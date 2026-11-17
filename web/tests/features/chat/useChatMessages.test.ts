@@ -187,6 +187,7 @@ describe('useChatMessages — unread', () => {
 
   it('a burst in the open conversation is marked read once, up to its last message', () => {
     vi.useFakeTimers();
+    const focus = vi.spyOn(document, 'hasFocus').mockReturnValue(true);
     try {
       const sendWs = vi.fn(() => true);
       const ref = <T,>(current: T) => ({ current });
@@ -205,7 +206,56 @@ describe('useChatMessages — unread', () => {
       expect(marks).toEqual([{ t: 'conversation-mark-read', conversationId: 'dm', msgId: 21 }]);
       expect(result.current.unreadByConversation.get('dm')).toBeUndefined();
     } finally {
+      focus.mockRestore();
       vi.useRealTimers();
+    }
+  });
+
+  it('a message in the open conversation stays new while the window is in the background, and is read when it comes back', () => {
+    vi.useFakeTimers();
+    const focus = vi.spyOn(document, 'hasFocus').mockReturnValue(false);
+    try {
+      const sendWs = vi.fn(() => true);
+      const ref = <T,>(current: T) => ({ current });
+      const { result } = renderHook(() => useChatMessages({
+        sendWs, activeConversationIdRef: ref<string | null>('geral'), setActiveConversation: vi.fn(),
+        conversationsRef: ref([]), allUsersRef: ref(new Map()), myUserIdRef: ref<string | null>('b'), myUsernameRef: ref<string | null>('b'), serversRef: ref([]),
+        activeViewRef: ref<'chat' | 'call'>('chat'), clearTypingEntry: vi.fn(),
+      }));
+      act(() => result.current.onChat({ t: 'chat', message: message(40, { conversationId: 'geral' }) }));
+      act(() => vi.advanceTimersByTime(1_000));
+
+      const marks = () => sendWs.mock.calls.map((call) => (call as unknown as [{ t: string }])[0]).filter((msg) => msg.t === 'conversation-mark-read');
+      expect(result.current.unreadByConversation.get('geral')).toBe(1);
+      expect(result.current.unreadStartByConversation.get('geral')).toBe(40);
+      expect(marks()).toEqual([]);
+
+      focus.mockReturnValue(true);
+      act(() => { window.dispatchEvent(new Event('focus')); });
+      act(() => vi.advanceTimersByTime(1_000));
+      expect(result.current.unreadByConversation.get('geral')).toBeUndefined();
+      expect(marks()).toEqual([{ t: 'conversation-mark-read', conversationId: 'geral', msgId: 40 }]);
+    } finally {
+      focus.mockRestore();
+      vi.useRealTimers();
+    }
+  });
+
+  it('the window coming back over the call leaves the channel new', () => {
+    const focus = vi.spyOn(document, 'hasFocus').mockReturnValue(false);
+    try {
+      const ref = <T,>(current: T) => ({ current });
+      const { result } = renderHook(() => useChatMessages({
+        sendWs: vi.fn(() => true), activeConversationIdRef: ref<string | null>('geral'), setActiveConversation: vi.fn(),
+        conversationsRef: ref([]), allUsersRef: ref(new Map()), myUserIdRef: ref<string | null>('b'), myUsernameRef: ref<string | null>('b'), serversRef: ref([]),
+        activeViewRef: ref<'chat' | 'call'>('call'), clearTypingEntry: vi.fn(),
+      }));
+      act(() => result.current.onChat({ t: 'chat', message: message(41, { conversationId: 'geral' }) }));
+      focus.mockReturnValue(true);
+      act(() => { window.dispatchEvent(new Event('focus')); });
+      expect(result.current.unreadByConversation.get('geral')).toBe(1);
+    } finally {
+      focus.mockRestore();
     }
   });
 });

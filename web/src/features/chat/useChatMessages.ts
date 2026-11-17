@@ -241,6 +241,13 @@ export function useChatMessages(deps: ChatMessagesDeps) {
     if (newest && newest.msgId > 0) queueMarkRead(conversationId, newest.msgId);
   }, [activeConversationIdRef, clearUnread, queueMarkRead]);
 
+  // the window coming back with the chat on screen reads what arrived while it was away
+  useEffect(() => {
+    const onWindowFocus = () => { if (activeViewRef.current === 'chat') markActiveSeen(); };
+    window.addEventListener('focus', onWindowFocus);
+    return () => window.removeEventListener('focus', onWindowFocus);
+  }, [activeViewRef, markActiveSeen]);
+
   const setLoading = useCallback((direction: 'older' | 'newer', conversationId: string, loading: boolean) => {
     (direction === 'older' ? setLoadingOlderByConversation : setLoadingNewerByConversation)((prev) => updateSet(prev, conversationId, loading));
   }, []);
@@ -513,10 +520,13 @@ export function useChatMessages(deps: ChatMessagesDeps) {
     }
     // your own message is never unread — it can land in a conversation you
     // left (an upload finishing after a switch, or another tab/device)
+    const amLookingAtIt = document.hasFocus() && activeViewRef.current === 'chat' && conversationId === activeConversationIdRef.current;
     if (fromSomeoneElse) {
-      // the active conversation only counts as read while its chat is on screen:
-      // from the friends page it is still active, but nobody is looking at it
-      if (conversationId !== activeConversationIdRef.current || activeViewRef.current !== 'chat') {
+      // the active conversation only counts as read while its chat is on screen
+      // in a focused window: from the friends page, the call, or with the app
+      // in the background (a call going on, the window in the tray) nobody is
+      // looking at it, so it stays new until the window comes back (onWindowFocus)
+      if (!amLookingAtIt) {
         const unreadBefore = unreadCountsRef.current.get(conversationId) ?? 0;
         unreadCountsRef.current.set(conversationId, unreadBefore + 1);
         setUnreadByConversation((prev) => new Map(prev).set(conversationId, (prev.get(conversationId) || 0) + 1));
@@ -530,7 +540,6 @@ export function useChatMessages(deps: ChatMessagesDeps) {
     // The message itself is proof they stopped typing — don't wait for
     // their typing:false (or the local expiry timer) to catch up.
     if (m.message.id) clearTypingEntry(conversationId, m.message.id);
-    const amLookingAtIt = document.hasFocus() && activeViewRef.current === 'chat' && conversationId === activeConversationIdRef.current;
     // a muted conversation, or one whose level leaves this message out, stays quiet: no sound, no notification
     if (fromSomeoneElse && !amLookingAtIt && (alertsForRef.current?.(conversationId, mentioned) ?? true)) {
       if (shouldChime(conversationId, mentioned)) playSound(mentioned ? 'mention' : 'newMessage');
