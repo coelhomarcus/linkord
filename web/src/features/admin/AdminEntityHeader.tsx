@@ -14,7 +14,7 @@ export function AdminEntityHeader({ avatar, title, subtitle, id, badges }: {
 }) {
   const { t } = useTranslation('admin');
   return (
-    <header className="flex flex-wrap items-center gap-x-4 gap-y-3 rounded-xl border border-border-subtle bg-fill-subtle p-4">
+    <header className="flex flex-wrap items-center gap-x-4 gap-y-3 rounded-xl border border-border-divider bg-fill-subtle p-4">
       <div className="flex-none">{avatar}</div>
       <div className="min-w-0 flex-1 basis-60">
         <h2 className="truncate text-heading font-semibold text-text-strong">{title}</h2>

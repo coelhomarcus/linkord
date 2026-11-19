@@ -58,8 +58,11 @@ describe('DirectProfilePanel', () => {
     expect(screen.getByText('bea').parentElement?.querySelector('svg')).toBeInTheDocument();
     expect(screen.getByRole('img', { name: 'Disponível' })).toBeInTheDocument();
     expect(await screen.findByText('4 de mai. de 2023')).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: '1 servidor em comum' })).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: '1 amigo em comum' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '1 amigo mútuo' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '1 servidor em comum' })).toBeInTheDocument();
+    // one line under the name rather than a list of each
+    expect(screen.queryByText('Luis')).not.toBeInTheDocument();
+    expect(screen.queryByText('Squad')).not.toBeInTheDocument();
   });
 
   it('never shows when the user was last online, only whether they are online now', async () => {
@@ -71,12 +74,10 @@ describe('DirectProfilePanel', () => {
     expect(screen.getByLabelText('Offline')).toBeInTheDocument();
   });
 
-  it('a mutual friend and the footer open profiles', async () => {
+  it('the footer opens the full profile', async () => {
     const onOpenProfile = vi.fn();
     renderWithRoom(<MemoryRouter><DirectProfilePanel user={bea} onOpenProfile={onOpenProfile} /></MemoryRouter>);
     const user = userEvent.setup();
-    await user.click(await screen.findByRole('button', { name: /Luis/ }));
-    expect(onOpenProfile).toHaveBeenCalledWith('u-luis');
     await user.click(screen.getByRole('button', { name: 'Ver perfil completo' }));
     expect(onOpenProfile).toHaveBeenCalledWith('u-bea');
   });

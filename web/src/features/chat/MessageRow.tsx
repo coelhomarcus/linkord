@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next';
-import { ArrowBendUpLeftIcon, CopyIcon, DotsThreeIcon, FlagIcon, PencilSimpleIcon, PhoneIcon, SmileyIcon, TrashIcon, UsersIcon } from '@phosphor-icons/react';
+import { ArrowBendUpLeftIcon, CopyIcon, DotsThreeIcon, FlagIcon, PencilSimpleIcon, PhoneIcon, SmileyIcon, TrashIcon, UsersIcon } from '@/shared/ui/icons';
 import { GroupAvatar } from '@/features/conversations/GroupAvatar';
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 

@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next';
-import { MagnifyingGlassIcon } from '@phosphor-icons/react';
+import { MagnifyingGlassIcon } from '@/shared/ui/icons';
 import { useEffect, useRef, useState } from 'react';
 
 import { useRoom } from '../../state/RoomContext';

@@ -1,4 +1,4 @@
-import { CircleNotchIcon, UserPlusIcon } from '@phosphor-icons/react';
+import { CircleNotchIcon, UserPlusIcon } from '@/shared/ui/icons';
 import { useState } from 'react';
 import type { FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';

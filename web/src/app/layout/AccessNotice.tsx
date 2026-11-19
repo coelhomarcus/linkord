@@ -1,4 +1,4 @@
-import { CheckCircleIcon, UserMinusIcon } from '@phosphor-icons/react';
+import { CheckCircleIcon, UserMinusIcon } from '@/shared/ui/icons';
 import { useEffect } from 'react';
 import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';

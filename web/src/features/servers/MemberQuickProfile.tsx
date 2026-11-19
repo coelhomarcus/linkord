@@ -1,4 +1,4 @@
-import { ArrowUpIcon, CrownIcon, IdentificationCardIcon, PlusIcon } from '@phosphor-icons/react';
+import { ArrowUpIcon, CrownIcon, IdentificationCardIcon, PlusIcon } from '@/shared/ui/icons';
 import { useEffect, useRef, useState } from 'react';
 import type { FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -9,8 +9,10 @@ import { Input } from '@/shared/ui/primitives/input';
 import { Popover, PopoverContent, PopoverTrigger } from '@/shared/ui/primitives/popover';
 import type { ServerSummary } from '@/shared/types/protocol';
 import { ProfileActions } from '@/features/friends/ProfileActions';
-import { BANNER_ASPECT_RATIO, bannerStyle } from '@/features/profile/profileLinks';
+import { BANNER_DISPLAY_ASPECT_RATIO, bannerStyle } from '@/features/profile/profileLinks';
 import { rememberProfilePreview, useUserProfile } from '@/features/profile/profileCache';
+import { ProfileMutuals } from '@/features/profile/ProfileMutuals';
+import type { ProfileTab } from '@/features/profile/ProfileSidebar';
 import { useRoom, useRoomState } from '@/state/RoomContext';
 import type { PublicUser } from '@/shared/types/protocol';
 import { cn } from '@/shared/lib/utils';
@@ -29,7 +31,7 @@ interface MemberQuickProfileProps {
   offline: boolean;
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onOpenProfile: (userId: string) => void;
+  onOpenProfile: (userId: string, tab?: ProfileTab) => void;
   onRoleIdsChange: (roleIds: string[]) => void;
 }
 
@@ -98,10 +100,10 @@ export function MemberQuickProfile({ server, member, currentUser, offline, open,
     openDirect(user.id);
   }
 
-  function openFullProfile() {
+  function openFullProfile(tab?: ProfileTab) {
     rememberProfilePreview(member.user);
     onOpenChange(false);
-    onOpenProfile(user.id);
+    onOpenProfile(user.id, tab);
   }
 
   return (
@@ -130,18 +132,18 @@ export function MemberQuickProfile({ server, member, currentUser, offline, open,
         {member.isOwner && <CrownIcon size={14} weight="fill" className="flex-none text-yellow" aria-label={t('members.owner')} />}
       </PopoverTrigger>
       <PopoverContent side="left" align="start" sideOffset={8} className="w-[min(24rem,calc(100vw-1rem))] gap-0 overflow-hidden rounded-xl border-border-default bg-bg-modal p-0">
-        <div className="relative w-full" style={{ ...bannerStyle({ id: user.id, avatarColor: user.avatarColor, banner }), aspectRatio: BANNER_ASPECT_RATIO }}>
+        <div className="relative w-full" style={{ ...bannerStyle({ id: user.id, avatarColor: user.avatarColor, banner }), aspectRatio: BANNER_DISPLAY_ASPECT_RATIO }}>
           <button
             type="button"
             aria-label={t('members.openProfile', { name: user.displayName })}
-            onClick={openFullProfile}
+            onClick={() => openFullProfile()}
             className="absolute inset-0 block h-full w-full cursor-pointer border-0 bg-transparent p-0 focus-ring focus-visible:ring-inset"
           />
           <div className="absolute right-3 top-3 z-10 flex max-w-[calc(100%-1.5rem)] flex-wrap items-center justify-end gap-1.5">
-            <Button type="button" variant="outline" size="icon-sm" aria-label={t('members.viewProfile')} onClick={openFullProfile}>
+            <Button type="button" variant="outline" size="icon-sm" aria-label={t('members.viewProfile')} onClick={() => openFullProfile()}>
               <IdentificationCardIcon size={16} />
             </Button>
-            <ProfileActions userId={user.id} username={user.username} displayName={user.displayName} onNavigate={() => onOpenChange(false)} onEditProfile={openFullProfile} showMessage={false} showFriendRequestActions={false} className="flex-row gap-1 p-0" />
+            <ProfileActions userId={user.id} username={user.username} displayName={user.displayName} onNavigate={() => onOpenChange(false)} onEditProfile={() => openFullProfile()} showMessage={false} showFriendRequestActions={false} className="flex-row gap-1 p-0" />
           </div>
         </div>
         <div className="px-4 pb-4">
@@ -150,14 +152,14 @@ export function MemberQuickProfile({ server, member, currentUser, offline, open,
               <button
                 type="button"
                 aria-label={t('members.openProfile', { name: user.displayName })}
-                onClick={openFullProfile}
+                onClick={() => openFullProfile()}
                 className="block cursor-pointer rounded-full border-0 bg-transparent p-0 focus-ring"
               >
                 <Avatar id={user.id} name={user.displayName} avatar={user.avatar} poster={avatarPoster} animateOnHover avatarColor={user.avatarColor} size={72} />
               </button>
               <UserStatusDot userId={user.id} labelled className="absolute bottom-1 right-1 size-5 border-4 text-bg-modal" />
             </div>
-            <UserCustomStatusBubble userId={user.id} className="mt-4 min-w-0" />
+            <UserCustomStatusBubble userId={user.id} className="-mt-3 -ml-2 min-w-0" />
           </div>
           <div className="mt-2 flex items-start justify-between gap-3">
             <div className="min-w-0">
@@ -168,6 +170,9 @@ export function MemberQuickProfile({ server, member, currentUser, offline, open,
               <p className="truncate text-label text-text-secondary">@{user.username}</p>
             </div>
           </div>
+          {user.id !== state.me.userId && (
+            <ProfileMutuals userId={user.id} onOpen={() => openFullProfile('common')} ringClassName="ring-bg-modal" className="mt-2" />
+          )}
 
           <UserActivityCard userId={user.id} className="mt-4" />
 

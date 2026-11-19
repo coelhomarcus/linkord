@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { FileIcon, FilePdfIcon, FilesIcon } from '@phosphor-icons/react';
+import { FileIcon, FilePdfIcon, FilesIcon } from '@/shared/ui/icons';
 import { carriesFiles, summarizeDrag } from '@/features/chat/dragSummary';
 
 function transfer(items: { kind: string; type: string }[], types = ['Files']): DataTransfer {

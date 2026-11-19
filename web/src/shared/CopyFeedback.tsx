@@ -1,6 +1,6 @@
 import { useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
-import { CheckIcon, CopyIcon, type Icon } from '@phosphor-icons/react';
+import { CheckIcon, CopyIcon, type IconComponent } from '@/shared/ui/icons';
 import { cn } from '@/shared/lib/utils';
 
 // The look every copy control shares, driven by `useCopyToClipboard`'s `copied`. The words a screen
@@ -13,7 +13,7 @@ export function CopyStatusIcon({ copied, size, icon: Idle = CopyIcon, className,
   copied: boolean;
   size: number;
   /** what the control shows before and after the check mark */
-  icon?: Icon;
+  icon?: IconComponent;
   className?: string;
   /** the check's colour, for a control whose own background is green */
   checkClassName?: string;

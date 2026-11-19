@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
-import { PhoneIcon, PhoneSlashIcon, PhoneXIcon, VideoCameraIcon } from '@phosphor-icons/react';
+import { PhoneIcon, PhoneSlashIcon, PhoneXIcon, VideoCameraIcon } from '@/shared/ui/icons';
 import { useTranslation } from 'react-i18next';
 import { Avatar } from '@/shared/Avatar';
 import { startRingtone } from '@/shared/sounds';

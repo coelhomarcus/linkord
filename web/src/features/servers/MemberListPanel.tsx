@@ -5,6 +5,7 @@ import type { ServerSummary } from '@/shared/types/protocol';
 import { fetchAllServerMembers, type ServerMemberEntry } from './serversApi';
 import { Skeleton, SkeletonGroup } from '@/shared/ui/primitives/skeleton';
 import { MemberQuickProfile } from './MemberQuickProfile';
+import type { ProfileTab } from '@/features/profile/ProfileSidebar';
 
 interface Section { key: string; label: string; members: ServerMemberEntry[] }
 
@@ -28,7 +29,7 @@ export function groupMembers(server: ServerSummary, members: ServerMemberEntry[]
 
 /** `active` is false while a closed sheet keeps this mounted for its
  * animation: nothing is fetched until it is shown. */
-export function MemberListPanel({ server, onOpenProfile, active = true }: { server: ServerSummary; onOpenProfile: (userId: string) => void; active?: boolean }) {
+export function MemberListPanel({ server, onOpenProfile, active = true }: { server: ServerSummary; onOpenProfile: (userId: string, tab?: ProfileTab) => void; active?: boolean }) {
   const { t } = useTranslation('servers');
   const { onlineUserIds, serverMemberRevision, allUsers, setServerMemberSnapshot, ownStatus } = useRoom('onlineUserIds', 'serverMemberRevision', 'allUsers', 'setServerMemberSnapshot', 'ownStatus');
   const state = useRoomState('me');

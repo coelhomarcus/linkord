@@ -1,4 +1,4 @@
-import { MagnifyingGlassIcon } from '@phosphor-icons/react';
+import { MagnifyingGlassIcon } from '@/shared/ui/icons';
 
 import { Input } from '@/shared/ui/primitives/input';
 

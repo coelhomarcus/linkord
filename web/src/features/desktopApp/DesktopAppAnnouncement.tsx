@@ -1,4 +1,4 @@
-import { BellRingingIcon, DownloadSimpleIcon, GameControllerIcon, PowerIcon } from '@phosphor-icons/react';
+import { BellRingingIcon, DownloadSimpleIcon, GameControllerIcon, PowerIcon } from '@/shared/ui/icons';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { isDesktopApp } from '@/shared/desktop';

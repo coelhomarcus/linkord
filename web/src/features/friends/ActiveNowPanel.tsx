@@ -1,4 +1,4 @@
-import { SpeakerHighIcon } from '@phosphor-icons/react';
+import { SpeakerHighIcon } from '@/shared/ui/icons';
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { CaretLeftIcon, CaretRightIcon, PencilSimpleIcon, PlusIcon, TrashIcon } from '@phosphor-icons/react';
+import { CaretLeftIcon, CaretRightIcon, PencilSimpleIcon, PlusIcon, TrashIcon } from '@/shared/ui/icons';
 import { useTranslation } from 'react-i18next';
 import { GAME_LIST_LIMITS, type GameItem, type GameList } from '@/features/games/types';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/shared/ui/primitives/dropdown-menu';

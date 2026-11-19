@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { PlusIcon } from '@phosphor-icons/react';
+import { PlusIcon } from '@/shared/ui/icons';
 import { arrayMove } from '@dnd-kit/sortable';
 import { GamePickerDialog } from '@/features/games/GamePickerDialog';
 import { forWidget, gameListOf, type GameItem, type GameList, type GameLists } from '@/features/games/types';

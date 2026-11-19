@@ -1,4 +1,4 @@
-import { ArrowBendUpLeftIcon, ChatTextIcon, FileXIcon, TrashIcon } from '@phosphor-icons/react';
+import { ArrowBendUpLeftIcon, ChatTextIcon, FileXIcon, TrashIcon } from '@/shared/ui/icons';
 import { useCallback, useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';

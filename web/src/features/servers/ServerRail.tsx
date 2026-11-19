@@ -1,4 +1,4 @@
-import { PlusIcon, SidebarSimpleIcon, SpeakerHighIcon } from '@phosphor-icons/react';
+import { PlusIcon, SidebarSimpleIcon, SpeakerHighIcon } from '@/shared/ui/icons';
 import { useMemo, useRef, useState } from 'react';
 import type { CSSProperties, DragEvent, HTMLAttributes, ReactNode } from 'react';
 import { DndContext, PointerSensor, closestCenter, useSensor, useSensors } from '@dnd-kit/core';

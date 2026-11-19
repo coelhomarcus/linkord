@@ -1,9 +1,8 @@
-import { CaretRightIcon, ShieldCheckIcon } from '@phosphor-icons/react';
+import { CaretRightIcon, ShieldCheckIcon, iconWeight } from '@/shared/ui/icons';
 import { useTranslation } from 'react-i18next';
 import { NavLink } from 'react-router';
 import { cn } from '@/shared/lib/utils';
 import { ActiveFill } from '@/shared/ui/active-fill';
-import { iconWeight } from '@/shared/ui/icons';
 import { ADMIN_GROUPS, adminSectionPath } from './adminCatalog';
 
 function GroupLabel({ children }: { children: string }) {
@@ -35,7 +34,7 @@ export function AdminSidebar() {
       <AreaCard />
       {ADMIN_GROUPS.map((group, index) => (
         <div key={group.labelKey} className="flex flex-col">
-          {index > 0 && <span aria-hidden className="mx-2.5 my-2 h-px flex-none bg-border-subtle" />}
+          {index > 0 && <span aria-hidden className="mx-2.5 my-2 h-px flex-none bg-border-divider" />}
           <GroupLabel>{t(group.labelKey as never)}</GroupLabel>
           {group.sections.map((section) => {
             const Icon = section.icon;

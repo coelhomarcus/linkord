@@ -1,6 +1,4 @@
-import {
-  ArrowClockwiseIcon, ArrowCounterClockwiseIcon, ArrowsInIcon, CaretLeftIcon, CaretRightIcon, MagnifyingGlassMinusIcon, MagnifyingGlassPlusIcon,
-} from '@phosphor-icons/react';
+import { ArrowClockwiseIcon, ArrowCounterClockwiseIcon, ArrowsInIcon, CaretLeftIcon, CaretRightIcon, MagnifyingGlassMinusIcon, MagnifyingGlassPlusIcon } from '@/shared/ui/icons';
 import { Dialog as DialogPrimitive } from '@base-ui/react/dialog';
 import { useReducedMotion } from 'motion/react';
 import { useLayoutEffect, useRef, useState } from 'react';

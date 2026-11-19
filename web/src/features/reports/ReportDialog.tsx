@@ -1,4 +1,4 @@
-import { FlagIcon } from '@phosphor-icons/react';
+import { FlagIcon } from '@/shared/ui/icons';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 

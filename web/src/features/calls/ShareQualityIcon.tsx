@@ -1,4 +1,4 @@
-import { GameControllerIcon, MonitorIcon } from '@phosphor-icons/react';
+import { GameControllerIcon, MonitorIcon } from '@/shared/ui/icons';
 import { SHARE_QUALITY_PRESETS } from './shareQualityPresets';
 import type { ShareQualityId } from './shareQualityPresets';
 

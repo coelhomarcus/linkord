@@ -1,4 +1,4 @@
-import { CircleNotchIcon } from '@phosphor-icons/react';
+import { CircleNotchIcon } from '@/shared/ui/icons';
 
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/shared/ui/primitives/dialog';
 import { UploadProgressBar } from './UploadProgressBar';

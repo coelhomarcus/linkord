@@ -1,4 +1,4 @@
-import { ArrowLeftIcon } from '@phosphor-icons/react';
+import { ArrowLeftIcon } from '@/shared/ui/icons';
 import { useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -18,6 +18,7 @@ import { AppearanceSettings } from './AppearanceSettings';
 import { AudioVideoSettings } from './AudioVideoSettings';
 import { ChatSettings } from './ChatSettings';
 import { DesktopSettings } from './DesktopSettings';
+import { DownloadsSettings } from './DownloadsSettings';
 import { LanguageSettings } from './LanguageSettings';
 import { NotificationsSettings } from './NotificationsSettings';
 import { PrivacyTab } from './PrivacyTab';
@@ -44,6 +45,7 @@ function CategoryPage({ tab, onOpenProfile }: { tab: SettingsTab; onOpenProfile:
     case 'chat': return <ChatSettings />;
     case 'notifications': return <NotificationsSettings />;
     case 'language': return <LanguageSettings />;
+    case 'downloads': return <DownloadsSettings />;
     case 'desktop': return <DesktopSettings />;
     case 'moderation': return <AdminLinkTab />;
   }
@@ -117,7 +119,7 @@ export function SettingsPage({ onOpenProfile }: SettingsPageProps) {
   function wide() {
     return (
       <div className="flex min-h-0 min-w-0 flex-1">
-        <div className="scrollbar-none flex flex-none overflow-y-auto border-r border-border-subtle">
+        <div className="scrollbar-none flex flex-none overflow-y-auto border-r border-border-divider">
           <SettingsSidebar active={current} isAdmin={isAdmin} onOpenProfile={onOpenProfile} />
         </div>
         {/* a stable gutter: a short page and a scrolling one keep the column in the same place */}

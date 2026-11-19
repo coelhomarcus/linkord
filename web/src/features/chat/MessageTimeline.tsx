@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import { useLanguage } from '@/shared/i18n/useLanguage';
-import { ArrowDownIcon, ArrowUpIcon } from '@phosphor-icons/react';
+import { ArrowDownIcon, ArrowUpIcon } from '@/shared/ui/icons';
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { defaultRangeExtractor, measureElement as measureRowElement, useVirtualizer, type Range } from '@tanstack/react-virtual';
 

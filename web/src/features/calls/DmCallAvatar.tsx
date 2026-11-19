@@ -1,4 +1,4 @@
-import { CircleNotchIcon, MicrophoneSlashIcon, SpeakerSlashIcon } from '@phosphor-icons/react';
+import { CircleNotchIcon, MicrophoneSlashIcon, SpeakerSlashIcon } from '@/shared/ui/icons';
 import { useCallback } from 'react';
 import type { MouseEvent } from 'react';
 import { useTranslation } from 'react-i18next';

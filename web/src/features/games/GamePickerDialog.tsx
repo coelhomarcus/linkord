@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { CheckIcon, GameControllerIcon, MagnifyingGlassIcon } from '@phosphor-icons/react';
+import { CheckIcon, GameControllerIcon, MagnifyingGlassIcon } from '@/shared/ui/icons';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/shared/ui/primitives/button';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/shared/ui/primitives/dialog';

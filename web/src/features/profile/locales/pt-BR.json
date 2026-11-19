@@ -62,10 +62,6 @@
   },
   "panel": {
     "label": "Perfil do usuário",
-    "mutualServers_one": "{{count}} servidor em comum",
-    "mutualServers_other": "{{count}} servidores em comum",
-    "mutualFriends_one": "{{count}} amigo em comum",
-    "mutualFriends_other": "{{count}} amigos em comum",
     "viewFull": "Ver perfil completo"
   },
   "integration": {

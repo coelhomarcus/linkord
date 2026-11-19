@@ -1,4 +1,4 @@
-import { ChecksIcon, TrashIcon } from '@phosphor-icons/react';
+import { ChecksIcon, TrashIcon } from '@/shared/ui/icons';
 import { useTranslation } from 'react-i18next';
 import { PageHeader } from '@/shared/PageHeader';
 import { Button } from '@/shared/ui/primitives/button';

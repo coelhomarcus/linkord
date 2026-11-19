@@ -1,4 +1,4 @@
-import { ArrowsClockwiseIcon, CaretDownIcon, FlipHorizontalIcon, GearIcon, LockKeyOpenIcon, PauseIcon, PlayIcon } from '@phosphor-icons/react';
+import { ArrowsClockwiseIcon, CaretDownIcon, FlipHorizontalIcon, GearIcon, LockKeyOpenIcon, PauseIcon, PlayIcon } from '@/shared/ui/icons';
 import type { ReactNode } from 'react';
 import { useNavigate } from 'react-router';
 import { useTranslation } from 'react-i18next';

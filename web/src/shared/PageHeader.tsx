@@ -1,4 +1,4 @@
-import { XIcon } from '@phosphor-icons/react';
+import { XIcon } from '@/shared/ui/icons';
 import type { ReactNode } from 'react';
 
 import { useAppModalClose } from '@/shared/ui/app-modal';

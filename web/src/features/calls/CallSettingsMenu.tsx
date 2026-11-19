@@ -1,4 +1,4 @@
-import { ChartLineIcon, ImageIcon, SlidersHorizontalIcon, VideoCameraSlashIcon } from '@phosphor-icons/react';
+import { ChartLineIcon, ImageIcon, SlidersHorizontalIcon, VideoCameraSlashIcon } from '@/shared/ui/icons';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 

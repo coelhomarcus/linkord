@@ -1,4 +1,4 @@
-import { ImageSquareIcon, SmileyIcon, UploadSimpleIcon } from '@phosphor-icons/react';
+import { ImageSquareIcon, SmileyIcon, UploadSimpleIcon } from '@/shared/ui/icons';
 import { useEffect, useId, useRef, useState } from 'react';
 import type { ChangeEvent, FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';

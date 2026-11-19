@@ -252,6 +252,7 @@ Every script runs from the repository root.
 | `npm run backup:rehearse` | Backup, restore and a boot of the app on throwaway local databases. Needs `pg_dump` and `pg_restore`. |
 | `npm run admin:grant -- <username>` / `admin:revoke` | Gives or takes administrator access. |
 | `npm run emoji:data` | Rebuilds `web/public/emoji-data/<lang>/emojis.json` (the emoji picker's and the composer's `:shortcode:` data) from the pinned `emojibase-data` devDependency of `web/`, leaving out the emojis (and skin tones) the pinned `@discordapp/twemoji` has no picture for. Run it after bumping either package. Twemoji's SVGs themselves are copied by the Vite build to `/assets/twemoji/<version>/` (served from `node_modules` in development), so a bump only needs `npm install` and this script. |
+| `npm run icons` | Rebuilds `web/src/shared/ui/icons/phosphor.ts` from the pinned `@phosphor-icons/react` devDependency of `web/`: every icon imported from `@/shared/ui/icons` under `web/src` and `web/tests`, in the regular, bold and fill weights only (the package ships six per icon). Run it after importing a new icon or bumping the package; `tests/scripts/buildIcons.test.tsx` fails while the file is stale, and lint refuses a direct `@phosphor-icons/*` import. |
 
 The scripts behind the `db:*`, `admin:*` and `test:integration` commands live in `server/src/scripts/`; each starts with a comment on what it does and how to call it.
 

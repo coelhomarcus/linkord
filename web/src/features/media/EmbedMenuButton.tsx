@@ -1,4 +1,4 @@
-import { DotsThreeIcon } from '@phosphor-icons/react';
+import { DotsThreeIcon } from '@/shared/ui/icons';
 import { useTranslation } from 'react-i18next';
 import type { MouseEvent } from 'react';
 import { cn } from '@/shared/lib/utils';

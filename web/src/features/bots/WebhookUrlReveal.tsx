@@ -1,4 +1,4 @@
-import { WarningIcon } from '@phosphor-icons/react';
+import { WarningIcon } from '@/shared/ui/icons';
 import { useTranslation } from 'react-i18next';
 
 import { CopyStatusIcon } from '@/shared/CopyFeedback';

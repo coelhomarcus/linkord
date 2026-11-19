@@ -27,6 +27,7 @@
       "chat": "Chat",
       "notifications": "Notifications",
       "language": "Language & time",
+      "downloads": "Get the app",
       "desktop": "App",
       "moderation": "Administration"
     },
@@ -49,7 +50,6 @@
       "twoFactor": "Two-step verification",
       "loginAlerts": "Sign-in alerts",
       "sessions": "Active sessions",
-      "install": "Install the app",
       "deleteAccount": "Delete account",
       "dataExport": "Your data",
       "desktopStartup": "Startup",
@@ -110,9 +110,13 @@
       "title": "Sounds",
       "keywords": "volume, sound, test sound, mute, message, mention, call, preview"
     },
-    "install": {
-      "title": "Install the app",
-      "keywords": "install, installation, app, pwa, home screen, shortcut, icon, add to home screen"
+    "desktopDownload": {
+      "title": "Windows app",
+      "keywords": "download, windows, computer, pc, desktop, installer, exe, application, app"
+    },
+    "webApp": {
+      "title": "Web app",
+      "keywords": "install, installation, app, pwa, home screen, shortcut, icon, add to home screen, phone, iphone, android"
     },
     "language": {
       "title": "Language",
@@ -539,6 +543,66 @@
       "check": "Check for updates",
       "restart": "Restart and update",
       "download": "Download version {{version}}"
+    }
+  },
+  "downloads": {
+    "title": "Install Linkord",
+    "description": "Use Linkord outside a browser tab. There are two ways, and both sign in to the same account with the same conversations: use one, the other, or both.",
+    "recommended": "Recommended for you",
+    "retry": "Try again",
+    "windows": {
+      "platforms": "Windows 10 and 11",
+      "title": "Windows app",
+      "description": "A program installed on your computer, like any other. It opens in its own window and keeps running in the system tray when you close it.",
+      "features": {
+        "notifications": "Notifications even with the window closed",
+        "activity": "Shows the game or app you're using",
+        "startup": "Opens with Windows, if you want",
+        "updates": "Updates itself when a new version is out"
+      },
+      "download": "Download for Windows",
+      "version": "Version {{version}}",
+      "allVersions": "All versions",
+      "otherSystem": "The app is Windows only. On this device, go with the web app.",
+      "unavailable": "The installer isn't available right now.",
+      "inUse": "You're using the Windows app.",
+      "openSettings": "App settings"
+    },
+    "web": {
+      "platforms": "Phone and computer",
+      "title": "Web app",
+      "description": "Linkord from your browser, installed as an app: it gets an icon on your home screen or taskbar and opens without the address bar. Nothing to download.",
+      "features": {
+        "anywhere": "Works on Android, iPhone, Windows, Mac and Linux",
+        "notifications": "Push notifications, even with the browser closed",
+        "light": "Lightweight and always on the latest version"
+      },
+      "install": "Install web app",
+      "installed": "The web app is installed on this device.",
+      "unsupported": "This browser doesn't offer installing. Use Chrome or Edge (computer and Android) or Safari (iPhone and iPad). If you dismissed the prompt, look for “Install Linkord” in the browser's menu.",
+      "fromDesktopApp": "To get Linkord on your phone, open the site in your phone's browser and install it there.",
+      "ios": {
+        "title": "In Safari, in three taps:",
+        "share": "Tap Share",
+        "addToHome": "Choose “Add to Home Screen”",
+        "confirm": "Tap Add",
+        "notifications": "On iPhone, notifications only work with the web app installed."
+      }
+    },
+    "compare": {
+      "title": "Which one?",
+      "windows": {
+        "question": "On a Windows PC, gaming?",
+        "answer": "Go with the Windows app: only it shows the game you're playing, opens with your computer and stays in the tray."
+      },
+      "web": {
+        "question": "On a phone, a Mac or Linux?",
+        "answer": "Install the web app. That's how Linkord becomes an app on those devices, and it gets notifications like a native app."
+      },
+      "both": {
+        "question": "Can I use both?",
+        "answer": "Yes. Your account, conversations and calls are the same everywhere, and you can install it on as many devices as you like."
+      }
     }
   }
 }

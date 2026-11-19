@@ -1,5 +1,5 @@
 import { useId, useState, type FormEvent } from 'react';
-import { CheckIcon, PlusIcon } from '@phosphor-icons/react';
+import { CheckIcon, PlusIcon } from '@/shared/ui/icons';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/shared/ui/primitives/button';
 import { Input } from '@/shared/ui/primitives/input';

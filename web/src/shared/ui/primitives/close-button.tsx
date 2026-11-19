@@ -1,4 +1,4 @@
-import { XIcon } from '@phosphor-icons/react';
+import { XIcon } from '@/shared/ui/icons';
 import { forwardRef } from "react"
 import { Button as ButtonPrimitive } from "@base-ui/react/button"
 import { cva, type VariantProps } from "class-variance-authority"

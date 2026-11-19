@@ -1,7 +1,6 @@
-import { ArrowsInIcon, ArrowsOutIcon, MicrophoneIcon, MicrophoneSlashIcon, MonitorIcon, PhoneSlashIcon, SpeakerHighIcon, SpeakerSlashIcon, VideoCameraIcon, VideoCameraSlashIcon } from '@phosphor-icons/react';
+import { ArrowsInIcon, ArrowsOutIcon, MicrophoneIcon, MicrophoneSlashIcon, MonitorIcon, PhoneSlashIcon, SpeakerHighIcon, SpeakerSlashIcon, VideoCameraIcon, VideoCameraSlashIcon, iconWeight } from '@/shared/ui/icons';
 import { forwardRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { iconWeight } from '@/shared/ui/icons';
 
 import { CloseButton } from '@/shared/ui/primitives/close-button';
 import { useRoom, useRoomState } from '../../state/RoomContext';

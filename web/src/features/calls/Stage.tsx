@@ -1,4 +1,4 @@
-import { ArrowLeftIcon, VideoCameraSlashIcon } from '@phosphor-icons/react';
+import { ArrowLeftIcon, VideoCameraSlashIcon } from '@/shared/ui/icons';
 import { useCallback, useLayoutEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 

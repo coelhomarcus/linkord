@@ -65,11 +65,11 @@ export function PrivacyTab({ onOpenProfile }: { onOpenProfile: (userId: string) 
           <LoadError message={t('privacy.loadFailed')} onRetry={list.retry} />
         )}
         {list.status === 'ready' && list.items.length === 0 && (
-          <EmptyState size="compact" illustration="shield" title={t('privacy.empty')} description={t('privacy.emptyText')} className="rounded-lg border border-border-subtle" />
+          <EmptyState size="compact" illustration="shield" title={t('privacy.empty')} description={t('privacy.emptyText')} className="rounded-lg border border-border-divider" />
         )}
 
         {list.items.length > 0 && (
-          <div className="flex flex-col divide-y divide-border-subtle">
+          <div className="flex flex-col divide-y divide-border-divider">
             {list.items.map(({ user }) => (
               <SocialUserRow key={user.id} user={user} onOpenProfile={() => onOpenProfile(user.id)}>
                 <Button type="button" variant="secondary" size="sm" disabled={pending.isPending(user.id)} onClick={() => void handleUnblock(user.id)}>

@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next';
-import { PlusIcon } from '@phosphor-icons/react';
+import { PlusIcon } from '@/shared/ui/icons';
 
 import { cn } from '@/shared/lib/utils';
 import { Emoji } from '@/features/emoji/Emoji';

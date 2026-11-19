@@ -1,6 +1,5 @@
-import { FileArchiveIcon, FileAudioIcon, FileCodeIcon, FileIcon, FileImageIcon, FilePdfIcon, FilePptIcon, FileTextIcon, FileVideoIcon, FileXlsIcon } from '@phosphor-icons/react';
+import { FileArchiveIcon, FileAudioIcon, FileCodeIcon, FileIcon, FileImageIcon, FilePdfIcon, FilePptIcon, FileTextIcon, FileVideoIcon, FileXlsIcon, type IconComponent } from '@/shared/ui/icons';
 
-import type { Icon } from '@phosphor-icons/react';
 
 type FileFamily = 'pdf' | 'document' | 'spreadsheet' | 'presentation' | 'archive' | 'text-code' | 'image' | 'audio' | 'video' | 'unknown';
 
@@ -8,7 +7,7 @@ export interface FilePresentation {
   family: FileFamily;
   /** Translation key for the word shown next to the size — never the raw MIME. */
   typeLabelKey: FileFamily;
-  icon: Icon;
+  icon: IconComponent;
   /** Small corner marker; only PDF needs one because the other file icons are distinct by shape. */
   badge?: string;
   iconBgClassName: string;
@@ -65,7 +64,7 @@ const EXT_FAMILY: Partial<Record<string, FileFamily>> = {
   'tar.gz': 'archive', 'tar.bz2': 'archive', 'tar.xz': 'archive',
 };
 
-const FAMILY_ICON: Record<FileFamily, Icon> = {
+const FAMILY_ICON: Record<FileFamily, IconComponent> = {
   pdf: FilePdfIcon,
   document: FileTextIcon,
   spreadsheet: FileXlsIcon,

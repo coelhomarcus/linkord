@@ -1,4 +1,4 @@
-import { ClockCounterClockwiseIcon } from '@phosphor-icons/react';
+import { ClockCounterClockwiseIcon } from '@/shared/ui/icons';
 import { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useLocation } from 'react-router';

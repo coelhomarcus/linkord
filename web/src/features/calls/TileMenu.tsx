@@ -1,4 +1,4 @@
-import { ArrowsClockwiseIcon, ArrowsInIcon, ArrowsOutIcon, CrosshairIcon, EyeIcon, EyeSlashIcon, FlipHorizontalIcon, GaugeIcon, PauseIcon, PictureInPictureIcon, PlayIcon, ScreencastIcon, SpeakerHighIcon, SpeakerSlashIcon, UserIcon, UserMinusIcon, VideoCameraSlashIcon } from '@phosphor-icons/react';
+import { ArrowsClockwiseIcon, ArrowsInIcon, ArrowsOutIcon, CrosshairIcon, EyeIcon, EyeSlashIcon, FlipHorizontalIcon, GaugeIcon, PauseIcon, PictureInPictureIcon, PlayIcon, ScreencastIcon, SpeakerHighIcon, SpeakerSlashIcon, UserIcon, UserMinusIcon, VideoCameraSlashIcon } from '@/shared/ui/icons';
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 

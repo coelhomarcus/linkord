@@ -1,4 +1,4 @@
-import { TrashIcon, UploadSimpleIcon } from '@phosphor-icons/react';
+import { TrashIcon, UploadSimpleIcon } from '@/shared/ui/icons';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 

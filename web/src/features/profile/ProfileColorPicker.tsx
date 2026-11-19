@@ -1,4 +1,4 @@
-import { CaretDownIcon } from '@phosphor-icons/react';
+import { CaretDownIcon } from '@/shared/ui/icons';
 import { useTranslation } from 'react-i18next';
 import { AVATAR_COLOR_OPTIONS, colorFor } from '@/shared/Avatar';
 import { ColorPicker } from '@/shared/ui/ColorPicker';

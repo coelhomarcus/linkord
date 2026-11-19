@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next';
-import { UsersIcon } from '@phosphor-icons/react';
+import { UsersIcon } from '@/shared/ui/icons';
 import { cn } from '@/shared/lib/utils';
 import { useContentLocation } from '@/shared/lib/contentLocation';
 import { ROUTES, isHomePath } from '@/shared/lib/routes';

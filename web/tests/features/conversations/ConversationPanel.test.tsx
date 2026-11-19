@@ -178,6 +178,34 @@ describe('ConversationPanel — right panel buttons', () => {
     const { toggle } = renderGroup(false);
     expect(toggle).toHaveAttribute('aria-pressed', 'false');
   });
+
+  it('the header search field names the server and opens the search', () => {
+    mockedApi.fetchRequestSummary.mockResolvedValue({ incoming: 0, invitations: 0 });
+    const onOpenSearch = vi.fn();
+    const servers = [{ id: 's1', name: 'Equipe' }] as RoomContextValue['servers'];
+    renderSocial(
+      <SidebarProvider>
+        <ConversationPanel onOpenProfile={() => {}} onOpenCall={() => {}} onOpenSearch={onOpenSearch} detailsOpen={false} mediaOpen={false} onOpenDetails={() => {}} onToggleDetails={() => {}} onToggleMedia={() => {}} />
+      </SidebarProvider>,
+      { room: { state: me, conversations: [group], servers, activeConversationId: 'g1' } },
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Buscar Equipe' }));
+    expect(onOpenSearch).toHaveBeenCalledTimes(1);
+  });
+
+  it('shows the aside beside the chat, under the header', () => {
+    mockedApi.fetchRequestSummary.mockResolvedValue({ incoming: 0, invitations: 0 });
+    renderSocial(
+      <SidebarProvider>
+        <ConversationPanel onOpenProfile={() => {}} onOpenCall={() => {}} onOpenSearch={() => {}} detailsOpen mediaOpen={false} onOpenDetails={() => {}} onToggleDetails={() => {}} onToggleMedia={() => {}} aside={<aside aria-label="Members" />} />
+      </SidebarProvider>,
+      { room: { state: me, conversations: [group], activeConversationId: 'g1' } },
+    );
+    const aside = screen.getByRole('complementary', { name: 'Members' });
+    const header = screen.getByRole('main').querySelector('header')!;
+    expect(header.contains(aside)).toBe(false);
+    expect(header.compareDocumentPosition(aside) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
 });
 
 describe('ConversationPanel — phone list route', () => {
