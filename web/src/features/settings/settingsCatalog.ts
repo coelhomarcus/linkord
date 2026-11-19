@@ -1,5 +1,5 @@
 import type { ParseKeys } from 'i18next';
-import { BellIcon, ChatCircleTextIcon, DesktopIcon, GameControllerIcon, IdentificationCardIcon, KeyIcon, LockIcon, MicrophoneIcon, PaintBrushIcon, PlugsConnectedIcon, ShieldCheckIcon, TranslateIcon, type IconComponent } from '@/shared/ui/icons';
+import { BellIcon, ChatCircleTextIcon, DesktopIcon, DownloadSimpleIcon, GameControllerIcon, IdentificationCardIcon, KeyIcon, LockIcon, MicrophoneIcon, PaintBrushIcon, PlugsConnectedIcon, ShieldCheckIcon, TranslateIcon, type IconComponent } from '@/shared/ui/icons';
 
 import type { SettingsTab } from '@/shared/lib/routes';
 
@@ -43,6 +43,7 @@ export const SETTINGS_GROUPS: SettingsGroup[] = [
       { id: 'chat', labelKey: 'catalog.categories.chat', icon: ChatCircleTextIcon },
       { id: 'notifications', labelKey: 'catalog.categories.notifications', icon: BellIcon },
       { id: 'language', labelKey: 'catalog.categories.language', icon: TranslateIcon },
+      { id: 'downloads', labelKey: 'catalog.categories.downloads', icon: DownloadSimpleIcon },
       { id: 'desktop', labelKey: 'catalog.categories.desktop', icon: DesktopIcon, desktopOnly: true },
     ],
   },

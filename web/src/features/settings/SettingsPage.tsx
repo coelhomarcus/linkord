@@ -18,6 +18,7 @@ import { AppearanceSettings } from './AppearanceSettings';
 import { AudioVideoSettings } from './AudioVideoSettings';
 import { ChatSettings } from './ChatSettings';
 import { DesktopSettings } from './DesktopSettings';
+import { DownloadsSettings } from './DownloadsSettings';
 import { LanguageSettings } from './LanguageSettings';
 import { NotificationsSettings } from './NotificationsSettings';
 import { PrivacyTab } from './PrivacyTab';
@@ -44,6 +45,7 @@ function CategoryPage({ tab, onOpenProfile }: { tab: SettingsTab; onOpenProfile:
     case 'chat': return <ChatSettings />;
     case 'notifications': return <NotificationsSettings />;
     case 'language': return <LanguageSettings />;
+    case 'downloads': return <DownloadsSettings />;
     case 'desktop': return <DesktopSettings />;
     case 'moderation': return <AdminLinkTab />;
   }

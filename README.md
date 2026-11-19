@@ -52,7 +52,7 @@ Linkord is a self-hosted place to chat and call with friends. Talk in direct mes
 - Two-step login by email, sign-in alerts, and a list of active sessions you can end.
 - Username and password changes, account deletion, and a download of your data.
 - Themes, languages (Portuguese and English), device settings, and notification sounds.
-- Installable as an app, with share-to-Linkord on Android.
+- Installable as a web app (PWA), with share-to-Linkord on Android; Settings → Baixar o app explains it beside the Windows app download.
 
 **Administration**
 - An `/admin` area for users, servers, webhooks, reports, audit history, and uploads.

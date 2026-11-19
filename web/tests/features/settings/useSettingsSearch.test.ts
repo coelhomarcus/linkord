@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { act, renderHook } from '@testing-library/react';
 import { normalizeSearchText, useSettingsSearch } from '@/features/settings/useSettingsSearch';
-import { startInstallPromptCapture } from '@/features/install/installPrompt';
 import { useLanguageForTests } from '@tests/fixtures/i18nFixture';
 
 function titles(results: ReturnType<typeof useSettingsSearch>['results']): string[] {
@@ -66,19 +65,14 @@ describe('useSettingsSearch', () => {
   });
 });
 
-describe('useSettingsSearch install entry', () => {
-  it('is not listed where the page has no install section, and is once the browser offers one', () => {
-    const stop = startInstallPromptCapture();
-    try {
-      const { result } = renderHook(() => useSettingsSearch(false));
-      act(() => result.current.setQuery('instalar'));
-      expect(titles(result.current.results)).not.toContain('Instalar o app');
+describe('useSettingsSearch downloads', () => {
+  it('finds both ways to install under the downloads tab, on every browser', () => {
+    const { result } = renderHook(() => useSettingsSearch(false));
+    act(() => result.current.setQuery('instalar'));
+    expect(result.current.results.find((r) => r.title === 'Web app')?.entry).toMatchObject({ categoryId: 'downloads', sectionId: 'web-app' });
 
-      act(() => { window.dispatchEvent(new Event('beforeinstallprompt')); });
-      expect(result.current.results.find((r) => r.title === 'Instalar o app')?.entry).toMatchObject({ categoryId: 'notifications', sectionId: 'install' });
-    } finally {
-      stop();
-    }
+    act(() => result.current.setQuery('windows'));
+    expect(result.current.results.find((r) => r.title === 'App para Windows')?.entry).toMatchObject({ categoryId: 'downloads', sectionId: 'windows-app' });
   });
 });
 

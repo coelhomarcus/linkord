@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { InstallSettingsSection } from '@/features/install/InstallSettingsSection';
 import { fetchPushShowContent, updatePushShowContent } from '@/features/notifications/pushPreferences';
 import { useRoom } from '@/state/RoomContext';
 import { isPushSubscriptionActive, notificationPermissionState } from '@/shared/notifications';
@@ -223,7 +222,6 @@ export function NotificationsSettings() {
         </div>
       </SettingsSection>
 
-      <InstallSettingsSection title={t('catalog.sections.install')} />
     </SettingsSections>
   );
 }
