@@ -43,6 +43,20 @@ function HeaderIcon({ label, pressed, onClick, className, children }: { label: s
   );
 }
 
+/** Discord's header search: a field-shaped button naming where it searches, which opens the message search. */
+function HeaderSearchField({ placeholder, onClick }: { placeholder: string; onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="group ml-1 flex h-8 w-[243px] flex-none items-center gap-2 rounded-lg border border-border-default pl-[9px] pr-2 text-left transition-colors hover:border-border-strong focus-ring max-lg:hidden"
+    >
+      <span className="min-w-0 flex-1 truncate text-label text-text-muted transition-colors group-hover:text-text-secondary">{placeholder}</span>
+      <MagnifyingGlassIcon size={18} className="flex-none text-text-secondary" aria-hidden />
+    </button>
+  );
+}
+
 /** The channel or DM's notification menu. The bell crosses out while the conversation is muted, on its own
  * or through its server; the tooltip then says until when. */
 function NotificationHeaderButton({ target }: { target: Extract<NotificationTarget, { scope: 'conversation' }> }) {
@@ -82,11 +96,13 @@ interface ConversationPanelProps {
   onOpenDetails: () => void;
   onToggleDetails: () => void;
   onToggleMedia: () => void;
+  /** a panel shown beside the chat, under the header (a text channel's member list) */
+  aside?: ReactNode;
 }
 
-export function ConversationPanel({ onOpenProfile, onOpenCall, onOpenSearch, detailsOpen, mediaOpen, onToggleDetails, onToggleMedia }: ConversationPanelProps) {
+export function ConversationPanel({ onOpenProfile, onOpenCall, onOpenSearch, detailsOpen, mediaOpen, onToggleDetails, onToggleMedia, aside }: ConversationPanelProps) {
   const { t } = useTranslation('conversations');
-  const { dispatch, conversations, activeConversationId, allUsers, activeCallConversationId, startDmCall } = useRoom('dispatch', 'conversations', 'activeConversationId', 'allUsers', 'activeCallConversationId', 'startDmCall');
+  const { dispatch, conversations, servers, activeConversationId, allUsers, activeCallConversationId, startDmCall } = useRoom('dispatch', 'conversations', 'servers', 'activeConversationId', 'allUsers', 'activeCallConversationId', 'startDmCall');
   const state = useRoomState('me', 'callJoinError');
   const roster = useCallRoster();
   const navigate = useNavigate();
@@ -138,6 +154,8 @@ export function ConversationPanel({ onOpenProfile, onOpenCall, onOpenSearch, det
     startDmCall(conversation.id, video);
   }
   const detailsLabel = t('panel.members');
+  const serverName = isChannel ? servers.find((server) => server.id === conversation?.serverId)?.name : undefined;
+  const searchPlaceholder = t('panel.searchIn', { name: serverName ?? title });
 
   return (
     <main
@@ -148,7 +166,7 @@ export function ConversationPanel({ onOpenProfile, onOpenCall, onOpenSearch, det
     >
       {conversation ? (
         <>
-          <header data-avatar-hover className="flex h-header flex-none items-center gap-2 bg-surface-panel px-2 md:border-b md:border-border-subtle md:px-4">
+          <header data-avatar-hover className="flex h-header flex-none items-center gap-2 bg-surface-panel px-2 md:border-b md:border-border-subtle md:px-4 lg:pr-2">
             <Button type="button" variant="ghost" size="icon" aria-label={t('panel.back')} onClick={goBackToList} className="md:hidden">
               <ArrowLeftIcon size={20} />
             </Button>
@@ -223,9 +241,10 @@ export function ConversationPanel({ onOpenProfile, onOpenCall, onOpenSearch, det
                   <UserCircleIcon size={24} weight="fill" />
                 </HeaderIcon>
               )}
-              <HeaderIcon label={t('panel.search')} onClick={onOpenSearch} className="max-md:hidden">
+              <HeaderIcon label={t('panel.search')} onClick={onOpenSearch} className="max-md:hidden lg:hidden">
                 <MagnifyingGlassIcon size={24} />
               </HeaderIcon>
+              <HeaderSearchField placeholder={searchPlaceholder} onClick={onOpenSearch} />
             </div>
             {(activeCallConversationId || !isChannel) && !inThisDmCall && <Button type="button" variant="ghost" size="icon" aria-label={activeCallConversationId && activeCallConversationId !== conversation.id ? t('panel.returnToActiveCall') : callBlockedReason ?? callActionLabel} disabled={!activeCallConversationId && !!callBlockedReason} onClick={() => { if (activeCallConversationId && activeCallConversationId !== conversation.id) onOpenCall(activeCallConversationId); else startThisCall(false); }} className="flex-none text-green md:hidden"><PhoneIcon size={22} weight="fill" /></Button>}
             {!isChannel && !inThisCall && !callBlockedReason && !activeCallConversationId && <Button type="button" variant="ghost" size="icon" aria-label={t('panel.videoCall')} onClick={() => startThisCall(true)} className="flex-none md:hidden"><VideoCameraIcon size={22} weight="fill" /></Button>}
@@ -244,6 +263,8 @@ export function ConversationPanel({ onOpenProfile, onOpenCall, onOpenSearch, det
               </DropdownMenuContent>
             </DropdownMenu>
           </header>
+          <div className="flex min-h-0 flex-1">
+          <div className="flex min-h-0 min-w-0 flex-1 flex-col">
           {callJoinError && (
             <div role="alert" className="mx-3 mt-3 flex items-start gap-2 rounded-md border border-red/40 bg-bg-floating px-3 py-2 text-label text-text-secondary shadow-popover md:mx-4">
               <PhoneIcon size={20} className="mt-0.5 flex-none text-red" />
@@ -256,6 +277,9 @@ export function ConversationPanel({ onOpenProfile, onOpenCall, onOpenSearch, det
           )}
           <div className={inThisDmCall ? 'flex min-h-[220px] min-w-0 flex-1 flex-col' : 'contents'}>
             <ChatSurface conversationId={conversation.id} onOpenProfile={onOpenProfile} />
+          </div>
+          </div>
+          {aside}
           </div>
         </>
       ) : (

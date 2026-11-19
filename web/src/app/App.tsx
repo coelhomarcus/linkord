@@ -384,6 +384,7 @@ function Shell() {
                   onOpenDetails={() => { setDetails(true); }}
                   onToggleDetails={() => { setDetails(directShown ? !(membersVisible || profileVisible) : !memberListOpen); }}
                   onToggleMedia={() => { setMediaOpen(!mediaVisible); }}
+                  aside={membersVisible && currentServer && wide ? <MemberListPanel server={currentServer} onOpenProfile={openProfile} /> : null}
                 />
               )}
             />
@@ -397,7 +398,6 @@ function Shell() {
             <Route path="*" element={<Navigate to={ROUTES.home} replace />} />
           </Routes>
           </div>
-          {membersVisible && currentServer && wide && <MemberListPanel server={currentServer} onOpenProfile={openProfile} />}
           {profilePanelUser && <DirectProfilePanel user={profilePanelUser} onOpenProfile={openProfile} />}
           </div>
           {inCall && <ParticipantAudioLayer participantIds={callIds} />}
