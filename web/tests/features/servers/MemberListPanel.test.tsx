@@ -15,6 +15,7 @@ vi.mock('@/features/friends/ProfileActions', () => ({ ProfileActions: () => null
 vi.mock('@/shared/api/api', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@/shared/api/api')>()),
   fetchUserProfile: vi.fn(),
+  fetchProfileDetails: vi.fn(),
 }));
 
 vi.mock('@/features/servers/serversApi', async (importOriginal) => ({
@@ -38,12 +39,14 @@ const server: ServerSummary = {
 const member = (id: string, name: string, roleIds: string[] = []): ServerMemberEntry => ({
   user: { id, username: id, displayName: name, avatar: '', avatarColor: '' }, roleIds, isOwner: id === 'u-ana', at: '',
 });
+const nothingInCommon = { memberSince: '2024-01-01T00:00:00.000Z', friendsSince: null, mutualFriends: { items: [], total: 0 }, mutualServers: { items: [], total: 0 } };
 const members = [member('u-ana', 'Ana', ['Mods']), member('u-bia', 'Bia', ['Quiet']), member('u-caio', 'Caio', ['Mods'])];
 
 beforeEach(() => {
   vi.clearAllMocks();
   mocked.fetchAllServerMembers.mockResolvedValue(members);
   mockedApi.fetchUserProfile.mockRejectedValue(new Error('not stubbed'));
+  mockedApi.fetchProfileDetails.mockResolvedValue(nothingInCommon);
 });
 
 describe('groupMembers', () => {
@@ -156,7 +159,30 @@ describe('MemberListPanel', () => {
     renderWithRoom(<MemberListPanel server={server} onOpenProfile={onOpenProfile} />);
     await user.click(await screen.findByRole('button', { name: 'Abrir perfil de Bia' }));
     await user.click(screen.getByRole('button', { name: 'Ver perfil completo' }));
-    expect(onOpenProfile).toHaveBeenCalledWith('u-bia');
+    expect(onOpenProfile).toHaveBeenCalledWith('u-bia', undefined);
+  });
+
+  it('sums up what you have in common under the name and opens it on the full profile', async () => {
+    const user = userEvent.setup();
+    mockedApi.fetchProfileDetails.mockResolvedValue({
+      ...nothingInCommon,
+      mutualFriends: { items: [member('u-caio', 'Caio').user, member('u-dan', 'Dan').user], total: 6 },
+      mutualServers: { items: [{ id: 's1', name: 'Squad', icon: '', memberCount: 3 }], total: 2 },
+    });
+    const onOpenProfile = vi.fn();
+    renderWithRoom(<MemberListPanel server={server} onOpenProfile={onOpenProfile} />, { state: asMe('u-me') });
+    await user.click(await screen.findByRole('button', { name: 'Abrir perfil de Bia' }));
+    expect(await screen.findByRole('button', { name: '6 amigos mútuos' })).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: '2 servidores em comum' }));
+    expect(mockedApi.fetchProfileDetails).toHaveBeenCalledWith('u-bia', expect.anything());
+    expect(onOpenProfile).toHaveBeenCalledWith('u-bia', 'common');
+  });
+
+  it('shows no common ground on your own compact profile', async () => {
+    const user = userEvent.setup();
+    renderWithRoom(<MemberListPanel server={server} onOpenProfile={vi.fn()} />, { state: asMe('u-bia') });
+    await user.click(await screen.findByRole('button', { name: 'Abrir perfil de Bia' }));
+    expect(mockedApi.fetchProfileDetails).not.toHaveBeenCalled();
   });
 
   it('fetches nothing while kept mounted behind a closed sheet', () => {
