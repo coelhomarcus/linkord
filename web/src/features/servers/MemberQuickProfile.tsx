@@ -7,12 +7,14 @@ import { Button } from '@/shared/ui/primitives/button';
 import { DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuGroup, DropdownMenuLabel, DropdownMenuTrigger } from '@/shared/ui/primitives/dropdown-menu';
 import { Input } from '@/shared/ui/primitives/input';
 import { Popover, PopoverContent, PopoverTrigger } from '@/shared/ui/primitives/popover';
+import { Skeleton, SkeletonGroup } from '@/shared/ui/primitives/skeleton';
 import type { ServerSummary } from '@/shared/types/protocol';
 import { ProfileActions } from '@/features/friends/ProfileActions';
 import { BANNER_DISPLAY_ASPECT_RATIO, bannerStyle } from '@/features/profile/profileLinks';
 import { rememberProfilePreview, useUserProfile } from '@/features/profile/profileCache';
 import { ProfileMutuals } from '@/features/profile/ProfileMutuals';
 import type { ProfileTab } from '@/features/profile/ProfileSidebar';
+import { useProfileDetails } from '@/features/profile/useProfileDetails';
 import { useRoom, useRoomState } from '@/state/RoomContext';
 import type { PublicUser } from '@/shared/types/protocol';
 import { cn } from '@/shared/lib/utils';
@@ -35,9 +37,35 @@ interface MemberQuickProfileProps {
   onRoleIdsChange: (roleIds: string[]) => void;
 }
 
+/** The whole card's shape until what it shows was read once, so it lands in
+ * one piece rather than its lines popping in one after another. */
+function QuickProfileSkeleton({ label }: { label: string }) {
+  return (
+    <SkeletonGroup label={label}>
+      <div style={{ aspectRatio: BANNER_DISPLAY_ASPECT_RATIO }}><Skeleton className="size-full rounded-none" /></div>
+      <div className="px-4 pb-4">
+        <div className="-mt-9 w-fit rounded-full bg-bg-modal p-1"><Skeleton shape="circle" className="size-[72px]" /></div>
+        <Skeleton shape="text" className="mt-3 h-5 w-36" />
+        <Skeleton shape="text" className="mt-2 h-3.5 w-24" />
+        <Skeleton shape="text" className="mt-3 h-4 w-56" />
+        <div className="mt-5 flex flex-col gap-2">
+          <Skeleton shape="text" className="w-10" />
+          <Skeleton shape="text" className="w-full" />
+          <Skeleton shape="text" className="w-2/3" />
+        </div>
+        <div className="mt-5 flex gap-1.5">
+          <Skeleton shape="circle" className="h-6 w-24" />
+          <Skeleton shape="circle" className="h-6 w-16" />
+        </div>
+      </div>
+    </SkeletonGroup>
+  );
+}
+
 export function MemberQuickProfile({ server, member, currentUser, offline, open, onOpenChange, onOpenProfile, onRoleIdsChange }: MemberQuickProfileProps) {
   const { t } = useTranslation('servers');
   const { t: tChat } = useTranslation('chat');
+  const { t: tProfile } = useTranslation('profile');
   const { conversations, friendUserIds, openDirect, sendChatMessage } = useRoom('conversations', 'friendUserIds', 'openDirect', 'sendChatMessage');
   const state = useRoomState('me', 'joined');
   const [savingRoleId, setSavingRoleId] = useState<string | null>(null);
@@ -51,7 +79,14 @@ export function MemberQuickProfile({ server, member, currentUser, offline, open,
   // the members endpoint only carries the minimal social fields: a member outside
   // the room's known users gets banner and bio from the shared profile cache,
   // at once when seen before, read again each time the card opens
-  const fetched = useUserProfile(open && !currentUser ? member.user.id : null).value;
+  const profileRead = useUserProfile(open && !currentUser ? member.user.id : null);
+  const fetched = profileRead.value;
+  const isMe = user.id === state.me.userId;
+  const detailsRead = useProfileDetails(open && !isMe ? user.id : null);
+  // a preview seeded from a list row (no bio, no banner) still waits for the real read;
+  // a failed read shows the card without what it could not read
+  const profileReady = !!currentUser || (profileRead.status !== 'loading' && !(profileRead.entry?.local && profileRead.entry.fetching));
+  const ready = profileReady && (isMe || detailsRead.status !== 'loading');
   const banner = currentUser?.banner || fetched?.banner || '';
   const bio = currentUser?.bio || fetched?.bio || '';
   const avatarPoster = 'avatarPoster' in user && typeof user.avatarPoster === 'string' ? user.avatarPoster : undefined;
@@ -132,6 +167,7 @@ export function MemberQuickProfile({ server, member, currentUser, offline, open,
         {member.isOwner && <CrownIcon size={14} weight="fill" className="flex-none text-yellow" aria-label={t('members.owner')} />}
       </PopoverTrigger>
       <PopoverContent side="left" align="start" sideOffset={8} className="w-[min(24rem,calc(100vw-1rem))] gap-0 overflow-hidden rounded-xl border-border-default bg-bg-modal p-0">
+        {ready ? (<>
         <div className="relative w-full" style={{ ...bannerStyle({ id: user.id, avatarColor: user.avatarColor, banner }), aspectRatio: BANNER_DISPLAY_ASPECT_RATIO }}>
           <button
             type="button"
@@ -170,8 +206,8 @@ export function MemberQuickProfile({ server, member, currentUser, offline, open,
               <p className="truncate text-label text-text-secondary">@{user.username}</p>
             </div>
           </div>
-          {user.id !== state.me.userId && (
-            <ProfileMutuals userId={user.id} onOpen={() => openFullProfile('common')} ringClassName="ring-bg-modal" className="mt-2" />
+          {!isMe && (
+            <ProfileMutuals details={detailsRead.details} onOpen={() => openFullProfile('common')} ringClassName="ring-bg-modal" className="mt-2" />
           )}
 
           <UserActivityCard userId={user.id} className="mt-4" />
@@ -239,6 +275,7 @@ export function MemberQuickProfile({ server, member, currentUser, offline, open,
           )}
           {roleError && <p role="alert" className="mt-2 text-caption text-red-text">{t('members.roleUpdateFailed')}</p>}
         </div>
+        </>) : <QuickProfileSkeleton label={tProfile('modal.loading')} />}
       </PopoverContent>
     </Popover>
   );

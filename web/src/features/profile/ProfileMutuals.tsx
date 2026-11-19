@@ -1,24 +1,24 @@
 import { useTranslation } from 'react-i18next';
 
 import { Avatar } from '@/shared/Avatar';
+import type { ProfileDetails } from '@/shared/api/api';
 import { cn } from '@/shared/lib/utils';
-import { useProfileDetails } from './useProfileDetails';
 
 const SHOWN_AVATARS = 3;
 const LINK = 'flex min-w-0 items-center gap-1.5 rounded-sm hover:text-text-primary hover:underline focus-ring';
 
 /** "6 amigos mútuos • 2 servidores em comum" under a compact profile's name,
  * the friends led by a few of their avatars; each count opens what you have
- * in common. Nothing while it loads or when there is nothing in common. */
-export function ProfileMutuals({ userId, onOpen, ringClassName, className }: {
-  userId: string;
+ * in common. Nothing when there is nothing in common (or nothing read). */
+export function ProfileMutuals({ details, onOpen, ringClassName, className }: {
+  /** the caller reads it, so the whole card can wait for it */
+  details: ProfileDetails | null;
   onOpen: () => void;
   /** the surface behind the avatars, so their overlap reads as a cutout */
   ringClassName: string;
   className?: string;
 }) {
   const { t } = useTranslation('profile');
-  const { details } = useProfileDetails(userId);
   const friends = details?.mutualFriends;
   const servers = details?.mutualServers;
   const hasFriends = !!friends && friends.total > 0;

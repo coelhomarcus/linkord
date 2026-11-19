@@ -31,28 +31,28 @@ beforeEach(() => {
 });
 
 describe('DirectProfilePanel', () => {
-  it('shows the status and custom status of someone online', () => {
+  it('shows the status and custom status of someone online', async () => {
     renderWithRoom(<MemoryRouter><DirectProfilePanel user={bea} onOpenProfile={vi.fn()} /></MemoryRouter>, {
       onlineUserIds: new Set(['u-bea']),
       presenceByUser: new Map([['u-bea', { status: 'dnd', customStatus: { emoji: '🎮', text: 'jogando Elden Ring', expiresAt: null } }]]),
     });
-    expect(screen.getByRole('img', { name: 'Não perturbe' })).toBeInTheDocument();
+    expect(await screen.findByRole('img', { name: 'Não perturbe' })).toBeInTheDocument();
     // as the bubble beside the avatar, read-only: it is someone else's
     expect(screen.getByText('jogando Elden Ring').closest('[data-custom-status-bubble]')).not.toBeNull();
     expect(screen.queryByRole('button', { name: 'Editar status personalizado' })).not.toBeInTheDocument();
   });
 
-  it('shows someone offline without their custom status', () => {
+  it('shows someone offline without their custom status', async () => {
     renderWithRoom(<MemoryRouter><DirectProfilePanel user={bea} onOpenProfile={vi.fn()} /></MemoryRouter>, {
       presenceByUser: new Map([['u-bea', { status: 'online', customStatus: { emoji: '', text: 'stale', expiresAt: null } }]]),
     });
-    expect(screen.getByRole('img', { name: 'Offline' })).toBeInTheDocument();
+    expect(await screen.findByRole('img', { name: 'Offline' })).toBeInTheDocument();
     expect(screen.queryByText('stale')).not.toBeInTheDocument();
   });
 
   it('shows who the DM is with, since when, and what you share', async () => {
     renderWithRoom(<MemoryRouter><DirectProfilePanel user={bea} onOpenProfile={vi.fn()} /></MemoryRouter>, { onlineUserIds: new Set(['u-bea']) });
-    expect(screen.getByRole('heading', { name: 'Bea' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'Bea' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Bio' })).toBeInTheDocument();
     expect(screen.getByText('oi, eu sou a Bea')).toBeInTheDocument();
     expect(screen.getByText('bea').parentElement?.querySelector('svg')).toBeInTheDocument();
@@ -78,7 +78,7 @@ describe('DirectProfilePanel', () => {
     const onOpenProfile = vi.fn();
     renderWithRoom(<MemoryRouter><DirectProfilePanel user={bea} onOpenProfile={onOpenProfile} /></MemoryRouter>);
     const user = userEvent.setup();
-    await user.click(screen.getByRole('button', { name: 'Ver perfil completo' }));
+    await user.click(await screen.findByRole('button', { name: 'Ver perfil completo' }));
     expect(onOpenProfile).toHaveBeenCalledWith('u-bea');
   });
 
@@ -90,5 +90,28 @@ describe('DirectProfilePanel', () => {
     expect(onOpenProfile).toHaveBeenLastCalledWith('u-bea', 'common');
     await user.click(screen.getByRole('button', { name: '1 servidor em comum' }));
     expect(onOpenProfile).toHaveBeenLastCalledWith('u-bea', 'common');
+  });
+
+  it('stays a skeleton as a whole until its details are read, then shows everything at once', async () => {
+    let answer!: (details: Awaited<ReturnType<typeof api.fetchProfileDetails>>) => void;
+    mocked.fetchProfileDetails.mockReturnValue(new Promise((resolve) => { answer = resolve; }));
+    renderWithRoom(<MemoryRouter><DirectProfilePanel user={bea} onOpenProfile={vi.fn()} /></MemoryRouter>);
+    expect(screen.getByRole('status')).toHaveTextContent('Carregando perfil…');
+    expect(screen.queryByRole('heading', { name: 'Bea' })).not.toBeInTheDocument();
+    expect(screen.queryByText('oi, eu sou a Bea')).not.toBeInTheDocument();
+
+    answer({ memberSince: '2023-05-04T12:00:00.000Z', friendsSince: null, mutualFriends: { items: [], total: 0 }, mutualServers: { items: [], total: 1 } });
+    expect(await screen.findByRole('heading', { name: 'Bea' })).toBeInTheDocument();
+    expect(screen.getByText('oi, eu sou a Bea')).toBeInTheDocument();
+    expect(screen.getByText('4 de mai. de 2023')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '1 servidor em comum' })).toBeInTheDocument();
+    expect(screen.queryByText('Carregando perfil…')).not.toBeInTheDocument();
+  });
+
+  it('shows the profile without its details when they cannot be read', async () => {
+    mocked.fetchProfileDetails.mockRejectedValue(new Error('offline'));
+    renderWithRoom(<MemoryRouter><DirectProfilePanel user={bea} onOpenProfile={vi.fn()} /></MemoryRouter>);
+    expect(await screen.findByRole('heading', { name: 'Bea' })).toBeInTheDocument();
+    expect(screen.queryByText('Membro desde')).not.toBeInTheDocument();
   });
 });

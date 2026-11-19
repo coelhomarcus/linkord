@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { screen, waitFor } from '@testing-library/react';
+import { act, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { renderWithRoom } from '@tests/fixtures/roomContextFixture';
 import { groupMembers, MemberListPanel } from '@/features/servers/MemberListPanel';
@@ -176,6 +176,29 @@ describe('MemberListPanel', () => {
     await user.click(screen.getByRole('button', { name: '2 servidores em comum' }));
     expect(mockedApi.fetchProfileDetails).toHaveBeenCalledWith('u-bia', expect.anything());
     expect(onOpenProfile).toHaveBeenCalledWith('u-bia', 'common');
+  });
+
+  it('keeps the compact profile a skeleton until both reads land, then shows it whole', async () => {
+    const user = userEvent.setup();
+    let answerProfile!: (value: Awaited<ReturnType<typeof api.fetchUserProfile>>) => void;
+    let answerDetails!: (value: Awaited<ReturnType<typeof api.fetchProfileDetails>>) => void;
+    mockedApi.fetchUserProfile.mockReturnValue(new Promise((resolve) => { answerProfile = resolve; }));
+    mockedApi.fetchProfileDetails.mockReturnValue(new Promise((resolve) => { answerDetails = resolve; }));
+    renderWithRoom(<MemberListPanel server={server} onOpenProfile={vi.fn()} />, { state: asMe('u-me') });
+    await user.click(await screen.findByRole('button', { name: 'Abrir perfil de Bia' }));
+    expect(screen.getByText('Carregando perfil…')).toBeInTheDocument();
+    expect(screen.queryByText('@u-bia')).not.toBeInTheDocument();
+
+    answerProfile({ user: { ...member('u-bia', 'Bia').user, banner: '', bio: 'plays too much chess', profileLinks: [], role: 'user' } });
+    await act(async () => {});
+    expect(screen.getByText('Carregando perfil…')).toBeInTheDocument();
+    expect(screen.queryByText('plays too much chess')).not.toBeInTheDocument();
+
+    answerDetails({ ...nothingInCommon, mutualServers: { items: [], total: 2 } });
+    expect(await screen.findByText('plays too much chess')).toBeInTheDocument();
+    expect(screen.getByText('@u-bia')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '2 servidores em comum' })).toBeInTheDocument();
+    expect(screen.queryByText('Carregando perfil…')).not.toBeInTheDocument();
   });
 
   it('shows no common ground on your own compact profile', async () => {
