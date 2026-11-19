@@ -29,5 +29,6 @@ describe('useInstall in the desktop app', () => {
     window.linkordDesktop = { platform: 'win32', version: '0.1.0' };
     const { result } = renderHook(() => useInstall());
     expect(result.current.method).toBeNull();
+    expect(result.current.installed).toBe(false);
   });
 });

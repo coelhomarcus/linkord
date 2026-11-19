@@ -1,4 +1,4 @@
-import { ArrowUpIcon, MicrophoneIcon, StopIcon, TrashIcon, WarningIcon } from '@phosphor-icons/react';
+import { ArrowUpIcon, MicrophoneIcon, StopIcon, TrashIcon, WarningIcon } from '@/shared/ui/icons';
 import { useEffect, useRef } from 'react';
 import type { KeyboardEvent as ReactKeyboardEvent } from 'react';
 import { useTranslation } from 'react-i18next';

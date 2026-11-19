@@ -1,4 +1,4 @@
-import { XIcon } from '@phosphor-icons/react';
+import { XIcon } from '@/shared/ui/icons';
 import { useTranslation } from 'react-i18next';
 import { cn } from '@/shared/lib/utils';
 

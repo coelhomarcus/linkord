@@ -1,4 +1,4 @@
-import { PencilSimpleIcon, SpeakerHighIcon, TrashIcon, UploadSimpleIcon } from '@phosphor-icons/react';
+import { PencilSimpleIcon, SpeakerHighIcon, TrashIcon, UploadSimpleIcon } from '@/shared/ui/icons';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 

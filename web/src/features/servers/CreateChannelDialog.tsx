@@ -1,4 +1,4 @@
-import { HashIcon, SpeakerHighIcon } from '@phosphor-icons/react';
+import { HashIcon, SpeakerHighIcon } from '@/shared/ui/icons';
 import { useState } from 'react';
 import { useNavigate } from 'react-router';
 import { useTranslation } from 'react-i18next';

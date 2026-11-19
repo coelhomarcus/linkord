@@ -1,4 +1,4 @@
-import { TrayIcon, ChatCircleIcon, PhoneIcon, SquaresFourIcon, UserCircleIcon } from '@phosphor-icons/react';
+import { TrayIcon, ChatCircleIcon, PhoneIcon, SquaresFourIcon, UserCircleIcon } from '@/shared/ui/icons';
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Avatar } from '@/shared/Avatar';

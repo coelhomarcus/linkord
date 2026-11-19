@@ -31,12 +31,12 @@ export function AdminTableSkeleton({ columns, identity = false, rows = ROWS }: {
   const cells = Array.from({ length: columns }, (_, index) => index);
   const grid = { gridTemplateColumns: `minmax(13rem, 2fr) repeat(${columns - 1}, minmax(0, 1fr))` };
   return (
-    <div className="overflow-hidden rounded-xl border border-border-subtle">
-      <div style={grid} className="grid gap-4 border-b border-border-subtle bg-fill-subtle px-4 py-2.5 text-label">
+    <div className="overflow-hidden rounded-xl border border-border-divider">
+      <div style={grid} className="grid gap-4 border-b border-border-divider bg-fill-subtle px-4 py-2.5 text-label">
         {cells.map((index) => <span key={index} className={LINE}><Skeleton shape="text" className={index === 0 ? 'w-20' : width(index)} /></span>)}
       </div>
       {Array.from({ length: rows }, (_, row) => (
-        <div key={row} style={grid} className="grid h-14 items-center gap-4 border-b border-border-subtle px-4 text-label last:border-b-0">
+        <div key={row} style={grid} className="grid h-14 items-center gap-4 border-b border-border-divider px-4 text-label last:border-b-0">
           {cells.map((index) => index === 0 && identity
             ? <Identity key={index} />
             : <span key={index} className={LINE}><Skeleton shape="text" className={index === 0 ? 'w-36' : width(index + row)} /></span>)}
@@ -49,7 +49,7 @@ export function AdminTableSkeleton({ columns, identity = false, rows = ROWS }: {
 /** The compact layout: AdminStackedList's rows, an identity over a line of badges. */
 export function AdminStackedSkeleton({ rows = ROWS }: { rows?: number }) {
   return (
-    <div className="flex flex-col divide-y divide-border-subtle rounded-xl border border-border-subtle">
+    <div className="flex flex-col divide-y divide-border-divider rounded-xl border border-border-divider">
       {Array.from({ length: rows }, (_, row) => (
         <div key={row} className="flex flex-col gap-2 p-3">
           <Identity />
@@ -67,7 +67,7 @@ export function AdminStackedSkeleton({ rows = ROWS }: { rows?: number }) {
 /** AuditList's entries: an action with its time, then who did it. */
 export function AuditListSkeleton({ rows = 4 }: { rows?: number }) {
   return (
-    <div className="flex flex-col divide-y divide-border-subtle">
+    <div className="flex flex-col divide-y divide-border-divider">
       {Array.from({ length: rows }, (_, row) => (
         <div key={row} className="flex flex-col gap-1 py-3.5 first:pt-0 last:pb-0">
           <div className="flex items-center gap-2 text-label">
@@ -87,7 +87,7 @@ export function AdminDetailSkeleton({ tabs = true }: { tabs?: boolean }) {
   return (
     <div className="flex flex-col gap-6">
       <span className={cn(LINE, 'text-label')}><Skeleton shape="text" className="w-28" /></span>
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-3 rounded-xl border border-border-subtle bg-fill-subtle p-4">
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-3 rounded-xl border border-border-divider bg-fill-subtle p-4">
         <Skeleton shape="circle" className="size-16" />
         <div className="min-w-0 flex-1 basis-60">
           <span className={cn(LINE, 'text-heading')}><Skeleton shape="text" className="h-4 w-48" /></span>

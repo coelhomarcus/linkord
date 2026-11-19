@@ -1,12 +1,11 @@
-import { FilesIcon } from '@phosphor-icons/react';
-import type { Icon } from '@phosphor-icons/react';
+import { FilesIcon, type IconComponent } from '@/shared/ui/icons';
 
 import { presentFile } from '@/features/media/filePresentation';
 
 /** What a file drag tells before the drop: how many files and what kind. */
 export interface DragSummary {
   count: number;
-  icon: Icon;
+  icon: IconComponent;
   iconBgClassName: string;
   iconTextClassName: string;
 }

@@ -1,6 +1,6 @@
 import { useRef, useState, type KeyboardEvent, type ReactElement } from 'react';
 import { useTranslation } from 'react-i18next';
-import { CaretRightIcon, IdentificationBadgeIcon, PencilSimpleIcon } from '@phosphor-icons/react';
+import { CaretRightIcon, IdentificationBadgeIcon, PencilSimpleIcon } from '@/shared/ui/icons';
 import { Popover, PopoverContent, PopoverTrigger } from '@/shared/ui/primitives/popover';
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuRadioGroup, DropdownMenuRadioItem, DropdownMenuTrigger,

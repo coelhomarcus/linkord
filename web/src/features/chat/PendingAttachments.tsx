@@ -1,5 +1,5 @@
 import { i18n } from '@/shared/i18n/init';
-import { WarningCircleIcon } from '@phosphor-icons/react';
+import { WarningCircleIcon } from '@/shared/ui/icons';
 
 import { DocumentAttachmentCard } from '@/features/media/DocumentAttachmentCard';
 import { FILE_CARD_MAX_WIDTH } from '@/features/media/FileAttachmentCard';

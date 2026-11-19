@@ -1,6 +1,5 @@
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useInstall } from '@/features/install/installPrompt';
 import { hasDesktopSettings } from './useDesktopSettings';
 import { categoryVisible, findCategory } from './settingsCatalog';
 import { SETTINGS_SEARCH_INDEX } from './settingsSearchIndex';
@@ -24,12 +23,11 @@ export interface SettingsSearchResult {
 export function useSettingsSearch(isAdmin: boolean) {
   const { t } = useTranslation('settings');
   const [query, setQuery] = useState('');
-  const canInstall = useInstall().method !== null;
   const desktop = hasDesktopSettings();
 
   const visibleEntries = useMemo(
-    () => SETTINGS_SEARCH_INDEX.filter((entry) => categoryVisible(findCategory(entry.categoryId), isAdmin, desktop) && (isAdmin || !entry.adminOnly) && (canInstall || !entry.requiresInstall)),
-    [isAdmin, canInstall, desktop],
+    () => SETTINGS_SEARCH_INDEX.filter((entry) => categoryVisible(findCategory(entry.categoryId), isAdmin, desktop) && (isAdmin || !entry.adminOnly)),
+    [isAdmin, desktop],
   );
 
   const results = useMemo((): SettingsSearchResult[] => {

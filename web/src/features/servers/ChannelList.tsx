@@ -1,7 +1,4 @@
-import {
-  BellSlashIcon, CaretDownIcon, CaretRightIcon, ChecksIcon, FolderPlusIcon, GearSixIcon, HashIcon, PlusCircleIcon, PlusIcon, SignOutIcon,
-  SpeakerHighIcon, UserPlusIcon,
-} from '@phosphor-icons/react';
+import { BellSlashIcon, CaretDownIcon, CaretRightIcon, ChecksIcon, FolderPlusIcon, GearSixIcon, HashIcon, PlusCircleIcon, PlusIcon, SignOutIcon, SpeakerHighIcon, UserPlusIcon } from '@/shared/ui/icons';
 import { useRef, useState } from 'react';
 import type { DragEvent } from 'react';
 import { useNavigate } from 'react-router';

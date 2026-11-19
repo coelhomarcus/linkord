@@ -1,13 +1,12 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { InstallSettingsSection } from '@/features/install/InstallSettingsSection';
 import { fetchPushShowContent, updatePushShowContent } from '@/features/notifications/pushPreferences';
 import { useRoom } from '@/state/RoomContext';
 import { isPushSubscriptionActive, notificationPermissionState } from '@/shared/notifications';
 import type { NotificationPermissionState } from '@/shared/notifications';
 import { disablePush, enablePush, preparePush, pushSupported, type PushSetup } from '@/shared/pushNotifications';
 import { isDesktopApp } from '@/shared/desktop';
-import { MicrophoneIcon } from '@phosphor-icons/react';
+import { MicrophoneIcon } from '@/shared/ui/icons';
 import { ROUTES } from '@/shared/lib/routes';
 import { playSound } from '@/shared/sounds';
 import type { SoundName } from '@/shared/sounds';
@@ -223,7 +222,6 @@ export function NotificationsSettings() {
         </div>
       </SettingsSection>
 
-      <InstallSettingsSection title={t('catalog.sections.install')} />
     </SettingsSections>
   );
 }

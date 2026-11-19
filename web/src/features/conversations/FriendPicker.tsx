@@ -1,4 +1,4 @@
-import { CheckIcon, MagnifyingGlassIcon } from '@phosphor-icons/react';
+import { CheckIcon, MagnifyingGlassIcon } from '@/shared/ui/icons';
 import { useCallback, useState } from 'react';
 import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';

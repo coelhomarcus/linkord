@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef } from 'react';
 import { useSearchParams } from 'react-router';
 import { useTranslation } from 'react-i18next';
-import { UsersIcon } from '@phosphor-icons/react';
+import { UsersIcon } from '@/shared/ui/icons';
 import { useElementWidth } from '@/shared/hooks/useElementWidth';
 import { parseFriendsView } from '@/shared/lib/routes';
 import { useMediaQuery } from '@/shared/hooks/useMediaQuery';

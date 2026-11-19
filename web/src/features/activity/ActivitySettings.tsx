@@ -1,4 +1,4 @@
-import { AppWindowIcon, GameControllerIcon } from '@phosphor-icons/react';
+import { AppWindowIcon, GameControllerIcon } from '@/shared/ui/icons';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useRoom } from '@/state/RoomContext';

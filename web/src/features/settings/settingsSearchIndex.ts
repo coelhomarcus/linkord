@@ -10,14 +10,12 @@ export interface SearchEntry {
    * settings locale files. */
   searchKey: SearchKey;
   adminOnly?: boolean;
-  /** Listed only where the page has this section at all (installing is not possible everywhere). */
-  requiresInstall?: boolean;
 }
 
 type SearchKey =
   | 'accountInfo' | 'email' | 'session' | 'deleteAccount' | 'dataExport' | 'password' | 'twoFactor' | 'loginAlerts' | 'sessions' | 'connections' | 'blocked' | 'presence'
   | 'theme' | 'voice' | 'inputProfile' | 'video' | 'calls' | 'uploads'
-  | 'desktopNotifications' | 'sounds' | 'language' | 'timeFormat' | 'adminArea' | 'install'
+  | 'desktopNotifications' | 'sounds' | 'language' | 'timeFormat' | 'adminArea' | 'desktopDownload' | 'webApp'
   | 'desktopStartup' | 'desktopWindow' | 'desktopUpdates' | 'activity';
 
 // One entry per SettingsSection that exists today (grep '<SettingsSection id='
@@ -45,9 +43,10 @@ export const SETTINGS_SEARCH_INDEX: SearchEntry[] = [
   { categoryId: 'chat', sectionId: 'uploads', searchKey: 'uploads' },
   { categoryId: 'notifications', sectionId: 'overview', searchKey: 'desktopNotifications' },
   { categoryId: 'notifications', sectionId: 'sounds', searchKey: 'sounds' },
-  { categoryId: 'notifications', sectionId: 'install', searchKey: 'install', requiresInstall: true },
   { categoryId: 'language', sectionId: 'language', searchKey: 'language' },
   { categoryId: 'language', sectionId: 'time-format', searchKey: 'timeFormat' },
+  { categoryId: 'downloads', sectionId: 'windows-app', searchKey: 'desktopDownload' },
+  { categoryId: 'downloads', sectionId: 'web-app', searchKey: 'webApp' },
   { categoryId: 'desktop', sectionId: 'desktop-startup', searchKey: 'desktopStartup' },
   { categoryId: 'desktop', sectionId: 'desktop-window', searchKey: 'desktopWindow' },
   { categoryId: 'desktop', sectionId: 'desktop-updates', searchKey: 'desktopUpdates' },

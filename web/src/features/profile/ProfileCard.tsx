@@ -1,10 +1,10 @@
-import { ArrowSquareOutIcon, AtIcon, CameraIcon, CircleNotchIcon, PencilSimpleIcon, SealCheckIcon, TrashIcon, UploadSimpleIcon } from '@phosphor-icons/react';
+import { ArrowSquareOutIcon, AtIcon, CameraIcon, CircleNotchIcon, PencilSimpleIcon, SealCheckIcon, TrashIcon, UploadSimpleIcon } from '@/shared/ui/icons';
 import { useLayoutEffect, useRef } from 'react';
 import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { Avatar } from '@/shared/Avatar';
-import { BANNER_ASPECT_RATIO, BrandIcon, bannerStyle, linkInfo } from '@/features/profile/profileLinks';
+import { BANNER_DISPLAY_ASPECT_RATIO, BrandIcon, bannerStyle, linkInfo } from '@/features/profile/profileLinks';
 import type { LinkInfo } from '@/features/profile/profileLinks';
 import { MAX_DISPLAY_NAME_LEN } from '@/shared/lib/displayName';
 import { MAX_PROFILE_BIO_LEN } from '@/shared/types/protocol';
@@ -111,7 +111,7 @@ export function ProfileCard({
   return (
     <div className={cn('overflow-hidden bg-bg-modal', !bare && 'rounded-lg border border-border-strong', className)}>
       {onBannerUpload ? (
-        <div className="group relative w-full" style={{ ...bannerStyle(user), aspectRatio: BANNER_ASPECT_RATIO }}>
+        <div className="group relative w-full" style={{ ...bannerStyle(user), aspectRatio: BANNER_DISPLAY_ASPECT_RATIO }}>
           <DropdownMenu>
             <DropdownMenuTrigger
               disabled={bannerUploading}
@@ -150,10 +150,10 @@ export function ProfileCard({
           aria-hidden
           onClick={onOpenProfile}
           className="block w-full cursor-pointer"
-          style={{ ...bannerStyle(user), aspectRatio: BANNER_ASPECT_RATIO }}
+          style={{ ...bannerStyle(user), aspectRatio: BANNER_DISPLAY_ASPECT_RATIO }}
         />
       ) : (
-        <div className="w-full" style={{ ...bannerStyle(user), aspectRatio: BANNER_ASPECT_RATIO }} />
+        <div className="w-full" style={{ ...bannerStyle(user), aspectRatio: BANNER_DISPLAY_ASPECT_RATIO }} />
       )}
       <div className="px-6 pb-6">
         <div className="-mt-12 flex items-end gap-3">
@@ -205,10 +205,11 @@ export function ProfileCard({
             {status && <StatusDot status={status} labelled className="absolute right-1 bottom-1 size-5 border-4 text-bg-modal" />}
           </div>
 
-          {/* the bubble straddles the banner's edge, its tail pointing down at the avatar; the colour
-              picker (editor only) sits under it at the avatar's foot */}
-          <div className="flex min-w-0 flex-1 flex-col gap-4 self-stretch pt-6">
-            <CustomStatusBubble custom={customStatus ?? null} onEdit={onEditCustomStatus} onClear={onClearCustomStatus} className="ml-1" />
+          {/* the bubble sits wholly on the banner (tail included, so it never straddles the edge),
+              tucked against the avatar's shoulder with its tail pointing down at it, so it reads as
+              that person's thought; the colour picker (editor only) sits at the avatar's foot */}
+          <div className="flex min-w-0 flex-1 flex-col gap-4 self-stretch">
+            <CustomStatusBubble custom={customStatus ?? null} onEdit={onEditCustomStatus} onClear={onClearCustomStatus} className="-mt-2 -ml-4" />
             {onAvatarColorChange && (
               <div className="mt-auto mb-1">
                 <ProfileColorPicker userId={user.id} value={user.avatarColor} disabled={fieldsDisabled} onChange={onAvatarColorChange} />

@@ -1,4 +1,4 @@
-import { ArrowClockwiseIcon, ArrowSquareOutIcon, CheckCircleIcon } from '@phosphor-icons/react';
+import { ArrowClockwiseIcon, ArrowSquareOutIcon, CheckCircleIcon } from '@/shared/ui/icons';
 import { useTranslation } from 'react-i18next';
 import { desktopApp } from '@/shared/desktop';
 import { Button } from '@/shared/ui/primitives/button';

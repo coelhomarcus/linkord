@@ -1,4 +1,4 @@
-import { PlayIcon, SmileyIcon, StopIcon, UploadSimpleIcon, XIcon } from '@phosphor-icons/react';
+import { PlayIcon, SmileyIcon, StopIcon, UploadSimpleIcon, XIcon } from '@/shared/ui/icons';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { ChangeEvent, FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';

@@ -1,4 +1,4 @@
-import { ArrowLeftIcon } from '@phosphor-icons/react';
+import { ArrowLeftIcon } from '@/shared/ui/icons';
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -108,7 +108,7 @@ export function AdminLayout() {
         />
       )}
       <div className="flex min-h-0 min-w-0 flex-1">
-        {mode === 'wide' && lost === null && <div className="scrollbar-none flex flex-none overflow-y-auto border-r border-border-subtle"><AdminSidebar /></div>}
+        {mode === 'wide' && lost === null && <div className="scrollbar-none flex flex-none overflow-y-auto border-r border-border-divider"><AdminSidebar /></div>}
         {/* a stable gutter: a short page and a scrolling one keep the column in the same place */}
         <main ref={scrollerRef} aria-label={label} className="@container flex min-h-0 min-w-0 flex-1 overflow-y-auto [scrollbar-gutter:stable]">
           {content}

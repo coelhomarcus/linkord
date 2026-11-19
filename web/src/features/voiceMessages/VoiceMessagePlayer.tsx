@@ -1,4 +1,4 @@
-import { PauseIcon, PlayIcon, WarningCircleIcon } from '@phosphor-icons/react';
+import { PauseIcon, PlayIcon, WarningCircleIcon } from '@/shared/ui/icons';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { KeyboardEvent as ReactKeyboardEvent, PointerEvent as ReactPointerEvent } from 'react';
 import { useTranslation } from 'react-i18next';

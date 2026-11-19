@@ -71,6 +71,10 @@
   --color-border-subtle: oklch(100% 0 0 / 0.06);
   --color-border-default: oklch(100% 0 0 / 0.10);
   --color-border-strong: oklch(100% 0 0 / 0.16);
+  /* lines inside a modal, dialog, picker or settings page. The same as the
+     shell's hairline unless a theme's hairline is darker than every surface
+     and would read as black on the modal's */
+  --color-border-divider: var(--color-border-subtle);
   /* sky blue: clear of the destructive red, the online/call green and the
      mention yellow, so it never reads as a status. White text on it: 4.8:1 */
   --color-accent-primary: oklch(55.00% 0.1500 248.00);

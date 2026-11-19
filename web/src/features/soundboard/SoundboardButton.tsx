@@ -1,4 +1,4 @@
-import { CaretDownIcon, ClockIcon, MagnifyingGlassIcon, MusicNotesIcon, PlusIcon, SpeakerHighIcon, SpeakerLowIcon, SpeakerSlashIcon } from '@phosphor-icons/react';
+import { CaretDownIcon, ClockIcon, MagnifyingGlassIcon, MusicNotesIcon, PlusIcon, SpeakerHighIcon, SpeakerLowIcon, SpeakerSlashIcon } from '@/shared/ui/icons';
 import { useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -142,7 +142,7 @@ export function SoundboardButton({ conversationId, callServerId, className, acti
 
         <div className="flex h-80 min-h-0">
           {sections.length > 1 && !query && (
-            <nav aria-label={t('picker.sections')} className="flex w-12 flex-none flex-col items-center gap-1 overflow-y-auto border-r border-border-subtle py-2 [scrollbar-width:none]">
+            <nav aria-label={t('picker.sections')} className="flex w-12 flex-none flex-col items-center gap-1 overflow-y-auto border-r border-border-divider py-2 [scrollbar-width:none]">
               {sections.map((section) => {
                 const server = section.serverId ? serverById.get(section.serverId) : undefined;
                 return (

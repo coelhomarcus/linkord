@@ -1,4 +1,4 @@
-import { CaretRightIcon, InfoIcon } from '@phosphor-icons/react';
+import { CaretRightIcon, InfoIcon } from '@/shared/ui/icons';
 import { useId } from 'react';
 import type { ComponentProps, ReactNode, Ref } from 'react';
 import { AppLink } from '@/shared/ui/app-link';
@@ -41,7 +41,7 @@ export function SettingsSection({ id, title, description, children, className, c
       // Not natively focusable — a search result landing here (SettingsPage's
       // hash effect) needs somewhere real to move focus to, not just scroll.
       tabIndex={id ? -1 : undefined}
-      className={cn('flex scroll-mt-10 flex-col border-t border-border-subtle py-10 outline-none first:border-t-0 first:pt-0', className)}
+      className={cn('flex scroll-mt-10 flex-col border-t border-border-divider py-10 outline-none first:border-t-0 first:pt-0', className)}
     >
       <h3 id={headingId} className="text-heading font-semibold text-text-strong">{title}</h3>
       {description && <p className="mt-2 text-label text-text-muted">{description}</p>}
@@ -56,7 +56,7 @@ export function SettingsSubheading({ children, muted, className }: { children: R
 }
 
 export function SettingsDivider() {
-  return <hr className="border-border-subtle" />;
+  return <hr className="border-border-divider" />;
 }
 
 /** One setting: what it is and what it does on the left, the control on the
@@ -85,7 +85,7 @@ export function SettingsRow({ label, description, htmlFor, children, className, 
 
 /** Rows with a hairline between them (the sounds list). */
 export function SettingsRowList({ className, ...props }: ComponentProps<'div'>) {
-  return <div className={cn('flex flex-col divide-y divide-border-subtle [&>*]:py-4 [&>*:first-child]:pt-0 [&>*:last-child]:pb-0', className)} {...props} />;
+  return <div className={cn('flex flex-col divide-y divide-border-divider [&>*]:py-4 [&>*:first-child]:pt-0 [&>*:last-child]:pb-0', className)} {...props} />;
 }
 
 /** A row that opens something else: an optional icon tile, the text, what it
@@ -187,4 +187,4 @@ export function SettingsNotice({ children, tone = 'info', action }: { children: 
 export const SETTINGS_ACTION_BUTTON = 'h-10 min-w-24 px-4 text-body';
 
 /** The box a row opens below itself for a short flow (a password to confirm, a code to type). */
-export const SETTINGS_INLINE_PANEL = 'rounded-lg border border-border-subtle bg-fill-subtle p-4';
+export const SETTINGS_INLINE_PANEL = 'rounded-lg border border-border-divider bg-fill-subtle p-4';

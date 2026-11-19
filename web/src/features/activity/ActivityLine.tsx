@@ -1,4 +1,4 @@
-import { AppWindowIcon, GameControllerIcon } from '@phosphor-icons/react';
+import { AppWindowIcon, GameControllerIcon } from '@/shared/ui/icons';
 import { useState } from 'react';
 import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -16,7 +16,7 @@ function ActivityIcon({ activity, size, className }: { activity: Pick<Activity, 
   return (
     <span
       className={cn(
-        'flex flex-none items-center justify-center overflow-hidden bg-fill-subtle text-text-muted',
+        'flex flex-none items-center justify-center overflow-hidden text-text-muted',
         size > 64 ? 'rounded-xl' : size > 24 ? 'rounded-lg' : 'rounded',
         className,
       )}
@@ -83,7 +83,7 @@ export function ActivityCard({ activity, heading, large, className, children }: 
   return (
     <section
       aria-label={t(`line.${activity.kind}`, { name: activity.name })}
-      className={cn('flex flex-col gap-2 rounded-lg border border-border-subtle bg-fill-subtle p-3', large && 'gap-3 p-4', className)}
+      className={cn('flex flex-col gap-2 rounded-xl border border-border-strong bg-bg-secondary p-3', large && 'gap-3 p-4', className)}
     >
       <h3 className="text-caption font-semibold text-text-secondary">{heading ?? t(`kind.${activity.kind}`)}</h3>
       <div className={cn('flex min-w-0 items-center gap-3', large && 'gap-4')}>

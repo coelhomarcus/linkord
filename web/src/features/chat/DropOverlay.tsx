@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ProhibitIcon } from '@phosphor-icons/react';
+import { ProhibitIcon } from '@/shared/ui/icons';
 
 import { useExitPresence } from '@/shared/hooks/useExitPresence';
 import { cn } from '@/shared/lib/utils';

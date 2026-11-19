@@ -1,4 +1,4 @@
-import { ProhibitIcon } from '@phosphor-icons/react';
+import { ProhibitIcon } from '@/shared/ui/icons';
 import { useTranslation } from 'react-i18next';
 import { parseHex } from '@/shared/lib/colorMath';
 import { ColorPicker } from '@/shared/ui/ColorPicker';

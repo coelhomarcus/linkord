@@ -1,4 +1,4 @@
-import { ArrowBendUpLeftIcon, ChecksIcon, CopyIcon, DownloadSimpleIcon, FileXIcon, FlagIcon, LinkBreakIcon, PencilSimpleIcon, TrashIcon, UserIcon, UsersIcon, XIcon } from '@phosphor-icons/react';
+import { ArrowBendUpLeftIcon, ChecksIcon, CopyIcon, DownloadSimpleIcon, FileXIcon, FlagIcon, LinkBreakIcon, PencilSimpleIcon, TrashIcon, UserIcon, UsersIcon, XIcon } from '@/shared/ui/icons';
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { ReactNode } from 'react';

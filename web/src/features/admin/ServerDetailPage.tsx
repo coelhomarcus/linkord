@@ -4,7 +4,7 @@ import { useParams } from 'react-router';
 import { Avatar } from '@/shared/Avatar';
 import { Button } from '@/shared/ui/primitives/button';
 import { useCursorList } from '@/shared/hooks/useCursorList';
-import { HashIcon, SpeakerHighIcon } from '@phosphor-icons/react';
+import { HashIcon, SpeakerHighIcon } from '@/shared/ui/icons';
 import { ServerIcon } from '@/features/servers/ServerIcon';
 import { assignServerOwner, deleteServer, fetchAdminServer, fetchAudit, reactivateServer, suspendServer } from './adminApi';
 import type { AdminServerDetail, AdminServerMember } from './adminApi';
@@ -136,7 +136,7 @@ function ServerDetail({ id }: { id: string }) {
 
       {tab === 'members' && (
         <AdminSection title={t('ui.members')} description={t('entity.serverMembersDescription')}>
-          <ul className="flex flex-col divide-y divide-border-subtle">
+          <ul className="flex flex-col divide-y divide-border-divider">
             {members.map((m) => (
               <li key={m.user.id} className="flex items-center gap-3 py-2.5">
                 <Avatar id={m.user.id} name={m.user.displayName} avatar={m.user.avatar} avatarColor={m.user.avatarColor} size={32} />
@@ -160,7 +160,7 @@ function ServerDetail({ id }: { id: string }) {
 
       {tab === 'channels' && (
         <AdminSection title={t('ui.channels')} description={t('entity.channelsDescription')}>
-          <ul className="flex flex-col divide-y divide-border-subtle">
+          <ul className="flex flex-col divide-y divide-border-divider">
             {detail.channels.map((channel) => (
               <li key={channel.id} className="flex items-center gap-2 py-2 text-label text-text-primary">
                 {channel.type === 'voice' ? <SpeakerHighIcon size={18} className="flex-none text-text-muted" aria-hidden /> : <HashIcon size={18} className="flex-none text-text-muted" aria-hidden />}

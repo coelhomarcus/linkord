@@ -361,8 +361,7 @@ function Shell() {
         <div className="relative flex min-h-0 min-w-0 flex-1 md:overflow-hidden md:rounded-tl-[12px] md:border-l md:border-t md:border-border-subtle">
         <ConversationSidebar onOpenProfile={openProfile} />
         <SidebarInset className={`relative min-h-0 overflow-hidden bg-surface-panel [--surface-base:var(--color-surface-panel)] ${mobileListPage ? 'max-md:hidden' : ''} ${mobileMainPage ? 'max-md:pb-[var(--mobile-navigation-height)]' : ''}`}>
-          <div className="flex h-full min-h-0">
-          <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+          <div className="flex h-full min-h-0 min-w-0 flex-col">
           <Routes location={contentLocation}>
             <Route path={ROUTES.home} element={<FriendsPage onOpenProfile={openProfile} />} />
             <Route path={ROUTES.friends} element={<FriendsPage onOpenProfile={openProfile} />} />
@@ -384,6 +383,8 @@ function Shell() {
                   onOpenDetails={() => { setDetails(true); }}
                   onToggleDetails={() => { setDetails(directShown ? !(membersVisible || profileVisible) : !memberListOpen); }}
                   onToggleMedia={() => { setMediaOpen(!mediaVisible); }}
+                  aside={profilePanelUser ? <DirectProfilePanel user={profilePanelUser} onOpenProfile={openProfile} />
+                    : membersVisible && currentServer && wide ? <MemberListPanel server={currentServer} onOpenProfile={openProfile} /> : null}
                 />
               )}
             />
@@ -396,9 +397,6 @@ function Shell() {
             <Route path="/app/conversations/:conversationId" element={<LegacyConversationRedirect />} />
             <Route path="*" element={<Navigate to={ROUTES.home} replace />} />
           </Routes>
-          </div>
-          {membersVisible && currentServer && wide && <MemberListPanel server={currentServer} onOpenProfile={openProfile} />}
-          {profilePanelUser && <DirectProfilePanel user={profilePanelUser} onOpenProfile={openProfile} />}
           </div>
           {inCall && <ParticipantAudioLayer participantIds={callIds} />}
           {inCall && !showStage && !viewingDmCall && (

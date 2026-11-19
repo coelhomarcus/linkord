@@ -19,7 +19,6 @@
     "@fontsource-variable/figtree": "^5.2.10",
     "@lexical/react": "0.52.0",
     "@lexical/utils": "0.52.0",
-    "@phosphor-icons/react": "^2.1.10",
     "@tanstack/react-virtual": "^3.14.11",
     "@twinkleplop/bash": "^0.1.7",
     "@twinkleplop/css": "^0.1.7",
@@ -59,6 +58,7 @@
   "devDependencies": {
     "@babel/core": "^7.29.13",
     "@discordapp/twemoji": "16.0.1",
+    "@phosphor-icons/react": "2.1.10",
     "@rolldown/plugin-babel": "^0.2.4",
     "@tailwindcss/vite": "^4.3.3",
     "@testing-library/jest-dom": "^7.0.1",

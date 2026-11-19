@@ -1,4 +1,4 @@
-import { CaretDownIcon, CaretRightIcon } from '@phosphor-icons/react';
+import { CaretDownIcon, CaretRightIcon } from '@/shared/ui/icons';
 import { useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -103,7 +103,7 @@ function WideRow({ row }: { row: AuditRow }) {
       </AdminTr>
       {open && (
         <tr id={detailsId} className="bg-fill-subtle">
-          <td colSpan={5} className="border-b border-border-subtle px-6 py-3"><AuditRowDetails row={row} /></td>
+          <td colSpan={5} className="border-b border-border-divider px-6 py-3"><AuditRowDetails row={row} /></td>
         </tr>
       )}
     </>

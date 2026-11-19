@@ -57,6 +57,8 @@ export function startInstallPromptCapture(): () => void {
 export interface InstallState {
   /** How this device can install, or null when it can't or already has. */
   method: InstallMethod | null;
+  /** The web app is installed: this page runs as it, or the browser just installed it. Never in the desktop app. */
+  installed: boolean;
   /** Opens the browser's install dialog; resolves to whether the person accepted. */
   install: () => Promise<boolean>;
 }
@@ -64,8 +66,9 @@ export interface InstallState {
 export function useInstall(): InstallState {
   const state = useSyncExternalStore(subscribe, () => captured);
   const displayModeStandalone = useMediaQuery('(display-mode: standalone)');
+  const installed = (displayModeStandalone || iosStandalone() || state.installed) && !isDesktopApp();
   // the desktop app is the installed app; Electron never offers a web install anyway
-  const standalone = displayModeStandalone || iosStandalone() || state.installed || isDesktopApp();
+  const standalone = installed || isDesktopApp();
   const method = installMethod({ standalone, canPrompt: state.prompt !== null, ios: isIOSDevice() });
 
   const install = useCallback(async () => {
@@ -81,5 +84,5 @@ export function useInstall(): InstallState {
     }
   }, []);
 
-  return { method, install };
+  return { method, installed, install };
 }

@@ -3,6 +3,18 @@
   "plugins": ["react", "typescript", "oxc"],
   "rules": {
     "react/rules-of-hooks": "error",
-    "react/only-export-components": ["warn", { "allowConstantExport": true }]
-  }
+    "react/only-export-components": ["warn", { "allowConstantExport": true }],
+    "no-restricted-imports": ["error", {
+      "patterns": [{
+        "group": ["@phosphor-icons/*", "@phosphor-icons/*/**"],
+        "message": "Import icons from '@/shared/ui/icons' and run `npm run icons`: the package ships all six weights of every icon."
+      }]
+    }]
+  },
+  "overrides": [
+    {
+      "files": ["tests/scripts/buildIcons.test.tsx"],
+      "rules": { "no-restricted-imports": "off" }
+    }
+  ]
 }

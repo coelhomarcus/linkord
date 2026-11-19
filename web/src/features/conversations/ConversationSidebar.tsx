@@ -1,4 +1,4 @@
-import { BellSlashIcon, PhoneIcon, PlusIcon, UsersIcon, XIcon } from '@phosphor-icons/react';
+import { BellSlashIcon, PhoneIcon, PlusIcon, UsersIcon, XIcon } from '@/shared/ui/icons';
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router';
 import { useTranslation } from 'react-i18next';

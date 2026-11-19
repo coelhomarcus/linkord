@@ -1,4 +1,4 @@
-import { CheckIcon } from '@phosphor-icons/react';
+import { CheckIcon } from '@/shared/ui/icons';
 import { useTranslation } from 'react-i18next';
 import { useRoom } from '@/state/RoomContext';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/shared/ui/primitives/tooltip';

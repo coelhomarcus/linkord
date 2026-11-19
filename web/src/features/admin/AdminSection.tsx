@@ -31,7 +31,7 @@ export function AdminSection({ id, title, description, danger, children, classNa
   const headingId = useId();
   return (
     // the hairline only goes between two sections; what comes before the first (a title, tabs) is spaced by the page
-    <section id={id} aria-labelledby={headingId} className={cn('flex scroll-mt-10 flex-col border-border-subtle pb-10 last:pb-0 [section+&]:border-t [section+&]:pt-10', className)}>
+    <section id={id} aria-labelledby={headingId} className={cn('flex scroll-mt-10 flex-col border-border-divider pb-10 last:pb-0 [section+&]:border-t [section+&]:pt-10', className)}>
       <h3 id={headingId} className={cn('text-heading font-semibold', danger ? 'text-red-text' : 'text-text-strong')}>{title}</h3>
       {description && <p className="mt-2 text-label text-text-muted">{description}</p>}
       <div className="mt-6 flex flex-col gap-4">{children}</div>
@@ -42,7 +42,7 @@ export function AdminSection({ id, title, description, danger, children, classNa
 /** "label → value" rows: the metadata of an entity, like the settings' account rows — the name on the
  * left, the value on the right, a hairline between them. */
 export function AdminFields({ children }: { children: ReactNode }) {
-  return <dl className="flex flex-col divide-y divide-border-subtle">{children}</dl>;
+  return <dl className="flex flex-col divide-y divide-border-divider">{children}</dl>;
 }
 
 export function AdminFieldRow({ label, children }: { label: string; children: ReactNode }) {

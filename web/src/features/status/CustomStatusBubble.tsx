@@ -1,4 +1,4 @@
-import { PencilSimpleIcon, PlusIcon, TrashIcon } from '@phosphor-icons/react';
+import { PencilSimpleIcon, PlusCircleIcon, TrashIcon } from '@/shared/ui/icons';
 import { useTranslation } from 'react-i18next';
 import type { CustomStatus } from '@/shared/types/protocol';
 import { timeOptions, useTimeFormat } from '@/shared/lib/timeFormat';
@@ -21,16 +21,20 @@ export function CustomStatusBubble({ custom, onEdit, onClear, className }: {
   const timeFormat = useTimeFormat();
   if (!custom && !onEdit) return null;
 
+  // The big dot is fused into the bubble: its outline sits behind it, and a fill one border smaller
+  // covers the bubble's own border where the two overlap, so they read as one shape. The small dot
+  // hangs just off it, down toward the avatar.
   const tail = (
     <>
-      <span aria-hidden className={cn('absolute -bottom-1.5 left-1 size-2.5 rounded-full', SHELL)} />
-      <span aria-hidden className={cn('absolute -bottom-3 -left-0.5 size-1.5 rounded-full', SHELL)} />
+      <span aria-hidden className={cn('absolute -bottom-[7px] left-4 -z-10 size-3.5 rounded-full', SHELL)} />
+      <span aria-hidden className="pointer-events-none absolute -bottom-[6px] left-[17px] z-10 size-3 rounded-full bg-bg-tertiary" />
+      <span aria-hidden className={cn('absolute -bottom-[13px] left-2.5 size-2 rounded-full', SHELL)} />
     </>
   );
 
   if (!custom) {
     return (
-      <div data-custom-status-bubble className={cn('relative w-fit max-w-full motion-safe:animate-in motion-safe:fade-in-0 motion-safe:zoom-in-95', className)}>
+      <div data-custom-status-bubble className={cn('relative isolate w-fit max-w-full motion-safe:animate-in motion-safe:fade-in-0 motion-safe:zoom-in-95', className)}>
         <button
           type="button"
           onClick={onEdit}
@@ -40,8 +44,8 @@ export function CustomStatusBubble({ custom, onEdit, onClear, className }: {
             'touch-target relative flex max-w-full items-center gap-1.5 rounded-2xl px-3 py-1.5 text-left text-label text-text-muted transition-colors hover:text-text-primary focus-ring',
           )}
         >
-          <PlusIcon size={14} weight="bold" className="flex-none" />
-          <span className="line-clamp-2 min-w-0">{t('bubble.invite')}</span>
+          <PlusCircleIcon size={18} weight="fill" className="flex-none" />
+          <span className="line-clamp-2 min-w-0 italic">{t('bubble.invite')}</span>
         </button>
         {tail}
       </div>
@@ -54,7 +58,7 @@ export function CustomStatusBubble({ custom, onEdit, onClear, className }: {
     : null;
 
   return (
-    <div data-custom-status-bubble className={cn('group/bubble relative w-fit max-w-full motion-safe:animate-in motion-safe:fade-in-0 motion-safe:zoom-in-95', className)}>
+    <div data-custom-status-bubble className={cn('group/bubble relative isolate w-fit max-w-full motion-safe:animate-in motion-safe:fade-in-0 motion-safe:zoom-in-95', className)}>
       <div
         title={until ? `${full} (${until})` : full}
         data-custom-status

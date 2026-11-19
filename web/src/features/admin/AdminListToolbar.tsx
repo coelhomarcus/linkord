@@ -1,4 +1,4 @@
-import { CaretDownIcon, MagnifyingGlassIcon } from '@phosphor-icons/react';
+import { CaretDownIcon, MagnifyingGlassIcon } from '@/shared/ui/icons';
 import { useId, useState } from 'react';
 import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';

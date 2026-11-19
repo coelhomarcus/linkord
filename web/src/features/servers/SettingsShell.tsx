@@ -26,7 +26,7 @@ export function SettingsShell({ label, heading, tabs, current, onSelect, onClose
             <span className="truncate px-2.5 pb-1.5 text-label font-medium text-text-muted max-md:hidden">{heading}</span>
             {tabs.map((tab, index) => (
               <Fragment key={tab.key}>
-                {(tab.group || (tab.danger && index > 0)) && <span aria-hidden className="mx-2.5 my-2 h-px flex-none bg-border-subtle max-md:hidden" />}
+                {(tab.group || (tab.danger && index > 0)) && <span aria-hidden className="mx-2.5 my-2 h-px flex-none bg-border-divider max-md:hidden" />}
                 {tab.group && <span className="truncate px-2.5 pb-1.5 pt-1 text-label font-medium text-text-muted max-md:hidden">{tab.group}</span>}
                 <button type="button" onClick={() => onSelect(tab.key)} aria-current={tab.key === current ? 'page' : undefined}
                   className={cn('mb-0.5 flex h-8 flex-none items-center rounded-lg px-2.5 text-left text-body font-medium focus-ring focus-visible:ring-inset',

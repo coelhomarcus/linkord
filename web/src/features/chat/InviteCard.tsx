@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next';
-import { UsersIcon } from '@phosphor-icons/react';
+import { UsersIcon } from '@/shared/ui/icons';
 import { useState } from 'react';
 
 import { ServerIcon } from '@/features/servers/ServerIcon';

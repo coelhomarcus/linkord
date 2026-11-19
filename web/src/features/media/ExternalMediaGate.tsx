@@ -1,4 +1,4 @@
-import { MusicNoteIcon, PlayIcon } from '@phosphor-icons/react';
+import { MusicNoteIcon, PlayIcon } from '@/shared/ui/icons';
 import { useState } from 'react';
 import type { CSSProperties, ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';

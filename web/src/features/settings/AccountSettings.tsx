@@ -1,4 +1,4 @@
-import { SignOutIcon } from '@phosphor-icons/react';
+import { SignOutIcon } from '@/shared/ui/icons';
 import { useTranslation } from 'react-i18next';
 
 import { useAuth } from '@/state/AuthContext';

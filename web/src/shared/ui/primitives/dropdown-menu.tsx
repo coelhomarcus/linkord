@@ -1,4 +1,4 @@
-import { CaretRightIcon, CheckIcon } from '@phosphor-icons/react';
+import { CaretRightIcon, CheckIcon } from '@/shared/ui/icons';
 import * as React from "react"
 import { Menu as MenuPrimitive } from "@base-ui/react/menu"
 

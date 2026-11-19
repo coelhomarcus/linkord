@@ -62,10 +62,6 @@
   },
   "panel": {
     "label": "User profile",
-    "mutualServers_one": "{{count}} mutual server",
-    "mutualServers_other": "{{count}} mutual servers",
-    "mutualFriends_one": "{{count}} mutual friend",
-    "mutualFriends_other": "{{count}} mutual friends",
     "viewFull": "View full profile"
   },
   "integration": {

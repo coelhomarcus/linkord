@@ -1,4 +1,4 @@
-import { CheckCircleIcon, CircleNotchIcon, LockIcon } from '@phosphor-icons/react';
+import { CheckCircleIcon, CircleNotchIcon, LockIcon } from '@/shared/ui/icons';
 import { useState } from 'react';
 import type { FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';

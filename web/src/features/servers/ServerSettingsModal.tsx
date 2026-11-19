@@ -1,4 +1,4 @@
-import { ArrowDownIcon, ArrowUpIcon, CrownIcon, MagnifyingGlassIcon, PlusIcon, ShieldIcon, TrashIcon, UserIcon, XIcon } from '@phosphor-icons/react';
+import { ArrowDownIcon, ArrowUpIcon, CrownIcon, MagnifyingGlassIcon, PlusIcon, ShieldIcon, TrashIcon, UserIcon, XIcon } from '@/shared/ui/icons';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { ChangeEvent } from 'react';
 import { useNavigate } from 'react-router';
@@ -89,7 +89,7 @@ function Overview({ server }: { server: ServerSummary }) {
         <FloatingBar open={nameBar.visible} label={t('bar.server')} status={nameBar.status} error={nameBar.error} saveDisabled={!name.trim()}
           onReset={() => { setName(server.name); nameBar.clearError(); }} />
       </form>
-      <hr className="border-border-subtle" />
+      <hr className="border-border-divider" />
       <section className="flex items-start justify-between gap-6 max-sm:flex-col">
         <div className="flex flex-col gap-1">
           <h3 className="text-body font-medium text-text-primary">{t('settings.icon')}</h3>
@@ -122,7 +122,7 @@ function PermissionSwitches({ value, onChange, disabled, grantable }: { value: n
           {section.names.map((name) => {
             const bit = bitOf(name);
             return (
-              <label key={name} className="flex items-start gap-4 border-b border-border-subtle py-3">
+              <label key={name} className="flex items-start gap-4 border-b border-border-divider py-3">
                 <span className="flex-1">
                   <span className="block text-body font-medium text-text-primary">{t(`permissions.${name}`)}</span>
                   <span className="block text-label text-text-secondary">{t(`permissionHints.${name}`)}</span>
@@ -207,7 +207,7 @@ function Roles({ server }: { server: ServerSummary }) {
             {creating ? <XIcon size={16} /> : <PlusIcon size={16} weight="fill" />} {creating ? t('cancel') : t('roles.create')}
           </Button>
           {creating && (
-            <form className="mb-2 flex flex-col gap-2 rounded-lg border border-border-subtle p-2" onSubmit={(event) => {
+            <form className="mb-2 flex flex-col gap-2 rounded-lg border border-border-divider p-2" onSubmit={(event) => {
               event.preventDefault();
               const name = newRoleName.trim();
               if (!name) return;
@@ -272,7 +272,7 @@ function Roles({ server }: { server: ServerSummary }) {
           <PermissionSwitches value={draft.permissions} disabled={!editable} grantable={grantable} onChange={(permissions) => setDraft({ ...draft, permissions })} />
           <ErrorLine error={error} />
           {!role.isDefault && editable && (
-            <div className="flex justify-end border-t border-border-subtle pt-3">
+            <div className="flex justify-end border-t border-border-divider pt-3">
               <Button type="button" variant="destructive" onClick={() => setConfirmDelete(true)}><TrashIcon size={16} /> {t('roles.delete')}</Button>
             </div>
           )}
@@ -305,7 +305,7 @@ function Members({ server, onOpenProfile }: { server: ServerSummary; onOpenProfi
     <>
       <SectionTitle>{t('settings.members')}</SectionTitle>
       <ErrorLine error={error} />
-      <ul className="flex flex-col divide-y divide-border-subtle">
+      <ul className="flex flex-col divide-y divide-border-divider">
         {members.map((member) => {
           const above = outranks(server, me, { userId: member.user.id, roleIds: member.roleIds, isOwner: member.isOwner });
           // the server takes a member's roles only from someone above them, or their own roles below the member's top
@@ -386,7 +386,7 @@ function Invites({ server }: { server: ServerSummary }) {
             <span />
           </div>
           {items.map((invite) => (
-            <div role="row" key={invite.code} className="group/invite grid grid-cols-[minmax(0,1.6fr)_minmax(0,1.4fr)_4rem_minmax(0,1.2fr)_2rem] items-center gap-3 border-b border-border-subtle py-3">
+            <div role="row" key={invite.code} className="group/invite grid grid-cols-[minmax(0,1.6fr)_minmax(0,1.4fr)_4rem_minmax(0,1.2fr)_2rem] items-center gap-3 border-b border-border-divider py-3">
               <span role="cell" className="flex min-w-0 items-center gap-2">
                 {invite.creator && <Avatar id={invite.creator.id} name={invite.creator.displayName} avatar={invite.creator.avatar} avatarColor={invite.creator.avatarColor} size={24} />}
                 <span className="truncate text-text-primary">{invite.creator?.displayName ?? '—'}</span>
@@ -419,7 +419,7 @@ function Bans({ server }: { server: ServerSummary }) {
       <SectionTitle>{t('settings.bans')}</SectionTitle>
       <ErrorLine error={error} />
       {items.length === 0 && <p className="text-label text-text-muted">{t('bans.none')}</p>}
-      <ul className="flex flex-col divide-y divide-border-subtle">
+      <ul className="flex flex-col divide-y divide-border-divider">
         {items.map((ban) => (
           <li key={ban.user.id} className="flex items-center gap-3 py-3">
             <Avatar id={ban.user.id} name={ban.user.displayName} avatar={ban.user.avatar} avatarColor={ban.user.avatarColor} size={32} />

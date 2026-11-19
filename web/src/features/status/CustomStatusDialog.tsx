@@ -1,6 +1,6 @@
 import { useEffect, useId, useState, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
-import { GameControllerIcon, SmileyIcon, XIcon } from '@phosphor-icons/react';
+import { GameControllerIcon, SmileyIcon, XIcon } from '@/shared/ui/icons';
 import { Button } from '@/shared/ui/primitives/button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/shared/ui/primitives/dialog';
 import { Input } from '@/shared/ui/primitives/input';

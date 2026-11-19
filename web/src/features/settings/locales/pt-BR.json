@@ -27,6 +27,7 @@
       "chat": "Chat",
       "notifications": "Notificações",
       "language": "Idioma e hora",
+      "downloads": "Baixar o app",
       "desktop": "Aplicativo",
       "moderation": "Administração"
     },
@@ -49,7 +50,6 @@
       "twoFactor": "Verificação em duas etapas",
       "loginAlerts": "Avisos de login",
       "sessions": "Sessões ativas",
-      "install": "Instalar o app",
       "deleteAccount": "Excluir conta",
       "dataExport": "Seus dados",
       "desktopStartup": "Inicialização",
@@ -110,9 +110,13 @@
       "title": "Sons",
       "keywords": "volume, som, testar som, mudo, mensagem, menção, chamada, prévia"
     },
-    "install": {
-      "title": "Instalar o app",
-      "keywords": "instalar, instalação, app, pwa, tela de início, atalho, ícone, adicionar à tela de início"
+    "desktopDownload": {
+      "title": "App para Windows",
+      "keywords": "baixar, download, windows, computador, pc, desktop, instalador, exe, aplicativo, app"
+    },
+    "webApp": {
+      "title": "Web app",
+      "keywords": "instalar, instalação, app, pwa, tela de início, atalho, ícone, adicionar à tela de início, celular, iphone, android"
     },
     "language": {
       "title": "Idioma",
@@ -539,6 +543,66 @@
       "check": "Procurar atualizações",
       "restart": "Reiniciar e atualizar",
       "download": "Baixar a versão {{version}}"
+    }
+  },
+  "downloads": {
+    "title": "Instale o Linkord",
+    "description": "Use o Linkord fora de uma aba do navegador. São duas opções e as duas entram na mesma conta, com as mesmas conversas: use uma, a outra ou as duas.",
+    "recommended": "Recomendado para você",
+    "retry": "Tentar de novo",
+    "windows": {
+      "platforms": "Windows 10 e 11",
+      "title": "App para Windows",
+      "description": "Um programa instalado no computador, como qualquer outro. Abre numa janela própria e continua rodando na bandeja do sistema quando você fecha a janela.",
+      "features": {
+        "notifications": "Notificações mesmo com a janela fechada",
+        "activity": "Mostra o jogo ou app que você está usando",
+        "startup": "Abre junto com o Windows, se você quiser",
+        "updates": "Atualiza sozinho quando sai uma versão nova"
+      },
+      "download": "Baixar para Windows",
+      "version": "Versão {{version}}",
+      "allVersions": "Todas as versões",
+      "otherSystem": "O app é só para Windows. Neste aparelho, prefira o web app.",
+      "unavailable": "O instalador não está disponível agora.",
+      "inUse": "Você está usando o app para Windows.",
+      "openSettings": "Ajustes do app"
+    },
+    "web": {
+      "platforms": "Celular e computador",
+      "title": "Web app",
+      "description": "O próprio Linkord do navegador, instalado como app: ganha um ícone na tela de início ou na barra de tarefas e abre sem a barra de endereço. Não há nada para baixar.",
+      "features": {
+        "anywhere": "Funciona no Android, iPhone, Windows, Mac e Linux",
+        "notifications": "Notificações push, mesmo com o navegador fechado",
+        "light": "Leve e sempre na versão mais nova"
+      },
+      "install": "Instalar web app",
+      "installed": "O web app está instalado neste aparelho.",
+      "unsupported": "Este navegador não oferece a instalação. Use o Chrome ou o Edge (computador e Android) ou o Safari (iPhone e iPad). Se você já dispensou o convite, procure “Instalar Linkord” no menu do navegador.",
+      "fromDesktopApp": "Para ter o Linkord no celular, abra o site no navegador do celular e instale por lá.",
+      "ios": {
+        "title": "No Safari, em três toques:",
+        "share": "Toque em Compartilhar",
+        "addToHome": "Escolha “Adicionar à Tela de Início”",
+        "confirm": "Toque em Adicionar",
+        "notifications": "No iPhone, as notificações só funcionam com o web app instalado."
+      }
+    },
+    "compare": {
+      "title": "Qual escolher?",
+      "windows": {
+        "question": "Num PC com Windows, jogando?",
+        "answer": "Fique com o app para Windows: só ele mostra o jogo que você está jogando, abre com o computador e fica na bandeja."
+      },
+      "web": {
+        "question": "No celular, num Mac ou no Linux?",
+        "answer": "Instale o web app. É assim que o Linkord vira app nesses aparelhos, e ele recebe notificações como um app nativo."
+      },
+      "both": {
+        "question": "Dá para usar os dois?",
+        "answer": "Dá. A conta, as conversas e as chamadas são as mesmas em todo lugar, e você pode instalar em quantos aparelhos quiser."
+      }
     }
   }
 }

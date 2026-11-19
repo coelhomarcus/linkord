@@ -1,4 +1,4 @@
-import { ArrowLeftIcon, CaretRightIcon, LinkIcon, PlusCircleIcon } from '@phosphor-icons/react';
+import { ArrowLeftIcon, CaretRightIcon, LinkIcon, PlusCircleIcon } from '@/shared/ui/icons';
 import { useState } from 'react';
 import { useNavigate } from 'react-router';
 import { useTranslation } from 'react-i18next';

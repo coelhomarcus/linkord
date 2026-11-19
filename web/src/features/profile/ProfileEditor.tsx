@@ -1,4 +1,4 @@
-import { PlusIcon } from '@phosphor-icons/react';
+import { PlusIcon } from '@/shared/ui/icons';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { ChangeEvent, FormEvent } from 'react';
 import type { Area } from 'react-easy-crop';

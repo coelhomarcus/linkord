@@ -1,4 +1,4 @@
-import { AppWindowIcon, CheckCircleIcon, MonitorIcon } from '@phosphor-icons/react';
+import { AppWindowIcon, CheckCircleIcon, MonitorIcon } from '@/shared/ui/icons';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -72,7 +72,7 @@ function PickerBody({ request }: { request: DesktopSourceRequest }) {
                   selected ? 'border-accent-primary bg-fill-subtle' : 'border-transparent hover:bg-fill-hover',
                 )}
               >
-                <span className="relative flex aspect-video w-full items-center justify-center overflow-hidden rounded-lg bg-black ring-1 ring-border-subtle">
+                <span className="relative flex aspect-video w-full items-center justify-center overflow-hidden rounded-lg bg-black ring-1 ring-border-divider">
                   {source.thumbnail
                     ? <img src={source.thumbnail} alt="" className="size-full object-contain" />
                     : source.kind === 'screen' ? <MonitorIcon size={32} className="text-text-muted" /> : <AppWindowIcon size={32} className="text-text-muted" />}
@@ -116,7 +116,7 @@ function PickerBody({ request }: { request: DesktopSourceRequest }) {
           {grid(windows, (source) => source.name)}
         </TabsPanel>
       </Tabs>
-      <DialogFooter className="items-center border-t border-border-subtle px-5 py-4 sm:justify-between">
+      <DialogFooter className="items-center border-t border-border-divider px-5 py-4 sm:justify-between">
         {request.systemAudio ? (
           <label className="flex items-center gap-2 text-label text-text-secondary">
             <Switch checked={audio} onCheckedChange={setAudio} />
