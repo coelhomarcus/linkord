@@ -12,18 +12,12 @@
       ]
     },
     "web": {
-      "ignoreDependencies": [
-        "@fontsource-variable/figtree",
-        "@twinkleplop/theme-github",
-        "tailwindcss",
-        "tw-animate-css"
-      ],
       "entry": [
         "tests/**/*.test.ts",
         "tests/**/*.test.tsx"
       ],
       "project": [
-        "src/**/*.{ts,tsx}",
+        "src/**/*.{ts,tsx,css}",
         "tests/**/*.{ts,tsx}"
       ]
     },
