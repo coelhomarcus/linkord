@@ -16,7 +16,7 @@ function ActivityIcon({ activity, size, className }: { activity: Pick<Activity, 
   return (
     <span
       className={cn(
-        'flex flex-none items-center justify-center overflow-hidden bg-fill-subtle text-text-muted',
+        'flex flex-none items-center justify-center overflow-hidden text-text-muted',
         size > 64 ? 'rounded-xl' : size > 24 ? 'rounded-lg' : 'rounded',
         className,
       )}
