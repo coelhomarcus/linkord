@@ -9,7 +9,7 @@ import { Input } from '@/shared/ui/primitives/input';
 import { Popover, PopoverContent, PopoverTrigger } from '@/shared/ui/primitives/popover';
 import type { ServerSummary } from '@/shared/types/protocol';
 import { ProfileActions } from '@/features/friends/ProfileActions';
-import { BANNER_ASPECT_RATIO, bannerStyle } from '@/features/profile/profileLinks';
+import { BANNER_DISPLAY_ASPECT_RATIO, bannerStyle } from '@/features/profile/profileLinks';
 import { rememberProfilePreview, useUserProfile } from '@/features/profile/profileCache';
 import { useRoom, useRoomState } from '@/state/RoomContext';
 import type { PublicUser } from '@/shared/types/protocol';
@@ -130,7 +130,7 @@ export function MemberQuickProfile({ server, member, currentUser, offline, open,
         {member.isOwner && <CrownIcon size={14} weight="fill" className="flex-none text-yellow" aria-label={t('members.owner')} />}
       </PopoverTrigger>
       <PopoverContent side="left" align="start" sideOffset={8} className="w-[min(24rem,calc(100vw-1rem))] gap-0 overflow-hidden rounded-xl border-border-default bg-bg-modal p-0">
-        <div className="relative w-full" style={{ ...bannerStyle({ id: user.id, avatarColor: user.avatarColor, banner }), aspectRatio: BANNER_ASPECT_RATIO }}>
+        <div className="relative w-full" style={{ ...bannerStyle({ id: user.id, avatarColor: user.avatarColor, banner }), aspectRatio: BANNER_DISPLAY_ASPECT_RATIO }}>
           <button
             type="button"
             aria-label={t('members.openProfile', { name: user.displayName })}

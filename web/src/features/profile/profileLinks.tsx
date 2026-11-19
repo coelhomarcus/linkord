@@ -100,11 +100,15 @@ export function BrandIcon({ kind, size = 17 }: { kind: LinkKind; size?: number }
   return <Icon size={size} />;
 }
 
-// 16:9 — same shape a call tile fills via `background-size: cover` (see
-// Tile.tsx), so a banner crops/displays consistently everywhere it shows up
-// (profile card, settings, in-call background) instead of each spot picking
-// its own ratio.
+// 16:9 — the shape a banner is cropped to and stored in, because a call tile
+// fills that shape with it as its background (`background-size: cover`, see
+// Tile.tsx).
 export const BANNER_ASPECT_RATIO = 16 / 9;
+
+// The shape a banner is shown in on a profile: the strip across the top of
+// the panel beside a DM (330 x 104), so the profile modal and the member card
+// read as the same profile. The stored 16:9 image covers it, losing top and bottom.
+export const BANNER_DISPLAY_ASPECT_RATIO = 330 / 104;
 
 export function bannerStyle(user: { id: string; avatarColor: string; banner: string }): CSSProperties {
   const accent = colorFor(user.id, user.avatarColor);

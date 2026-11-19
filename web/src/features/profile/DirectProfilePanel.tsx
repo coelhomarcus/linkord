@@ -7,7 +7,7 @@ import { Button } from '@/shared/ui/primitives/button';
 import { ROUTES } from '@/shared/lib/routes';
 import { ServerIcon } from '@/features/servers/ServerIcon';
 import type { PublicUser } from '@/shared/types/protocol';
-import { bannerStyle } from './profileLinks';
+import { BANNER_DISPLAY_ASPECT_RATIO, bannerStyle } from './profileLinks';
 import type { ProfileTab } from './ProfileSidebar';
 import { formatProfileDate, useProfileDetails } from './useProfileDetails';
 import { rememberProfilePreview } from './profileCache';
@@ -35,7 +35,7 @@ export function DirectProfilePanel({ user, onOpenProfile }: { user: PublicUser; 
     <aside aria-label={t('panel.label')} className="flex h-full w-[340px] flex-none flex-col p-2 pl-0">
       <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-[12px] border border-border-subtle bg-bg-card">
       <div className="min-h-0 flex-1 overflow-y-auto">
-      <div className="h-[104px] flex-none" style={bannerStyle(user)} />
+      <div className="w-full flex-none" style={{ ...bannerStyle(user), aspectRatio: BANNER_DISPLAY_ASPECT_RATIO }} />
       <div className="relative px-4 pb-4">
         <span className="absolute -top-12 left-3 rounded-full border-[6px] border-bg-card">
           <Avatar id={user.id} name={user.displayName} avatar={user.avatar} poster={user.avatarPoster} animateOnHover avatarColor={user.avatarColor} size={80} />
