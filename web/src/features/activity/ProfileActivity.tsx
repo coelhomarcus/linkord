@@ -16,7 +16,7 @@ function RecentActivity({ item, now }: { item: ActivityHistoryItem; now: number 
   const { unit, count } = playedAgo(now - Date.parse(item.lastPlayedAt));
   const when = t(`ago.${unit}`, { count });
   return (
-    <li className="flex min-w-0 items-center gap-3 rounded-lg border border-border-divider bg-fill-subtle p-3">
+    <li className="flex min-w-0 items-center gap-3 rounded-lg border border-border-strong bg-fill-subtle p-3">
       <ActivityIcon activity={item} size={56} />
       <div className="flex min-w-0 flex-col gap-1">
         <p className="truncate text-label font-semibold text-text-primary">{item.name}</p>
@@ -34,7 +34,7 @@ function RecentSkeleton({ label }: { label: string }) {
   return (
     <SkeletonGroup label={label} className="flex flex-col gap-2">
       {[0, 1, 2].map((i) => (
-        <div key={i} className="flex items-center gap-3 rounded-lg border border-border-divider p-3">
+        <div key={i} className="flex items-center gap-3 rounded-lg border border-border-strong p-3">
           <Skeleton className="size-14 rounded-lg" />
           <div className="flex flex-col gap-2">
             <Skeleton shape="text" className="h-3.5 w-36" />
