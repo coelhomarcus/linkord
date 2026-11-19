@@ -10,7 +10,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/shared/ui/primitives/
 import { Skeleton, SkeletonGroup } from '@/shared/ui/primitives/skeleton';
 import type { ServerSummary } from '@/shared/types/protocol';
 import { ProfileActions } from '@/features/friends/ProfileActions';
-import { BANNER_DISPLAY_ASPECT_RATIO, bannerStyle } from '@/features/profile/profileLinks';
+import { bannerStyle } from '@/features/profile/profileLinks';
 import { rememberProfilePreview, useUserProfile } from '@/features/profile/profileCache';
 import { ProfileMutuals } from '@/features/profile/ProfileMutuals';
 import type { ProfileTab } from '@/features/profile/ProfileSidebar';
@@ -25,6 +25,11 @@ import { UserCustomStatus, UserCustomStatusBubble, UserStatusDot } from '@/featu
 import { UserActivityCard, UserActivityInline } from '@/features/activity/ActivityLine';
 import { useUserActivity } from '@/features/activity/activityDisplay';
 import { canAssignRole, canManageRole, outranks } from './roleHierarchy';
+
+// Discord's user popout, measured: 300px wide, a 105px banner, an 80px avatar
+// in a 6px ring centred on the banner's edge, 16px of padding on the sides
+const BANNER = 'h-[105px] w-full';
+const AVATAR_FRAME = '-mt-[50px] -ml-1.5 w-fit flex-none rounded-full bg-bg-modal p-1.5';
 
 interface MemberQuickProfileProps {
   server: ServerSummary;
@@ -42,21 +47,12 @@ interface MemberQuickProfileProps {
 function QuickProfileSkeleton({ label }: { label: string }) {
   return (
     <SkeletonGroup label={label}>
-      <div style={{ aspectRatio: BANNER_DISPLAY_ASPECT_RATIO }}><Skeleton className="size-full rounded-none" /></div>
+      <Skeleton className={cn(BANNER, 'rounded-none')} />
       <div className="px-4 pb-4">
-        <div className="-mt-9 w-fit rounded-full bg-bg-modal p-1"><Skeleton shape="circle" className="size-[72px]" /></div>
-        <Skeleton shape="text" className="mt-3 h-5 w-36" />
+        <div className={AVATAR_FRAME}><Skeleton shape="circle" className="size-20" /></div>
+        <Skeleton shape="text" className="mt-2.5 h-5 w-32" />
         <Skeleton shape="text" className="mt-2 h-3.5 w-24" />
-        <Skeleton shape="text" className="mt-3 h-4 w-56" />
-        <div className="mt-5 flex flex-col gap-2">
-          <Skeleton shape="text" className="w-10" />
-          <Skeleton shape="text" className="w-full" />
-          <Skeleton shape="text" className="w-2/3" />
-        </div>
-        <div className="mt-5 flex gap-1.5">
-          <Skeleton shape="circle" className="h-6 w-24" />
-          <Skeleton shape="circle" className="h-6 w-16" />
-        </div>
+        <Skeleton shape="text" className="mt-4 h-4 w-52" />
       </div>
     </SkeletonGroup>
   );
@@ -166,40 +162,41 @@ export function MemberQuickProfile({ server, member, currentUser, offline, open,
         </span>
         {member.isOwner && <CrownIcon size={14} weight="fill" className="flex-none text-yellow" aria-label={t('members.owner')} />}
       </PopoverTrigger>
-      <PopoverContent side="left" align="start" sideOffset={8} className="w-[min(24rem,calc(100vw-1rem))] gap-0 overflow-hidden rounded-xl border-border-default bg-bg-modal p-0">
+      <PopoverContent side="left" align="start" sideOffset={8} className="w-[min(300px,calc(100vw-1rem))] gap-0 overflow-hidden rounded-xl border-border-default bg-bg-modal p-0">
         {ready ? (<>
-        <div className="relative w-full" style={{ ...bannerStyle({ id: user.id, avatarColor: user.avatarColor, banner }), aspectRatio: BANNER_DISPLAY_ASPECT_RATIO }}>
+        <div className={cn('relative', BANNER)} style={bannerStyle({ id: user.id, avatarColor: user.avatarColor, banner })}>
           <button
             type="button"
             aria-label={t('members.openProfile', { name: user.displayName })}
             onClick={() => openFullProfile()}
             className="absolute inset-0 block h-full w-full cursor-pointer border-0 bg-transparent p-0 focus-ring focus-visible:ring-inset"
           />
-          <div className="absolute right-3 top-3 z-10 flex max-w-[calc(100%-1.5rem)] flex-wrap items-center justify-end gap-1.5">
+          {/* round, as Discord draws the actions over a popout's banner */}
+          <div className="absolute right-3 top-2 z-10 flex max-w-[calc(100%-1.5rem)] flex-wrap items-center justify-end gap-2 [&_button]:rounded-full">
             <Button type="button" variant="outline" size="icon-sm" aria-label={t('members.viewProfile')} onClick={() => openFullProfile()}>
               <IdentificationCardIcon size={16} />
             </Button>
-            <ProfileActions userId={user.id} username={user.username} displayName={user.displayName} onNavigate={() => onOpenChange(false)} onEditProfile={() => openFullProfile()} showMessage={false} showFriendRequestActions={false} className="flex-row gap-1 p-0" />
+            <ProfileActions userId={user.id} username={user.username} displayName={user.displayName} onNavigate={() => onOpenChange(false)} onEditProfile={() => openFullProfile()} showMessage={false} showFriendRequestActions={false} className="flex-row gap-2 p-0" />
           </div>
         </div>
         <div className="px-4 pb-4">
-          <div className="-mt-9 flex items-start gap-2">
-            <div className="relative w-fit flex-none rounded-full bg-bg-modal p-1">
+          <div className="flex items-start gap-2">
+            <div className={cn('relative', AVATAR_FRAME)}>
               <button
                 type="button"
                 aria-label={t('members.openProfile', { name: user.displayName })}
                 onClick={() => openFullProfile()}
                 className="block cursor-pointer rounded-full border-0 bg-transparent p-0 focus-ring"
               >
-                <Avatar id={user.id} name={user.displayName} avatar={user.avatar} poster={avatarPoster} animateOnHover avatarColor={user.avatarColor} size={72} />
+                <Avatar id={user.id} name={user.displayName} avatar={user.avatar} poster={avatarPoster} animateOnHover avatarColor={user.avatarColor} size={80} />
               </button>
-              <UserStatusDot userId={user.id} labelled className="absolute bottom-1 right-1 size-5 border-4 text-bg-modal" />
+              <UserStatusDot userId={user.id} labelled className="absolute bottom-1.5 right-1.5 size-6 border-4 text-bg-modal" />
             </div>
             <UserCustomStatusBubble userId={user.id} className="-mt-3 -ml-2 min-w-0" />
           </div>
-          <div className="mt-2 flex items-start justify-between gap-3">
+          <div className="mt-1.5 flex items-start justify-between gap-3">
             <div className="min-w-0">
-              <h2 className="flex min-w-0 items-center gap-1.5 text-heading font-semibold text-text-primary">
+              <h2 className="flex min-w-0 items-center gap-1.5 text-heading font-bold text-text-primary">
                 <span className="truncate">{user.displayName}</span>
                 {member.isOwner && <CrownIcon size={14} weight="fill" className="flex-none text-yellow" aria-label={t('members.owner')} />}
               </h2>
@@ -207,7 +204,7 @@ export function MemberQuickProfile({ server, member, currentUser, offline, open,
             </div>
           </div>
           {!isMe && (
-            <ProfileMutuals details={detailsRead.details} onOpen={() => openFullProfile('common')} ringClassName="ring-bg-modal" className="mt-2" />
+            <ProfileMutuals details={detailsRead.details} onOpen={() => openFullProfile('common')} ringClassName="ring-bg-modal" className="mt-3" />
           )}
 
           <UserActivityCard userId={user.id} className="mt-4" />
@@ -258,7 +255,7 @@ export function MemberQuickProfile({ server, member, currentUser, offline, open,
           </div>
           {/* the server only opens a DM with a friend (the same gate as sending) */}
           {user.id !== state.me.userId && friendUserIds.has(user.id) && (
-            <form onSubmit={submitQuickMessage} className="mt-4 flex h-12 items-center gap-2 rounded-xl border border-border-control px-3 focus-within:border-border-accent">
+            <form onSubmit={submitQuickMessage} className="mt-4 flex h-11.5 items-center gap-2 rounded-xl border border-border-control px-3 focus-within:border-border-accent">
               <Input
                 value={messageDraft}
                 onChange={(event) => setMessageDraft(event.target.value)}

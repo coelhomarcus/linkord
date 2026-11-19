@@ -59,7 +59,7 @@ describe('DirectProfilePanel', () => {
     expect(screen.getByRole('img', { name: 'Disponível' })).toBeInTheDocument();
     expect(await screen.findByText('4 de mai. de 2023')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: '1 amigo mútuo' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: '1 servidor em comum' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '1 servidor mútuo' })).toBeInTheDocument();
     // one line under the name rather than a list of each
     expect(screen.queryByText('Luis')).not.toBeInTheDocument();
     expect(screen.queryByText('Squad')).not.toBeInTheDocument();
@@ -88,7 +88,7 @@ describe('DirectProfilePanel', () => {
     const user = userEvent.setup();
     await user.click(await screen.findByRole('button', { name: '1 amigo mútuo' }));
     expect(onOpenProfile).toHaveBeenLastCalledWith('u-bea', 'common');
-    await user.click(screen.getByRole('button', { name: '1 servidor em comum' }));
+    await user.click(screen.getByRole('button', { name: '1 servidor mútuo' }));
     expect(onOpenProfile).toHaveBeenLastCalledWith('u-bea', 'common');
   });
 
@@ -104,7 +104,7 @@ describe('DirectProfilePanel', () => {
     expect(await screen.findByRole('heading', { name: 'Bea' })).toBeInTheDocument();
     expect(screen.getByText('oi, eu sou a Bea')).toBeInTheDocument();
     expect(screen.getByText('4 de mai. de 2023')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: '1 servidor em comum' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '1 servidor mútuo' })).toBeInTheDocument();
     expect(screen.queryByText('Carregando perfil…')).not.toBeInTheDocument();
   });
 

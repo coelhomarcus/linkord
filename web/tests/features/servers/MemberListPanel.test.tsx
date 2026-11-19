@@ -173,7 +173,7 @@ describe('MemberListPanel', () => {
     renderWithRoom(<MemberListPanel server={server} onOpenProfile={onOpenProfile} />, { state: asMe('u-me') });
     await user.click(await screen.findByRole('button', { name: 'Abrir perfil de Bia' }));
     expect(await screen.findByRole('button', { name: '6 amigos mútuos' })).toBeInTheDocument();
-    await user.click(screen.getByRole('button', { name: '2 servidores em comum' }));
+    await user.click(screen.getByRole('button', { name: '2 servidores mútuos' }));
     expect(mockedApi.fetchProfileDetails).toHaveBeenCalledWith('u-bia', expect.anything());
     expect(onOpenProfile).toHaveBeenCalledWith('u-bia', 'common');
   });
@@ -197,7 +197,7 @@ describe('MemberListPanel', () => {
     answerDetails({ ...nothingInCommon, mutualServers: { items: [], total: 2 } });
     expect(await screen.findByText('plays too much chess')).toBeInTheDocument();
     expect(screen.getByText('@u-bia')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: '2 servidores em comum' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '2 servidores mútuos' })).toBeInTheDocument();
     expect(screen.queryByText('Carregando perfil…')).not.toBeInTheDocument();
   });
 
