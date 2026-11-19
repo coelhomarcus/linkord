@@ -21,16 +21,19 @@ export function CustomStatusBubble({ custom, onEdit, onClear, className }: {
   const timeFormat = useTimeFormat();
   if (!custom && !onEdit) return null;
 
+  // The big dot is fused into the bubble: its outline sits behind the bubble, and a fill one border
+  // smaller covers the bubble's own border where the two overlap, so they read as one shape.
   const tail = (
     <>
-      <span aria-hidden className={cn('absolute -bottom-1.5 left-1 size-2.5 rounded-full', SHELL)} />
-      <span aria-hidden className={cn('absolute -bottom-3 -left-0.5 size-1.5 rounded-full', SHELL)} />
+      <span aria-hidden className={cn('absolute -bottom-1.5 left-2.5 -z-10 size-3 rounded-full', SHELL)} />
+      <span aria-hidden className="pointer-events-none absolute -bottom-[5px] left-[11px] z-10 size-2.5 rounded-full bg-bg-tertiary" />
+      <span aria-hidden className={cn('absolute -bottom-3.5 left-0 size-1.5 rounded-full', SHELL)} />
     </>
   );
 
   if (!custom) {
     return (
-      <div data-custom-status-bubble className={cn('relative w-fit max-w-full motion-safe:animate-in motion-safe:fade-in-0 motion-safe:zoom-in-95', className)}>
+      <div data-custom-status-bubble className={cn('relative isolate w-fit max-w-full motion-safe:animate-in motion-safe:fade-in-0 motion-safe:zoom-in-95', className)}>
         <button
           type="button"
           onClick={onEdit}
@@ -54,7 +57,7 @@ export function CustomStatusBubble({ custom, onEdit, onClear, className }: {
     : null;
 
   return (
-    <div data-custom-status-bubble className={cn('group/bubble relative w-fit max-w-full motion-safe:animate-in motion-safe:fade-in-0 motion-safe:zoom-in-95', className)}>
+    <div data-custom-status-bubble className={cn('group/bubble relative isolate w-fit max-w-full motion-safe:animate-in motion-safe:fade-in-0 motion-safe:zoom-in-95', className)}>
       <div
         title={until ? `${full} (${until})` : full}
         data-custom-status
