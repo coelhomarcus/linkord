@@ -157,7 +157,7 @@ export function MemberQuickProfile({ server, member, currentUser, offline, open,
               </button>
               <UserStatusDot userId={user.id} labelled className="absolute bottom-1 right-1 size-5 border-4 text-bg-modal" />
             </div>
-            <UserCustomStatusBubble userId={user.id} className="mt-4 min-w-0" />
+            <UserCustomStatusBubble userId={user.id} className="-mt-3 -ml-2 min-w-0" />
           </div>
           <div className="mt-2 flex items-start justify-between gap-3">
             <div className="min-w-0">

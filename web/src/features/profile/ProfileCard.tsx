@@ -205,10 +205,11 @@ export function ProfileCard({
             {status && <StatusDot status={status} labelled className="absolute right-1 bottom-1 size-5 border-4 text-bg-modal" />}
           </div>
 
-          {/* the bubble straddles the banner's edge, its tail pointing down at the avatar; the colour
-              picker (editor only) sits under it at the avatar's foot */}
-          <div className="flex min-w-0 flex-1 flex-col gap-4 self-stretch pt-6">
-            <CustomStatusBubble custom={customStatus ?? null} onEdit={onEditCustomStatus} onClear={onClearCustomStatus} className="ml-1" />
+          {/* the bubble sits wholly on the banner (tail included, so it never straddles the edge),
+              tucked against the avatar's shoulder with its tail pointing down at it, so it reads as
+              that person's thought; the colour picker (editor only) sits at the avatar's foot */}
+          <div className="flex min-w-0 flex-1 flex-col gap-4 self-stretch">
+            <CustomStatusBubble custom={customStatus ?? null} onEdit={onEditCustomStatus} onClear={onClearCustomStatus} className="-mt-2 -ml-4" />
             {onAvatarColorChange && (
               <div className="mt-auto mb-1">
                 <ProfileColorPicker userId={user.id} value={user.avatarColor} disabled={fieldsDisabled} onChange={onAvatarColorChange} />

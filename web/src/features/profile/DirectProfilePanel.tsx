@@ -41,8 +41,9 @@ export function DirectProfilePanel({ user, onOpenProfile }: { user: PublicUser; 
           <Avatar id={user.id} name={user.displayName} avatar={user.avatar} poster={user.avatarPoster} animateOnHover avatarColor={user.avatarColor} size={80} />
           <UserStatusDot userId={user.id} labelled className="absolute bottom-0.5 right-0.5 size-5 border-4 text-bg-card" />
         </span>
-        {/* right of the avatar (80px plus its 6px ring), straddling the banner's edge */}
-        <div className="absolute -top-5 right-4 left-27">
+        {/* wholly on the banner (tail included) and against the avatar's shoulder (80px plus its 6px
+            ring end at 104px), so it reads as that person's thought */}
+        <div className="absolute -top-14 right-4 left-24">
           <UserCustomStatusBubble userId={user.id} />
         </div>
         <div className="pt-12">
