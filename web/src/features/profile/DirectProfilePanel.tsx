@@ -1,33 +1,26 @@
 import { AtIcon } from '@/shared/ui/icons';
-import { useNavigate } from 'react-router';
 import { useTranslation } from 'react-i18next';
 
 import { Avatar } from '@/shared/Avatar';
 import { Button } from '@/shared/ui/primitives/button';
-import { ROUTES } from '@/shared/lib/routes';
-import { ServerIcon } from '@/features/servers/ServerIcon';
 import type { PublicUser } from '@/shared/types/protocol';
 import { BANNER_DISPLAY_ASPECT_RATIO, bannerStyle } from './profileLinks';
 import type { ProfileTab } from './ProfileSidebar';
 import { formatProfileDate, useProfileDetails } from './useProfileDetails';
-import { rememberProfilePreview } from './profileCache';
+import { ProfileMutuals } from './ProfileMutuals';
 import { UserCustomStatusBubble, UserStatusDot } from '@/features/status/UserStatus';
 import { UserActivityCard } from '@/features/activity/ActivityLine';
 import { useLanguage } from '@/shared/i18n/useLanguage';
 
-const SHOWN_MUTUALS = 5;
 const SECTION = 'flex flex-col gap-1';
-const MUTUAL_LINK = 'rounded-sm hover:text-text-primary hover:underline focus-ring';
 
 /** The profile beside a DM, as Discord draws it: banner, avatar, bio, since
- * when, and what you have in common, with the full profile one click away. */
+ * when, and what you have in common in one line, with the full profile one
+ * click away. */
 export function DirectProfilePanel({ user, onOpenProfile }: { user: PublicUser; onOpenProfile: (userId: string, tab?: ProfileTab) => void }) {
   const language = useLanguage();
   const { t } = useTranslation('profile');
-  const navigate = useNavigate();
   const { details } = useProfileDetails(user.id);
-  const servers = details?.mutualServers;
-  const friends = details?.mutualFriends;
 
   return (
     // Discord's profile beside a DM: a card of its own, inset from the edges,
@@ -53,69 +46,23 @@ export function DirectProfilePanel({ user, onOpenProfile }: { user: PublicUser; 
             <AtIcon size={14} aria-hidden className="flex-none" />
             <span className="truncate">{user.username}</span>
           </p>
-          {((friends?.total ?? 0) > 0 || (servers?.total ?? 0) > 0) && (
-            <p className="mt-1 flex flex-wrap items-center gap-x-1.5 text-caption text-text-secondary">
-              {friends && friends.total > 0 && (
-                <button type="button" onClick={() => onOpenProfile(user.id, 'common')} className={MUTUAL_LINK}>
-                  {t('mutuals.friends', { count: friends.total })}
-                </button>
-              )}
-              {friends && friends.total > 0 && servers && servers.total > 0 && <span aria-hidden>•</span>}
-              {servers && servers.total > 0 && (
-                <button type="button" onClick={() => onOpenProfile(user.id, 'common')} className={MUTUAL_LINK}>
-                  {t('mutuals.servers', { count: servers.total })}
-                </button>
-              )}
-            </p>
-          )}
+          <ProfileMutuals userId={user.id} onOpen={() => onOpenProfile(user.id, 'common')} ringClassName="ring-bg-card" className="mt-2" />
         </div>
-        <div className="mt-4 flex flex-col gap-4">
-          <section className="flex flex-col gap-3">
-            <UserActivityCard userId={user.id} className={SECTION} />
-            {user.bio && (
-              <div className={SECTION}>
-                <h3 className="text-caption font-semibold text-text-primary">{t('card.bio')}</h3>
-                <p className="select-text whitespace-pre-wrap wrap-break-word text-label text-text-secondary">{user.bio}</p>
-              </div>
-            )}
-            {details && (
-              <div className={SECTION}>
-                <h3 className="text-caption font-semibold text-text-primary">{t('modal.memberSince')}</h3>
-                <p className="text-label text-text-secondary">{formatProfileDate(details.memberSince, language)}</p>
-              </div>
-            )}
-          </section>
-          {servers && servers.total > 0 && (
-            <section className={SECTION}>
-              <h3 className="mb-1 text-caption font-semibold text-text-primary">{t('panel.mutualServers', { count: servers.total })}</h3>
-              <ul className="flex flex-col gap-1">
-                {servers.items.slice(0, SHOWN_MUTUALS).map((server) => (
-                  <li key={server.id}>
-                    <button type="button" onClick={() => navigate(ROUTES.server(server.id))} className="flex w-full items-center gap-2.5 rounded-md p-1 text-left focus-ring hover:bg-fill-hover">
-                      <ServerIcon id={server.id} name={server.name} icon={server.icon} size={32} active />
-                      <span className="min-w-0 flex-1 truncate text-label font-medium text-text-primary">{server.name}</span>
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            </section>
+        <section className="mt-4 flex flex-col gap-3">
+          <UserActivityCard userId={user.id} className={SECTION} />
+          {user.bio && (
+            <div className={SECTION}>
+              <h3 className="text-caption font-semibold text-text-primary">{t('card.bio')}</h3>
+              <p className="select-text whitespace-pre-wrap wrap-break-word text-label text-text-secondary">{user.bio}</p>
+            </div>
           )}
-          {friends && friends.total > 0 && (
-            <section className={SECTION}>
-              <h3 className="mb-1 text-caption font-semibold text-text-primary">{t('panel.mutualFriends', { count: friends.total })}</h3>
-              <ul className="flex flex-col gap-1">
-                {friends.items.slice(0, SHOWN_MUTUALS).map((friend) => (
-                  <li key={friend.id}>
-                    <button type="button" onClick={() => { rememberProfilePreview(friend); onOpenProfile(friend.id); }} className="flex w-full items-center gap-2.5 rounded-md p-1 text-left focus-ring hover:bg-fill-hover">
-                      <Avatar id={friend.id} name={friend.displayName} avatar={friend.avatar} avatarColor={friend.avatarColor} size={32} />
-                      <span className="min-w-0 flex-1 truncate text-label font-medium text-text-primary">{friend.displayName}</span>
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            </section>
+          {details && (
+            <div className={SECTION}>
+              <h3 className="text-caption font-semibold text-text-primary">{t('modal.memberSince')}</h3>
+              <p className="text-label text-text-secondary">{formatProfileDate(details.memberSince, language)}</p>
+            </div>
           )}
-        </div>
+        </section>
       </div>
       </div>
       <div className="flex-none p-4 pt-2">
