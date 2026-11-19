@@ -1,4 +1,4 @@
-import { ArrowUpIcon, CrownIcon, IdentificationCardIcon, PlusIcon } from '@phosphor-icons/react';
+import { ArrowUpIcon, CrownIcon, IdentificationCardIcon, PlusIcon } from '@/shared/ui/icons';
 import { useEffect, useRef, useState } from 'react';
 import type { FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';

@@ -1,4 +1,4 @@
-import { CalendarBlankIcon, CaretLeftIcon, CaretRightIcon } from '@phosphor-icons/react';
+import { CalendarBlankIcon, CaretLeftIcon, CaretRightIcon } from '@/shared/ui/icons';
 import { useId, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { KeyboardEvent, RefObject } from 'react';
 import { useTranslation } from 'react-i18next';

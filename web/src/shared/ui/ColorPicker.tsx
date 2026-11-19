@@ -1,5 +1,5 @@
 import { useId, useRef, useState, type KeyboardEvent, type PointerEvent, type ReactNode } from 'react';
-import { CheckIcon, EyedropperIcon, ProhibitIcon } from '@phosphor-icons/react';
+import { CheckIcon, EyedropperIcon, ProhibitIcon } from '@/shared/ui/icons';
 import { useTranslation } from 'react-i18next';
 import { contrastOn, hexToHsv, hsvToHex, parseHex, type Hsv } from '@/shared/lib/colorMath';
 import { cn } from '@/shared/lib/utils';

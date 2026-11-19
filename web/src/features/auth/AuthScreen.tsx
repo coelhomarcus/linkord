@@ -1,4 +1,4 @@
-import { ArrowLeftIcon, ArrowRightIcon, CheckCircleIcon, CircleNotchIcon, EnvelopeIcon, EyeIcon, EyeSlashIcon, KeyIcon, LockIcon, ShieldCheckIcon, SignInIcon, UserIcon, UserPlusIcon } from '@phosphor-icons/react';
+import { ArrowLeftIcon, ArrowRightIcon, CheckCircleIcon, CircleNotchIcon, EnvelopeIcon, EyeIcon, EyeSlashIcon, KeyIcon, LockIcon, ShieldCheckIcon, SignInIcon, UserIcon, UserPlusIcon } from '@/shared/ui/icons';
 import { useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { FormEvent } from 'react';

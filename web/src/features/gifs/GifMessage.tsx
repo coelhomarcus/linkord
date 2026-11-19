@@ -1,4 +1,4 @@
-import { ImageBrokenIcon } from '@phosphor-icons/react';
+import { ImageBrokenIcon } from '@/shared/ui/icons';
 import { useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 

@@ -1,6 +1,5 @@
-import { CaretRightIcon, MagnifyingGlassIcon, PencilSimpleIcon } from '@phosphor-icons/react';
+import { CaretRightIcon, MagnifyingGlassIcon, PencilSimpleIcon, iconWeight } from '@/shared/ui/icons';
 import { useTranslation } from 'react-i18next';
-import { iconWeight } from '@/shared/ui/icons';
 
 import { Avatar } from '@/shared/Avatar';
 import { useRoomState } from '@/state/RoomContext';

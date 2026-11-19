@@ -1,4 +1,4 @@
-import { ArrowSquareOutIcon, AtIcon, CameraIcon, CircleNotchIcon, PencilSimpleIcon, SealCheckIcon, TrashIcon, UploadSimpleIcon } from '@phosphor-icons/react';
+import { ArrowSquareOutIcon, AtIcon, CameraIcon, CircleNotchIcon, PencilSimpleIcon, SealCheckIcon, TrashIcon, UploadSimpleIcon } from '@/shared/ui/icons';
 import { useLayoutEffect, useRef } from 'react';
 import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';

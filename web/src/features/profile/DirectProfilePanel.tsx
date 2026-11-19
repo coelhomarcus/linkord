@@ -1,4 +1,4 @@
-import { AtIcon } from '@phosphor-icons/react';
+import { AtIcon } from '@/shared/ui/icons';
 import { useNavigate } from 'react-router';
 import { useTranslation } from 'react-i18next';
 

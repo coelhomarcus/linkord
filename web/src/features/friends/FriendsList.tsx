@@ -1,4 +1,4 @@
-import { ChatCircleIcon, DotsThreeVerticalIcon, ProhibitIcon, UserIcon, UserMinusIcon, UserPlusIcon } from '@phosphor-icons/react';
+import { ChatCircleIcon, DotsThreeVerticalIcon, ProhibitIcon, UserIcon, UserMinusIcon, UserPlusIcon } from '@/shared/ui/icons';
 import { useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router';

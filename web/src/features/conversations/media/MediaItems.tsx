@@ -1,4 +1,4 @@
-import { ArrowBendUpLeftIcon, PlayIcon } from '@phosphor-icons/react';
+import { ArrowBendUpLeftIcon, PlayIcon } from '@/shared/ui/icons';
 import { useTranslation } from 'react-i18next';
 
 import { cn } from '@/shared/lib/utils';

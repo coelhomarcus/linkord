@@ -1,4 +1,4 @@
-import { CaretDownIcon, ClockIcon, MagnifyingGlassIcon, MusicNotesIcon, PlusIcon, SpeakerHighIcon, SpeakerLowIcon, SpeakerSlashIcon } from '@phosphor-icons/react';
+import { CaretDownIcon, ClockIcon, MagnifyingGlassIcon, MusicNotesIcon, PlusIcon, SpeakerHighIcon, SpeakerLowIcon, SpeakerSlashIcon } from '@/shared/ui/icons';
 import { useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 

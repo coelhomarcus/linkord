@@ -1,4 +1,4 @@
-import { LinkIcon } from '@phosphor-icons/react';
+import { LinkIcon } from '@/shared/ui/icons';
 import type { ComponentType, CSSProperties } from 'react';
 
 import {

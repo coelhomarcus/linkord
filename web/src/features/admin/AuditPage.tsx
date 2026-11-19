@@ -1,4 +1,4 @@
-import { CaretDownIcon, CaretRightIcon } from '@phosphor-icons/react';
+import { CaretDownIcon, CaretRightIcon } from '@/shared/ui/icons';
 import { useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 

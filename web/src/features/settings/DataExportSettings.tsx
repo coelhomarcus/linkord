@@ -1,4 +1,4 @@
-import { CircleNotchIcon, DownloadSimpleIcon, PackageIcon } from '@phosphor-icons/react';
+import { CircleNotchIcon, DownloadSimpleIcon, PackageIcon } from '@/shared/ui/icons';
 import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 

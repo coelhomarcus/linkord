@@ -1,4 +1,4 @@
-import { CaretLeftIcon, CaretRightIcon } from '@phosphor-icons/react';
+import { CaretLeftIcon, CaretRightIcon } from '@/shared/ui/icons';
 import { useEffect, useRef, useState } from 'react';
 import type { PointerEvent as ReactPointerEvent } from 'react';
 import { createPortal } from 'react-dom';

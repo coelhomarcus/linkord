@@ -1,6 +1,4 @@
-import {
-  ArrowsInIcon, ArrowsOutIcon, DownloadSimpleIcon, PauseIcon, PictureInPictureIcon, PlayIcon, SpeakerHighIcon, SpeakerSlashIcon,
-} from '@phosphor-icons/react';
+import { ArrowsInIcon, ArrowsOutIcon, DownloadSimpleIcon, PauseIcon, PictureInPictureIcon, PlayIcon, SpeakerHighIcon, SpeakerSlashIcon } from '@/shared/ui/icons';
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { CSSProperties, ReactNode, RefObject } from 'react';
 import { createPortal } from 'react-dom';

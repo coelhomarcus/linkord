@@ -1,4 +1,4 @@
-import { CaretRightIcon, InfoIcon } from '@phosphor-icons/react';
+import { CaretRightIcon, InfoIcon } from '@/shared/ui/icons';
 import { useId } from 'react';
 import type { ComponentProps, ReactNode, Ref } from 'react';
 import { AppLink } from '@/shared/ui/app-link';

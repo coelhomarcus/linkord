@@ -1,4 +1,4 @@
-import { ArrowLeftIcon } from '@phosphor-icons/react';
+import { ArrowLeftIcon } from '@/shared/ui/icons';
 import { useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 

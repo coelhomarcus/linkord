@@ -1,9 +1,8 @@
-import { CaretRightIcon, ShieldCheckIcon } from '@phosphor-icons/react';
+import { CaretRightIcon, ShieldCheckIcon, iconWeight } from '@/shared/ui/icons';
 import { useTranslation } from 'react-i18next';
 import { NavLink } from 'react-router';
 import { cn } from '@/shared/lib/utils';
 import { ActiveFill } from '@/shared/ui/active-fill';
-import { iconWeight } from '@/shared/ui/icons';
 import { ADMIN_GROUPS, adminSectionPath } from './adminCatalog';
 
 function GroupLabel({ children }: { children: string }) {

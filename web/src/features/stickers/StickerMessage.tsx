@@ -1,4 +1,4 @@
-import { StickerIcon } from '@phosphor-icons/react';
+import { StickerIcon } from '@/shared/ui/icons';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 

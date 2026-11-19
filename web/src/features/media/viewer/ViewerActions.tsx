@@ -1,5 +1,4 @@
-import { ArrowSquareOutIcon, DotsThreeIcon, DownloadSimpleIcon, ImageSquareIcon, LinkIcon } from '@phosphor-icons/react';
-import type { Icon } from '@phosphor-icons/react';
+import { ArrowSquareOutIcon, DotsThreeIcon, DownloadSimpleIcon, ImageSquareIcon, LinkIcon, type IconComponent } from '@/shared/ui/icons';
 import { Dialog as DialogPrimitive } from '@base-ui/react/dialog';
 import { useState } from 'react';
 import type { ReactNode } from 'react';
@@ -21,7 +20,7 @@ import type { ViewerItem } from './viewerItem';
 export interface ViewerAction {
   id: string;
   label: string;
-  icon: Icon;
+  icon: IconComponent;
   /** `shiftKey` lets a destructive one skip its confirmation, as the message menu does */
   onSelect: (event: { shiftKey: boolean }) => void;
   destructive?: boolean;
@@ -128,7 +127,7 @@ export function ViewerActionSheet({ item, extraActions }: { item: ViewerItem; ex
   );
 }
 
-function SheetRow({ icon: Icon, destructive, onClick, children }: { icon: Icon; destructive?: boolean; onClick: () => void; children: ReactNode }) {
+function SheetRow({ icon: Icon, destructive, onClick, children }: { icon: IconComponent; destructive?: boolean; onClick: () => void; children: ReactNode }) {
   return (
     <button
       type="button"

@@ -1,4 +1,4 @@
-import { AppWindowIcon, CheckCircleIcon, MonitorIcon } from '@phosphor-icons/react';
+import { AppWindowIcon, CheckCircleIcon, MonitorIcon } from '@/shared/ui/icons';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 

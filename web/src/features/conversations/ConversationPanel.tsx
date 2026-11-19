@@ -1,4 +1,4 @@
-import { ArrowLeftIcon, BellIcon, BellSlashIcon, DotsThreeIcon, HashIcon, ImageIcon, MagnifyingGlassIcon, PhoneIcon, UserCircleIcon, UsersThreeIcon, VideoCameraIcon } from '@phosphor-icons/react';
+import { ArrowLeftIcon, BellIcon, BellSlashIcon, DotsThreeIcon, HashIcon, ImageIcon, MagnifyingGlassIcon, PhoneIcon, UserCircleIcon, UsersThreeIcon, VideoCameraIcon } from '@/shared/ui/icons';
 import { useState } from 'react';
 import type { ReactNode } from 'react';
 import { useLocation, useNavigate } from 'react-router';

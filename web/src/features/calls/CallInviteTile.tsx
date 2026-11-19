@@ -1,4 +1,4 @@
-import { UserPlusIcon, UsersThreeIcon } from '@phosphor-icons/react';
+import { UserPlusIcon, UsersThreeIcon } from '@/shared/ui/icons';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 

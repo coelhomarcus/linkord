@@ -1,4 +1,4 @@
-import { SpeakerHighIcon } from '@phosphor-icons/react';
+import { SpeakerHighIcon } from '@/shared/ui/icons';
 import { useTranslation } from 'react-i18next';
 
 import { Avatar } from '@/shared/Avatar';

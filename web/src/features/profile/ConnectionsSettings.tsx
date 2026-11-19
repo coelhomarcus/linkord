@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { PencilSimpleIcon } from '@phosphor-icons/react';
+import { PencilSimpleIcon } from '@/shared/ui/icons';
 import { useTranslation } from 'react-i18next';
 import { ConfirmDialog } from '@/shared/ConfirmDialog';
 import { Button } from '@/shared/ui/primitives/button';

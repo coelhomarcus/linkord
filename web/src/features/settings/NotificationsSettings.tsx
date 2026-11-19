@@ -7,7 +7,7 @@ import { isPushSubscriptionActive, notificationPermissionState } from '@/shared/
 import type { NotificationPermissionState } from '@/shared/notifications';
 import { disablePush, enablePush, preparePush, pushSupported, type PushSetup } from '@/shared/pushNotifications';
 import { isDesktopApp } from '@/shared/desktop';
-import { MicrophoneIcon } from '@phosphor-icons/react';
+import { MicrophoneIcon } from '@/shared/ui/icons';
 import { ROUTES } from '@/shared/lib/routes';
 import { playSound } from '@/shared/sounds';
 import type { SoundName } from '@/shared/sounds';

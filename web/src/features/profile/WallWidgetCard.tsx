@@ -1,4 +1,4 @@
-import { BookOpenIcon, UserIcon, UsersIcon } from '@phosphor-icons/react';
+import { BookOpenIcon, UserIcon, UsersIcon } from '@/shared/ui/icons';
 import type { ComponentType } from 'react';
 import { useTranslation } from 'react-i18next';
 import { readableAccent } from './accentColor';

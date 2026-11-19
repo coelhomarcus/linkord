@@ -1,4 +1,4 @@
-import { CircleNotchIcon, MagnifyingGlassPlusIcon } from '@phosphor-icons/react';
+import { CircleNotchIcon, MagnifyingGlassPlusIcon } from '@/shared/ui/icons';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import Cropper from 'react-easy-crop';

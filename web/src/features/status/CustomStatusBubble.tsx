@@ -1,4 +1,4 @@
-import { PencilSimpleIcon, PlusIcon, TrashIcon } from '@phosphor-icons/react';
+import { PencilSimpleIcon, PlusIcon, TrashIcon } from '@/shared/ui/icons';
 import { useTranslation } from 'react-i18next';
 import type { CustomStatus } from '@/shared/types/protocol';
 import { timeOptions, useTimeFormat } from '@/shared/lib/timeFormat';

@@ -1,4 +1,4 @@
-import { GearIcon, UserCircleIcon } from '@phosphor-icons/react';
+import { GearIcon, UserCircleIcon } from '@/shared/ui/icons';
 import { useNavigate } from 'react-router';
 import { useTranslation } from 'react-i18next';
 import { Avatar } from '@/shared/Avatar';

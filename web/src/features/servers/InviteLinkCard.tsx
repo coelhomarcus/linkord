@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router';
 import { useTranslation } from 'react-i18next';
-import { EnvelopeSimpleIcon } from '@phosphor-icons/react';
+import { EnvelopeSimpleIcon } from '@/shared/ui/icons';
 import { Button } from '@/shared/ui/primitives/button';
 import { describeApiError } from '@/shared/api/errorText';
 import { ROUTES } from '@/shared/lib/routes';

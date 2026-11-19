@@ -1,4 +1,4 @@
-import { PlayIcon } from '@phosphor-icons/react';
+import { PlayIcon } from '@/shared/ui/icons';
 import { useId } from 'react';
 import { useTranslation } from 'react-i18next';
 

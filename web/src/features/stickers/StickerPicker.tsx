@@ -1,4 +1,4 @@
-import { CircleNotchIcon, ClockIcon, MagnifyingGlassIcon, PlusIcon, StickerIcon } from '@phosphor-icons/react';
+import { CircleNotchIcon, ClockIcon, MagnifyingGlassIcon, PlusIcon, StickerIcon } from '@/shared/ui/icons';
 import { useId, useMemo, useRef, useState } from 'react';
 import type { KeyboardEvent as ReactKeyboardEvent } from 'react';
 import { useTranslation } from 'react-i18next';

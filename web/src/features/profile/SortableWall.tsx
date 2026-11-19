@@ -1,6 +1,6 @@
 import { useLayoutEffect, useRef, useState } from 'react';
 import type { CSSProperties, ReactNode } from 'react';
-import { ArrowDownIcon, ArrowUpIcon, DotsSixVerticalIcon, DotsThreeIcon, TrashIcon } from '@phosphor-icons/react';
+import { ArrowDownIcon, ArrowUpIcon, DotsSixVerticalIcon, DotsThreeIcon, TrashIcon } from '@/shared/ui/icons';
 import { DndContext, KeyboardSensor, PointerSensor, closestCenter, useSensor, useSensors } from '@dnd-kit/core';
 import type { Announcements, DragEndEvent, Modifier, ScreenReaderInstructions, UniqueIdentifier } from '@dnd-kit/core';
 import { SortableContext, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';

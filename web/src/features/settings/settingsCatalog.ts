@@ -1,7 +1,6 @@
 import type { ParseKeys } from 'i18next';
-import { BellIcon, ChatCircleTextIcon, DesktopIcon, GameControllerIcon, IdentificationCardIcon, KeyIcon, LockIcon, MicrophoneIcon, PaintBrushIcon, PlugsConnectedIcon, ShieldCheckIcon, TranslateIcon } from '@phosphor-icons/react';
+import { BellIcon, ChatCircleTextIcon, DesktopIcon, GameControllerIcon, IdentificationCardIcon, KeyIcon, LockIcon, MicrophoneIcon, PaintBrushIcon, PlugsConnectedIcon, ShieldCheckIcon, TranslateIcon, type IconComponent } from '@/shared/ui/icons';
 
-import type { IconComponent } from '@/shared/ui/icons';
 import type { SettingsTab } from '@/shared/lib/routes';
 
 /** An i18n key of the `settings` namespace. */

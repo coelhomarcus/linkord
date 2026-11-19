@@ -1,14 +1,10 @@
-import {
-  ArrowsLeftRightIcon, ChatCircleIcon, DotsThreeIcon, MicrophoneSlashIcon, MonitorPlayIcon, PhoneSlashIcon, SpeakerHighIcon, SpeakerSimpleSlashIcon,
-  SpeakerSlashIcon, UserIcon, VideoCameraIcon,
-} from '@phosphor-icons/react';
+import { ArrowsLeftRightIcon, ChatCircleIcon, DotsThreeIcon, MicrophoneSlashIcon, MonitorPlayIcon, PhoneSlashIcon, SpeakerHighIcon, SpeakerSimpleSlashIcon, SpeakerSlashIcon, UserIcon, VideoCameraIcon, iconWeight } from '@/shared/ui/icons';
 import { useEffect, useState } from 'react';
 import type { DragEvent, MouseEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { TOUCH_FIRST_QUERY } from '@/shared/hooks/useLongPress';
 import { useMediaQuery } from '@/shared/hooks/useMediaQuery';
 import { Avatar, colorFor } from '@/shared/Avatar';
-import { iconWeight } from '@/shared/ui/icons';
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator,
 } from '@/shared/ui/primitives/dropdown-menu';

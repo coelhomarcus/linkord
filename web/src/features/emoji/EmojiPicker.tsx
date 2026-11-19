@@ -1,8 +1,4 @@
-import {
-  AirplaneIcon, BasketballIcon, CaretDownIcon, CircleNotchIcon, ClockIcon, FlagIcon, HamburgerIcon, HeartIcon, LeafIcon,
-  LightbulbIcon, MagnifyingGlassIcon, PlusIcon, SmileyIcon,
-} from '@phosphor-icons/react';
-import type { Icon } from '@phosphor-icons/react';
+import { AirplaneIcon, BasketballIcon, CaretDownIcon, CircleNotchIcon, ClockIcon, FlagIcon, HamburgerIcon, HeartIcon, LeafIcon, LightbulbIcon, MagnifyingGlassIcon, PlusIcon, SmileyIcon, type IconComponent } from '@/shared/ui/icons';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import type { KeyboardEvent as ReactKeyboardEvent } from 'react';
@@ -37,7 +33,7 @@ const CELL = 40;
 const HEADER = 32;
 const SIDEBAR_HAND = '✋';
 const TONE_HANDS = ['✋', '✋🏻', '✋🏼', '✋🏽', '✋🏾', '✋🏿'];
-const CATEGORY_ICONS: Record<EmojiCategoryKey, Icon> = {
+const CATEGORY_ICONS: Record<EmojiCategoryKey, IconComponent> = {
   people: SmileyIcon, nature: LeafIcon, food: HamburgerIcon, activities: BasketballIcon,
   travel: AirplaneIcon, objects: LightbulbIcon, symbols: HeartIcon, flags: FlagIcon,
 };

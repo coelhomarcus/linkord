@@ -1,4 +1,4 @@
-import { DownloadSimpleIcon } from '@phosphor-icons/react';
+import { DownloadSimpleIcon } from '@/shared/ui/icons';
 import { useTranslation } from 'react-i18next';
 
 import { cn } from '@/shared/lib/utils';

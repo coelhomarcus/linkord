@@ -1,4 +1,4 @@
-import { FilmStripIcon, GifIcon, ImageIcon } from '@phosphor-icons/react';
+import { FilmStripIcon, GifIcon, ImageIcon } from '@/shared/ui/icons';
 import { useEffect, useRef, useState } from 'react';
 import type { KeyboardEvent } from 'react';
 import { useTranslation } from 'react-i18next';

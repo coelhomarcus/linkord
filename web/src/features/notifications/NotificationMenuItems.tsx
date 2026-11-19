@@ -1,4 +1,4 @@
-import { BellIcon, BellSlashIcon } from '@phosphor-icons/react';
+import { BellIcon, BellSlashIcon } from '@/shared/ui/icons';
 import { useTranslation } from 'react-i18next';
 import {
   DropdownMenuItem, DropdownMenuRadioGroup, DropdownMenuRadioItem, DropdownMenuSub, DropdownMenuSubContent, DropdownMenuSubTrigger,

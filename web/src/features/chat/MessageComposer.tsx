@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next';
-import { ArrowBendUpLeftIcon, ArrowsInSimpleIcon, ArrowUpIcon, AtIcon, GifIcon, ImageSquareIcon, PaperclipIcon, PlusCircleIcon, ShieldIcon, SmileyIcon, StickerIcon } from '@phosphor-icons/react';
+import { ArrowBendUpLeftIcon, ArrowsInSimpleIcon, ArrowUpIcon, AtIcon, GifIcon, ImageSquareIcon, PaperclipIcon, PlusCircleIcon, ShieldIcon, SmileyIcon, StickerIcon } from '@/shared/ui/icons';
 import { forwardRef, useCallback, useEffect, useEffectEvent, useId, useImperativeHandle, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { ChangeEvent, KeyboardEvent as ReactKeyboardEvent } from 'react';
 

@@ -1,4 +1,4 @@
-import { ArrowLeftIcon, PhoneIcon } from '@phosphor-icons/react';
+import { ArrowLeftIcon, PhoneIcon } from '@/shared/ui/icons';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/shared/ui/primitives/button';
 

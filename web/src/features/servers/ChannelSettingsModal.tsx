@@ -1,4 +1,4 @@
-import { CameraIcon, CheckIcon, MinusIcon, XIcon } from '@phosphor-icons/react';
+import { CameraIcon, CheckIcon, MinusIcon, XIcon } from '@/shared/ui/icons';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { ChangeEvent } from 'react';
 import type { Area } from 'react-easy-crop';

@@ -1,4 +1,4 @@
-import { HeadphonesIcon, MicrophoneIcon, VideoCameraIcon } from '@phosphor-icons/react';
+import { HeadphonesIcon, MicrophoneIcon, VideoCameraIcon } from '@/shared/ui/icons';
 import { Track } from 'livekit-client';
 import type { LocalAudioTrack } from 'livekit-client';
 import { useTranslation } from 'react-i18next';

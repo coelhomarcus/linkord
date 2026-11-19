@@ -1,4 +1,4 @@
-import { ArrowDownIcon, ArrowUpIcon, CrownIcon, MagnifyingGlassIcon, PlusIcon, ShieldIcon, TrashIcon, UserIcon, XIcon } from '@phosphor-icons/react';
+import { ArrowDownIcon, ArrowUpIcon, CrownIcon, MagnifyingGlassIcon, PlusIcon, ShieldIcon, TrashIcon, UserIcon, XIcon } from '@/shared/ui/icons';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { ChangeEvent } from 'react';
 import { useNavigate } from 'react-router';

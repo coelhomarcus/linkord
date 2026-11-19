@@ -1,6 +1,5 @@
-import { FlagIcon, HardDrivesIcon, ScrollIcon, SquaresFourIcon, UsersIcon, WebhooksLogoIcon } from '@phosphor-icons/react';
+import { FlagIcon, HardDrivesIcon, ScrollIcon, SquaresFourIcon, UsersIcon, WebhooksLogoIcon, type IconComponent } from '@/shared/ui/icons';
 
-import type { IconComponent } from '@/shared/ui/icons';
 
 export interface AdminSection {
   /** first path segment under /admin */

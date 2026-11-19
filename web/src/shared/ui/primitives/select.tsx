@@ -1,6 +1,6 @@
 "use client"
 
-import { CaretDownIcon, CheckIcon } from '@phosphor-icons/react';
+import { CaretDownIcon, CheckIcon } from '@/shared/ui/icons';
 import { Select as SelectPrimitive } from "@base-ui/react/select"
 
 import { cn } from "@/shared/lib/utils"

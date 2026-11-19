@@ -4,7 +4,7 @@ import { useParams } from 'react-router';
 import { Avatar } from '@/shared/Avatar';
 import { Button } from '@/shared/ui/primitives/button';
 import { useCursorList } from '@/shared/hooks/useCursorList';
-import { HashIcon, SpeakerHighIcon } from '@phosphor-icons/react';
+import { HashIcon, SpeakerHighIcon } from '@/shared/ui/icons';
 import { ServerIcon } from '@/features/servers/ServerIcon';
 import { assignServerOwner, deleteServer, fetchAdminServer, fetchAudit, reactivateServer, suspendServer } from './adminApi';
 import type { AdminServerDetail, AdminServerMember } from './adminApi';

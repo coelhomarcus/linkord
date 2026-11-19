@@ -1,4 +1,4 @@
-import { DesktopIcon, DeviceMobileIcon, SignOutIcon } from '@phosphor-icons/react';
+import { DesktopIcon, DeviceMobileIcon, SignOutIcon } from '@/shared/ui/icons';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
