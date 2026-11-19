@@ -96,7 +96,7 @@ interface ConversationPanelProps {
   onOpenDetails: () => void;
   onToggleDetails: () => void;
   onToggleMedia: () => void;
-  /** a panel shown beside the chat, under the header (a text channel's member list) */
+  /** a panel shown beside the chat, under the header (a text channel's member list, a DM's profile) */
   aside?: ReactNode;
 }
 
