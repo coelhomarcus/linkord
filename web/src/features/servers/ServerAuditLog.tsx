@@ -264,7 +264,7 @@ export function ServerAuditLog({ server }: { server: ServerSummary }) {
         ) : <EmptyState illustration="document" title={t('auditLog.empty')} description={t('auditLog.emptyText')} />
       )}
       {items.length > 0 && (
-        <ul aria-label={t('settings.auditLog')} aria-busy={loading} className="flex flex-col divide-y divide-border-subtle">
+        <ul aria-label={t('settings.auditLog')} aria-busy={loading} className="flex flex-col divide-y divide-border-divider">
           {items.map((entry) => (
             <Entry key={entry.id} entry={entry}
               onFilterActor={(actor) => setFilters((f) => ({ ...f, actor }))}
@@ -273,7 +273,7 @@ export function ServerAuditLog({ server }: { server: ServerSummary }) {
         </ul>
       )}
       {loading && items.length === 0 && (
-        <SkeletonGroup label={t('auditLog.loading')} className="flex flex-col divide-y divide-border-subtle">
+        <SkeletonGroup label={t('auditLog.loading')} className="flex flex-col divide-y divide-border-divider">
           {['w-64', 'w-48', 'w-56', 'w-40'].map((width, index) => (
             <div key={index} className="flex gap-3 py-3">
               <Skeleton shape="circle" className="size-9" />

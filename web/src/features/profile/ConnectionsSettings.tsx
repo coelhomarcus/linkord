@@ -112,7 +112,7 @@ export function ConnectionsSettings() {
       {/* the size of one connection card, so the list arriving moves nothing below it */}
       {!data && !loadError && <SkeletonGroup label={t('integration.loading')}><Skeleton className="h-[120px] w-full rounded-lg" /></SkeletonGroup>}
       {loadError && <div role="alert" className="text-label text-red-text">{t('integration.errors.load')} <Button type="button" variant="ghost" size="sm" onClick={() => void load()}>{t('modal.retry')}</Button></div>}
-      {data?.connections.length === 0 && <p className="rounded-lg border border-border-subtle px-4 py-6 text-center text-label text-text-muted">{t('integration.empty')}</p>}
+      {data?.connections.length === 0 && <p className="rounded-lg border border-border-divider px-4 py-6 text-center text-label text-text-muted">{t('integration.empty')}</p>}
       {!!data?.connections.length && (
         <section aria-labelledby="connections-list-title" className="flex flex-col gap-4">
           <SettingsSubheading><span id="connections-list-title">{t('integration.count', { count: data.connections.length })}</span></SettingsSubheading>

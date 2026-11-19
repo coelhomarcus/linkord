@@ -98,7 +98,7 @@ function Permissions({ server, channel }: { server: ServerSummary; channel: Chan
             </li>
           ))}
         </ul>
-        <ul className="flex min-w-0 flex-1 flex-col divide-y divide-border-subtle">
+        <ul className="flex min-w-0 flex-1 flex-col divide-y divide-border-divider">
           {channelPermissionNames(channel.type).map((name) => {
             const bit = bitOf(name);
             const value: Tri = current.allow & bit ? 'allow' : current.deny & bit ? 'deny' : 'inherit';
@@ -153,7 +153,7 @@ function WebhookCard({ channel, webhook, onChanged, onReveal, onError }: {
   }
 
   return (
-    <li className="flex items-start gap-4 rounded-lg border border-border-subtle bg-bg-card p-4 max-sm:flex-col">
+    <li className="flex items-start gap-4 rounded-lg border border-border-divider bg-bg-card p-4 max-sm:flex-col">
       <button type="button" disabled={uploading} onClick={() => fileRef.current?.click()} aria-label={t('webhooks.avatarFor', { name: webhook.name })}
         className="group/avatar relative flex-none rounded-full focus-ring">
         <GroupAvatar id={channel.id} title={webhook.name} avatar={webhook.avatar} size={80} />

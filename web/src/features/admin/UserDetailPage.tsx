@@ -125,7 +125,7 @@ function UserDetail({ id }: { id: string }) {
       {tab === 'servers' && (
         <AdminSection title={t('detail.servers')} description={t('detail.serversDescription')}>
           {servers.length === 0 ? <EmptyState size="compact" illustration="servers" title={t('detail.noServersTitle')} /> : (
-            <ul className="flex flex-col divide-y divide-border-subtle">
+            <ul className="flex flex-col divide-y divide-border-divider">
               {servers.map((g) => (
                 <li key={g.id} className="flex flex-wrap items-center gap-x-3 gap-y-1 py-2.5">
                   <AppLink to={`/admin/servers/${g.id}`} className="min-w-0 flex-1 basis-48 truncate text-body text-text-primary hover:underline">{g.name || t('detail.serverUnnamed')}</AppLink>
@@ -141,7 +141,7 @@ function UserDetail({ id }: { id: string }) {
       {tab === 'moderation' && (
         <>
           <AdminSection title={t('detail.access')} description={t('detail.accessDescription')}>
-            <div className="flex flex-col divide-y divide-border-subtle">
+            <div className="flex flex-col divide-y divide-border-divider">
               {suspended ? (
                 <AdminActionRow title={t('detail.suspended')} description={t('detail.suspendedDescription', { when: formatWhen(user.statusChangedAt, language), reason: user.statusReason })}>
                   <Button type="button" size="sm" onClick={() => setDialog('reactivate')}>{t('detail.reactivateAccount')}</Button>

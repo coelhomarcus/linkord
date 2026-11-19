@@ -248,7 +248,7 @@ export function EmojiPicker({ onPick, allowCustom = true, className, autoFocus =
       </div>
 
       <div className="flex min-h-0 flex-1">
-        <nav aria-label={t('picker.sections')} className="flex w-12 flex-none flex-col items-center gap-1 overflow-y-auto overscroll-contain border-r border-border-subtle bg-bg-secondary/40 py-2 [scrollbar-width:none]">
+        <nav aria-label={t('picker.sections')} className="flex w-12 flex-none flex-col items-center gap-1 overflow-y-auto overscroll-contain border-r border-border-divider bg-bg-secondary/40 py-2 [scrollbar-width:none]">
           {browseSections.map((section, index) => {
             const isActive = section.key === visibleSection;
             const prev = browseSections[index - 1];
@@ -355,7 +355,7 @@ export function EmojiPicker({ onPick, allowCustom = true, className, autoFocus =
         </div>
       </div>
 
-      <div className="flex h-12 flex-none items-center gap-2.5 border-t border-border-subtle bg-bg-secondary/40 px-3" aria-live="polite">
+      <div className="flex h-12 flex-none items-center gap-2.5 border-t border-border-divider bg-bg-secondary/40 px-3" aria-live="polite">
         {preview ? (
           <>
             {preview.custom

@@ -119,7 +119,9 @@ html[data-theme="graphite"] {
 
 /* Catppuccin dark flavours (Frappé, Macchiato, Mocha), adapted from catppuccin/discord:
    crust is the rail, mantle the channel list and the user panel, base the
-   conversation, crust again under fields. The accent is the flavour's blue
+   conversation, crust again under fields. Crust also draws the shell's
+   hairlines; inside modals and settings pages lines are surface0, as the
+   theme's --border-muted, since crust on base reads as black. The accent is the flavour's blue
    with a crust label, since white on a pastel fails contrast. Red and green
    fills are a deeper shade of the flavour's hue because several call sites
    put white text on them; the pastels stay for words (--color-red-text) and
@@ -162,6 +164,7 @@ html[data-theme="frappe"] {
   --color-fill-code: #232634;
 
   --color-border-subtle: #232634;
+  --color-border-divider: #414559;
   --color-border-default: #414559;
   --color-border-strong: #51576d;
   --color-border-field: #414559;
@@ -223,6 +226,7 @@ html[data-theme="macchiato"] {
   --color-fill-code: #181926;
 
   --color-border-subtle: #181926;
+  --color-border-divider: #363a4f;
   --color-border-default: #363a4f;
   --color-border-strong: #494d64;
   --color-border-field: #363a4f;
@@ -284,6 +288,7 @@ html[data-theme="mocha"] {
   --color-fill-code: #11111b;
 
   --color-border-subtle: #11111b;
+  --color-border-divider: #313244;
   --color-border-default: #313244;
   --color-border-strong: #45475a;
   --color-border-field: #313244;
@@ -350,6 +355,7 @@ html[data-theme="latte"] {
   --color-fill-code: #dce0e8;
 
   --color-border-subtle: #ccd0da;
+  --color-border-divider: #ccd0da;
   --color-border-default: #bcc0cc;
   --color-border-strong: #acb0be;
   --color-border-field: #bcc0cc;

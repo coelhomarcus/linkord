@@ -81,7 +81,7 @@ export function ServerInviteDialog({ server, channelId, open, onOpenChange }: {
           {notes.length > 0 && <ul className="flex flex-col gap-0.5 text-caption text-text-secondary">{notes.map((n) => <li key={n}>{n}</li>)}</ul>}
           {error && <p role="alert" className="text-label text-red-text">{error}</p>}
         </div>
-        <div className="flex flex-col gap-2 border-t border-border-subtle px-6 pb-6 pt-4">
+        <div className="flex flex-col gap-2 border-t border-border-divider px-6 pb-6 pt-4">
           <span className="text-body font-semibold text-text-primary">{t('invite.orLink')}</span>
           <div className="flex h-11 items-center gap-2 rounded-lg border border-border-field bg-bg-textarea py-1 pl-3 pr-1">
             <code className="min-w-0 flex-1 select-text truncate font-sans text-body text-text-primary">{link ?? t('invite.generating')}</code>

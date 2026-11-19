@@ -50,7 +50,7 @@ function SweepCard({ title, result, tone }: { title: string; result: SweepResult
   const { t } = useTranslation('admin');
   const language = useLanguage();
   return (
-    <div className="flex flex-col gap-2 rounded-xl border border-border-subtle bg-fill-subtle p-4">
+    <div className="flex flex-col gap-2 rounded-xl border border-border-divider bg-fill-subtle p-4">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
         <p className="text-body font-medium text-text-primary">{title}</p>
         <p className="text-caption text-text-muted">{t('system.sweepAt', { when: formatWhen(result.at, language) })}</p>
@@ -192,7 +192,7 @@ export function SystemPage() {
           title={t('common.maintenance')}
           description={t(info.orphanSweep.dryRunByDefault ? 'system.maintenanceReportOnly' : 'system.maintenanceDeletes', { grace: graceText(info.orphanSweep.graceMs) })}
         >
-          <div className="flex flex-col divide-y divide-border-subtle">
+          <div className="flex flex-col divide-y divide-border-divider">
             <AdminActionRow title={t('common.verify')} description={t('system.verifyDescription')}>
               <Button type="button" variant="secondary" disabled={previewing} onClick={() => void runPreview()}>{previewing ? t('common.checking') : t('common.verifyOrphans')}</Button>
             </AdminActionRow>

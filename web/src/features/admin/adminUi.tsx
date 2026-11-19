@@ -54,7 +54,7 @@ export function AuditList({ items, empty }: { items: AuditRow[]; empty?: string 
   const { t } = useTranslation('admin');
   if (items.length === 0) return <EmptyState size="compact" illustration="document" title={empty ?? t('audit.empty')} />;
   return (
-    <ul className="flex flex-col divide-y divide-border-subtle">
+    <ul className="flex flex-col divide-y divide-border-divider">
       {items.map((row) => (
         <li key={row.id} className="flex flex-col gap-1 py-3.5 text-label first:pt-0 last:pb-0">
           <div className="flex flex-wrap items-center gap-2">
@@ -124,13 +124,13 @@ export function ListChrome({ list, empty, onClearFilters, skeleton, children }: 
           title={t('chrome.filteredTitle')}
           description={t('chrome.filteredText')}
           action={<Button type="button" variant="secondary" size="sm" onClick={onClearFilters}>{t('ui.clearFilters')}</Button>}
-          className="rounded-xl border border-dashed border-border-subtle"
+          className="rounded-xl border border-dashed border-border-divider"
         />
       );
     }
     return empty.compact
       ? <EmptyState size="compact" illustration={empty.illustration} title={empty.title} description={empty.description} />
-      : <EmptyState illustration={empty.illustration} title={empty.title} description={empty.description} className="rounded-xl border border-dashed border-border-subtle" />;
+      : <EmptyState illustration={empty.illustration} title={empty.title} description={empty.description} className="rounded-xl border border-dashed border-border-divider" />;
   }
   return (
     <>

@@ -80,7 +80,7 @@ export function ImageCropDialog({ open, imageSrc, aspect, cropShape, title, proc
           {error && !processing && <p role="alert" className="text-label text-red-text">{error}</p>}
         </div>
 
-        <DialogFooter className="border-border-subtle bg-bg-tertiary/60 px-6 py-4">
+        <DialogFooter className="border-border-divider bg-bg-tertiary/60 px-6 py-4">
           <Button type="button" variant="ghost" disabled={processing} onClick={onCancel}>
             <span>{t('imageCrop.cancel')}</span>
           </Button>

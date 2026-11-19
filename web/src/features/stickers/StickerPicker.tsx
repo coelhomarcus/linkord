@@ -180,9 +180,9 @@ export function StickerPicker({ onPick, className, autoFocus = true }: StickerPi
         </label>
       </div>
 
-      <div className="flex min-h-0 flex-1 border-t border-border-subtle">
+      <div className="flex min-h-0 flex-1 border-t border-border-divider">
         {navSections.length > 0 && (
-          <nav aria-label={t('picker.sections')} className="flex w-12 flex-none flex-col items-center gap-1 overflow-y-auto overscroll-contain border-r border-border-subtle bg-bg-secondary/40 py-2 [scrollbar-width:none]">
+          <nav aria-label={t('picker.sections')} className="flex w-12 flex-none flex-col items-center gap-1 overflow-y-auto overscroll-contain border-r border-border-divider bg-bg-secondary/40 py-2 [scrollbar-width:none]">
             {navSections.map((section, index) => {
               const key = stickerSectionKey(section);
               const isActive = key === highlighted;
@@ -283,7 +283,7 @@ export function StickerPicker({ onPick, className, autoFocus = true }: StickerPi
         </div>
       </div>
 
-      <div className="flex h-14 flex-none items-center gap-2.5 border-t border-border-subtle bg-bg-secondary/40 px-3" aria-live="polite">
+      <div className="flex h-14 flex-none items-center gap-2.5 border-t border-border-divider bg-bg-secondary/40 px-3" aria-live="polite">
         {preview ? (
           <>
             <img src={stickerImageUrl(preview.id)} alt="" className="size-9 flex-none object-contain" />

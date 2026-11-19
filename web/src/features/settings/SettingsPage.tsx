@@ -117,7 +117,7 @@ export function SettingsPage({ onOpenProfile }: SettingsPageProps) {
   function wide() {
     return (
       <div className="flex min-h-0 min-w-0 flex-1">
-        <div className="scrollbar-none flex flex-none overflow-y-auto border-r border-border-subtle">
+        <div className="scrollbar-none flex flex-none overflow-y-auto border-r border-border-divider">
           <SettingsSidebar active={current} isAdmin={isAdmin} onOpenProfile={onOpenProfile} />
         </div>
         {/* a stable gutter: a short page and a scrolling one keep the column in the same place */}

@@ -83,7 +83,7 @@ export function ActivityCard({ activity, heading, large, className, children }: 
   return (
     <section
       aria-label={t(`line.${activity.kind}`, { name: activity.name })}
-      className={cn('flex flex-col gap-2 rounded-lg border border-border-subtle bg-fill-subtle p-3', large && 'gap-3 p-4', className)}
+      className={cn('flex flex-col gap-2 rounded-lg border border-border-divider bg-fill-subtle p-3', large && 'gap-3 p-4', className)}
     >
       <h3 className="text-caption font-semibold text-text-secondary">{heading ?? t(`kind.${activity.kind}`)}</h3>
       <div className={cn('flex min-w-0 items-center gap-3', large && 'gap-4')}>
