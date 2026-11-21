@@ -1,4 +1,4 @@
-import { ArrowLeftIcon, BellIcon, BellSlashIcon, DotsThreeIcon, HashIcon, ImageIcon, MagnifyingGlassIcon, PhoneIcon, UserCircleIcon, UsersThreeIcon, VideoCameraIcon } from '@/shared/ui/icons';
+import { ArrowLeftIcon, BellIcon, BellSlashIcon, DotsThreeIcon, HashIcon, MagnifyingGlassIcon, PhoneIcon, UserCircleIcon, UsersThreeIcon, VideoCameraIcon } from '@/shared/ui/icons';
 import { useState } from 'react';
 import type { ReactNode } from 'react';
 import { useLocation, useNavigate } from 'react-router';
@@ -82,18 +82,16 @@ interface ConversationPanelProps {
   onOpenSearch: () => void;
   /** the filters dialog, from the field's "Mais filtros" */
   onOpenSearchFilters: (query: SearchQuery) => void;
-  /** whether each right panel is showing, so its header button reads as pressed */
+  /** whether the right panel is showing, so its header button reads as pressed */
   detailsOpen: boolean;
-  mediaOpen: boolean;
   /** the avatar and title: they only ever open the details */
   onOpenDetails: () => void;
   onToggleDetails: () => void;
-  onToggleMedia: () => void;
   /** a panel shown beside the chat, under the header (a text channel's member list, a DM's profile) */
   aside?: ReactNode;
 }
 
-export function ConversationPanel({ onOpenProfile, onOpenCall, onOpenSearch, onOpenSearchFilters, detailsOpen, mediaOpen, onToggleDetails, onToggleMedia, aside }: ConversationPanelProps) {
+export function ConversationPanel({ onOpenProfile, onOpenCall, onOpenSearch, onOpenSearchFilters, detailsOpen, onToggleDetails, aside }: ConversationPanelProps) {
   const { t } = useTranslation('conversations');
   const { dispatch, conversations, servers, activeConversationId, allUsers, activeCallConversationId, startDmCall } = useRoom('dispatch', 'conversations', 'servers', 'activeConversationId', 'allUsers', 'activeCallConversationId', 'startDmCall');
   const state = useRoomState('me', 'callJoinError');
@@ -222,9 +220,6 @@ export function ConversationPanel({ onOpenProfile, onOpenCall, onOpenSearch, onO
               )}
               {conversation.type !== 'voice' && <NotificationHeaderButton target={{ scope: 'conversation', id: conversation.id, serverId: conversation.serverId ?? null }} />}
               {conversation.type !== 'voice' && <PinsButton conversation={conversation} className={HEADER_ICON} onOpenProfile={onOpenProfile} />}
-              <HeaderIcon label={t('panel.media')} pressed={mediaOpen} onClick={onToggleMedia} className="max-md:hidden">
-                <ImageIcon size={24} weight={mediaOpen ? 'fill' : 'regular'} />
-              </HeaderIcon>
               {isChannel ? (
                 <HeaderIcon label={detailsLabel} pressed={detailsOpen} onClick={onToggleDetails}>
                   <UsersThreeIcon size={24} weight="fill" />
@@ -250,7 +245,6 @@ export function ConversationPanel({ onOpenProfile, onOpenCall, onOpenSearch, onO
               <DropdownMenuTrigger render={<Button type="button" variant="ghost" size="icon" aria-label={t('panel.moreOptions')} className="flex-none md:hidden" />}><DotsThreeIcon size={22} /></DropdownMenuTrigger>
               <DropdownMenuContent align="end">
                 <DropdownMenuItem onClick={onOpenSearch}><MagnifyingGlassIcon size={18} />{t('panel.search')}</DropdownMenuItem>
-                <DropdownMenuItem onClick={onToggleMedia}><ImageIcon size={18} />{t('panel.media')}</DropdownMenuItem>
                 {activeCallConversationId && activeCallConversationId !== conversation.id && !isChannel && <DropdownMenuItem disabled={!!callBlockedReason} onClick={() => startThisCall(false)}><PhoneIcon size={18} />{t('panel.voiceCall')}</DropdownMenuItem>}
                 {conversation.type !== 'voice' && (
                   <>

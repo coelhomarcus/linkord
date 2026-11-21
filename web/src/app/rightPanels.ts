@@ -1,24 +1,18 @@
 import type { Conversation } from '@/shared/types/protocol';
 
-/** Whether the details (member list or DM profile) and media panels show, whatever their remembered
- * open flags say. Gated on what is actually on screen: the chat page, with a
+/** Whether the details (member list or DM profile) show, whatever their remembered
+ * open flag says. Gated on what is actually on screen: the chat page, with a
  * conversation of the page's kind, and not covered by the call stage. Not on
  * "the last view picked" — that stays 'call' after a call ends, and gating on
- * it left both buttons doing nothing until another conversation was clicked. */
+ * it left the button doing nothing until another conversation was clicked. */
 export function rightPanelsVisible(input: {
   detailsOpen: boolean;
-  mediaOpen: boolean;
   onChatPage: boolean;
   stageShown: boolean;
   conversationType: Conversation['type'] | null;
-}): { details: boolean; media: boolean } {
+}): { details: boolean } {
   const chatShown = input.onChatPage && !input.stageShown && input.conversationType !== null;
   // the details are a text channel's member list, or the profile beside a DM
   const hasDetails = input.conversationType === 'text' || input.conversationType === 'direct';
-  // Media is a modal over the chat. The member list and the DM profile are the
-  // page behind it, so opening media must not change whether they show.
-  return {
-    details: chatShown && hasDetails && input.detailsOpen,
-    media: chatShown && input.mediaOpen,
-  };
+  return { details: chatShown && hasDetails && input.detailsOpen };
 }

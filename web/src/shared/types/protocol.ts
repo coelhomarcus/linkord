@@ -251,17 +251,6 @@ export const AVATAR_MIME_TYPES = ['image/png', 'image/jpeg', 'image/gif', 'image
 export const MAX_BANNER_LEN = 500;
 export const MAX_PROFILE_BIO_LEN = 300;
 
-export interface SearchResult {
-  msgId: number;
-  conversationId: string;
-  conversationName: string;
-  id: string | null;
-  name: string;
-  avatar: string;
-  ts: number;
-  snippet: string;
-}
-
 /** A DM, or a server channel seen as a place to chat. The server sends a DM
  * summary as is; a channel is built on the client from its server's summary
  * (features/servers/useServersList.ts), so chat, calls and unread never need
@@ -378,7 +367,6 @@ export type ClientMessage =
   | { t: 'load-more-messages'; conversationId: string; beforeMsgId: number; requestId?: string }
   | { t: 'load-messages-after'; conversationId: string; afterMsgId: number; requestId?: string }
   | { t: 'load-messages-around'; conversationId: string; msgId: number; requestId?: string }
-  | { t: 'message-search'; query: string; conversationId?: string }
   | {
       t: 'search-messages'; requestId: string; scope: { serverId: string } | { conversationId: string };
       content?: string; authorIds?: string[]; channelIds?: string[]; mentionIds?: string[];
@@ -492,7 +480,6 @@ export type ServerMessage =
   | { t: 'server-sounds-changed'; serverId: string }
   | { t: 'server-emojis-changed'; serverId: string }
   | { t: 'server-stickers-changed'; serverId: string }
-  | { t: 'message-search-results'; query: string; conversationId?: string; results: SearchResult[] }
   | { t: 'search-messages-result'; requestId: string; total: number; page: number; messages: ChatMessage[] }
   | { t: 'chat'; message: ChatMessage }
   | { t: 'chat-send-result'; requestId: string; clientMessageId: string; message?: ChatMessage; error?: { code: string; message: string } }

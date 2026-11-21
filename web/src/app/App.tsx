@@ -28,7 +28,6 @@ import { VoiceChannelLobby } from '@/features/servers/VoiceChannelLobby';
 import { TopBar } from '@/app/layout/TopBar';
 import { FloatingUserDock } from '@/features/navigation/FloatingUserDock';
 import { ConversationPanel } from '@/features/conversations/ConversationPanel';
-import { ConversationMediaPanel } from '@/features/conversations/ConversationMediaPanel';
 import { SearchField } from '@/features/search/SearchField';
 import { SearchFiltersDialog } from '@/features/search/SearchFiltersDialog';
 import { SearchResultsPanel } from '@/features/search/SearchResultsPanel';
@@ -154,7 +153,6 @@ function Shell() {
   const [memberListOpen, setMemberListPreference] = useMemberListOpen(wide, contentLocation.pathname);
   // A DM's profile sits beside it unless closed, as in Discord.
   const [profilePanelOpen, setProfilePanelOpen] = useState(true);
-  const [mediaOpen, setMediaOpen] = useState(false);
   const pendingStageRef = useRef<string | null>(null);
 
   useConversationRouteSync();
@@ -301,8 +299,8 @@ function Shell() {
   }, [roleDataServerId, roleDataRevision, setServerMemberSnapshot]);
   const shownType = visibleConversationId ? activeConversation?.type ?? null : null;
   const directShown = shownType === 'direct';
-  const { details: detailsVisible, media: mediaVisible } = rightPanelsVisible({
-    detailsOpen: directShown ? profilePanelOpen && wide : memberListOpen, mediaOpen, onChatPage: !!visibleConversationId, stageShown: showStage, conversationType: shownType,
+  const { details: detailsVisible } = rightPanelsVisible({
+    detailsOpen: directShown ? profilePanelOpen && wide : memberListOpen, onChatPage: !!visibleConversationId, stageShown: showStage, conversationType: shownType,
   });
   const membersVisible = detailsVisible && !directShown;
   const profileVisible = detailsVisible && directShown;
@@ -394,10 +392,8 @@ function Shell() {
                   onOpenSearch={() => setSearchSheetOpen(true)}
                   onOpenSearchFilters={openSearchFilters}
                   detailsOpen={directShown ? profileVisible : memberListOpen}
-                  mediaOpen={mediaVisible}
                   onOpenDetails={() => { setDetails(true); }}
                   onToggleDetails={() => { setDetails(directShown ? !(membersVisible || profileVisible) : !memberListOpen); }}
-                  onToggleMedia={() => { setMediaOpen(!mediaVisible); }}
                   aside={searchVisible && wide ? <div className="flex w-[420px] flex-none border-l border-border-subtle">{searchPanel}</div>
                     : profilePanelUser ? <DirectProfilePanel user={profilePanelUser} onOpenProfile={openProfile} />
                     : membersVisible && currentServer && wide ? <MemberListPanel server={currentServer} onOpenProfile={openProfile} /> : null}
@@ -436,11 +432,6 @@ function Shell() {
             <MemberListPanel server={currentServer} onOpenProfile={openProfile} active={membersVisible} />
           </Sheet>
         )}
-        <ConversationMediaPanel
-          conversationId={activeConversation?.id ?? null}
-          open={mediaVisible}
-          onOpenChange={setMediaOpen}
-        />
         <TileMenu onOpenProfile={openProfile} />
         <ProfileModal userId={profileTarget?.userId ?? null} initialTab={profileTarget?.tab} onClose={() => setProfileTarget(null)} onOpenProfile={openProfile} />
         <AppModals modal={modal} onClose={closeModal} onOpenProfile={openProfile} />

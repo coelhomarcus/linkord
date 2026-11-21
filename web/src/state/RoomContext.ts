@@ -1,7 +1,7 @@
 import { createContext, useContext, useEffect, useMemo, useRef, useSyncExternalStore } from 'react';
 import type { Dispatch, MutableRefObject } from 'react';
 import type { Room } from 'livekit-client';
-import type { ActivitySettings, ChatMessage, ClientMessage, Conversation, OwnStatus, PublicUser, ReactionEmoji, SearchResult, ServerSummary, StickerCard, VisiblePresence } from '@/shared/types/protocol';
+import type { ActivitySettings, ChatMessage, ClientMessage, Conversation, OwnStatus, PublicUser, ReactionEmoji, ServerSummary, StickerCard, VisiblePresence } from '@/shared/types/protocol';
 import type { PresencePatch } from '@/features/status/useOwnStatus';
 import type { DmCallNotice } from '@/features/calls/useDmCall';
 import type { CallElsewhere } from '@/features/calls/callElsewhere';
@@ -268,11 +268,6 @@ export interface RoomContextValue {
   pendingJumpTarget: { conversationId: string; msgId: number } | null;
   clearPendingJumpTarget: () => void;
   jumpToMessage: (conversationId: string, msgId: number) => void;
-  searchResults: SearchResult[];
-  searchLoading: boolean;
-  searchError: string | null;
-  clearSearchError: () => void;
-  searchMessages: (query: string, conversationId?: string) => void;
   /** The header search and its results; null while the results panel is closed. */
   messageSearch: MessageSearchState | null;
   runMessageSearch: (scope: SearchScope, query: SearchQuery) => void;

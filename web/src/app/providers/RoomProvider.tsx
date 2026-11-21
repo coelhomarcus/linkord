@@ -20,7 +20,6 @@ import { useChatMessages } from '@/features/chat/useChatMessages';
 import type { ChatView } from '@/features/chat/useChatMessages';
 import { useTypingIndicator } from '@/state/hooks/useTypingIndicator';
 import { useSoundboardEvents } from '@/features/soundboard/useSoundboardEvents';
-import { useMessageSearch } from '@/features/chat/useMessageSearch';
 import { usePins } from '@/features/pins/usePins';
 import { useSavedMessages } from '@/features/saved/useSavedMessages';
 import { useHeaderSearch } from '@/features/search/useHeaderSearch';
@@ -170,7 +169,6 @@ export function RoomProvider({ children }: { children: ReactNode }) {
     [allConversations, chatMessages.unreadByConversation, chatMessages.mentionsByConversation, policyFor],
   );
   useEffect(() => { markActiveSeenRef.current = chatMessages.markActiveSeen; }, [chatMessages.markActiveSeen]);
-  const messageSearch = useMessageSearch(sendWs);
   const pins = usePins(sendWs, myUserIdRef);
   const saved = useSavedMessages(sendWs);
   const headerSearch = useHeaderSearch(sendWs);
@@ -422,9 +420,6 @@ export function RoomProvider({ children }: { children: ReactNode }) {
       case 'conversation-history-around':
         chatMessages.onConversationHistoryAround(m);
         break;
-      case 'message-search-results':
-        messageSearch.onMessageSearchResults(m);
-        break;
       case 'search-messages-result':
         headerSearch.onSearchResult(m);
         break;
@@ -569,7 +564,6 @@ export function RoomProvider({ children }: { children: ReactNode }) {
           else if (!callLifecycle.onCallJoinRejected(m.message)) log.warn('unhandled server error', { code: m.code, message: m.message, report: true });
         } else if (m.code === ERROR_CODES['message-not-found']) {
           chatMessages.cancelPendingJump();
-          messageSearch.setSearchErrorMessage(m.message);
           headerSearch.setSearchError(m.message);
         } else {
           log.warn('unhandled server error', { code: m.code, message: m.message, report: true });
@@ -578,7 +572,7 @@ export function RoomProvider({ children }: { children: ReactNode }) {
     }
   }, [
     dispatch, conversationsList, serversList, presence, openConversation, sendWs, callLifecycle, dmCall,
-    messageSearch, chatMessages, typingIndicator, pins, saved, headerSearch, disconnectIntentionally, profileUpdate, soundboardEvents, livekitRoom,
+    chatMessages, typingIndicator, pins, saved, headerSearch, disconnectIntentionally, profileUpdate, soundboardEvents, livekitRoom,
     onStatusSnapshot, onMyStatus, onPresenceResult, onIdleWelcome, refreshAuth, onNotificationSettingsWelcome, onNotificationSettingsChanged,
     onCallElsewhereRefused, onActivityWelcome, onActivitySettingsWelcome, onActivitySettingsChanged, onActivitySettingsResult,
   ]);
@@ -671,8 +665,6 @@ export function RoomProvider({ children }: { children: ReactNode }) {
         openReactionParticipants: chatMessages.openReactionParticipants, closeReactionParticipants: chatMessages.closeReactionParticipants,
         hasMoreAfterByConversation: chatMessages.hasMoreAfterByConversation, pendingJumpTarget: chatMessages.pendingJumpTarget,
         clearPendingJumpTarget: chatMessages.clearPendingJumpTarget, jumpToMessage: chatMessages.jumpToMessage,
-        searchResults: messageSearch.searchResults, searchLoading: messageSearch.searchLoading, searchError: messageSearch.searchError,
-        clearSearchError: messageSearch.clearSearchError, searchMessages: messageSearch.searchMessages,
         messageSearch: headerSearch.search, runMessageSearch: headerSearch.runSearch,
         setMessageSearchSort: headerSearch.setSearchSort, setMessageSearchPage: headerSearch.setSearchPage,
         closeMessageSearch: headerSearch.closeSearch,

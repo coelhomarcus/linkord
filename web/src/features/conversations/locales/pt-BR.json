@@ -31,7 +31,6 @@
   "panel": {
     "back": "Voltar para conversas",
     "viewProfile": "Ver perfil",
-    "media": "Mídias e links",
     "search": "Buscar mensagens",
     "blocked": "Você não pode ligar enquanto essa pessoa estiver bloqueada.",
     "needFriends": "Vocês precisam ser amigos para fazer chamadas.",
@@ -56,48 +55,6 @@
     "noneToInvite": "Você não tem amigos para convidar.",
     "loadingMore": "Carregando…",
     "loadMore": "Carregar mais"
-  },
-  "media": {
-    "title": "Mídias e links",
-    "tabs": {
-      "uploads": "Todos",
-      "images": "Imagens",
-      "gifs": "GIFs",
-      "videos": "Vídeos",
-      "audios": "Áudios",
-      "documents": "Documentos",
-      "embeds": "Links"
-    },
-    "empty": {
-      "uploads": "Nenhum arquivo enviado ainda.",
-      "images": "Nenhuma imagem enviada ainda.",
-      "gifs": "Nenhum GIF enviado ainda.",
-      "videos": "Nenhum vídeo enviado ainda.",
-      "audios": "Nenhum áudio enviado ainda.",
-      "documents": "Nenhum documento enviado ainda.",
-      "embeds": "Nenhum link incorporável compartilhado ainda."
-    },
-    "list": {
-      "uploads": "Arquivos enviados",
-      "images": "Imagens enviadas",
-      "gifs": "GIFs enviados",
-      "videos": "Vídeos enviados",
-      "audios": "Áudios enviados",
-      "documents": "Documentos enviados",
-      "embeds": "Links compartilhados"
-    },
-    "noResults": "Nada encontrado para essa busca.",
-    "searchLinks": "Buscar links",
-    "searchFiles": "Buscar arquivos",
-    "today": "Hoje",
-    "yesterday": "Ontem",
-    "thisWeek": "Esta semana",
-    "loadFailed": "Não foi possível carregar.",
-    "jumpToMessage": "Ir para a mensagem",
-    "open": "Abrir {{name}}",
-    "download": "Baixar {{name}}",
-    "retry": "Tentar de novo",
-    "loading": "Carregando…"
   },
   "newDirect": {
     "title": "Selecionar amigo",

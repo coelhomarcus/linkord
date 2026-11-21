@@ -7,7 +7,7 @@ export type ContentKind = (typeof CONTENT_KINDS)[number];
 
 /** The filters written as chips in the field: `de:`, `em:`, `tem:` and `menciona:`. */
 export type TokenKey = 'from' | 'in' | 'has' | 'mentions';
-export const TOKEN_KEYS: TokenKey[] = ['from', 'in', 'has', 'mentions'];
+const TOKEN_KEYS: TokenKey[] = ['from', 'in', 'has', 'mentions'];
 
 export interface SearchToken {
   key: TokenKey;

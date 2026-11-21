@@ -508,8 +508,9 @@ export const messages = pgTable('messages', {
   // what one account sent, in order: the data export (modules/data-export) reads it in id batches
   index('messages_author_id_idx').on(t.authorId, t.id),
   index('messages_search_vector_idx').using('gin', t.searchVector),
-  // Substring search in the media panel's links/GIFs (`ilike '%q%'`, see
-  // modules/attachments/media.ts), which a word index can't answer.
+  // Substring search (`ilike '%q%'`), which a word index can't answer. Its
+  // reader, the media panel, is gone; kept because dropping it rewrites
+  // nothing users see and a later substring search would want it back.
   index('messages_text_trgm_idx').using('gin', t.text.op('gin_trgm_ops')),
   index('messages_server_invitation_id_idx').on(t.serverInvitationId),
   index('messages_webhook_id_idx').on(t.webhookId),
