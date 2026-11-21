@@ -9,7 +9,7 @@ import { cn } from '@/shared/lib/utils';
 import { useRoom } from '@/state/RoomContext';
 import type { ChatMessage } from '@/shared/types/protocol';
 import { SEARCH_PAGE_SIZE, activeFilterCount, type SearchSort } from './searchQuery';
-import { highlightWords } from './useTextHighlight';
+import { highlightWords } from './searchMatches';
 
 // the server stops at page 40: past a thousand results nobody pages, they narrow the search
 const MAX_PAGES = 40;
