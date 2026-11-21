@@ -280,7 +280,7 @@ export const MessageRow = memo(function MessageRow({ message, showHeader, afterD
   }
 
   return (
-    <div className={cn('relative', showHeader && !afterDivider ? 'mt-[17px]' : 'mt-0')}>
+    <div className={cn('relative', showHeader && !afterDivider ? 'mt-message-group' : 'mt-0')}>
       {swipe.enabled && (
         <div
           aria-hidden
@@ -305,7 +305,7 @@ export const MessageRow = memo(function MessageRow({ message, showHeader, afterD
       {...swipe.handlers}
       style={swipe.offset ? { transform: `translateX(${swipe.offset}px)` } : undefined}
       className={cn(
-        'group/row relative flex gap-3 rounded-md px-4 py-0.5 transition-colors duration-100',
+        'group/row relative flex gap-3 rounded-md px-4 py-message-row-y transition-colors duration-100',
         'hover:bg-message-hover',
         mentionsMe && 'bg-yellow/[0.06] hover:bg-yellow/[0.08]',
         highlighted && 'bg-primary/10',
@@ -405,7 +405,7 @@ export const MessageRow = memo(function MessageRow({ message, showHeader, afterD
                 </div>
               ) : (
               <>
-                <div className={cn('message-press-text text-body leading-5.5 text-text-secondary', pending && pending.state !== 'failed' && 'opacity-60')}>
+                <div className={cn('message-press-text text-body leading-message text-text-secondary', pending && pending.state !== 'failed' && 'opacity-60')}>
                   <ChatMessageText
                     text={message.text}
                     mentionLookup={mentionLookup}

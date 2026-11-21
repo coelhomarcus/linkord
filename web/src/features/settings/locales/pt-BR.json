@@ -54,7 +54,9 @@
       "dataExport": "Seus dados",
       "desktopStartup": "Inicialização",
       "desktopWindow": "Janela",
-      "desktopUpdates": "Atualizações"
+      "desktopUpdates": "Atualizações",
+      "density": "Densidade",
+      "typography": "Texto"
     }
   },
   "search": {
@@ -173,6 +175,14 @@
     "activity": {
       "title": "Compartilhar atividade",
       "keywords": "jogando, jogo, jogos, app, apps, atividade, compartilhar, ocultar, steam, rich presence"
+    },
+    "density": {
+      "title": "Densidade",
+      "keywords": "densidade, compacta, compacto, confortável, espaçamento, espaço, linhas, aparência"
+    },
+    "typography": {
+      "title": "Tamanho do texto e fonte",
+      "keywords": "texto, fonte, tamanho, letra, tipografia, maior, menor, figtree, sistema, acessibilidade, aparência"
     }
   },
   "account": {
@@ -386,7 +396,55 @@
   "appearance": {
     "themes": "Temas",
     "themeAria": "Tema {{name}}",
-    "description": "Muda fundos, textos e botões da interface neste dispositivo."
+    "description": "Muda fundos, textos e botões da interface neste dispositivo.",
+    "density": {
+      "description": "O espaço entre as mensagens e a altura das linhas nas listas de conversas, canais e membros.",
+      "compact": {
+        "label": "Compacta",
+        "description": "Mais mensagens e conversas cabem na tela."
+      },
+      "default": {
+        "label": "Padrão",
+        "description": "O espaçamento de sempre."
+      },
+      "comfortable": {
+        "label": "Confortável",
+        "description": "Mais respiro entre as mensagens e as linhas."
+      }
+    },
+    "typography": {
+      "description": "Muda só o texto: espaçamentos e ícones continuam do mesmo tamanho."
+    },
+    "textSize": {
+      "label": "Tamanho do texto",
+      "small": "Pequeno",
+      "default": "Padrão",
+      "large": "Grande",
+      "larger": "Maior",
+      "pixels": "{{px}} px"
+    },
+    "font": {
+      "label": "Fonte",
+      "figtree": {
+        "label": "Figtree",
+        "description": "A fonte do Linkord."
+      },
+      "system": {
+        "label": "Fonte do sistema",
+        "description": "A mesma dos outros apps deste dispositivo."
+      }
+    },
+    "preview": {
+      "first": {
+        "name": "Ana",
+        "line1": "Alguém topa jogar hoje à noite?",
+        "line2": "Começo umas nove."
+      },
+      "second": {
+        "name": "Bruno",
+        "line1": "Tô dentro! Te encontro no canal de voz."
+      }
+    }
   },
   "calls": {
     "banners": {

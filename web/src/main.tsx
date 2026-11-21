@@ -7,6 +7,7 @@ import { installGlobalErrorHandlers } from './shared/lib/logger';
 import './styles/index.css';
 import { initI18n } from '@/shared/i18n/init';
 import { applyColorTheme } from '@/features/settings/applyColorTheme';
+import { applyAppearance } from '@/features/settings/appearancePreferences';
 import { startInstallPromptCapture } from '@/features/install/installPrompt';
 import { loadColorTheme } from '@/features/settings/useColorThemePreference';
 
@@ -20,6 +21,7 @@ installGlobalErrorHandlers();
 initI18n();
 startInstallPromptCapture();
 applyColorTheme(loadColorTheme());
+applyAppearance();
 
 // Register on load only in a build. In dev, opening notification settings can
 // register it for an explicit Push test without putting it in every Vite tab.

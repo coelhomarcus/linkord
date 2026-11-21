@@ -3,6 +3,7 @@ import { screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { renderWithRoom } from '@tests/fixtures/roomContextFixture';
 import { AppearanceSettings } from '@/features/settings/AppearanceSettings';
+import { applyAppearance } from '@/features/settings/appearancePreferences';
 import { AudioVideoSettings } from '@/features/settings/AudioVideoSettings';
 import { LanguageSettings } from '@/features/settings/LanguageSettings';
 import { getAudioPreferences } from '@/features/calls/audioPreferences';
@@ -15,6 +16,7 @@ vi.mock('@/features/calls/inputProfile', () => ({ applyInputProfile: vi.fn(async
 
 beforeEach(() => {
   localStorage.clear();
+  applyAppearance();
   setTimeFormat('auto');
 });
 
@@ -26,6 +28,19 @@ describe('AppearanceSettings', () => {
     expect(screen.getByRole('radio', { name: 'Tema Graphite' })).toHaveAttribute('aria-checked', 'false');
     await userEvent.setup().click(screen.getByRole('radio', { name: 'Tema Graphite' }));
     expect(setColorTheme).toHaveBeenCalledWith('graphite');
+  });
+
+  it('chooses the density and the text size, applied to the page at once', async () => {
+    renderWithRoom(<AppearanceSettings />);
+    const user = userEvent.setup();
+    expect(screen.getByRole('radio', { name: /Padrão.*O espaçamento de sempre/ })).toBeChecked();
+    await user.click(screen.getByRole('radio', { name: /Compacta/ }));
+    expect(document.documentElement.dataset.density).toBe('compact');
+    await user.click(screen.getByRole('radio', { name: /Maior/ }));
+    expect(screen.getByRole('radio', { name: /Maior/ })).toBeChecked();
+    expect(document.documentElement.dataset.textSize).toBe('larger');
+    await user.click(screen.getByRole('radio', { name: /Fonte do sistema/ }));
+    expect(document.documentElement.dataset.font).toBe('system');
   });
 });
 

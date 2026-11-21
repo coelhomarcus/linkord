@@ -61,14 +61,14 @@ function ChannelRow({ server, channel, active, onOpen, onInvite, onOpenProfile, 
     <li data-channel-id={channel.id} data-drop-target={accepts && dropping ? '' : undefined} {...dropHandlers}>
       {/* a text channel's row opens the conversation menu (mark as read), on a long press too */}
       <div data-conversation-id={channel.type === 'text' ? channel.id : undefined} className={cn(
-        'group/channel relative isolate mx-2 flex h-8 items-center rounded-lg',
+        'group/channel relative isolate mx-2 flex min-h-row-channel items-center rounded-lg',
         active ? 'text-text-primary' : unread ? 'text-text-primary' : 'text-text-muted hover:bg-nav-hover hover:text-text-primary',
         muted && !active && !unread && 'opacity-60',
         accepts && dropping && 'bg-nav-hover text-text-primary ring-2 ring-ring',
       )}>
         {active && <ActiveFill />}
         {unread > 0 && !active && <span aria-hidden className="absolute -left-2 top-1/2 h-2 w-1 -translate-y-1/2 rounded-r-full bg-text-primary" />}
-        <button type="button" onClick={onOpen} aria-current={active ? 'page' : undefined} className="flex h-full min-w-0 flex-1 items-center gap-1.5 rounded-lg px-2 text-left focus-ring">
+        <button type="button" onClick={onOpen} aria-current={active ? 'page' : undefined} className="flex min-w-0 flex-1 items-center gap-1.5 self-stretch rounded-lg px-2 text-left focus-ring">
           <Icon size={20} className={cn('flex-none', active || unread > 0 ? 'text-text-secondary' : 'text-text-muted')} />
           <span className={cn('truncate text-body', unread > 0 ? 'font-semibold' : 'font-medium')}>{channel.name}</span>
           {muted && <BellSlashIcon size={14} className="flex-none text-text-muted" aria-label={tn('preferences.muted')} role="img" />}

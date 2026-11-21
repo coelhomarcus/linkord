@@ -136,7 +136,9 @@ export function SettingsRadioGroup<T extends string>({ label, value, options, on
       {options.map((option) => {
         const checked = option.value === value;
         return (
-          <label key={option.value} className={cn('group/radio flex cursor-pointer items-start gap-3', disabled && 'cursor-not-allowed opacity-50')}>
+          // relative: the visually hidden input is absolute, and without a box of its own
+          // here it sits outside the scrolling page, so focusing it scrolled the dialog itself
+          <label key={option.value} className={cn('group/radio relative flex cursor-pointer items-start gap-3', disabled && 'cursor-not-allowed opacity-50')}>
             <input
               type="radio"
               name={name}

@@ -86,7 +86,7 @@ export function MessageCard({ message, actions, onOpenProfile, highlight, onActi
           ) : (
             <>
               {message.text && (
-                <div className="text-body leading-5.5 text-text-secondary">
+                <div className="text-body leading-message text-text-secondary">
                   <ChatMessageText
                     text={message.text}
                     mentionLookup={mentionLookup}

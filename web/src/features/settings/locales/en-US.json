@@ -54,7 +54,9 @@
       "dataExport": "Your data",
       "desktopStartup": "Startup",
       "desktopWindow": "Window",
-      "desktopUpdates": "Updates"
+      "desktopUpdates": "Updates",
+      "density": "Density",
+      "typography": "Text"
     }
   },
   "search": {
@@ -173,6 +175,14 @@
     "activity": {
       "title": "Share activity",
       "keywords": "playing, game, games, app, apps, activity, share, hide, steam, rich presence"
+    },
+    "density": {
+      "title": "Density",
+      "keywords": "density, compact, comfortable, spacing, space, rows, appearance"
+    },
+    "typography": {
+      "title": "Text size and font",
+      "keywords": "text, font, size, letters, typography, bigger, smaller, figtree, system, accessibility, appearance"
     }
   },
   "account": {
@@ -386,7 +396,55 @@
   "appearance": {
     "themes": "Themes",
     "themeAria": "{{name}} theme",
-    "description": "Changes the interface's backgrounds, text and buttons on this device."
+    "description": "Changes the interface's backgrounds, text and buttons on this device.",
+    "density": {
+      "description": "The space between messages and the height of rows in the conversation, channel and member lists.",
+      "compact": {
+        "label": "Compact",
+        "description": "More messages and conversations fit on screen."
+      },
+      "default": {
+        "label": "Default",
+        "description": "The usual spacing."
+      },
+      "comfortable": {
+        "label": "Comfortable",
+        "description": "More room between messages and rows."
+      }
+    },
+    "typography": {
+      "description": "Changes only the text: spacing and icons stay the same size."
+    },
+    "textSize": {
+      "label": "Text size",
+      "small": "Small",
+      "default": "Default",
+      "large": "Large",
+      "larger": "Larger",
+      "pixels": "{{px}} px"
+    },
+    "font": {
+      "label": "Font",
+      "figtree": {
+        "label": "Figtree",
+        "description": "Linkord's font."
+      },
+      "system": {
+        "label": "System font",
+        "description": "The same as the other apps on this device."
+      }
+    },
+    "preview": {
+      "first": {
+        "name": "Ana",
+        "line1": "Anyone up for a game tonight?",
+        "line2": "I'm starting around nine."
+      },
+      "second": {
+        "name": "Bruno",
+        "line1": "I'm in! See you in the voice channel."
+      }
+    }
   },
   "calls": {
     "banners": {
