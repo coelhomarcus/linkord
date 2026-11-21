@@ -33,8 +33,10 @@ export function MessageCard({ message, actions, onOpenProfile, highlight, onActi
   /** a click on the card itself, not on one of its links, pictures or buttons */
   onActivate?: () => void;
 }) {
-  const cardRef = useRef<HTMLElement | null>(null);
-  useTextHighlight(cardRef, highlight ?? []);
+  // only what was said is marked: the author, the time, the reply line and the
+  // card's own buttons (the jump) are not what the search matched
+  const textRef = useRef<HTMLDivElement | null>(null);
+  useTextHighlight(textRef, highlight ?? []);
   const activate = (event: MouseEvent) => {
     if (!onActivate || window.getSelection()?.toString()) return;
     if (event.target instanceof Element && event.target.closest('a, button, img, video, audio, input, [role="button"]')) return;
@@ -57,7 +59,7 @@ export function MessageCard({ message, actions, onOpenProfile, highlight, onActi
   return (
     // the jump is also a button among the card's actions: the click is a shortcut, not the only way
     // eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-noninteractive-element-interactions
-    <article ref={cardRef} onClick={activate} className={cn('group/card relative flex gap-3 rounded-lg border border-border-default bg-bg-primary px-3 py-2.5 focus-within:border-border-strong', onActivate && 'cursor-pointer hover:border-border-strong')}>
+    <article onClick={activate} className={cn('group/card relative flex gap-3 rounded-lg border border-border-default bg-bg-primary px-3 py-2.5 focus-within:border-border-strong', onActivate && 'cursor-pointer hover:border-border-strong')}>
       <div className="w-10 flex-none">
         {message.id && onOpenProfile ? (
           <button type="button" onClick={() => onOpenProfile(message.id!)} className="mt-0.5 block rounded-full focus-ring">
@@ -86,7 +88,7 @@ export function MessageCard({ message, actions, onOpenProfile, highlight, onActi
           ) : (
             <>
               {message.text && (
-                <div className="text-body leading-message text-text-secondary">
+                <div ref={textRef} className="text-body leading-message text-text-secondary">
                   <ChatMessageText
                     text={message.text}
                     mentionLookup={mentionLookup}
