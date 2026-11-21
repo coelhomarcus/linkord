@@ -1,0 +1,128 @@
+{
+  "placeholder": "Search {{name}}",
+  "placeholderDirect": "Search",
+  "field": "Search messages",
+  "clear": "Clear search",
+  "removeChip": "Remove filter {{label}}",
+  "keys": {
+    "from": "from:",
+    "in": "in:",
+    "has": "has:",
+    "mentions": "mentions:"
+  },
+  "filters": {
+    "title": "Filters",
+    "from": {
+      "title": "From a specific user",
+      "hint": "user"
+    },
+    "in": {
+      "title": "Sent in a specific channel",
+      "hint": "channel"
+    },
+    "has": {
+      "title": "Includes a specific type of data",
+      "hint": "link, embed or file"
+    },
+    "mentions": {
+      "title": "Mentions a specific user",
+      "hint": "user"
+    },
+    "more": {
+      "title": "More filters",
+      "hint": "dates, author type and more"
+    }
+  },
+  "sections": {
+    "from": "From user",
+    "in": "In channel",
+    "has": "Message contains",
+    "mentions": "Mentions user",
+    "history": "History",
+    "noMatch": "No matches"
+  },
+  "clearHistory": "Clear history",
+  "kinds": {
+    "image": "image",
+    "video": "video",
+    "link": "link",
+    "file": "file",
+    "audio": "audio",
+    "gif": "GIF",
+    "sticker": "sticker",
+    "embed": "embed"
+  },
+  "dialog": {
+    "title": "Filters",
+    "from": {
+      "label": "From",
+      "hint": "Sent by one of the selected users",
+      "placeholder": "e.g. {{example}}"
+    },
+    "in": {
+      "label": "In",
+      "hint": "Sent in one of the selected channels",
+      "placeholder": "e.g. {{example}}"
+    },
+    "has": {
+      "label": "Contains",
+      "hint": "Includes one of the selected types of data",
+      "placeholder": "Any content"
+    },
+    "mentions": {
+      "label": "Mentions",
+      "hint": "Mentions one of the selected users",
+      "placeholder": "e.g. {{example}}"
+    },
+    "date": {
+      "label": "Date",
+      "hint": "When the message was sent",
+      "add": "Add date",
+      "remove": "Remove date",
+      "picker": "Period"
+    },
+    "authorType": {
+      "label": "Author type",
+      "hint": "Who sent the message",
+      "user": "Person",
+      "bot": "Bot"
+    },
+    "pinned": {
+      "label": "Pinned",
+      "hint": "Pinned messages only"
+    },
+    "clear": "Clear filters",
+    "clearCount": "Clear filters ({{count}})",
+    "cancel": "Cancel",
+    "apply": "Apply filters",
+    "search": "Search",
+    "noOptions": "No matches"
+  },
+  "results": {
+    "count_one": "{{count}} result",
+    "count_other": "{{count}} results",
+    "many": "More than 1,000 results",
+    "searching": "Searching…",
+    "filters": "Filters",
+    "filtersCount": "Filters ({{count}})",
+    "sort": "Sort",
+    "sorts": {
+      "newest": "Newest",
+      "oldest": "Oldest",
+      "relevant": "Most relevant"
+    },
+    "jump": "Jump to message",
+    "close": "Close search",
+    "previous": "Previous page",
+    "next": "Next page",
+    "page": "Page {{page}}",
+    "pages": "Result pages",
+    "empty": {
+      "title": "No results",
+      "description": "Try other words or remove a filter."
+    }
+  },
+  "errors": {
+    "offline": "No connection to the server. Try again once it reconnects."
+  }
+}

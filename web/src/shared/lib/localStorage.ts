@@ -30,6 +30,8 @@ export const LOCAL_STORAGE_KEYS = {
   sounds: 'ss-sounds',
   autoIdleMinutes: 'ss-auto-idle-minutes',
   emojiSkinTone: 'ss-emoji-skin-tone',
+  /** the recent searches of one server, or of one DM */
+  searchHistory: (contextId: string) => `ss-search-history:${contextId}` as const,
 } as const;
 
 type RegistryValue = (typeof LOCAL_STORAGE_KEYS)[keyof typeof LOCAL_STORAGE_KEYS];

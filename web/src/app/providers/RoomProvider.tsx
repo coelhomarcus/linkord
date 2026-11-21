@@ -23,6 +23,7 @@ import { useSoundboardEvents } from '@/features/soundboard/useSoundboardEvents';
 import { useMessageSearch } from '@/features/chat/useMessageSearch';
 import { usePins } from '@/features/pins/usePins';
 import { useSavedMessages } from '@/features/saved/useSavedMessages';
+import { useHeaderSearch } from '@/features/search/useHeaderSearch';
 import { usePresence } from '@/state/hooks/usePresence';
 import { useCallLifecycle } from '@/features/calls/useCallLifecycle';
 import { useDmCall } from '@/features/calls/useDmCall';
@@ -172,6 +173,7 @@ export function RoomProvider({ children }: { children: ReactNode }) {
   const messageSearch = useMessageSearch(sendWs);
   const pins = usePins(sendWs, myUserIdRef);
   const saved = useSavedMessages(sendWs);
+  const headerSearch = useHeaderSearch(sendWs);
   const [maxAttachmentBytes, setMaxAttachmentBytes] = useState(DEFAULT_MAX_ATTACHMENT_BYTES);
 
   const { startSharing, stopSharing, changeSource, pauseSharePreview, resumeSharePreview } = useScreenShare(livekitRoom, dispatch);
@@ -423,6 +425,9 @@ export function RoomProvider({ children }: { children: ReactNode }) {
       case 'message-search-results':
         messageSearch.onMessageSearchResults(m);
         break;
+      case 'search-messages-result':
+        headerSearch.onSearchResult(m);
+        break;
       case 'conversation-history-more':
         chatMessages.onConversationHistoryMore(m);
         break;
@@ -445,11 +450,13 @@ export function RoomProvider({ children }: { children: ReactNode }) {
         chatMessages.onChatDeleted(m);
         pins.onMessageDeleted(m.conversationId, m.msgId);
         saved.onMessageDeleted(m.msgId);
+        headerSearch.onMessageDeleted(m.msgId);
         break;
       case 'chat-edited':
         chatMessages.onChatEdited(m);
         pins.onMessageChanged(m.message);
         saved.onMessageChanged(m.message);
+        headerSearch.onMessageChanged(m.message);
         break;
       case 'conversation-pins-updated':
         pins.onPinsUpdated(m);
@@ -563,6 +570,7 @@ export function RoomProvider({ children }: { children: ReactNode }) {
         } else if (m.code === ERROR_CODES['message-not-found']) {
           chatMessages.cancelPendingJump();
           messageSearch.setSearchErrorMessage(m.message);
+          headerSearch.setSearchError(m.message);
         } else {
           log.warn('unhandled server error', { code: m.code, message: m.message, report: true });
         }
@@ -570,7 +578,7 @@ export function RoomProvider({ children }: { children: ReactNode }) {
     }
   }, [
     dispatch, conversationsList, serversList, presence, openConversation, sendWs, callLifecycle, dmCall,
-    messageSearch, chatMessages, typingIndicator, pins, saved, disconnectIntentionally, profileUpdate, soundboardEvents, livekitRoom,
+    messageSearch, chatMessages, typingIndicator, pins, saved, headerSearch, disconnectIntentionally, profileUpdate, soundboardEvents, livekitRoom,
     onStatusSnapshot, onMyStatus, onPresenceResult, onIdleWelcome, refreshAuth, onNotificationSettingsWelcome, onNotificationSettingsChanged,
     onCallElsewhereRefused, onActivityWelcome, onActivitySettingsWelcome, onActivitySettingsChanged, onActivitySettingsResult,
   ]);
@@ -665,6 +673,9 @@ export function RoomProvider({ children }: { children: ReactNode }) {
         clearPendingJumpTarget: chatMessages.clearPendingJumpTarget, jumpToMessage: chatMessages.jumpToMessage,
         searchResults: messageSearch.searchResults, searchLoading: messageSearch.searchLoading, searchError: messageSearch.searchError,
         clearSearchError: messageSearch.clearSearchError, searchMessages: messageSearch.searchMessages,
+        messageSearch: headerSearch.search, runMessageSearch: headerSearch.runSearch,
+        setMessageSearchSort: headerSearch.setSearchSort, setMessageSearchPage: headerSearch.setSearchPage,
+        closeMessageSearch: headerSearch.closeSearch,
         maxAttachmentBytes,
       }}
     >

@@ -26,6 +26,7 @@ import type stickers from '@/features/stickers/locales/pt-BR.json';
 import type voiceMessages from '@/features/voiceMessages/locales/pt-BR.json';
 import type pins from '@/features/pins/locales/pt-BR.json';
 import type saved from '@/features/saved/locales/pt-BR.json';
+import type search from '@/features/search/locales/pt-BR.json';
 
 // pt-BR is the source of truth for key names: other languages are checked
 // against it by tests/shared/i18n/localeParity.test.ts. A feature that moves
@@ -61,6 +62,7 @@ declare module 'i18next' {
       voiceMessages: typeof voiceMessages;
       pins: typeof pins;
       saved: typeof saved;
+      search: typeof search;
     };
   }
 }

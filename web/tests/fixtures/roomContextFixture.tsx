@@ -171,6 +171,11 @@ export function createFakeRoomContextValue(overrides: Partial<RoomContextValue> 
     searchError: null,
     clearSearchError: noop,
     searchMessages: noop,
+    messageSearch: null,
+    runMessageSearch: noop,
+    setMessageSearchSort: noop,
+    setMessageSearchPage: noop,
+    closeMessageSearch: noop,
     maxAttachmentBytes: DEFAULT_MAX_ATTACHMENT_BYTES,
   };
   return { ...base, ...overrides };

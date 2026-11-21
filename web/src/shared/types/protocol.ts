@@ -28,8 +28,8 @@ export type ReactionEmoji = string;
 
 /** Wire protocol version this build speaks; the server refuses older ones
  * (client_outdated). Keep in sync with server/src/realtime/protocolVersion.ts
- * — version 25 adds pinned and saved messages. */
-export const PROTOCOL_VERSION = 25;
+ * — version 26 adds the header search with filters (`search-messages`). */
+export const PROTOCOL_VERSION = 26;
 
 /** One server's or one channel/DM's notification setting (protocol 19). `level` null inherits: a channel
  * from its server, a server or a DM from "all". `mutedUntil` (ISO) is only read while `muted`, and null
@@ -379,6 +379,13 @@ export type ClientMessage =
   | { t: 'load-messages-after'; conversationId: string; afterMsgId: number; requestId?: string }
   | { t: 'load-messages-around'; conversationId: string; msgId: number; requestId?: string }
   | { t: 'message-search'; query: string; conversationId?: string }
+  | {
+      t: 'search-messages'; requestId: string; scope: { serverId: string } | { conversationId: string };
+      content?: string; authorIds?: string[]; channelIds?: string[]; mentionIds?: string[];
+      has?: ('image' | 'video' | 'audio' | 'file' | 'link' | 'gif' | 'sticker' | 'embed')[];
+      before?: number; after?: number; authorType?: ('user' | 'bot')[]; pinned?: boolean;
+      sort: 'newest' | 'oldest' | 'relevant'; page: number;
+    }
   | { t: 'chat'; conversationId: string; text: string; replyTo?: number; requestId?: string; clientMessageId?: string; attachmentIds?: string[]; stickerId?: string }
   | { t: 'chat-delete'; msgId: number; requestId?: string }
   | { t: 'chat-edit'; msgId: number; text: string; requestId?: string }
@@ -486,6 +493,7 @@ export type ServerMessage =
   | { t: 'server-emojis-changed'; serverId: string }
   | { t: 'server-stickers-changed'; serverId: string }
   | { t: 'message-search-results'; query: string; conversationId?: string; results: SearchResult[] }
+  | { t: 'search-messages-result'; requestId: string; total: number; page: number; messages: ChatMessage[] }
   | { t: 'chat'; message: ChatMessage }
   | { t: 'chat-send-result'; requestId: string; clientMessageId: string; message?: ChatMessage; error?: { code: string; message: string } }
   | { t: 'chat-deleted'; conversationId: string; msgId: number }

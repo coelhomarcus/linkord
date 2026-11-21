@@ -18,6 +18,8 @@ import type { NotificationPolicy, NotificationSettingChange, NotificationSetting
 import type { NotificationScope, PolicyTarget } from '@/features/notifications/useNotificationSettings';
 import type { PinsList } from '@/features/pins/usePins';
 import type { SavedList } from '@/features/saved/useSavedMessages';
+import type { MessageSearchState } from '@/features/search/useHeaderSearch';
+import type { SearchQuery, SearchScope, SearchSort } from '@/features/search/searchQuery';
 
 export interface TileDomHandle {
   root: HTMLDivElement;
@@ -271,6 +273,12 @@ export interface RoomContextValue {
   searchError: string | null;
   clearSearchError: () => void;
   searchMessages: (query: string, conversationId?: string) => void;
+  /** The header search and its results; null while the results panel is closed. */
+  messageSearch: MessageSearchState | null;
+  runMessageSearch: (scope: SearchScope, query: SearchQuery) => void;
+  setMessageSearchSort: (sort: SearchSort) => void;
+  setMessageSearchPage: (page: number) => void;
+  closeMessageSearch: () => void;
   /** the largest file the server takes, from `welcome` */
   maxAttachmentBytes: number;
 }
