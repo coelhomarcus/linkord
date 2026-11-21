@@ -215,6 +215,8 @@ export function SearchField({ scope, scopeName, onOpenFilters, fullWidth = false
             onChange={(event) => handleChange(event.target.value)}
             onKeyDown={handleKeyDown}
             onFocus={() => setOpen(true)}
+            // a click on the field it already has focus in, after Escape closed the list
+            onClick={() => setOpen(true)}
             // a click in the list lands before the field loses focus
             onBlur={() => setOpen(false)}
             className="h-6 min-w-12 flex-1 bg-transparent px-0.5 text-label text-text-primary outline-none placeholder:text-text-muted"

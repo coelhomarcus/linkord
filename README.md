@@ -19,7 +19,8 @@ Linkord is a self-hosted place to chat and call with friends. Talk in direct mes
 
 **Chat**
 - Direct messages and private servers with text channels, organized into categories.
-- Replies, reactions, edits, deletes, and message search.
+- Replies, reactions, edits, and deletes.
+- Message search in the header, as in Discord: filters for author (`de:`), channel (`em:`), content type (`tem:` image, video, link, file, audio, GIF, sticker, embed) and mentions (`menciona:`), plus dates, author type and pinned in the filters dialog; results beside the chat, by channel, sorted newest, oldest or by relevance, with recent searches kept per server.
 - Pinned messages per channel and DM (with their own role permission), and saved messages, private to each account, in the inbox.
 - Attachments, voice messages, and link cards: rich previews with galleries, YouTube and Twitch players (one playing at a time), and `||spoiler||` text and links.
 - A video player with keyboard shortcuts (Space/K, J/L, arrows, M, F, 0–9), playback speed, picture-in-picture, a frame preview when hovering the timeline, and one saved volume for every player; uploaded videos keep their shape before they load.

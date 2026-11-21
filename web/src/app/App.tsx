@@ -440,8 +440,9 @@ function Shell() {
         <ReactionSheetHost />
         {searchScope && (
           <>
+            {!wide && (
             <Sheet
-              open={!wide && (searchSheetOpen || searchVisible)}
+              open={searchSheetOpen || searchVisible}
               onOpenChange={(open) => { if (!open) { setSearchSheetOpen(false); closeMessageSearch(); } }}
               side="right"
               ariaLabel={activeConversationName}
@@ -454,6 +455,7 @@ function Shell() {
                 {searchVisible && <div className="flex min-h-0 flex-1">{searchPanel}</div>}
               </div>
             </Sheet>
+            )}
             <SearchFiltersDialog
               open={searchFilters.open}
               onOpenChange={(open) => setSearchFilters((current) => ({ ...current, open }))}
