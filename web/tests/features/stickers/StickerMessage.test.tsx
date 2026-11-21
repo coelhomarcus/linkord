@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { ReactNode } from 'react';
@@ -15,7 +15,7 @@ function inRoom(children: ReactNode, activeConversationId: string | null = null)
   return <RoomStoreProvider value={value}>{children}</RoomStoreProvider>;
 }
 
-afterEach(() => resetMyStickers());
+afterEach(() => { resetMyStickers(); vi.restoreAllMocks(); });
 
 describe('StickerMessage', () => {
   it('draws the sticker large, described for screen readers', () => {
@@ -25,13 +25,19 @@ describe('StickerMessage', () => {
     expect(image).toHaveAttribute('width', '160');
   });
 
-  it('says which server it is from to a member there, and not to anyone else', async () => {
+  it('names its server to anyone, and tells someone outside it that only members use it', async () => {
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockImplementation(async () => (
+      new Response(JSON.stringify({ server: { id: 's9', name: 'Gatos', icon: '' } }), { headers: { 'Content-Type': 'application/json' } })
+    ));
     setMyStickersForTests('me', []);
     const { unmount } = render(inRoom(<StickerMessage sticker={card} />));
     await userEvent.click(screen.getByRole('button', { name: 'Figurinha abraço' }));
-    expect(await screen.findByText('Esta figurinha é de um servidor em que você não está.')).toBeInTheDocument();
-    expect(screen.queryByText('Esta figurinha é de')).not.toBeInTheDocument();
+    expect(await screen.findByText('Esta figurinha é de um servidor em que você não está. Só os membros dele podem usá-la.')).toBeInTheDocument();
+    expect(await screen.findByText('Gatos')).toBeInTheDocument();
+    expect(screen.getByText('Esta figurinha é de')).toBeInTheDocument();
+    expect(fetchSpy).toHaveBeenCalledWith(`/api/stickers/${card.id}/source`, expect.anything());
     unmount();
+    fetchSpy.mockClear();
 
     setMyStickersForTests('me', [{ serverId: 's1', stickers: [{ ...card, emoji: '🤗', serverId: 's1' }] }]);
     render(inRoom(<StickerMessage sticker={card} />));
@@ -40,6 +46,8 @@ describe('StickerMessage', () => {
     expect(screen.getByText('Esta figurinha é de')).toBeInTheDocument();
     expect(screen.getByText('Equipe')).toBeInTheDocument();
     expect(screen.getByText('Servidor apenas para convidados')).toBeInTheDocument();
+    // a member's own servers are already known
+    expect(fetchSpy).not.toHaveBeenCalled();
   });
 
   it('calls it this server\'s inside one of that server\'s channels', async () => {

@@ -79,14 +79,14 @@ function CustomEmojiDetails({ id, label }: { id: string; label: string }) {
   const { t } = useTranslation('emoji');
   const mine = useMyEmojis(useOptionalRoomSelector((room) => room.state.me.userId) ?? null);
   const known = useKnownCustomEmoji(id);
-  const origin = useExpressionOrigin(known?.serverId, mine.status === 'ready');
+  const origin = useExpressionOrigin('emojis', id, known?.serverId, mine.status === 'ready');
   return (
     <ExpressionDetails
       picture={<img src={emojiImageUrl(id)} alt="" draggable={false} className="size-12 object-contain" />}
       name={label}
       description={origin ? t(`details.custom.${origin.kind}`) : undefined}
       sourceLabel={t('details.custom.source')}
-      server={origin && origin.kind !== 'elsewhere' ? origin.server : undefined}
+      server={origin?.server}
     />
   );
 }

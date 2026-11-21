@@ -174,16 +174,21 @@ describe('ChatMessageText — server emojis', () => {
     expect(dialog).toHaveTextContent('Servidor apenas para convidados');
   });
 
-  it('never names the server to someone who is not in it', async () => {
+  it('names the server to someone who is not in it too, read by the emoji\'s id', async () => {
     const user = userEvent.setup();
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockImplementation(async () => (
+      new Response(JSON.stringify({ server: { id: 's9', name: 'Gatos', icon: '' } }), { headers: { 'Content-Type': 'application/json' } })
+    ));
     setMyEmojisForTests('me', []);
     const value = { state: { me: { userId: 'me' } }, servers: [], activeConversationId: null } as unknown as RoomContextValue;
     render(<RoomStoreProvider value={value}><ChatMessageText text="<:wave:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa>" /></RoomStoreProvider>);
     await user.click(screen.getByRole('button', { name: ':wave:' }));
     const dialog = await screen.findByRole('dialog');
-    expect(dialog).toHaveTextContent('Este emoji é de um servidor em que você não está.');
-    expect(within(dialog).queryByText('Este emoji é de')).not.toBeInTheDocument();
-    expect(dialog).not.toHaveTextContent('Servidor apenas para convidados');
+    expect(dialog).toHaveTextContent('Este emoji é de um servidor em que você não está. Só os membros dele podem usá-lo.');
+    expect(await within(dialog).findByText('Gatos')).toBeInTheDocument();
+    expect(within(dialog).getByText('Este emoji é de')).toBeInTheDocument();
+    expect(fetchSpy).toHaveBeenCalledWith('/api/emojis/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/source', expect.anything());
+    fetchSpy.mockRestore();
   });
 });
 

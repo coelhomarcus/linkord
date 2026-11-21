@@ -65,8 +65,8 @@ test('a sticker goes into a DM with someone outside its server, who sees it and 
   await expect(picture).toHaveAttribute('src', `/api/stickers/${sticker.id}`);
   await expect.poll(() => picture.evaluate((img: HTMLImageElement) => img.naturalWidth)).toBe(320);
   await b.page.getByRole('button', { name: 'Figurinha cores' }).click();
-  await expect(b.page.getByText('Esta figurinha é de um servidor em que você não está.')).toBeVisible();
-  await expect(b.page.getByText('Servidor apenas para convidados')).toBeHidden();
+  await expect(b.page.getByText('Esta figurinha é de um servidor em que você não está. Só os membros dele podem usá-la.')).toBeVisible();
+  await expect(b.page.getByRole('dialog').getByText('E2E stickers')).toBeVisible();
   await b.page.keyboard.press('Escape');
 
   // bob has no stickers of his own to send

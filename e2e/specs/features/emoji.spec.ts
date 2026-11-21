@@ -85,10 +85,10 @@ test('a server emoji goes into a DM with someone outside the server, who sees th
   await expect(picture).toBeVisible();
   await expect(picture).toHaveAttribute('src', `/api/emojis/${emoji.id}`);
   await expect.poll(() => picture.evaluate((img: HTMLImageElement) => img.naturalWidth)).toBe(128);
-  // a click says what it is, never which server to someone outside it
+  // a click says what it is and which server it is from, to someone outside it too
   await b.page.locator('[data-message-id]').getByRole('button', { name: ':e2e_sun:' }).click();
-  await expect(b.page.getByText('Este emoji é de um servidor em que você não está.')).toBeVisible();
-  await expect(b.page.getByText('Servidor apenas para convidados')).toBeHidden();
+  await expect(b.page.getByText('Este emoji é de um servidor em que você não está. Só os membros dele podem usá-lo.')).toBeVisible();
+  await expect(b.page.getByRole('dialog').getByText('E2E emojis')).toBeVisible();
   await b.page.keyboard.press('Escape');
 
   // and in another server's channel, typed in full

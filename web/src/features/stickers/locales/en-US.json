@@ -78,7 +78,7 @@
   "details": {
     "here": "This sticker is from this server. You can use it anywhere.",
     "mine": "This sticker is from one of your servers. You can use it anywhere.",
-    "elsewhere": "This sticker is from a server you're not in.",
+    "elsewhere": "This sticker is from a server you're not in. Only its members can use it.",
     "source": "This sticker is from"
   }
 }

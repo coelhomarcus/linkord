@@ -321,6 +321,24 @@ async function handleDelete(request: FastifyRequest<StickerParams>, reply: Fasti
 /** `GET /api/stickers/:stickerId` — open to any signed-in account, member or
  * not: whoever reads a message must see its sticker. The id is random and
  * unguessable, and its file never changes, so it is cached for good. */
+/** `GET /api/stickers/:stickerId/source` — the server a sticker comes from,
+ * for the card a click on it opens, member or not (Discord shows it too):
+ * its name and icon, as an invitation card shows them. `server` is null when
+ * that server is suspended. */
+async function handleSource(request: FastifyRequest<{ Params: { stickerId: string } }>, reply: FastifyReply): Promise<void> {
+  const sess = await requireSession(request, reply);
+  if (!sess) return;
+  const stickerId = String(request.params.stickerId || '');
+  if (!isStickerId(stickerId)) return sendError(reply, 404, 'not_found', 'Figurinha não encontrada.');
+  const [row] = await db.select({ id: servers.id, name: servers.name, icon: servers.icon, status: servers.status })
+    .from(serverStickers)
+    .innerJoin(servers, eq(servers.id, serverStickers.serverId))
+    .where(eq(serverStickers.id, stickerId))
+    .limit(1);
+  if (!row) return sendError(reply, 404, 'not_found', 'Figurinha não encontrada.');
+  sendJson(reply, 200, { server: row.status === 'active' ? { id: row.id, name: row.name, icon: row.icon } : null });
+}
+
 async function handleFile(request: FastifyRequest<{ Params: { stickerId: string } }>, reply: FastifyReply): Promise<void> {
   const sess = await requireSession(request, reply);
   if (!sess) return;
@@ -345,6 +363,7 @@ async function handleFile(request: FastifyRequest<{ Params: { stickerId: string 
 export function registerServerStickerRoutes(fastify: FastifyInstance): void {
   fastify.get('/api/me/stickers', handleMine);
   fastify.get('/api/stickers/:stickerId', handleFile);
+  fastify.get('/api/stickers/:stickerId/source', handleSource);
   fastify.get('/api/servers/:serverId/stickers', handleList);
   fastify.patch('/api/servers/:serverId/stickers/:stickerId', handleUpdate);
   fastify.delete('/api/servers/:serverId/stickers/:stickerId', handleDelete);

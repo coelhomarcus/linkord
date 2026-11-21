@@ -60,14 +60,14 @@ function StickerDetails({ id, name }: { id: string; name: string }) {
   const { t } = useTranslation('stickers');
   const mine = useMyStickers(useOptionalRoomSelector((room) => room.state.me.userId) ?? null);
   const known = useKnownSticker(id);
-  const origin = useExpressionOrigin(known?.serverId, mine.status === 'ready');
+  const origin = useExpressionOrigin('stickers', id, known?.serverId, mine.status === 'ready');
   return (
     <ExpressionDetails
       picture={<img src={stickerImageUrl(id)} alt="" draggable={false} className="size-12 object-contain" />}
       name={name}
       description={origin ? t(`details.${origin.kind}`) : undefined}
       sourceLabel={t('details.source')}
-      server={origin && origin.kind !== 'elsewhere' ? origin.server : undefined}
+      server={origin?.server}
     />
   );
 }

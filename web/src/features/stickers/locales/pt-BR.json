@@ -78,7 +78,7 @@
   "details": {
     "here": "Esta figurinha é deste servidor. Você pode usá-la em qualquer lugar.",
     "mine": "Esta figurinha é de um dos seus servidores. Você pode usá-la em qualquer lugar.",
-    "elsewhere": "Esta figurinha é de um servidor em que você não está.",
+    "elsewhere": "Esta figurinha é de um servidor em que você não está. Só os membros dele podem usá-la.",
     "source": "Esta figurinha é de"
   }
 }
