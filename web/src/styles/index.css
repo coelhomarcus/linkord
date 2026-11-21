@@ -252,6 +252,16 @@
    shorter than entrances: nothing waits on them, and they are hidden from
    input as they start (Base UI's popups; the floating save bar is inert). */
 
+/* Set by applyColorTheme for the frame the theme changes in: each element's
+   own color transition would otherwise run at its own pace, and the old and
+   new themes show side by side for a moment. */
+.theme-switching,
+.theme-switching *,
+.theme-switching *::before,
+.theme-switching *::after {
+  transition: none !important;
+}
+
 /* The desktop app's own title bar (app/layout/DesktopFrame.tsx): Electron moves
    the window when a drag starts on an app-drag area, and swallows its clicks,
    so anything clickable inside takes app-no-drag. Browsers ignore both. */

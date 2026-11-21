@@ -12,7 +12,18 @@ const SHELL_BACKGROUND: Record<ColorThemeId, string> = {
   mocha: '#11111b',
 };
 
+const SWITCHING_CLASS = 'theme-switching';
+
 export function applyColorTheme(id: ColorThemeId): void {
-  document.documentElement.dataset.theme = id;
+  const root = document.documentElement;
+  const changing = root.dataset.theme !== undefined && root.dataset.theme !== id;
+  if (changing) root.classList.add(SWITCHING_CLASS);
+  root.dataset.theme = id;
   document.querySelector('meta[name="theme-color"]')?.setAttribute('content', SHELL_BACKGROUND[id]);
+  if (!changing) return;
+  // A layout read restyles the whole page now, while transitions are off;
+  // dropping the class before that would let every element animate from the
+  // old colors.
+  void document.body.offsetHeight;
+  requestAnimationFrame(() => root.classList.remove(SWITCHING_CLASS));
 }
