@@ -1,6 +1,6 @@
 // A sandboxed preload must be CommonJS and cannot require local files, so this
 // stays one self-contained file. The channel names match src/main/screenShare.ts,
-// src/main/appBridge.ts, src/main/deepLinkBridge.ts and src/main/mainWindow.ts.
+// src/main/appBridge.ts, src/main/deepLinkBridge.ts, src/main/notificationBridge.ts and src/main/mainWindow.ts.
 const { contextBridge, ipcRenderer } = require('electron') as typeof import('electron');
 
 function flag(name: string): string | undefined {
@@ -25,6 +25,15 @@ contextBridge.exposeInMainWorld('linkordDesktop', Object.freeze({
   version: flag('linkord-desktop-version') ?? '',
   focusWindow: () => ipcRenderer.invoke('linkord:window:focus'),
   setBadgeCount: (count: number) => ipcRenderer.invoke('linkord:badge:set', Number(count)),
+  // The system's own notifications (src/main/notificationBridge.ts); a click names the one clicked
+  notifications: Object.freeze({
+    show: (request: unknown) => ipcRenderer.invoke('linkord:notification:show', request),
+    onClick: (callback: (id: string) => void) => {
+      const listener = (_event: unknown, id: unknown) => { if (typeof id === 'string') callback(id); };
+      ipcRenderer.on('linkord:notification:click', listener);
+      return () => { ipcRenderer.removeListener('linkord:notification:click', listener); };
+    },
+  }),
   // Once the page listens, the main process stops reloading it to follow a link
   onDeepLink: (callback: (path: string) => void) => {
     deepLinkListener = callback;

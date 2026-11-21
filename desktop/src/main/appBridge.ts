@@ -18,10 +18,7 @@ export function installAppBridge(appOrigin: string): void {
   ipcMain.handle(FOCUS_WINDOW, (event) => {
     if (!isAppPage(event.senderFrame, appOrigin)) return;
     const window = BrowserWindow.fromWebContents(event.sender);
-    if (!window) return;
-    if (window.isMinimized()) window.restore();
-    window.show();
-    window.focus();
+    if (window) bringBack(window);
   });
 
   // The page's own title bar buttons (the system's are hidden, see titleBar.ts)
@@ -47,6 +44,14 @@ export function installAppBridge(appOrigin: string): void {
     const count = parseBadgeCount(value);
     return count === null ? false : app.setBadgeCount(count);
   });
+}
+
+/** Shows the window, from the tray or the dock, and puts it in front. */
+export function bringBack(window: BrowserWindow): void {
+  if (window.isDestroyed()) return;
+  if (window.isMinimized()) window.restore();
+  window.show();
+  window.focus();
 }
 
 /** Tells the page when its maximise button should read "restore", fullscreen hides the bar's inset, or focus dims it. */

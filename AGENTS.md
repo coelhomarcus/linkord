@@ -124,8 +124,8 @@ desktop/
                  # (permission handlers), contentsGuard.ts (navigation and popups), plus the
                  # rules they apply as plain modules: appUrl, navigation, permissions, windowState, loadRetry,
                  # titleBar, loginItem, menus, strings, updates, preferences, trayMenuLayout, activityCatalog,
-                 # activityDetect (tray.ts, trayMenuWindow.ts, startAtLogin.ts, updater.ts, settingsBridge.ts,
-                 # activityWatcher.ts, activityBridge.ts wire them)
+                 # activityDetect, notificationLayout (tray.ts, trayMenuWindow.ts, startAtLogin.ts, updater.ts,
+                 # settingsBridge.ts, activityWatcher.ts, activityBridge.ts, notificationBridge.ts wire them)
   src/preload/   # index.cts, the only bridge into the page (trayMenu.cts serves the drawn tray menu)
   scripts/       # package.mjs (`npm run package`: bakes LINKORD_URL in, runs electron-builder)
   resources/     # installer icons; electron-builder.config.cjs sits next to package.json

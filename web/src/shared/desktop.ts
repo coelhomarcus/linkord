@@ -104,6 +104,27 @@ export interface DesktopRunningActivities {
   preferred: string | null;
 }
 
+/** A notification for the system's own centre (desktop/src/main/notificationLayout.ts checks it). */
+export interface DesktopNotificationRequest {
+  /** the notification's tag: a newer one with the same id replaces it */
+  id: string;
+  title: string;
+  body: string;
+  /** a PNG data URL; anything else shows the app icon */
+  icon?: string | null;
+  /** a conversation's notifications stack together */
+  group?: string | null;
+  /** a single channel message, which macOS lays out as sender, channel and text */
+  detail?: { sender: string; place: string; text: string } | null;
+}
+
+export interface DesktopNotifications {
+  /** false when it was not shown (a request it refused, or no notifications on this system) */
+  show: (request: DesktopNotificationRequest) => Promise<boolean>;
+  /** the id of the notification clicked, once the window is back; returns the unsubscribe */
+  onClick: (callback: (id: string) => void) => () => void;
+}
+
 export interface LinkordDesktop {
   platform: string;
   version: string;
@@ -115,6 +136,8 @@ export interface LinkordDesktop {
   onDeepLink?: (callback: (path: string) => void) => () => void;
   /** the count on the dock or launcher icon; false where the system shows none (Windows) */
   setBadgeCount?: (count: number) => Promise<boolean>;
+  /** absent in builds that show the page's web notifications instead */
+  notifications?: DesktopNotifications;
   /** absent in builds that keep the system title bar */
   windowControls?: DesktopWindowControls;
   /** absent in builds without the app's own settings */

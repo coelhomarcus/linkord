@@ -9,6 +9,7 @@ import { guardContents } from './contentsGuard.js';
 import { forbiddenSwitch } from './debugSwitches.js';
 import { deepLinkFromArgv, deepLinkPath, protocolRegistration } from './deepLink.js';
 import { installDeepLinkBridge } from './deepLinkBridge.js';
+import { installNotificationBridge } from './notificationBridge.js';
 import { capturesSystemAudio, sharePicker } from './displayMedia.js';
 import { createMainWindow, type MainWindow } from './mainWindow.js';
 import { appMenuTemplate, runTrayItem, trayMenuItems, trayMenuTemplate, type MenuActions, type MenuState } from './menus.js';
@@ -271,6 +272,7 @@ if (!resolved.ok) {
     installPermissionHandlers(session.defaultSession, appUrl.origin);
     installScreenShare(session.defaultSession, appUrl.origin, picker);
     installAppBridge(appUrl.origin);
+    installNotificationBridge(appUrl.origin);
     const activityWatcher = createActivityWatcher({
       recentFile: path.join(app.getPath('userData'), 'activity-recent.json'),
       preferredFile: path.join(app.getPath('userData'), 'activity-preferred.json'),
