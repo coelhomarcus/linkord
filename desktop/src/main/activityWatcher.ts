@@ -5,13 +5,15 @@ import path from 'node:path';
 import { app } from 'electron';
 import { ACTIVITY_CATALOG } from './activityCatalog.js';
 import {
-  detectActivity, needsArgs, parseLibraryFolders, parsePsOutput, parseRegDword, parseRegString, parseTasklistCsv,
-  parseVdfValue, runningAppId, sameDetection, type DetectedActivity, type RunningProcess, type SteamGame,
+  detectCandidates, foregroundKey, needsArgs, parseForegroundLine, parseLibraryFolders, parseLsappinfoPid, parsePsOutput,
+  parseRegDword, parseRegString, parseTasklistCsv, parseVdfValue, parseXpropPid, parseXpropWindow, runningAppId, sameDetection,
+  type DetectedActivity, type ForegroundProcess, type RunningProcess, type SteamGame,
 } from './activityDetect.js';
+import { needsForeground, pickActivity, settleActivity, type ActivityPreferences, type Challenger } from './activityResolve.js';
 
-// Looks every few seconds at what is running (activityDetect.ts decides what counts) and tells the
-// page when the activity changes. Each system is asked with its own tools; a failed or slow command
-// counts as "nothing running", never as an error the person sees.
+// Looks every few seconds at what is running (activityDetect.ts decides what counts, activityResolve.ts
+// which of it is shared) and tells the page when the activity changes. Each system is asked with its
+// own tools; a failed or slow command counts as "nothing running", never as an error the person sees.
 
 const INTERVAL_MS = 15_000;
 const COMMAND_TIMEOUT_MS = 5_000;
@@ -30,6 +32,12 @@ export interface RecentActivity {
   key: string;
   kind: 'playing' | 'using';
   name: string;
+}
+
+/** What runs now and which one the person picked, for choosing in settings. */
+export interface RunningActivities {
+  running: RecentActivity[];
+  preferred: string | null;
 }
 
 function run(file: string, args: string[]): Promise<string> {
@@ -95,16 +103,36 @@ async function steamState(platform: NodeJS.Platform): Promise<{ appId: number | 
   return { appId: runningAppId(parseVdfValue(text, 'RunningAppID')), root: null };
 }
 
-/** The game's name from its Steam app manifest, in the main library or any other. */
-async function steamGameName(root: string | null, appId: number): Promise<string | null> {
-  if (!root) return null;
+/** The game's name and folder from its Steam app manifest, in the main library or any other. */
+async function steamGameInfo(root: string | null, appId: number): Promise<{ name: string | null; installDir: string | null }> {
+  if (!root) return { name: null, installDir: null };
   const libraries = parseLibraryFolders(await fs.readFile(path.join(root, 'steamapps/libraryfolders.vdf'), 'utf8').catch(() => ''));
   for (const library of [root, ...libraries]) {
     const manifest = await fs.readFile(path.join(library, 'steamapps', `appmanifest_${appId}.acf`), 'utf8').catch(() => null);
-    const name = manifest ? parseVdfValue(manifest, 'name') : null;
-    if (name) return name.slice(0, 64);
+    if (!manifest) continue;
+    const name = parseVdfValue(manifest, 'name');
+    const folder = parseVdfValue(manifest, 'installdir');
+    return { name: name ? name.slice(0, 64) : null, installDir: folder ? path.join(library, 'steamapps/common', folder) : null };
   }
-  return null;
+  return { name: null, installDir: null };
+}
+
+const WINDOWS_FOREGROUND = [
+  'Add-Type -Namespace Linkord -Name Fg -MemberDefinition \'[DllImport("user32.dll")] public static extern System.IntPtr GetForegroundWindow(); [DllImport("user32.dll")] public static extern uint GetWindowThreadProcessId(System.IntPtr h, out uint p);\';',
+  '$p = 0; [void][Linkord.Fg]::GetWindowThreadProcessId([Linkord.Fg]::GetForegroundWindow(), [ref]$p);',
+  '"$p`t$((Get-Process -Id $p -ErrorAction SilentlyContinue).Path)"',
+].join(' ');
+
+/** The process that owns the window in front, or null where the system does not say (Wayland). */
+async function foregroundProcess(platform: NodeJS.Platform, processes: readonly RunningProcess[]): Promise<ForegroundProcess | null> {
+  const withPath = (pid: number | null): ForegroundProcess | null => (pid ? { pid, path: processes.find((p) => p.pid === pid)?.path ?? null } : null);
+  if (platform === 'win32') return parseForegroundLine(await powershell(WINDOWS_FOREGROUND));
+  if (platform === 'darwin') {
+    const asn = (await run('lsappinfo', ['front'])).trim();
+    return asn ? withPath(parseLsappinfoPid(await run('lsappinfo', ['info', '-only', 'pid', asn]))) : null;
+  }
+  const window = parseXpropWindow(await run('xprop', ['-root', '_NET_ACTIVE_WINDOW']));
+  return window ? withPath(parseXpropPid(await run('xprop', ['-id', window, '_NET_WM_PID']))) : null;
 }
 
 /** A macOS app's own icon: the `.icns` its Info.plist names, turned into a PNG by `sips`. Electron's
@@ -134,19 +162,43 @@ async function windowsExePath(pid: number): Promise<string | null> {
   return value || null;
 }
 
-export function createActivityWatcher(options: { recentFile: string; onChange: (activity: CurrentActivity | null) => void }) {
+const sameRunning = (a: readonly RecentActivity[], b: readonly RecentActivity[]) =>
+  a.length === b.length && a.every((item, i) => item.key === b[i]!.key && item.name === b[i]!.name);
+
+export function createActivityWatcher(options: {
+  recentFile: string;
+  /** where the activity picked by hand is kept */
+  preferredFile: string;
+  onChange: (activity: CurrentActivity | null) => void;
+  onRunningChange: (running: RunningActivities) => void;
+}) {
   const platform = process.platform;
   let detected: DetectedActivity | null = null;
   let current: CurrentActivity | null = null;
+  let candidates: DetectedActivity[] = [];
+  let running: RecentActivity[] = [];
+  let foreground: string | null = null;
+  let challenger: Challenger | null = null;
+  // when each running activity was first seen, so the shown one counts from its own start, not from
+  // the moment it won over another
+  const firstSeen = new Map<string, number>();
   let recent: RecentActivity[] = [];
-  const steamNames = new Map<number, string | null>();
+  const prefs: { preferred: string | null; hidden: string[] } = { preferred: null, hidden: [] };
+  const steamGames = new Map<number, { name: string | null; installDir: string | null }>();
   const icons = new Map<string, string | null>();
   let timer: NodeJS.Timeout | null = null;
-  let running = false;
+  // one check or re-pick at a time; a settings change during a check picks again when it ends
+  let busy = false;
+  let pickAgain = false;
+  let stops = 0;
 
   void fs.readFile(options.recentFile, 'utf8').then((text) => {
     const saved = JSON.parse(text) as unknown;
     if (Array.isArray(saved)) recent = saved.filter((item): item is RecentActivity => !!item && typeof item.key === 'string' && typeof item.name === 'string').slice(0, RECENT_MAX);
+  }, () => {});
+  void fs.readFile(options.preferredFile, 'utf8').then((text) => {
+    const saved = JSON.parse(text) as { preferred?: unknown };
+    if (typeof saved?.preferred === 'string' && !prefs.preferred) prefs.preferred = saved.preferred;
   }, () => {});
 
   const remember = (activity: CurrentActivity) => {
@@ -155,29 +207,69 @@ export function createActivityWatcher(options: { recentFile: string; onChange: (
     void fs.writeFile(options.recentFile, JSON.stringify(recent)).catch(() => {});
   };
 
-  async function tick() {
-    if (running) return;
-    running = true;
+  const preferences = (): ActivityPreferences => ({ preferred: prefs.preferred, hidden: prefs.hidden });
+
+  /** Picks what to show from the last check, and tells the page when that changed. */
+  async function resolve(now: number) {
+    const pick = pickActivity(candidates, preferences(), foreground);
+    const settled = settleActivity({ shown: detected?.key ?? null, pick, candidates, prefs: preferences(), challenger, now });
+    challenger = settled.challenger;
+    const next = settled.show;
+    if (sameDetection(detected, next)) return;
+    if (next && !next.exePath && next.pid !== undefined && platform === 'win32') next.exePath = (await windowsExePath(next.pid)) ?? undefined;
+    detected = next;
+    current = next
+      ? { key: next.key, kind: next.kind, name: next.name, ...(next.steamAppId ? { steamAppId: next.steamAppId } : {}), startedAt: firstSeen.get(next.key) ?? now }
+      : null;
+    if (current) remember(current);
+    options.onChange(current);
+  }
+
+  async function exclusive(work: () => Promise<void>, onBusy: () => void) {
+    if (busy) {
+      onBusy();
+      return;
+    }
+    busy = true;
     try {
-      const [processes, steam] = await Promise.all([listProcesses(platform), steamState(platform)]);
-      let game: SteamGame | null = null;
-      if (steam.appId) {
-        if (!steamNames.has(steam.appId)) steamNames.set(steam.appId, await steamGameName(steam.root, steam.appId));
-        game = { appId: steam.appId, name: steamNames.get(steam.appId) ?? null };
+      await work();
+      while (pickAgain) {
+        pickAgain = false;
+        await resolve(Date.now());
       }
-      const next = detectActivity({ processes, steam: game, catalog: ACTIVITY_CATALOG, platform });
-      if (sameDetection(detected, next)) return;
-      if (next && !next.exePath && next.pid !== undefined && platform === 'win32') next.exePath = (await windowsExePath(next.pid)) ?? undefined;
-      detected = next;
-      current = next ? { key: next.key, kind: next.kind, name: next.name, ...(next.steamAppId ? { steamAppId: next.steamAppId } : {}), startedAt: Date.now() } : null;
-      if (current) remember(current);
-      options.onChange(current);
     } catch (error) {
       console.error('[desktop] activity check failed', error);
     } finally {
-      running = false;
+      busy = false;
     }
   }
+
+  const pickNow = () => (timer ? exclusive(() => resolve(Date.now()), () => { pickAgain = true; }) : Promise.resolve());
+
+  const tick = () => exclusive(async () => {
+    const generation = stops;
+    const [processes, steam] = await Promise.all([listProcesses(platform), steamState(platform)]);
+    let game: SteamGame | null = null;
+    if (steam.appId) {
+      if (!steamGames.has(steam.appId)) steamGames.set(steam.appId, await steamGameInfo(steam.root, steam.appId));
+      game = { appId: steam.appId, ...steamGames.get(steam.appId)! };
+    }
+    // turned off while the system was being asked: what it found is not shared
+    if (generation !== stops) return;
+    candidates = detectCandidates({ processes, steam: game, catalog: ACTIVITY_CATALOG, platform });
+    const now = Date.now();
+    for (const key of firstSeen.keys()) if (!candidates.some((c) => c.key === key)) firstSeen.delete(key);
+    for (const candidate of candidates) if (!firstSeen.has(candidate.key)) firstSeen.set(candidate.key, now);
+    foreground = needsForeground(candidates, preferences())
+      ? foregroundKey(candidates, await foregroundProcess(platform, processes).catch(() => null), processes, game)
+      : null;
+    await resolve(now);
+    const list = candidates.filter((c) => c.name).map((c) => ({ key: c.key, kind: c.kind, name: c.name }));
+    if (!sameRunning(running, list)) {
+      running = list;
+      options.onRunningChange({ running, preferred: prefs.preferred });
+    }
+  }, () => {});
 
   return {
     start() {
@@ -188,11 +280,31 @@ export function createActivityWatcher(options: { recentFile: string; onChange: (
     stop() {
       if (timer) clearInterval(timer);
       timer = null;
+      stops += 1;
       detected = null;
       current = null;
+      candidates = [];
+      running = [];
+      foreground = null;
+      challenger = null;
+      firstSeen.clear();
     },
     current: () => current,
     recent: () => recent,
+    running: (): RunningActivities => ({ running, preferred: prefs.preferred }),
+    /** The activity to show whenever it runs, or null to choose automatically; applies at once. */
+    async setPreferred(key: string | null) {
+      if (prefs.preferred === key) return;
+      prefs.preferred = key;
+      void fs.writeFile(options.preferredFile, JSON.stringify({ preferred: key })).catch(() => {});
+      options.onRunningChange({ running, preferred: key });
+      await pickNow();
+    },
+    /** The keys the account hides, so another activity shows instead of nothing; applies at once. */
+    async setHidden(keys: string[]) {
+      prefs.hidden = keys;
+      await pickNow();
+    },
     /** The current program's own icon as a PNG data URL, for an app or a game IGDB does not know. */
     async icon(): Promise<string | null> {
       const exePath = detected?.exePath;

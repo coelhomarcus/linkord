@@ -67,7 +67,8 @@ async function describe(activity: DesktopActivity, readIcon: () => Promise<strin
 
 /**
  * Inside the desktop app: turns its detection on while the account shares its activity, and sends
- * what it finds. A hidden activity is not sent at all (the server would drop it anyway). The report
+ * what it finds. A hidden activity is not sent at all (the server would drop it anyway; a desktop app
+ * from before `setHidden` may still find one). The report
  * lives with the connection, so it is sent again after every `welcome`.
  */
 export function useActivityReporter({ sendWs, settings }: { sendWs: (msg: ClientMessage) => boolean; settings: ActivitySettings }) {
@@ -120,8 +121,13 @@ export function useActivityReporter({ sendWs, settings }: { sendWs: (msg: Client
     };
   }, [desktop, settings.sharing, onDetected, send]);
 
-  // hiding or showing one again applies to what is being reported right now
-  useEffect(() => { if (desktop && reportRef.current) send(); }, [desktop, settings.hidden, send]);
+  // hiding or showing one again applies to what is being reported right now; the desktop app also
+  // learns them, so it picks another running activity rather than one that would show as nothing
+  useEffect(() => {
+    if (!desktop) return;
+    void desktop.setHidden?.(settings.hidden);
+    if (reportRef.current) send();
+  }, [desktop, settings.hidden, send]);
 
   const onWelcome = useCallback(() => { if (desktop && reportRef.current) send(); }, [desktop, send]);
   return { onWelcome };

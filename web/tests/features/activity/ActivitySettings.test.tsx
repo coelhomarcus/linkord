@@ -3,7 +3,7 @@ import { screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { renderWithRoom } from '@tests/fixtures/roomContextFixture';
 import { ActivitySettings } from '@/features/activity/ActivitySettings';
-import type { DesktopActivityApi } from '@/shared/desktop';
+import type { DesktopActivityApi, DesktopRunningActivities } from '@/shared/desktop';
 
 afterEach(() => { delete window.linkordDesktop; });
 
@@ -18,7 +18,67 @@ function stubDesktop() {
   window.linkordDesktop = { platform: 'win32', version: '0.3.0', activity: api };
 }
 
+function stubChoosingDesktop(initial: DesktopRunningActivities) {
+  let listener: ((running: DesktopRunningActivities) => void) | null = null;
+  const api = {
+    watch: vi.fn(async () => {}),
+    current: vi.fn(async () => null),
+    recent: vi.fn(async () => [{ key: 'minecraft', kind: 'playing' as const, name: 'Minecraft' }]),
+    icon: vi.fn(async () => null),
+    onChange: vi.fn(() => () => {}),
+    running: vi.fn(async () => initial),
+    prefer: vi.fn(async (key: string | null) => { listener?.({ ...initial, preferred: key }); }),
+    setHidden: vi.fn(async () => {}),
+    onRunningChange: vi.fn((callback: (running: DesktopRunningActivities) => void) => {
+      listener = callback;
+      return () => { listener = null; };
+    }),
+  } satisfies DesktopActivityApi;
+  window.linkordDesktop = { platform: 'win32', version: '0.6.0', activity: api };
+  return api;
+}
+
+const running: DesktopRunningActivities['running'] = [
+  { key: 'minecraft', kind: 'playing', name: 'Minecraft' },
+  { key: 'spotify', kind: 'using', name: 'Spotify' },
+  { key: 'figma', kind: 'using', name: 'Figma' },
+];
+
 describe('ActivitySettings', () => {
+  it('picks which running activity shows, or automatic', async () => {
+    const api = stubChoosingDesktop({ running, preferred: null });
+    renderWithRoom(<ActivitySettings />, { activitySettings: { sharing: true, hidden: ['figma'] } });
+    const user = userEvent.setup();
+    const select = await screen.findByRole('combobox', { name: 'Atividade exibida' });
+    expect(select).toHaveTextContent('Automático');
+    await user.click(select);
+    // a hidden one is not offered
+    expect(screen.queryByRole('option', { name: 'Figma' })).not.toBeInTheDocument();
+    await user.click(await screen.findByRole('option', { name: 'Spotify' }));
+    expect(api.prefer).toHaveBeenLastCalledWith('spotify');
+    expect(await screen.findByRole('combobox', { name: 'Atividade exibida' })).toHaveTextContent('Spotify');
+    await user.click(screen.getByRole('combobox', { name: 'Atividade exibida' }));
+    await user.click(await screen.findByRole('option', { name: 'Automático' }));
+    expect(api.prefer).toHaveBeenLastCalledWith(null);
+  });
+
+  it('keeps showing the activity picked by hand while it is closed', async () => {
+    stubChoosingDesktop({ running: running.slice(1), preferred: 'minecraft' });
+    renderWithRoom(<ActivitySettings />, { activitySettings: { sharing: true, hidden: [] } });
+    expect(await screen.findByRole('combobox', { name: 'Atividade exibida' })).toHaveTextContent('Minecraft (fechado)');
+  });
+
+  it('offers no choice while sharing is off, or in a desktop app that cannot choose', async () => {
+    stubChoosingDesktop({ running, preferred: null });
+    const { unmount } = renderWithRoom(<ActivitySettings />, { activitySettings: { sharing: false, hidden: [] } });
+    expect(screen.queryByRole('combobox', { name: 'Atividade exibida' })).not.toBeInTheDocument();
+    unmount();
+    stubDesktop();
+    renderWithRoom(<ActivitySettings />, { activitySettings: { sharing: true, hidden: [] } });
+    expect(await screen.findByRole('button', { name: 'Ocultar Minecraft' })).toBeInTheDocument();
+    expect(screen.queryByRole('combobox', { name: 'Atividade exibida' })).not.toBeInTheDocument();
+  });
+
   it('splits the tab into sharing and the games list', () => {
     renderWithRoom(<ActivitySettings />, { activitySettings: { sharing: true, hidden: [] } });
     expect(screen.getByRole('region', { name: 'Compartilhamento' })).toContainElement(screen.getByRole('switch', { name: 'Compartilhar minha atividade' }));

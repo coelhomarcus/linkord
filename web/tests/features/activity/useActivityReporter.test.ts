@@ -20,6 +20,7 @@ function stubDesktop(initial: DesktopActivity | null) {
       listener = callback;
       return () => { listener = null; };
     }),
+    setHidden: vi.fn(async (_keys: string[]) => {}),
   } satisfies DesktopActivityApi;
   window.linkordDesktop = { platform: 'win32', version: '0.3.0', activity: api };
   return { api, change: (activity: DesktopActivity | null) => act(() => listener?.(activity)) };
@@ -136,6 +137,14 @@ describe('useActivityReporter', () => {
     const { sentAt } = reports().at(-1) as { sentAt: number };
     expect(sentAt).toBeGreaterThanOrEqual(before);
     expect(sentAt).toBeLessThanOrEqual(Date.now());
+  });
+
+  it('tells the desktop app which activities are hidden, so it picks another one', async () => {
+    const { api } = stubDesktop(null);
+    const { rerender } = render({ sharing: true, hidden: ['spotify'] });
+    expect(api.setHidden).toHaveBeenLastCalledWith(['spotify']);
+    rerender({ s: { sharing: true, hidden: [] } });
+    await waitFor(() => expect(api.setHidden).toHaveBeenLastCalledWith([]));
   });
 
   it('stops detection and clears the activity when sharing is turned off', async () => {

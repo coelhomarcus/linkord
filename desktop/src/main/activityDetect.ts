@@ -1,8 +1,9 @@
 import type { CatalogEntry } from './activityCatalog.js';
 
-// Turns what the system lists (activityWatcher.ts runs the commands) into one activity: the Steam
-// game Steam says is running, else the first catalog entry with a running program. Plain functions,
-// so every system's output format is tested without that system.
+// Turns what the system lists (activityWatcher.ts runs the commands) into the activities running now:
+// the Steam game Steam says is running and every catalog entry with a running program. Which one is
+// shared is activityResolve.ts's choice. Plain functions, so every system's output format is tested
+// without that system.
 
 export interface RunningProcess {
   pid: number;
@@ -22,11 +23,21 @@ export interface DetectedActivity {
   exePath?: string;
   /** the process found, to look its file up where the listing gives only a name (Windows) */
   pid?: number;
+  /** every process of it, to tell whether it owns the window in front */
+  pids: number[];
 }
 
 export interface SteamGame {
   appId: number;
   name: string | null;
+  /** the game's folder (`steamapps/common/<installdir>`), when its manifest was found */
+  installDir?: string | null;
+}
+
+/** The process that owns the window in front; `path` where the system gave it. */
+export interface ForegroundProcess {
+  pid: number;
+  path: string | null;
 }
 
 /** The executable's name, lowercased, from a Windows or POSIX path. */
@@ -71,23 +82,44 @@ export function needsArgs(process: RunningProcess, platform: NodeJS.Platform): b
   return JAVA.test(name) || (platform === 'linux' && /^(?:wine|wine64|wine-preloader|wine64-preloader|proton)$/.test(name));
 }
 
-export function detectActivity(input: {
+export function detectCandidates(input: {
   processes: RunningProcess[];
   steam: SteamGame | null;
   catalog: readonly CatalogEntry[];
   platform: NodeJS.Platform;
-}): DetectedActivity | null {
+}): DetectedActivity[] {
+  const found: DetectedActivity[] = [];
   if (input.steam && input.steam.appId > 0) {
-    return { key: `steam:${input.steam.appId}`, kind: 'playing', name: input.steam.name ?? '', steamAppId: input.steam.appId };
+    found.push({ key: `steam:${input.steam.appId}`, kind: 'playing', name: input.steam.name ?? '', steamAppId: input.steam.appId, pids: [] });
   }
   for (const entry of input.catalog) {
-    const process = input.processes.find((candidate) => matches(entry, candidate, input.platform));
-    if (process) {
-      const exePath = /[\\/]/.test(process.path) ? process.path : undefined;
-      return { key: entry.key, kind: entry.kind, name: entry.name, pid: process.pid, ...(exePath ? { exePath } : {}) };
-    }
+    const running = input.processes.filter((candidate) => matches(entry, candidate, input.platform));
+    const first = running[0];
+    if (!first) continue;
+    const exePath = /[\\/]/.test(first.path) ? first.path : undefined;
+    found.push({ key: entry.key, kind: entry.kind, name: entry.name, pid: first.pid, pids: running.map((p) => p.pid), ...(exePath ? { exePath } : {}) });
   }
-  return null;
+  return found;
+}
+
+const normalizePath = (value: string) => value.replace(/\\/g, '/').toLowerCase();
+
+/** Which candidate owns the window in front: a Steam game by its folder (the foreground program's
+ * path, or the Wine/Proton command line that runs it), a catalog entry by its processes. */
+export function foregroundKey(
+  candidates: readonly DetectedActivity[],
+  foreground: ForegroundProcess | null,
+  processes: readonly RunningProcess[],
+  steam: SteamGame | null,
+): string | null {
+  if (!foreground) return null;
+  const steamCandidate = candidates.find((candidate) => candidate.steamAppId !== undefined);
+  if (steamCandidate && steam?.installDir) {
+    const listed = processes.find((process) => process.pid === foreground.pid);
+    const text = normalizePath([foreground.path, listed?.path, listed?.args].filter(Boolean).join(' '));
+    if (text.includes(`${normalizePath(steam.installDir).replace(/\/+$/, '')}/`)) return steamCandidate.key;
+  }
+  return candidates.find((candidate) => candidate.pids.includes(foreground.pid))?.key ?? null;
 }
 
 export function sameDetection(a: DetectedActivity | null, b: DetectedActivity | null): boolean {
@@ -139,6 +171,31 @@ export function parseVdfValue(text: string, key: string): string | null {
 /** Every `"path"` in Steam's `libraryfolders.vdf`: the folders holding `steamapps`. */
 export function parseLibraryFolders(text: string): string[] {
   return [...text.matchAll(/"path"\s+"((?:[^"\\]|\\.)*)"/gi)].map((match) => match[1]!.replace(/\\\\/g, '\\'));
+}
+
+/** `lsappinfo info -only pid <ASN>` (macOS): `"pid"=812`. */
+export function parseLsappinfoPid(text: string): number | null {
+  const match = /"pid"\s*=\s*(\d+)/.exec(text);
+  return match ? Number(match[1]) : null;
+}
+
+/** `xprop -root _NET_ACTIVE_WINDOW` (Linux, X11): `... window id # 0x3a00007`; null for none (0x0). */
+export function parseXpropWindow(text: string): string | null {
+  const match = /#\s*(0x[0-9a-f]+)/i.exec(text);
+  return match && Number.parseInt(match[1]!, 16) > 0 ? match[1]! : null;
+}
+
+/** `xprop -id <window> _NET_WM_PID`: `_NET_WM_PID(CARDINAL) = 4120`. */
+export function parseXpropPid(text: string): number | null {
+  const match = /_NET_WM_PID\(CARDINAL\)\s*=\s*(\d+)/.exec(text);
+  return match ? Number(match[1]) : null;
+}
+
+/** The Windows foreground query's answer: `<pid>\t<path>`, the path empty when it could not be read. */
+export function parseForegroundLine(text: string): ForegroundProcess | null {
+  const match = /^\s*(\d+)\t?(.*?)\s*$/m.exec(text);
+  if (!match || Number(match[1]) <= 0) return null;
+  return { pid: Number(match[1]), path: match[2] || null };
 }
 
 /** A running Steam game's app id from `registry.vdf` (macOS, Linux) or the registry (Windows); 0 is none. */

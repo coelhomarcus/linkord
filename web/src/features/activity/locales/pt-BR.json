@@ -47,6 +47,12 @@
       "label": "Compartilhar minha atividade",
       "description": "Mostra no seu perfil o jogo ou app que você está usando, como \"Jogando Minecraft\". Funciona no app desktop do Linkord, que só reconhece jogos e apps de uma lista conhecida."
     },
+    "shown": {
+      "label": "Atividade exibida",
+      "description": "Com mais de um jogo ou app aberto, escolha qual mostrar. No automático, vale o jogo em primeiro plano, depois o jogo aberto pela Steam, depois os outros jogos e apps.",
+      "auto": "Automático",
+      "notRunning": "{{name}} (fechado)"
+    },
     "gamesDescription": "Um jogo ou app oculto nunca aparece para os outros, mesmo com o compartilhamento ligado.",
     "detected": "Detectados neste computador",
     "detectedEmpty": "Nenhum jogo ou app detectado ainda. Abra um com o Linkord aberto e ele aparece aqui.",

@@ -2,22 +2,30 @@ import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { ACTIVITY_CATALOG } from '../../src/main/activityCatalog.js';
 import {
-  detectActivity, macAppName, needsArgs, parseLibraryFolders, parsePsOutput, parseRegDword, parseRegString, parseTasklistCsv,
-  parseVdfValue, processName, runningAppId,
+  detectCandidates, foregroundKey, macAppName, needsArgs, parseForegroundLine, parseLibraryFolders, parseLsappinfoPid, parsePsOutput,
+  parseRegDword, parseRegString, parseTasklistCsv, parseVdfValue, parseXpropPid, parseXpropWindow, processName, runningAppId,
+  type SteamGame,
 } from '../../src/main/activityDetect.js';
 
-const detect = (processes: { path: string; args?: string }[], platform: NodeJS.Platform, steam: { appId: number; name: string | null } | null = null) =>
-  detectActivity({ processes: processes.map((p, i) => ({ pid: i + 1, ...p })), steam, catalog: ACTIVITY_CATALOG, platform });
+const listed = (processes: { path: string; args?: string }[]) => processes.map((p, i) => ({ pid: i + 1, ...p }));
+const candidates = (processes: { path: string; args?: string }[], platform: NodeJS.Platform, steam: SteamGame | null = null) =>
+  detectCandidates({ processes: listed(processes), steam, catalog: ACTIVITY_CATALOG, platform });
+const detect = (processes: { path: string; args?: string }[], platform: NodeJS.Platform, steam: SteamGame | null = null) =>
+  candidates(processes, platform, steam)[0] ?? null;
 
-describe('detectActivity', () => {
-  it('prefers the Steam game Steam says is running', () => {
-    const found = detect([{ path: 'C:\\Program Files\\Spotify\\Spotify.exe' }], 'win32', { appId: 570, name: 'Dota 2' });
-    assert.deepEqual(found, { key: 'steam:570', kind: 'playing', name: 'Dota 2', steamAppId: 570 });
+describe('detectCandidates', () => {
+  it('lists the Steam game Steam says is running first', () => {
+    const found = candidates([{ path: 'C:\\Program Files\\Spotify\\Spotify.exe' }], 'win32', { appId: 570, name: 'Dota 2' });
+    assert.deepEqual(found[0], { key: 'steam:570', kind: 'playing', name: 'Dota 2', steamAppId: 570, pids: [] });
+    assert.equal(found[1]?.key, 'spotify');
   });
 
-  it('finds a catalog game by its Windows executable, games before apps', () => {
-    const found = detect([{ path: 'C:\\Users\\a\\AppData\\Roaming\\Spotify\\Spotify.exe' }, { path: 'RobloxPlayerBeta.exe' }], 'win32');
-    assert.deepEqual(found, { key: 'roblox', kind: 'playing', name: 'Roblox', pid: 2 });
+  it('lists every running catalog entry, each with all its processes', () => {
+    const found = candidates([{ path: 'Spotify.exe' }, { path: 'RobloxPlayerBeta.exe' }, { path: 'Spotify.exe' }], 'win32');
+    assert.deepEqual(found, [
+      { key: 'roblox', kind: 'playing', name: 'Roblox', pid: 2, pids: [2] },
+      { key: 'spotify', kind: 'using', name: 'Spotify', pid: 1, pids: [1, 3] },
+    ]);
   });
 
   it('keeps the full path of what it found, for the icon', () => {
@@ -46,6 +54,38 @@ describe('detectActivity', () => {
   });
 });
 
+describe('foregroundKey', () => {
+  const steam: SteamGame = { appId: 1145360, name: 'Hades', installDir: 'C:\\Program Files (x86)\\Steam\\steamapps\\common\\Hades' };
+
+  it('names the catalog entry that owns the window in front', () => {
+    const processes = listed([{ path: 'Spotify.exe' }, { path: 'RobloxPlayerBeta.exe' }]);
+    const found = detectCandidates({ processes, steam: null, catalog: ACTIVITY_CATALOG, platform: 'win32' });
+    assert.equal(foregroundKey(found, { pid: 1, path: null }, processes, null), 'spotify');
+    assert.equal(foregroundKey(found, { pid: 99, path: null }, processes, null), null);
+    assert.equal(foregroundKey(found, null, processes, null), null);
+  });
+
+  it('knows a Steam game in front by its folder, whatever the case or slashes', () => {
+    const processes = listed([{ path: 'Hades.exe' }, { path: 'Spotify.exe' }]);
+    const found = detectCandidates({ processes, steam, catalog: ACTIVITY_CATALOG, platform: 'win32' });
+    assert.equal(foregroundKey(found, { pid: 1, path: 'c:/program files (x86)/steam/steamapps/common/hades/x64/Hades.exe' }, processes, steam), 'steam:1145360');
+    assert.equal(foregroundKey(found, { pid: 2, path: 'C:\\Spotify\\Spotify.exe' }, processes, steam), 'spotify');
+  });
+
+  it('knows a Proton game in front by its command line', () => {
+    const linuxSteam: SteamGame = { appId: 1145360, name: 'Hades', installDir: '/home/a/.local/share/Steam/steamapps/common/Hades' };
+    const processes = listed([{ path: '/usr/bin/wine64-preloader', args: 'Z:\\home\\a\\.local\\share\\Steam\\steamapps\\common\\Hades\\x64\\Hades.exe' }]);
+    const found = detectCandidates({ processes, steam: linuxSteam, catalog: ACTIVITY_CATALOG, platform: 'linux' });
+    assert.equal(foregroundKey(found, { pid: 1, path: '/usr/bin/wine64-preloader' }, processes, linuxSteam), 'steam:1145360');
+  });
+
+  it('does not take a folder that only starts the same for the game\'s', () => {
+    const processes = listed([{ path: 'C:\\Program Files (x86)\\Steam\\steamapps\\common\\Hades II\\Hades2.exe' }]);
+    const found = detectCandidates({ processes, steam, catalog: ACTIVITY_CATALOG, platform: 'win32' });
+    assert.equal(foregroundKey(found, { pid: 1, path: processes[0]!.path }, processes, steam), null);
+  });
+});
+
 describe('process helpers', () => {
   it('names a process and its macOS bundle', () => {
     assert.equal(processName('C:\\Games\\VALORANT-Win64-Shipping.exe'), 'valorant-win64-shipping.exe');
@@ -62,6 +102,17 @@ describe('process helpers', () => {
 });
 
 describe('system output parsers', () => {
+  it('reads the foreground process on each system', () => {
+    assert.equal(parseLsappinfoPid('"pid"=86502\n'), 86502);
+    assert.equal(parseLsappinfoPid(''), null);
+    assert.equal(parseXpropWindow('_NET_ACTIVE_WINDOW(WINDOW): window id # 0x3a00007\n'), '0x3a00007');
+    assert.equal(parseXpropWindow('_NET_ACTIVE_WINDOW(WINDOW): window id # 0x0\n'), null);
+    assert.equal(parseXpropPid('_NET_WM_PID(CARDINAL) = 4120\n'), 4120);
+    assert.deepEqual(parseForegroundLine('4120\tC:\\Games\\Hades.exe\r\n'), { pid: 4120, path: 'C:\\Games\\Hades.exe' });
+    assert.deepEqual(parseForegroundLine('4120\t\r\n'), { pid: 4120, path: null });
+    assert.equal(parseForegroundLine('0\t'), null);
+  });
+
   it('reads tasklist CSV', () => {
     const text = '"System Idle Process","0","Services","0","8 K"\r\n"Spotify.exe","4120","Console","1","120,000 K"\r\n';
     assert.deepEqual(parseTasklistCsv(text), [{ path: 'System Idle Process', pid: 0 }, { path: 'Spotify.exe', pid: 4120 }]);

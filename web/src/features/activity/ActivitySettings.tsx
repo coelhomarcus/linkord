@@ -2,9 +2,10 @@ import { AppWindowIcon, GameControllerIcon } from '@/shared/ui/icons';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useRoom } from '@/state/RoomContext';
-import { desktopApp } from '@/shared/desktop';
+import { desktopApp, type DesktopRunningActivities } from '@/shared/desktop';
 import { ErrorBanner } from '@/shared/ErrorBanner';
 import { Button } from '@/shared/ui/primitives/button';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/primitives/select';
 import { Switch } from '@/shared/ui/primitives/switch';
 import { SettingsRow, SettingsRowList, SettingsSection, SettingsSections, SettingsSubheading } from '@/shared/ui/settings-layout';
 
@@ -28,6 +29,26 @@ function useRecentActivities(): Known[] {
   return recent;
 }
 
+/** What this computer's desktop app finds running now and the one picked by hand; null in a browser
+ * and in desktop builds that cannot choose. */
+function useRunningActivities(): DesktopRunningActivities | null {
+  const [state, setState] = useState<DesktopRunningActivities | null>(null);
+  useEffect(() => {
+    const activity = desktopApp()?.activity;
+    if (!activity?.running || !activity.onRunningChange) return;
+    let live = true;
+    activity.running().then((value) => { if (live) setState(value); }, () => {});
+    const unsubscribe = activity.onRunningChange((value) => { if (live) setState(value); });
+    return () => {
+      live = false;
+      unsubscribe();
+    };
+  }, []);
+  return state;
+}
+
+const AUTO = 'auto';
+
 type Section = 'sharing' | 'games';
 
 /** Settings → Activity: share it or not, and hide single games and apps. */
@@ -37,6 +58,7 @@ export function ActivitySettings() {
   // shown in the section whose control failed, beside what the person just touched
   const [error, setError] = useState<{ section: Section; text: string } | null>(null);
   const recent = useRecentActivities();
+  const running = useRunningActivities();
   const inDesktop = !!desktopApp()?.activity;
   const hidden = new Set(activitySettings.hidden);
 
@@ -48,6 +70,20 @@ export function ActivitySettings() {
   const nameOf = (key: string) => recent.find((item) => item.key === key)?.name ?? key;
   const hiddenElsewhere = activitySettings.hidden.filter((key) => !recent.some((item) => item.key === key));
   const errorIn = (section: Section) => error?.section === section && <ErrorBanner>{error.text}</ErrorBanner>;
+
+  // the one picked by hand stays listed while it is closed, so the choice reads as it is
+  const choices = running ? running.running.filter((item) => !hidden.has(item.key)) : [];
+  const preferred = running?.preferred ?? null;
+  const preferredClosed = preferred && !choices.some((item) => item.key === preferred);
+  const choiceLabel = (key: string) => {
+    if (key === AUTO) return t('settings.shown.auto');
+    const name = choices.find((item) => item.key === key)?.name ?? nameOf(key);
+    return preferredClosed && key === preferred ? t('settings.shown.notRunning', { name }) : name;
+  };
+  const prefer = (value: unknown) => {
+    if (typeof value !== 'string') return;
+    void desktopApp()?.activity?.prefer?.(value === AUTO ? null : value);
+  };
 
   const row = (key: string, name: string, kind: Known['kind'] | null) => {
     const isHidden = hidden.has(key);
@@ -69,6 +105,20 @@ export function ActivitySettings() {
         <SettingsRow label={t('settings.share.label')} description={t('settings.share.description')}>
           <Switch size="lg" checked={activitySettings.sharing} onCheckedChange={(sharing) => save('sharing', { sharing })} aria-label={t('settings.share.label')} />
         </SettingsRow>
+        {running && activitySettings.sharing && (
+          <SettingsRow label={t('settings.shown.label')} description={t('settings.shown.description')}>
+            <Select value={preferred ?? AUTO} onValueChange={prefer}>
+              <SelectTrigger aria-label={t('settings.shown.label')} className="w-56 max-w-full">
+                <SelectValue>{(value: string) => <span className="truncate">{choiceLabel(value)}</span>}</SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={AUTO}>{t('settings.shown.auto')}</SelectItem>
+                {choices.map((item) => <SelectItem key={item.key} value={item.key}>{item.name}</SelectItem>)}
+                {preferredClosed && <SelectItem value={preferred}>{choiceLabel(preferred)}</SelectItem>}
+              </SelectContent>
+            </Select>
+          </SettingsRow>
+        )}
         {errorIn('sharing')}
       </SettingsSection>
       <SettingsSection id="games" title={t('settings.sections.games')} description={t('settings.gamesDescription')} contentClassName="gap-5">
