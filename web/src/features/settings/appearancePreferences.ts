@@ -1,10 +1,12 @@
 import { useSyncExternalStore } from 'react';
-import { LOCAL_STORAGE_KEYS, localStorageStore, type LocalStorageKey } from '@/shared/lib/localStorage';
+import { LOCAL_STORAGE_KEYS, localStorageStore } from '@/shared/lib/localStorage';
+import { getPreference, setPreference, subscribePreferences } from '@/shared/preferences/accountPreferences';
 import { withoutTransitions } from './applyColorTheme';
 
-// Stored per device, like the color theme. The inline boot script in
-// index.html applies the same values before this bundle loads, so keep its
-// lists in step with these.
+// Density and font follow the account, like the color theme; text size stays on
+// this device, since how large text should be depends on its screen. The inline
+// boot script in index.html applies the same values before this bundle loads,
+// so keep its lists in step with these.
 export const DENSITIES = ['compact', 'default', 'comfortable'] as const;
 export type Density = (typeof DENSITIES)[number];
 
@@ -25,8 +27,7 @@ export interface Appearance {
 
 const DEFAULTS: Appearance = { density: 'default', textSize: 'default', font: 'figtree' };
 
-function read<T extends string>(key: LocalStorageKey, values: readonly T[], fallback: T): T {
-  const raw = localStorageStore.get(key);
+function pick<T extends string>(raw: unknown, values: readonly T[], fallback: T): T {
   return values.find((value) => value === raw) ?? fallback;
 }
 
@@ -35,9 +36,9 @@ let snapshot: Appearance = DEFAULTS;
 
 export function getAppearance(): Appearance {
   const next: Appearance = {
-    density: read(LOCAL_STORAGE_KEYS.density, DENSITIES, DEFAULTS.density),
-    textSize: read(LOCAL_STORAGE_KEYS.textSize, TEXT_SIZES, DEFAULTS.textSize),
-    font: read(LOCAL_STORAGE_KEYS.font, FONTS, DEFAULTS.font),
+    density: pick(getPreference('density'), DENSITIES, DEFAULTS.density),
+    textSize: pick(localStorageStore.get(LOCAL_STORAGE_KEYS.textSize), TEXT_SIZES, DEFAULTS.textSize),
+    font: pick(getPreference('font'), FONTS, DEFAULTS.font),
   };
   if (next.density !== snapshot.density || next.textSize !== snapshot.textSize || next.font !== snapshot.font) snapshot = next;
   return snapshot;
@@ -61,32 +62,40 @@ export function applyAppearance(appearance: Appearance = getAppearance()): void 
   setAttribute(root, 'font', appearance.font);
 }
 
+// text size, the one kept on this device
 const listeners = new Set<() => void>();
-
-function save<K extends keyof Appearance>(key: LocalStorageKey, name: K, value: Appearance[K]): void {
-  if (value === DEFAULTS[name]) localStorageStore.remove(key);
-  else localStorageStore.set(key, value);
-  const appearance = getAppearance();
-  // Rows grow or shrink at once instead of each easing to its new size.
-  withoutTransitions(() => applyAppearance(appearance));
-  for (const listener of listeners) listener();
-}
-
-export function setDensity(value: Density): void {
-  save(LOCAL_STORAGE_KEYS.density, 'density', value);
-}
-
-export function setTextSize(value: TextSize): void {
-  save(LOCAL_STORAGE_KEYS.textSize, 'textSize', value);
-}
-
-export function setFont(value: Font): void {
-  save(LOCAL_STORAGE_KEYS.font, 'font', value);
-}
 
 function subscribe(listener: () => void) {
   listeners.add(listener);
-  return () => { listeners.delete(listener); };
+  const unsubscribe = subscribePreferences(listener);
+  return () => { listeners.delete(listener); unsubscribe(); };
+}
+
+export function setDensity(value: Density): void {
+  setPreference('density', value === DEFAULTS.density ? null : value);
+}
+
+export function setTextSize(value: TextSize): void {
+  if (value === DEFAULTS.textSize) localStorageStore.remove(LOCAL_STORAGE_KEYS.textSize);
+  else localStorageStore.set(LOCAL_STORAGE_KEYS.textSize, value);
+  for (const listener of listeners) listener();
+}
+
+export function setFont(value: Font): void {
+  setPreference('font', value === DEFAULTS.font ? null : value);
+}
+
+/** Puts the appearance on the page now and again whenever it changes, here or on another device. Rows
+ * grow or shrink at once instead of each easing to its new size. */
+export function followAppearance(): () => void {
+  let shown = getAppearance();
+  applyAppearance(shown);
+  return subscribe(() => {
+    const next = getAppearance();
+    if (next === shown) return;
+    shown = next;
+    withoutTransitions(() => applyAppearance(next));
+  });
 }
 
 export function useAppearance(): Appearance {

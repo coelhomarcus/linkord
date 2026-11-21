@@ -54,6 +54,7 @@ Linkord is a self-hosted place to chat and call with friends. Talk in direct mes
 - Two-step login by email, sign-in alerts, and a list of active sessions you can end.
 - Username and password changes, account deletion, and a download of your data.
 - Themes, density, text size and font, languages (Portuguese and English), device settings, and notification sounds.
+- Settings follow the account: the theme, density, font, language, clock format, which sounds play, the emoji skin tone, call view options, image compression, camera mirroring, the volume given to each person in a call and the folded channel categories are the same on every device, and change on the others as soon as you change them on one. What depends on the device stays on it: microphone, camera and speaker and their volumes, the input profile, the notification and soundboard volumes, text size, browser notifications, screen share quality, auto-away, panel sizes and recent searches.
 - Installable as a web app (PWA), with share-to-Linkord on Android; Settings → Baixar o app explains it beside the Windows app download.
 
 **Administration**

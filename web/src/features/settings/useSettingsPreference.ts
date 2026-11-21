@@ -1,14 +1,15 @@
-
 import { LOCAL_STORAGE_KEYS, localStorageStore } from '@/shared/lib/localStorage';
+import { getPreference, setPreference } from '@/shared/preferences/accountPreferences';
 
 export function loadShowStats(): boolean {
-  return localStorageStore.get(LOCAL_STORAGE_KEYS.showStats) !== '0';
+  return getPreference('showStats') !== false;
 }
 
 export function saveShowStats(value: boolean): void {
-  localStorageStore.set(LOCAL_STORAGE_KEYS.showStats, value ? '1' : '0');
+  setPreference('showStats', value ? null : false);
 }
 
+// The notification volume stays on this device: it depends on its speakers.
 const DEFAULT_NOTIFY_VOLUME = 0.65;
 
 export function loadNotifyVolume(): number {

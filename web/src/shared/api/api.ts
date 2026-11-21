@@ -60,7 +60,8 @@ export async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> 
   return body as T;
 }
 
-export function fetchMe(): Promise<{ user: ApiUser }> {
+/** `preferences`: the settings that follow the account, null until a device seeds them (absent from an older server). */
+export function fetchMe(): Promise<{ user: ApiUser; preferences?: Record<string, unknown> | null }> {
   return apiFetch('/api/auth/me');
 }
 

@@ -333,7 +333,8 @@
     "mirror": {
       "label": "Mirror my camera",
       "description": "Only your own preview is mirrored; everyone else sees the normal image."
-    }
+    },
+    "deviceOnly": "Devices, volumes and the input profile are saved on this device only."
   },
   "deviceErrors": {
     "switchFailed": "Couldn't switch the device. Try again.",
@@ -368,7 +369,8 @@
     },
     "volume": {
       "label": "Notification volume",
-      "muted": "Muted"
+      "muted": "Muted",
+      "deviceOnly": "Saved on this device only."
     },
     "preview": "Preview sound",
     "sounds": {
@@ -396,7 +398,7 @@
   "appearance": {
     "themes": "Themes",
     "themeAria": "{{name}} theme",
-    "description": "Changes the interface's backgrounds, text and buttons on this device.",
+    "description": "Changes the interface's backgrounds, text and buttons on all your devices.",
     "density": {
       "description": "The space between messages and the height of rows in the conversation, channel and member lists.",
       "compact": {
@@ -421,7 +423,8 @@
       "default": "Default",
       "large": "Large",
       "larger": "Larger",
-      "pixels": "{{px}} px"
+      "pixels": "{{px}} px",
+      "deviceOnly": "Saved on this device only, since it depends on the screen."
     },
     "font": {
       "label": "Font",

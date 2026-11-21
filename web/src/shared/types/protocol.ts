@@ -28,8 +28,8 @@ export type ReactionEmoji = string;
 
 /** Wire protocol version this build speaks; the server refuses older ones
  * (client_outdated). Keep in sync with server/src/realtime/protocolVersion.ts
- * — version 27 places activity starts on the server's clock (`activity-set.sentAt`, `welcome.serverTime`). */
-export const PROTOCOL_VERSION = 27;
+ * — version 28 syncs account preferences (`welcome.preferences`, `my-preferences`). */
+export const PROTOCOL_VERSION = 28;
 
 /** One server's or one channel/DM's notification setting (protocol 19). `level` null inherits: a channel
  * from its server, a server or a DM from "all". `mutedUntil` (ISO) is only read while `muted`, and null
@@ -446,6 +446,8 @@ export type ServerMessage =
       myStatus?: OwnStatus;
       // absent from servers before protocol 24: activity is shared, nothing hidden
       activitySettings?: ActivitySettings;
+      // the settings that follow the account (protocol 28); null until a device seeds them, absent before
+      preferences?: Record<string, unknown> | null;
       // both absent from servers before protocol 25: no pins, nothing saved
       unseenPins?: string[];
       savedMessageIds?: number[];
@@ -524,6 +526,8 @@ export type ServerMessage =
   | ({ t: 'my-status' } & OwnStatus)
   | { t: 'presence-result'; requestId: string; ok: boolean }
   | ({ t: 'my-activity-settings' } & ActivitySettings)
+  // a change to the account's preferences from any of its tabs (protocol 28); null puts a key back to its default
+  | { t: 'my-preferences'; changes: Record<string, unknown> }
   | { t: 'activity-settings-result'; requestId: string; ok: boolean }
   | { t: 'user-online'; userId: string }
   | { t: 'user-offline'; userId: string; lastSeenAt?: string | null }

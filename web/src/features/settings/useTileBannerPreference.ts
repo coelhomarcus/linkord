@@ -1,9 +1,9 @@
-import { LOCAL_STORAGE_KEYS, localStorageStore } from '@/shared/lib/localStorage';
+import { getPreference, setPreference } from '@/shared/preferences/accountPreferences';
 
 export function loadShowTileBanners(): boolean {
-  return localStorageStore.get(LOCAL_STORAGE_KEYS.showTileBanners) !== '0';
+  return getPreference('showTileBanners') !== false;
 }
 
 export function saveShowTileBanners(value: boolean): void {
-  localStorageStore.set(LOCAL_STORAGE_KEYS.showTileBanners, value ? '1' : '0');
+  setPreference('showTileBanners', value ? null : false);
 }

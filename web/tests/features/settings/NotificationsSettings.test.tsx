@@ -6,6 +6,7 @@ import { RoomStoreProvider } from '@/state/RoomStoreProvider';
 import { createFakeRoomContextValue } from '@tests/fixtures/roomContextFixture';
 import { NotificationsSettings } from '@/features/settings/NotificationsSettings';
 import { setPushSubscriptionActive } from '@/shared/notifications';
+import { getSoundPreferences } from '@/shared/soundPreferences';
 
 class FakeNotification {
   static permission: NotificationPermission = 'default';
@@ -141,7 +142,7 @@ describe('NotificationsSettings', () => {
     renderNotifications();
     await user.click(screen.getByRole('switch', { name: 'Nova mensagem' }));
     expect(screen.getByRole('switch', { name: 'Nova mensagem' })).not.toBeChecked();
-    expect(JSON.parse(localStorage.getItem('ss-sounds') ?? '{}')).toMatchObject({ message: false, mention: true });
+    expect(getSoundPreferences()).toMatchObject({ message: false, mention: true });
 
     await user.click(screen.getByRole('switch', { name: 'Desativar todos os sons de notificação' }));
     expect(screen.getByRole('switch', { name: 'Menção a você' })).toHaveAttribute('data-disabled');

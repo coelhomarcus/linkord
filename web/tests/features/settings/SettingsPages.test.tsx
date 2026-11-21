@@ -1,9 +1,9 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { renderWithRoom } from '@tests/fixtures/roomContextFixture';
 import { AppearanceSettings } from '@/features/settings/AppearanceSettings';
-import { applyAppearance } from '@/features/settings/appearancePreferences';
+import { followAppearance } from '@/features/settings/appearancePreferences';
 import { AudioVideoSettings } from '@/features/settings/AudioVideoSettings';
 import { LanguageSettings } from '@/features/settings/LanguageSettings';
 import { getAudioPreferences } from '@/features/calls/audioPreferences';
@@ -14,11 +14,16 @@ vi.mock('@/features/settings/useLanguageSetting', () => ({
 }));
 vi.mock('@/features/calls/inputProfile', () => ({ applyInputProfile: vi.fn(async () => undefined) }));
 
+// what main.tsx does for the whole app
+let unfollow = () => {};
+
 beforeEach(() => {
   localStorage.clear();
-  applyAppearance();
+  unfollow = followAppearance();
   setTimeFormat('auto');
 });
+
+afterEach(() => unfollow());
 
 describe('AppearanceSettings', () => {
   it('shows each theme as a swatch, the current one checked, and picks another on click', async () => {

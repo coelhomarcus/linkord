@@ -26,5 +26,3 @@ export const PREFERENCE_PREFIXES = {
   'callVolume:': 'volume',
   'collapsed:': 'idList',
 } as const satisfies Record<string, PreferenceKind>;
-
-export type PlainPreferenceKey = keyof typeof PREFERENCE_KINDS;

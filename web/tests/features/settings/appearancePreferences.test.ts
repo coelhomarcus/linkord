@@ -1,11 +1,16 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
-import { appearanceLayoutKey, applyAppearance, getAppearance, setDensity, setFont, setTextSize, useAppearance } from '@/features/settings/appearancePreferences';
+import { appearanceLayoutKey, applyAppearance, followAppearance, getAppearance, setDensity, setFont, setTextSize, useAppearance } from '@/features/settings/appearancePreferences';
+import { getPreference } from '@/shared/preferences/accountPreferences';
 import { LOCAL_STORAGE_KEYS } from '@/shared/lib/localStorage';
 
 const root = document.documentElement;
 
+let unfollow = () => {};
+beforeEach(() => { unfollow = followAppearance(); });
+
 afterEach(() => {
+  unfollow();
   localStorage.clear();
   applyAppearance();
 });
@@ -29,7 +34,12 @@ describe('appearance preferences', () => {
     setDensity('compact');
     setTextSize('larger');
     setFont('system');
+    expect(getPreference('density')).toBe('compact');
+    // where index.html's boot script reads it
     expect(localStorage.getItem(LOCAL_STORAGE_KEYS.density)).toBe('compact');
+    // text size stays on this device
+    expect(getPreference('textSize')).toBeUndefined();
+    expect(localStorage.getItem(LOCAL_STORAGE_KEYS.textSize)).toBe('larger');
     expect(root.getAttribute('data-density')).toBe('compact');
     expect(root.getAttribute('data-text-size')).toBe('larger');
     expect(root.getAttribute('data-font')).toBe('system');

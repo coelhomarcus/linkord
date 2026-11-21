@@ -1,5 +1,4 @@
-import { useSyncExternalStore } from 'react';
-import { LOCAL_STORAGE_KEYS, localStorageStore } from '@/shared/lib/localStorage';
+import { getPreference, setPreference, usePreferenceValue } from '@/shared/preferences/accountPreferences';
 
 /** What a sound tells you, the unit a person turns on or off in settings. */
 export type SoundGroup = 'message' | 'mention' | 'call';
@@ -15,44 +14,30 @@ export interface SoundPreferences {
 
 const DEFAULTS: SoundPreferences = { message: true, mention: true, call: true, muteAll: false };
 
-const listeners = new Set<() => void>();
-let cached: SoundPreferences | null = null;
-let cachedRaw: string | null | undefined;
-
-function parse(raw: string | null): SoundPreferences {
-  if (!raw) return DEFAULTS;
-  try {
-    const value = JSON.parse(raw) as Partial<Record<keyof SoundPreferences, unknown>>;
-    const pick = (key: keyof SoundPreferences) => (typeof value[key] === 'boolean' ? value[key] as boolean : DEFAULTS[key]);
-    return { message: pick('message'), mention: pick('mention'), call: pick('call'), muteAll: pick('muteAll') };
-  } catch {
-    return DEFAULTS;
-  }
-}
+const GROUPS = ['message', 'mention', 'call', 'muteAll'] as const satisfies readonly (keyof SoundPreferences)[];
 
 // useSyncExternalStore needs the same object back while nothing changed.
+let cached: SoundPreferences = DEFAULTS;
+
 export function getSoundPreferences(): SoundPreferences {
-  const raw = localStorageStore.get(LOCAL_STORAGE_KEYS.sounds);
-  if (cached && raw === cachedRaw) return cached;
-  cachedRaw = raw;
-  cached = parse(raw);
+  const read = (key: keyof SoundPreferences) => {
+    const value = getPreference(`sounds.${key}`);
+    return typeof value === 'boolean' ? value : DEFAULTS[key];
+  };
+  const next: SoundPreferences = { message: read('message'), mention: read('mention'), call: read('call'), muteAll: read('muteAll') };
+  if (GROUPS.some((key) => next[key] !== cached[key])) cached = next;
   return cached;
 }
 
+/** Follows the account: what plays is the same on every device. */
 export function setSoundPreference(key: keyof SoundPreferences, value: boolean): void {
-  localStorageStore.set(LOCAL_STORAGE_KEYS.sounds, JSON.stringify({ ...getSoundPreferences(), [key]: value }));
-  for (const listener of listeners) listener();
+  setPreference(`sounds.${key}`, value === DEFAULTS[key] ? null : value);
 }
 
 export function soundGroupEnabled(group: SoundGroup, prefs: SoundPreferences = getSoundPreferences()): boolean {
   return !prefs.muteAll && prefs[group];
 }
 
-function subscribe(listener: () => void) {
-  listeners.add(listener);
-  return () => { listeners.delete(listener); };
-}
-
 export function useSoundPreferences(): SoundPreferences {
-  return useSyncExternalStore(subscribe, getSoundPreferences);
+  return usePreferenceValue(getSoundPreferences);
 }

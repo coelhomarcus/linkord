@@ -88,7 +88,10 @@ export function AppearanceSettings() {
       <SettingsSection id="typography" title={t('catalog.sections.typography')} description={t('appearance.typography.description')}>
         <div className="flex flex-col gap-8">
           <div className="flex flex-col gap-4">
-            <SettingsSubheading>{t('appearance.textSize.label')}</SettingsSubheading>
+            <div>
+              <SettingsSubheading>{t('appearance.textSize.label')}</SettingsSubheading>
+              <p className="mt-1 text-label text-text-muted">{t('appearance.textSize.deviceOnly')}</p>
+            </div>
             <SettingsRadioGroup
               label={t('appearance.textSize.label')}
               value={textSize}

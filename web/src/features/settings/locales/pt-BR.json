@@ -333,7 +333,8 @@
     "mirror": {
       "label": "Espelhar minha câmera",
       "description": "Só a sua prévia fica espelhada; quem assiste vê a imagem normal."
-    }
+    },
+    "deviceOnly": "Os dispositivos, os volumes e o perfil de entrada ficam salvos só neste dispositivo."
   },
   "deviceErrors": {
     "switchFailed": "Não foi possível trocar o dispositivo. Tente de novo.",
@@ -368,7 +369,8 @@
     },
     "volume": {
       "label": "Volume das notificações",
-      "muted": "Mudo"
+      "muted": "Mudo",
+      "deviceOnly": "Fica salvo só neste dispositivo."
     },
     "preview": "Prévia do som",
     "sounds": {
@@ -396,7 +398,7 @@
   "appearance": {
     "themes": "Temas",
     "themeAria": "Tema {{name}}",
-    "description": "Muda fundos, textos e botões da interface neste dispositivo.",
+    "description": "Muda fundos, textos e botões da interface em todos os seus dispositivos.",
     "density": {
       "description": "O espaço entre as mensagens e a altura das linhas nas listas de conversas, canais e membros.",
       "compact": {
@@ -421,7 +423,8 @@
       "default": "Padrão",
       "large": "Grande",
       "larger": "Maior",
-      "pixels": "{{px}} px"
+      "pixels": "{{px}} px",
+      "deviceOnly": "Fica salvo só neste dispositivo, porque depende da tela."
     },
     "font": {
       "label": "Fonte",

@@ -6,6 +6,7 @@ import { RoomStoreProvider } from '@/state/RoomStoreProvider';
 import type { AudioHandle, OpenCallOptions, TileDomHandle } from '@/state/RoomContext';
 import { roomReducer, initialRoomState } from '@/state/roomReducer';
 import { useAuth } from '@/state/AuthContext';
+import { receivePreferenceChanges, syncAccountPreferences } from '@/shared/preferences/accountPreferences';
 import { saveIdentity } from '@/shared/lib/identitySession';
 import { useSocketConnection } from '@/state/hooks/useSocketConnection';
 import { useScreenShare } from '@/features/calls/useScreenShare';
@@ -305,6 +306,7 @@ export function RoomProvider({ children }: { children: ReactNode }) {
         onIdleWelcome();
         syncServerClock(m.serverTime);
         onActivitySettingsWelcome(m.activitySettings);
+        if (m.preferences !== undefined) void syncAccountPreferences(m.userId, m.preferences);
         onActivityWelcome();
         setMaxAttachmentBytes(m.maxAttachmentBytes ?? DEFAULT_MAX_ATTACHMENT_BYTES);
         // the first welcome opens nothing: the URL says what to show (the
@@ -519,6 +521,9 @@ export function RoomProvider({ children }: { children: ReactNode }) {
         break;
       case 'my-activity-settings':
         onActivitySettingsChanged(m);
+        break;
+      case 'my-preferences':
+        receivePreferenceChanges(m.changes);
         break;
       case 'activity-settings-result':
         onActivitySettingsResult(m);
