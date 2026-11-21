@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next';
-import { useEffect, useMemo, useState } from 'react';
+import { Fragment, useEffect, useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
 import { highlightCode } from '@/shared/lib/highlightCode';
 import type { PublicUser, RoleSummary } from '@/shared/types/protocol';
@@ -16,6 +16,7 @@ import { gifMessageUrl } from '@/features/gifs/klipyMedia';
 import { GROUP_MENTION_NAMES, parseMessage, spoileredLinks, type Block, type Inline } from './messageMarkup';
 import { messageEmbedLinks } from './messageEmbedLinks';
 import { EmojiText } from '@/features/emoji/Emoji';
+import { matchTerms, splitMatches } from '@/features/search/searchMatches';
 
 interface RenderContext {
   /** a message of emojis alone shows them big */
@@ -27,6 +28,18 @@ interface RenderContext {
   roles?: readonly RoleSummary[];
   /** the server says the message's @everyone/@here notified the channel */
   mentionEveryone?: boolean;
+  /** a search's terms (matchTerms), marked where they start a word */
+  terms?: readonly string[];
+}
+
+/** `text` with the search's matches in marks; each piece drawn by `draw`. */
+function marked(text: string, ctx: RenderContext, draw: (piece: string) => ReactNode): ReactNode {
+  if (!ctx.terms?.length) return draw(text);
+  const parts = splitMatches(text, ctx.terms);
+  if (parts.length === 1 && !parts[0]!.match) return draw(text);
+  return parts.map((part, index) => (part.match
+    ? <mark key={index} className="rounded-xs bg-yellow/30 text-text-primary">{draw(part.text)}</mark>
+    : <Fragment key={index}>{draw(part.text)}</Fragment>));
 }
 
 // the chip's box: h-6 matches the line box of the text around it (see Mention)
@@ -87,9 +100,9 @@ function Mention({ name, ctx }: { name: string; ctx: RenderContext }) {
 function renderInline(nodes: Inline[], ctx: RenderContext): ReactNode[] {
   return nodes.map((node, index) => {
     switch (node.type) {
-      case 'text': return <EmojiText key={index} text={node.text} emojiClassName={ctx.jumbo ? undefined : 'size-[1.375em] align-[-0.3em]'} details />;
-      case 'code': return <code key={index} className="rounded-sm bg-fill-code px-1 py-0.5 font-mono text-[0.875em]">{node.text}</code>;
-      case 'link': return <a key={index} href={node.url} target="_blank" rel="noopener noreferrer" className="break-all text-link hover:underline">{node.url}</a>;
+      case 'text': return <Fragment key={index}>{marked(node.text, ctx, (piece) => <EmojiText text={piece} emojiClassName={ctx.jumbo ? undefined : 'size-[1.375em] align-[-0.3em]'} details />)}</Fragment>;
+      case 'code': return <code key={index} className="rounded-sm bg-fill-code px-1 py-0.5 font-mono text-[0.875em]">{marked(node.text, ctx, (piece) => piece)}</code>;
+      case 'link': return <a key={index} href={node.url} target="_blank" rel="noopener noreferrer" className="break-all text-link hover:underline">{marked(node.url, ctx, (piece) => piece)}</a>;
       case 'mention': return GROUP_MENTION_NAMES.includes(node.name.toLowerCase())
         ? <GroupMention key={index} name={node.name} ctx={ctx} />
         : <Mention key={index} name={node.name} ctx={ctx} />;
@@ -220,14 +233,17 @@ interface ChatMessageTextProps {
   roles?: readonly RoleSummary[];
   /** the message's @everyone/@here notified the channel (ChatMessage.mentionEveryone) */
   mentionEveryone?: boolean;
+  /** a search's words, marked where the message has them (search results) */
+  highlight?: readonly string[];
 }
 
-export function ChatMessageText({ text, mentionLookup, myUserId, onOpenProfile, embeds: previews, suppressedEmbeds, noPreviews, roles, mentionEveryone }: ChatMessageTextProps) {
+export function ChatMessageText({ text, mentionLookup, myUserId, onOpenProfile, embeds: previews, suppressedEmbeds, noPreviews, roles, mentionEveryone, highlight }: ChatMessageTextProps) {
   const blocks = useMemo(() => parseMessage(text), [text]);
   const embeds = useMemo(() => (noPreviews ? [] : messageEmbedLinks(blocks, suppressedEmbeds)), [blocks, suppressedEmbeds, noPreviews]);
   const spoilered = useMemo(() => spoileredLinks(blocks), [blocks]);
   const jumbo = useMemo(() => isSingleEmoji(text) || isServerEmojiOnly(blocks), [text, blocks]);
-  const ctx: RenderContext = { jumbo, mentionLookup, myUserId, onOpenProfile, roles, mentionEveryone };
+  const terms = highlight ? matchTerms(highlight) : undefined;
+  const ctx: RenderContext = { jumbo, mentionLookup, myUserId, onOpenProfile, roles, mentionEveryone, terms };
   // a GIF message is only its KLIPY URL: show the GIF, not the link and a preview of it
   const gifUrl = gifMessageUrl(text);
   if (gifUrl) return <GifMessage url={gifUrl} />;

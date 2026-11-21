@@ -1,4 +1,4 @@
-import { useRef, type MouseEvent, type ReactNode } from 'react';
+import type { MouseEvent, ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ArrowBendUpLeftIcon } from '@/shared/ui/icons';
 
@@ -19,7 +19,6 @@ import { useLanguage } from '@/shared/i18n/useLanguage';
 import { useRoom, useRoomState } from '@/state/RoomContext';
 import { cn } from '@/shared/lib/utils';
 import type { ChatMessage } from '@/shared/types/protocol';
-import { useTextHighlight } from '@/features/search/useTextHighlight';
 
 /** A message drawn on its own, outside the timeline: a boxed card with its
  * author, time, what it answers, and its content. `actions` sit over its top
@@ -33,10 +32,6 @@ export function MessageCard({ message, actions, onOpenProfile, highlight, onActi
   /** a click on the card itself, not on one of its links, pictures or buttons */
   onActivate?: () => void;
 }) {
-  // only what was said is marked: the author, the time, the reply line and the
-  // card's own buttons (the jump) are not what the search matched
-  const textRef = useRef<HTMLDivElement | null>(null);
-  useTextHighlight(textRef, highlight ?? []);
   const activate = (event: MouseEvent) => {
     if (!onActivate || window.getSelection()?.toString()) return;
     if (event.target instanceof Element && event.target.closest('a, button, img, video, audio, input, [role="button"]')) return;
@@ -88,7 +83,7 @@ export function MessageCard({ message, actions, onOpenProfile, highlight, onActi
           ) : (
             <>
               {message.text && (
-                <div ref={textRef} className="text-body leading-message text-text-secondary">
+                <div className="text-body leading-message text-text-secondary">
                   <ChatMessageText
                     text={message.text}
                     mentionLookup={mentionLookup}
@@ -98,6 +93,8 @@ export function MessageCard({ message, actions, onOpenProfile, highlight, onActi
                     suppressedEmbeds={message.suppressedEmbeds}
                     roles={server?.roles}
                     mentionEveryone={!!message.mentionEveryone}
+                    // only what was said is marked, not the author, the time or the reply line
+                    highlight={highlight}
                   />
                 </div>
               )}
@@ -106,8 +103,11 @@ export function MessageCard({ message, actions, onOpenProfile, highlight, onActi
           )}
         </MessageMediaScope>
       </div>
+      {/* will-change keeps the actions on a layer of their own: otherwise the
+          layer appears and goes with every hover (opacity below 1 and back),
+          and each time Chromium lays out the whole page and re-rasters around it */}
       {actions && (
-        <div className="absolute right-2 top-2 flex items-center gap-1 opacity-0 transition-opacity duration-100 group-hover/card:opacity-100 group-focus-within/card:opacity-100 touch-first:opacity-100">
+        <div className="absolute right-2 top-2 flex items-center gap-1 opacity-0 will-change-[opacity] transition-opacity duration-100 group-hover/card:opacity-100 group-focus-within/card:opacity-100 touch-first:opacity-100">
           {actions}
         </div>
       )}
