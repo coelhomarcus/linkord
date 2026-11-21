@@ -210,6 +210,12 @@ export function SearchField({ scope, scopeName, onOpenFilters, fullWidth = false
             aria-controls={listId}
             aria-autocomplete="list"
             aria-activedescendant={activeOption ? `${listId}-${activeOption.id}` : undefined}
+            // the list below is the field's own history and filters: the browser's
+            // would cover it, and a phone would capitalize or correct `from:`
+            autoComplete="off"
+            autoCorrect="off"
+            autoCapitalize="off"
+            spellCheck={false}
             value={draft.text}
             placeholder={placeholder}
             onChange={(event) => handleChange(event.target.value)}
