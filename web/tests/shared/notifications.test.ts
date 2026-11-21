@@ -1,4 +1,5 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi, type Mock } from 'vitest';
+import type { DesktopNotifications } from '@/shared/desktop';
 import { notifyIncomingChatMessage, notifyLiveNotice, setNoticeNavigationHandler, setNotificationClickHandler, setNotificationsModuleEnabled, setPushSubscriptionActive } from '@/shared/notifications';
 import type { LiveNotice } from '@/shared/types/protocol';
 import type { IncomingChatEvent } from '@/shared/notifications';
@@ -271,13 +272,13 @@ describe('notifyLiveNotice', () => {
 
 describe('notifications through the desktop app’s own notifier', () => {
   let clicked: ((id: string) => void) | null;
-  let show: ReturnType<typeof vi.fn>;
+  let show: Mock<DesktopNotifications['show']>;
 
   beforeEach(() => {
     clicked = null;
-    show = vi.fn(async () => true);
+    show = vi.fn<DesktopNotifications['show']>(async () => true);
     window.linkordDesktop = {
-      platform: 'darwin', version: '0.7.0', focusWindow: vi.fn(async () => {}),
+      platform: 'win32', version: '0.7.0', focusWindow: vi.fn(async () => {}),
       notifications: { show, onClick: (callback) => { clicked = callback; return () => { clicked = null; }; } },
     };
   });
@@ -288,23 +289,13 @@ describe('notifications through the desktop app’s own notifier', () => {
     setNoticeNavigationHandler(null);
   });
 
-  it('sends a channel message with its picture, group and sender/channel/text layout', async () => {
+  it('sends a channel message with its picture, grouped by conversation', async () => {
     notifyIncomingChatMessage(baseEvent({ conversationName: '#geral · Clube', text: 'oi' }));
     await vi.runAllTimersAsync();
     expect(show).toHaveBeenCalledWith({
       id: 'chat-ch-1', title: '#geral · Clube', body: 'Fulano: oi', icon: 'data:image/png;base64,drawn', group: 'ch-1',
-      detail: { sender: 'Fulano', place: '#geral · Clube', text: 'oi' },
     });
     expect(created).toHaveLength(0);
-  });
-
-  it('keeps the flat layout for a mention, a DM or a burst', async () => {
-    notifyIncomingChatMessage(baseEvent({ conversationId: 'ch-1', mentioned: true }));
-    notifyIncomingChatMessage(baseEvent({ conversationId: 'dm-1', direct: true, conversationName: 'Fulano' }));
-    notifyIncomingChatMessage(baseEvent({ conversationId: 'ch-2' }));
-    notifyIncomingChatMessage(baseEvent({ conversationId: 'ch-2' }));
-    await vi.runAllTimersAsync();
-    expect(show.mock.calls.map(([request]) => request.detail)).toEqual([null, null, null]);
   });
 
   it('a click on the system’s notification opens what it was about', async () => {
@@ -323,7 +314,7 @@ describe('notifications through the desktop app’s own notifier', () => {
     setNoticeNavigationHandler(navigate);
     notifyLiveNotice({ kind: 'friend_accepted', title: 'Fulano aceitou seu pedido', body: '', path: '/app/friends', tag: 'social-n2' });
     await vi.runAllTimersAsync();
-    expect(show).toHaveBeenCalledWith({ id: 'social-n2', title: 'Fulano aceitou seu pedido', body: '', icon: null, group: 'social', detail: null });
+    expect(show).toHaveBeenCalledWith({ id: 'social-n2', title: 'Fulano aceitou seu pedido', body: '', icon: null, group: 'social' });
     clicked?.('social-n2');
     expect(navigate).toHaveBeenCalledWith('/app/friends');
   });

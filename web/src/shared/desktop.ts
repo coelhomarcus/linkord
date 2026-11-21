@@ -114,8 +114,6 @@ export interface DesktopNotificationRequest {
   icon?: string | null;
   /** a conversation's notifications stack together */
   group?: string | null;
-  /** a single channel message, which macOS lays out as sender, channel and text */
-  detail?: { sender: string; place: string; text: string } | null;
 }
 
 export interface DesktopNotifications {

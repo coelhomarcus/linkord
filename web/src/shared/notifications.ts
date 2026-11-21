@@ -2,7 +2,7 @@
 import { i18n } from '@/shared/i18n/init';
 import { LOCAL_STORAGE_KEYS, localStorageStore } from '@/shared/lib/localStorage';
 import { isDoNotDisturb } from '@/shared/doNotDisturb';
-import { desktopApp, isDesktopApp, type DesktopNotificationRequest, type DesktopNotifications } from '@/shared/desktop';
+import { desktopApp, isDesktopApp, type DesktopNotifications } from '@/shared/desktop';
 import type { LiveNotice } from '@/shared/types/protocol';
 import { FALLBACK_NOTIFICATION_ICON, notificationIcon, type NoticePicture } from '@/shared/notificationIcon';
 
@@ -152,18 +152,13 @@ function flush(conversationId: string): void {
 
   // several people in a channel: the server alone, since no one face stands for them
   const [main, badge] = buf.senders.size > 1 && buf.server ? [buf.server, null] : [buf.lastSender, buf.server];
-  const single = buf.count === 1 && !buf.mentioned && !buf.direct;
-  const layout = {
-    group: conversationId,
-    detail: single ? { sender: senderName, place: buf.conversationName, text: buf.lastText.slice(0, BODY_TEXT_LIMIT) } : null,
-  };
   void notificationIcon(main, badge).then((icon) => show(title, {
     body,
     icon,
     badge: '/icons/notification-badge-96.png',
     tag: `chat-${conversationId}`,
     data: { path: `/app/conversations/${encodeURIComponent(conversationId)}` },
-  }, () => onClick?.(conversationId), layout)).catch(() => {});
+  }, () => onClick?.(conversationId), conversationId)).catch(() => {});
 }
 
 /** A friend request, an accepted request or a server invitation, as the server words it. */
@@ -186,15 +181,14 @@ export function notifyLiveNotice(notice: LiveNotice): void {
     badge: '/icons/notification-badge-96.png',
     tag: notice.tag,
     data: { path },
-  }, () => onNavigate?.(path), { group: 'social' })).catch(() => {});
+  }, () => onNavigate?.(path), 'social')).catch(() => {});
 }
 
-type DesktopLayout = Pick<DesktopNotificationRequest, 'group' | 'detail'>;
-
-function show(title: string, options: NotificationOptions, onShownClick: () => void, layout: DesktopLayout = {}): void {
+/** `group`: the desktop app stacks a conversation's toasts together (`social` for the notices). */
+function show(title: string, options: NotificationOptions, onShownClick: () => void, group: string | null = null): void {
   const desktop = desktopApp()?.notifications;
   if (desktop && options.tag) {
-    showOnDesktop(desktop, title, { ...options, tag: options.tag }, onShownClick, layout);
+    showOnDesktop(desktop, title, { ...options, tag: options.tag }, onShownClick, group);
     return;
   }
   // An older desktop app shows page notifications as the system's; a service
@@ -215,7 +209,7 @@ const MAX_DESKTOP_CLICKS = 100;
 let listeningTo: DesktopNotifications | null = null;
 let stopListening: (() => void) | null = null;
 
-function showOnDesktop(desktop: DesktopNotifications, title: string, options: NotificationOptions & { tag: string }, onShownClick: () => void, layout: DesktopLayout): void {
+function showOnDesktop(desktop: DesktopNotifications, title: string, options: NotificationOptions & { tag: string }, onShownClick: () => void, group: string | null): void {
   if (listeningTo !== desktop) {
     stopListening?.();
     listeningTo = desktop;
@@ -239,8 +233,7 @@ function showOnDesktop(desktop: DesktopNotifications, title: string, options: No
     body: options.body ?? '',
     // the app icon is the system's default there; only a picture the page drew is worth sending
     icon: typeof options.icon === 'string' && options.icon.startsWith('data:') ? options.icon : null,
-    group: layout.group ?? null,
-    detail: layout.detail ?? null,
+    group,
   }).then((shown) => { if (!shown) fallback(); }, fallback);
 }
 

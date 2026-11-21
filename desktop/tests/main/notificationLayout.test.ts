@@ -5,14 +5,13 @@ import { nativeNotificationFields, parseNotificationRequest, type NotificationRe
 const PNG = 'data:image/png;base64,iVBORw0KGgo=';
 const channelMessage = {
   id: 'chat-3f2b8c1e', title: '#geral · Clube', body: 'Ana: oi', icon: PNG, group: '3f2b8c1e',
-  detail: { sender: 'Ana', place: '#geral · Clube', text: 'oi' },
 };
 
 describe('parseNotificationRequest', () => {
   it('takes a request the page sends', () => {
     assert.deepEqual(parseNotificationRequest(channelMessage), channelMessage);
     assert.deepEqual(parseNotificationRequest({ id: 'social-1', title: 'Ana quer ser sua amiga', body: '' }), {
-      id: 'social-1', title: 'Ana quer ser sua amiga', body: '', icon: null, group: null, detail: null,
+      id: 'social-1', title: 'Ana quer ser sua amiga', body: '', icon: null, group: null,
     });
   });
 
@@ -30,10 +29,8 @@ describe('parseNotificationRequest', () => {
     assert.equal(parseNotificationRequest({ ...channelMessage, icon: `data:image/png;base64,${'A'.repeat(1_000_000)}` })?.icon, null);
   });
 
-  it('drops a bad group or an incomplete detail but keeps the notification', () => {
-    const parsed = parseNotificationRequest({ ...channelMessage, group: '../x', detail: { sender: 'Ana', place: '' } });
-    assert.equal(parsed?.group, null);
-    assert.equal(parsed?.detail, null);
+  it('drops a bad group but keeps the notification', () => {
+    assert.equal(parseNotificationRequest({ ...channelMessage, group: '../x' })?.group, null);
   });
 
   it('caps long text', () => {
@@ -44,22 +41,9 @@ describe('parseNotificationRequest', () => {
 });
 
 describe('nativeNotificationFields', () => {
-  const request = parseNotificationRequest(channelMessage) as NotificationRequest;
-
-  it('lays a channel message out as sender, channel and text on macOS', () => {
-    assert.deepEqual(nativeNotificationFields(request, 'darwin'), {
-      id: 'chat-3f2b8c1e', groupId: '3f2b8c1e', title: 'Ana', subtitle: '#geral · Clube', body: 'oi',
-    });
-  });
-
-  it('keeps the page’s own title and body where there is no subtitle', () => {
-    assert.deepEqual(nativeNotificationFields(request, 'win32'), { id: 'chat-3f2b8c1e', groupId: '3f2b8c1e', title: '#geral · Clube', body: 'Ana: oi' });
-    assert.deepEqual(nativeNotificationFields(request, 'linux'), { id: 'chat-3f2b8c1e', title: '#geral · Clube', body: 'Ana: oi' });
-  });
-
-  it('shows the page’s title and body on macOS when there is no detail', () => {
-    assert.deepEqual(nativeNotificationFields({ ...request, group: null, detail: null }, 'darwin'), {
-      id: 'chat-3f2b8c1e', title: '#geral · Clube', body: 'Ana: oi',
-    });
+  it('gives the toast its tag and group, with the page’s own title and body', () => {
+    const request = parseNotificationRequest(channelMessage) as NotificationRequest;
+    assert.deepEqual(nativeNotificationFields(request), { id: 'chat-3f2b8c1e', groupId: '3f2b8c1e', title: '#geral · Clube', body: 'Ana: oi' });
+    assert.deepEqual(nativeNotificationFields({ ...request, group: null }), { id: 'chat-3f2b8c1e', title: '#geral · Clube', body: 'Ana: oi' });
   });
 });

@@ -11,11 +11,10 @@ const CLICK = 'linkord:notification:click';
 const MAX_KEPT = 100;
 
 /**
- * The page's notifications as the system's own, rather than the ones Chromium makes from the web
- * API: the system gets an id and a group (a conversation's notifications stack, the newest replacing
- * the one on screen), macOS lays a channel message out as sender, channel and text, and the picture
- * the page drew is handed over as an image. A click brings the window back and tells the page which
- * one it was.
+ * The page's notifications as Windows toasts of the app's own, rather than the ones Chromium makes
+ * from the web API: each gets a tag and a group (a conversation's toasts stack, the newest replacing
+ * the one on screen), and the picture the page drew is handed over as an image. A click brings the
+ * window back and tells the page which one it was.
  */
 export function installNotificationBridge(appOrigin: string): void {
   const kept = new Map<string, Notification>();
@@ -30,7 +29,7 @@ export function installNotificationBridge(appOrigin: string): void {
     if (!request || !window) return false;
     const icon = request.icon ? nativeImage.createFromDataURL(request.icon) : null;
     const notification = new Notification({
-      ...nativeNotificationFields(request, process.platform),
+      ...nativeNotificationFields(request),
       ...(icon && !icon.isEmpty() ? { icon } : {}),
     });
     notification.on('click', () => {

@@ -1,4 +1,4 @@
-// What a notification the page asks for becomes on each system. The page is untrusted here, so
+// What a notification the page asks for becomes as a Windows toast. The page is untrusted here, so
 // everything is checked and capped before it reaches the system's notification centre.
 
 export interface NotificationRequest {
@@ -8,17 +8,14 @@ export interface NotificationRequest {
   body: string;
   /** a PNG the page drew (its picture of the person and the server), as a data URL */
   icon: string | null;
-  /** notifications of one conversation, which the system stacks together */
+  /** notifications of one conversation, which Windows stacks together */
   group: string | null;
-  /** a single channel message: who, where and what, which macOS lays out on three lines */
-  detail: { sender: string; place: string; text: string } | null;
 }
 
 export interface NativeNotificationFields {
   id: string;
   groupId?: string;
   title: string;
-  subtitle?: string;
   body: string;
 }
 
@@ -38,15 +35,6 @@ function iconOf(value: unknown): string | null {
   return typeof value === 'string' && value.length <= MAX_ICON_LENGTH && PNG_DATA_URL_RE.test(value) ? value : null;
 }
 
-function detailOf(value: unknown): NotificationRequest['detail'] {
-  if (!value || typeof value !== 'object') return null;
-  const raw = value as Record<string, unknown>;
-  const sender = text(raw.sender, MAX_TITLE);
-  const place = text(raw.place, MAX_TITLE);
-  const body = text(raw.text, MAX_BODY);
-  return sender && place && body !== null ? { sender, place, text: body } : null;
-}
-
 /** The request as the page sent it, or null when it is not one. */
 export function parseNotificationRequest(value: unknown): NotificationRequest | null {
   if (!value || typeof value !== 'object') return null;
@@ -60,16 +48,10 @@ export function parseNotificationRequest(value: unknown): NotificationRequest | 
     body,
     icon: iconOf(raw.icon),
     group: typeof raw.group === 'string' && ID_RE.test(raw.group) ? raw.group : null,
-    detail: detailOf(raw.detail),
   };
 }
 
-/** The fields each system shows well. Only macOS has a subtitle; elsewhere the page's own title
- * (`#channel · Server`) and body (`Name: text`) already say who and where. */
-export function nativeNotificationFields(request: NotificationRequest, platform: NodeJS.Platform): NativeNotificationFields {
-  const grouped = request.group && (platform === 'darwin' || platform === 'win32') ? { groupId: request.group } : {};
-  if (platform === 'darwin' && request.detail) {
-    return { id: request.id, ...grouped, title: request.detail.sender, subtitle: request.detail.place, body: request.detail.text };
-  }
-  return { id: request.id, ...grouped, title: request.title, body: request.body };
+/** The toast's tag (`id`) and group: the newest toast of a conversation replaces the one on screen. */
+export function nativeNotificationFields(request: NotificationRequest): NativeNotificationFields {
+  return { id: request.id, ...(request.group ? { groupId: request.group } : {}), title: request.title, body: request.body };
 }
