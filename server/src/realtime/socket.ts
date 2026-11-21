@@ -14,6 +14,7 @@ import * as floodControl from './floodControl.js';
 import * as chat from '../modules/messages/messages.js';
 import * as pins from '../modules/messages/pins.js';
 import * as savedMessages from '../modules/messages/savedMessages.js';
+import * as messageSearch from '../modules/messages/messageSearch.js';
 import * as conversations from '../modules/conversations/conversations.js';
 import { listForUser, getConversationForUser, unreadCountsForUser } from '../modules/conversations/conversationsRepository.js';
 import { listNotificationSettings } from '../modules/notifications/notificationSettings.js';
@@ -48,6 +49,7 @@ export const handlers: HandlerTable = Object.assign(
   chat.handlers,
   pins.handlers,
   savedMessages.handlers,
+  messageSearch.handlers,
   conversations.handlers,
   moderation.handlers,
   streamPreview.handlers,
@@ -88,6 +90,7 @@ export const ACTION_LIMITS: Record<string, ActionLimit> = {
   'soundboard-play': { windowMs: 10_000, max: 6 },
   profile: { windowMs: 60_000, max: 10 },
   'message-search': { windowMs: 10_000, max: 20 },
+  'search-messages': { windowMs: 10_000, max: 20 },
   'direct-open': { windowMs: 10_000, max: 10 },
   'conversation-mark-read': { windowMs: 10_000, max: 30 },
   'conversation-mark-all-read': { windowMs: 10_000, max: 30 },

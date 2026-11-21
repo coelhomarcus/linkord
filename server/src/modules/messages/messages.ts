@@ -4,7 +4,7 @@ import { eq, and, desc, asc, lt, gt, gte, inArray, sql } from 'drizzle-orm';
 import { config } from '../../config/env.js';
 import { db } from '../../db/client.js';
 import { conversations, messages, users, webhooks, type Message, type Attachment } from '../../db/schema.js';
-import { MESSAGE_SEARCH_CONFIGS, searchConfig } from '../../db/textSearch.js';
+import { MESSAGE_SEARCH_CONFIGS, messageSearchQueries, searchConfig } from '../../db/textSearch.js';
 import { participants, send, sendSocketError } from '../presence/participants.js';
 import { isSingleEmoji } from './emoji.js';
 import {
@@ -552,6 +552,8 @@ const HEADLINE_OPTIONS = 'StartSel=\uE000, StopSel=\uE001, MaxFragments=1, MaxWo
  * indexed side; websearch_to_tsquery never throws on malformed input
  * (quoted phrases / -exclude / or all work, garbage input just matches
  * nothing), so it's safe to feed raw user text directly into it. */
+// Kept for tabs on a build before protocol 26, whose search dialog still sends
+// it; the header search is messageSearch.ts. Goes when the minimum is raised.
 async function handleMessageSearch(socket: AppSocket, msg: { query?: string; conversationId?: string }): Promise<void> {
   const p = participants.get(socket.participantId ?? '');
   if (!p || p.socket !== socket) return;
@@ -564,10 +566,7 @@ async function handleMessageSearch(socket: AppSocket, msg: { query?: string; con
   if (conversationId && !(await conversationExistsForUser(conversationId, p.userId))) return;
   const searchable = conversationId ? [conversationId] : await visibleConversationIds(p.userId);
 
-  // The query is parsed once per configuration the vector holds, and a message
-  // matches when any of them does (the exact word, or its stem in either language).
-  const perConfig = MESSAGE_SEARCH_CONFIGS.map((name) => ({ name, tsQuery: sql`websearch_to_tsquery(${searchConfig(name)}, ${query})` }));
-  const tsQuery = sql`(${sql.join(perConfig.map((c) => c.tsQuery), sql` || `)})`;
+  const { perConfig, tsQuery } = messageSearchQueries(query);
   const rank = sql`ts_rank(${messages.searchVector}, ${tsQuery})`;
   // ts_headline highlights only the words its own configuration maps onto the
   // query, so the snippet is drawn by the first configuration that matched

@@ -66,9 +66,13 @@
 // `pin_notice` message kind, and `welcome.unseenPins` and `welcome.savedMessageIds`. An old tab ignores
 // the new messages and fields and shows a pin notice as an empty message from whoever pinned, so the
 // minimum stays at 7.
+// Version 26 adds the header search: `search-messages` (full text plus author, channel, content type,
+// mention, date, author type and pinned filters, a sort and a page) answered with
+// `search-messages-result`. An old tab keeps its search dialog on `message-search`, which stays until
+// the minimum is raised, so the minimum stays at 7.
 // Raising MIN_PROTOCOL_VERSION also drops open tabs out of their calls (they are refused and
 // disconnect), so keep it for changes an old client cannot tolerate.
-export const PROTOCOL_VERSION = 25;
+export const PROTOCOL_VERSION = 26;
 export const MIN_PROTOCOL_VERSION = 7;
 export const MIC_STARTING_PROTOCOL_VERSION = 18;
 export const CALL_ELSEWHERE_PROTOCOL_VERSION = 20;
