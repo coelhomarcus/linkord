@@ -25,7 +25,8 @@ export function liveNoticeMessage(event: { type: string; attempts: number }, not
     t: 'notice' as const,
     notice: {
       kind, title: notice.title, body: notice.body, path: notice.path, tag: notice.tag,
-      ...(notice.avatar ? { avatar: notice.avatar } : {}),
+      ...(notice.person ? { person: notice.person } : {}),
+      ...(notice.server ? { server: notice.server } : {}),
     },
   };
 }

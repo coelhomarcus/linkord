@@ -13,6 +13,9 @@ export interface PushNotice {
   avatar?: string;
   /** Alert again when a notice replaces one with the same tag, so a burst of messages is not silent. */
   renotify?: boolean;
+  /** For the open tabs' notice, which draws its own picture (liveNotices.ts); the push leaves them out. */
+  person?: { id: string; name: string; avatar?: string; avatarColor: string };
+  server?: { id: string; name: string; icon?: string };
 }
 
 const UPLOADED_AVATAR_RE = /^\/uploads\/[0-9a-f]{32}$/;
@@ -26,6 +29,17 @@ export function pushAvatarPath(user: { avatar: string; avatarPoster: string } | 
   if (!user) return undefined;
   for (const candidate of [user.avatarPoster, user.avatar]) if (UPLOADED_AVATAR_RE.test(candidate)) return candidate;
   return undefined;
+}
+
+/** A server's icon, under the same rule as an avatar. */
+export function serverIconPath(icon: string): string | undefined {
+  return UPLOADED_AVATAR_RE.test(icon) ? icon : undefined;
+}
+
+/** Who a notice is about, as the open tab draws them. */
+export function noticePerson(user: { id: string; username: string; displayName: string; avatar: string; avatarPoster: string; avatarColor: string }): NonNullable<PushNotice['person']> {
+  const avatar = pushAvatarPath(user);
+  return { id: user.id, name: user.displayName || user.username, avatarColor: user.avatarColor, ...(avatar ? { avatar } : {}) };
 }
 
 const ROLE_MENTION_RE = new RegExp(ROLE_MENTION_TOKEN, 'g');

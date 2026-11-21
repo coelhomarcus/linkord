@@ -38,8 +38,10 @@ export interface LiveNotice {
   path: string;
   /** the same notice in another tab, or as a push, replaces this one */
   tag: string;
-  /** own-server upload path of the person's avatar */
-  avatar?: string;
+  /** who sent or accepted the request, or who invited; `avatar` is an own-server upload path */
+  person?: { id: string; name: string; avatar?: string; avatarColor: string };
+  /** the server of an invitation; `icon` is an own-server upload path */
+  server?: { id: string; name: string; icon?: string };
 }
 
 /** One server's or one channel/DM's notification setting (protocol 19). `level` null inherits: a channel

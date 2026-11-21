@@ -1,6 +1,6 @@
 import { cn } from '@/shared/lib/utils';
 import { colorFor } from '@/shared/Avatar';
-import { conversationInitials } from './conversationUtils';
+import { titleInitials } from '@/shared/lib/initials';
 
 interface GroupAvatarProps {
   /** the group's id: with no picture, its color (the same way an account's is) */
@@ -25,7 +25,7 @@ export function GroupAvatar({ id, title, avatar, active, size = 44, className }:
       )}
       style={{ width: size, height: size, fontSize: Math.round(size * 0.36), ...(solid ? { background: colorFor(id) } : {}) }}
     >
-      {avatar ? <img src={avatar} alt="" className="size-full object-cover" /> : conversationInitials(title)}
+      {avatar ? <img src={avatar} alt="" className="size-full object-cover" /> : titleInitials(title)}
     </div>
   );
 }

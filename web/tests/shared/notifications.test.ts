@@ -3,6 +3,12 @@ import { notifyIncomingChatMessage, notifyLiveNotice, setNoticeNavigationHandler
 import type { LiveNotice } from '@/shared/types/protocol';
 import type { IncomingChatEvent } from '@/shared/notifications';
 import { setDoNotDisturb } from '@/shared/doNotDisturb';
+import { notificationIcon } from '@/shared/notificationIcon';
+
+vi.mock('@/shared/notificationIcon', () => ({
+  FALLBACK_NOTIFICATION_ICON: '/icons/icon-192.png',
+  notificationIcon: vi.fn(async () => 'data:image/png;base64,drawn'),
+}));
 
 interface FakeNotificationInstance {
   title: string;
@@ -30,6 +36,7 @@ function baseEvent(overrides: Partial<IncomingChatEvent> = {}): IncomingChatEven
   return {
     conversationId: 'ch-1',
     conversationName: 'geral',
+    direct: false,
     senderId: 'user-1',
     senderName: 'Fulano',
     text: 'oi',
@@ -40,6 +47,7 @@ function baseEvent(overrides: Partial<IncomingChatEvent> = {}): IncomingChatEven
 
 beforeEach(() => {
   created = [];
+  vi.mocked(notificationIcon).mockClear();
   vi.stubGlobal('Notification', FakeNotification);
   vi.useFakeTimers();
   setNotificationsModuleEnabled(true);
@@ -52,76 +60,110 @@ afterEach(() => {
 });
 
 describe('notifyIncomingChatMessage', () => {
-  it('does not create a notification when the module is disabled', () => {
+  it('does not create a notification when the module is disabled', async () => {
     setNotificationsModuleEnabled(false);
     notifyIncomingChatMessage(baseEvent());
-    vi.runAllTimers();
+    await vi.runAllTimersAsync();
     expect(created).toHaveLength(0);
   });
 
-  it('does not create a notification in do not disturb', () => {
+  it('does not create a notification in do not disturb', async () => {
     setDoNotDisturb(true);
     notifyIncomingChatMessage(baseEvent());
-    vi.runAllTimers();
+    await vi.runAllTimersAsync();
     setDoNotDisturb(false);
     expect(created).toHaveLength(0);
   });
 
-  it('does not create a notification without permission granted', () => {
+  it('does not create a notification without permission granted', async () => {
     FakeNotification.permission = 'default';
     notifyIncomingChatMessage(baseEvent());
-    vi.runAllTimers();
+    await vi.runAllTimersAsync();
     expect(created).toHaveLength(0);
     FakeNotification.permission = 'granted';
   });
 
-  it('a single message generates "Sender: text"', () => {
+  it('a single message generates "Sender: text"', async () => {
     notifyIncomingChatMessage(baseEvent({ senderName: 'Fulano', text: 'oi pessoal' }));
-    vi.runAllTimers();
+    await vi.runAllTimersAsync();
     expect(created).toHaveLength(1);
     expect(created[0]!.options?.body).toBe('Fulano: oi pessoal');
     expect(created[0]!.options?.tag).toBe('chat-ch-1');
   });
 
-  it('a quick burst from the same sender in the same channel collapses into ONE notification', () => {
+  it('a quick burst from the same sender in the same channel collapses into ONE notification', async () => {
     for (let i = 0; i < 6; i++) {
       notifyIncomingChatMessage(baseEvent({ text: `mensagem ${i}` }));
       vi.advanceTimersByTime(200);
     }
-    vi.runAllTimers();
+    await vi.runAllTimersAsync();
     expect(created).toHaveLength(1);
     expect(created[0]!.options?.body).toBe('Fulano enviou 6 mensagens');
   });
 
-  it('a burst with different senders in the same channel collapses by citing the number of people', () => {
+  it('a burst with different senders in the same channel collapses by citing the number of people', async () => {
     notifyIncomingChatMessage(baseEvent({ senderId: 'user-1', senderName: 'Fulano' }));
     vi.advanceTimersByTime(200);
     notifyIncomingChatMessage(baseEvent({ senderId: 'user-2', senderName: 'Ciclano' }));
-    vi.runAllTimers();
+    await vi.runAllTimersAsync();
     expect(created).toHaveLength(1);
     expect(created[0]!.options?.body).toBe('2 pessoas enviaram mensagens');
   });
 
-  it('different conversations do not mix (buffer per conversation)', () => {
+  it('different conversations do not mix (buffer per conversation)', async () => {
     notifyIncomingChatMessage(baseEvent({ conversationId: 'ch-1' }));
     notifyIncomingChatMessage(baseEvent({ conversationId: 'ch-2' }));
-    vi.runAllTimers();
+    await vi.runAllTimersAsync();
     expect(created).toHaveLength(2);
     expect(created.map((n) => n.options?.tag).sort()).toEqual(['chat-ch-1', 'chat-ch-2']);
   });
 
-  it('a continuous burst (no pause) still fires periodically (MAX_WAIT)', () => {
+  it('a continuous burst (no pause) still fires periodically (MAX_WAIT)', async () => {
     for (let i = 0; i < 40; i++) {
       notifyIncomingChatMessage(baseEvent({ text: `m${i}` }));
-      vi.advanceTimersByTime(300);
+      await vi.advanceTimersByTimeAsync(300);
     }
     expect(created.length).toBeGreaterThan(0);
   });
 
-  it('a message with a mention uses a distinct title', () => {
+  it('a message with a mention uses a distinct title', async () => {
     notifyIncomingChatMessage(baseEvent({ mentioned: true }));
-    vi.runAllTimers();
+    await vi.runAllTimersAsync();
     expect(created[0]!.title).toBe('Você foi mencionado em geral');
+  });
+});
+
+describe('notifyIncomingChatMessage — wording and picture', () => {
+  const server = { id: 's1', name: 'Clube', icon: '/uploads/server' };
+
+  it('a DM is titled by the sender and its body is just the text', async () => {
+    notifyIncomingChatMessage(baseEvent({ conversationName: 'Fulano', direct: true, text: 'oi' }));
+    await vi.runAllTimersAsync();
+    expect(created[0]!.title).toBe('Fulano');
+    expect(created[0]!.options?.body).toBe('oi');
+  });
+
+  it('a mention in a DM says who mentioned', async () => {
+    notifyIncomingChatMessage(baseEvent({ conversationName: 'Fulano', direct: true, mentioned: true }));
+    await vi.runAllTimersAsync();
+    expect(created[0]!.title).toBe('Fulano mencionou você');
+  });
+
+  it('draws the sender with the channel’s server as a badge', async () => {
+    notifyIncomingChatMessage(baseEvent({ server, senderAvatar: '/uploads/fulano', senderAvatarColor: 'teal' }));
+    await vi.runAllTimersAsync();
+    expect(notificationIcon).toHaveBeenCalledWith(
+      { id: 'user-1', name: 'Fulano', src: '/uploads/fulano', color: 'teal', shape: 'circle' },
+      { id: 's1', name: 'Clube', src: '/uploads/server', shape: 'squircle' },
+    );
+    expect(created[0]!.options?.icon).toBe('data:image/png;base64,drawn');
+  });
+
+  it('several people in a channel are drawn as the server alone', async () => {
+    notifyIncomingChatMessage(baseEvent({ server, senderId: 'user-1', senderName: 'Fulano' }));
+    notifyIncomingChatMessage(baseEvent({ server, senderId: 'user-2', senderName: 'Ciclano' }));
+    await vi.runAllTimersAsync();
+    expect(notificationIcon).toHaveBeenCalledWith({ id: 's1', name: 'Clube', src: '/uploads/server', shape: 'squircle' }, null);
   });
 });
 
@@ -137,7 +179,7 @@ describe('notifyIncomingChatMessage — in the desktop app', () => {
     setNotificationClickHandler(onClick);
 
     notifyIncomingChatMessage(baseEvent());
-    vi.advanceTimersByTime(3000);
+    await vi.advanceTimersByTimeAsync(3000);
 
     expect(showNotification).not.toHaveBeenCalled();
     expect(created).toHaveLength(1);
@@ -159,40 +201,60 @@ describe('notifyLiveNotice', () => {
     setPushSubscriptionActive(false);
   });
 
-  it('shows the notice as the server words it, at once', () => {
+  it('shows the notice as the server words it, at once', async () => {
     notifyLiveNotice(friendRequest);
+    await vi.runAllTimersAsync();
     expect(created).toHaveLength(1);
     expect(created[0]!.title).toBe('Fulano quer ser seu amigo');
     expect(created[0]!.options).toMatchObject({ body: '@fulano', tag: 'social-n1', icon: '/icons/icon-192.png' });
+    expect(notificationIcon).not.toHaveBeenCalled();
   });
 
-  it('a click goes to the notice path and brings the desktop window back', () => {
+  it('draws the person, and an invitation as its server with the inviter as a badge', async () => {
+    const person = { id: 'u1', name: 'Fulano', avatar: '/uploads/fulano', avatarColor: 'teal' };
+    notifyLiveNotice({ ...friendRequest, person });
+    await vi.runAllTimersAsync();
+    expect(notificationIcon).toHaveBeenLastCalledWith({ id: 'u1', name: 'Fulano', src: '/uploads/fulano', color: 'teal', shape: 'circle' }, null);
+    expect(created[0]!.options?.icon).toBe('data:image/png;base64,drawn');
+
+    notifyLiveNotice({ ...friendRequest, kind: 'server_invitation', person, server: { id: 's1', name: 'Clube' } });
+    await vi.runAllTimersAsync();
+    expect(notificationIcon).toHaveBeenLastCalledWith(
+      { id: 's1', name: 'Clube', src: undefined, shape: 'squircle' },
+      { id: 'u1', name: 'Fulano', src: '/uploads/fulano', color: 'teal', shape: 'circle' },
+    );
+  });
+
+  it('a click goes to the notice path and brings the desktop window back', async () => {
     const focusWindow = vi.fn(async () => {});
     window.linkordDesktop = { platform: 'win32', version: '0.6.0', focusWindow };
     const navigate = vi.fn();
     setNoticeNavigationHandler(navigate);
     notifyLiveNotice(friendRequest);
+    await vi.runAllTimersAsync();
     created[0]!.onclick?.();
     expect(navigate).toHaveBeenCalledWith('/app/friends?tab=pending#received');
     expect(focusWindow).toHaveBeenCalled();
     delete window.linkordDesktop;
   });
 
-  it('a path outside the app falls back to the notifications page', () => {
+  it('a path outside the app falls back to the notifications page', async () => {
     const navigate = vi.fn();
     setNoticeNavigationHandler(navigate);
     notifyLiveNotice({ ...friendRequest, path: 'https://example.com/app/friends' });
+    await vi.runAllTimersAsync();
     created[0]!.onclick?.();
     expect(navigate).toHaveBeenCalledWith('/app/notifications');
   });
 
-  it('stays quiet when a push subscription already shows it', () => {
+  it('stays quiet when a push subscription already shows it', async () => {
     setPushSubscriptionActive(true);
     notifyLiveNotice(friendRequest);
+    await vi.runAllTimersAsync();
     expect(created).toHaveLength(0);
   });
 
-  it('stays quiet when disabled, in do not disturb, or without permission', () => {
+  it('stays quiet when disabled, in do not disturb, or without permission', async () => {
     setNotificationsModuleEnabled(false);
     notifyLiveNotice(friendRequest);
     setNotificationsModuleEnabled(true);
@@ -202,6 +264,7 @@ describe('notifyLiveNotice', () => {
     FakeNotification.permission = 'denied';
     notifyLiveNotice(friendRequest);
     FakeNotification.permission = 'granted';
+    await vi.runAllTimersAsync();
     expect(created).toHaveLength(0);
   });
 });

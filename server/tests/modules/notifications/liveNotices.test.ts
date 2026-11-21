@@ -5,6 +5,7 @@ import { liveNoticeKind, liveNoticeMessage } from '../../../src/modules/notifica
 const notice = {
   title: 'Fulano quer ser seu amigo', body: '@fulano', path: '/app/friends?tab=pending#received',
   tag: 'social-1', avatar: '/uploads/0123456789abcdef0123456789abcdef', renotify: true,
+  person: { id: 'u1', name: 'Fulano', avatar: '/uploads/0123456789abcdef0123456789abcdef', avatarColor: 'teal' },
 };
 
 describe('live notices', () => {
@@ -25,14 +26,16 @@ describe('live notices', () => {
     assert.deepEqual(liveNoticeMessage({ type: 'friend_request_created', attempts: 0 }, notice), {
       t: 'notice',
       notice: {
-        kind: 'friend_request', title: notice.title, body: notice.body, path: notice.path, tag: notice.tag, avatar: notice.avatar,
+        kind: 'friend_request', title: notice.title, body: notice.body, path: notice.path, tag: notice.tag, person: notice.person,
       },
     });
     assert.equal(liveNoticeMessage({ type: 'friend_request_created', attempts: 1 }, notice), null);
   });
 
-  it('leaves out an avatar the person does not have', () => {
-    const message = liveNoticeMessage({ type: 'server_invitation_created', attempts: 0 }, { ...notice, avatar: undefined });
-    assert.equal(message && 'avatar' in message.notice, false);
+  it('carries the invitation’s server, and leaves out what the push alone uses', () => {
+    const server = { id: 's1', name: 'Clube' };
+    const message = liveNoticeMessage({ type: 'server_invitation_created', attempts: 0 }, { ...notice, server });
+    assert.deepEqual(message?.notice.server, server);
+    assert.equal(message && ('avatar' in message.notice || 'renotify' in message.notice), false);
   });
 });
