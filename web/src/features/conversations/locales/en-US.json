@@ -33,7 +33,6 @@
     "viewProfile": "View profile",
     "media": "Media and links",
     "search": "Search messages",
-    "searchIn": "Search {{name}}",
     "blocked": "You can't call while this person is blocked.",
     "needFriends": "You need to be friends to make calls.",
     "joinCall": "Join the call",

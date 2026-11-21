@@ -4,7 +4,7 @@ import { HashIcon, LockSimpleIcon, UserIcon } from '@/shared/ui/icons';
 
 import { Button } from '@/shared/ui/primitives/button';
 import { EmptyState } from '@/shared/ui/empty-state';
-import { MessageCard } from '@/features/pins/MessageCard';
+import { MessageCard } from '@/features/chat/MessageCard';
 import { useRoom } from '@/state/RoomContext';
 import type { SavedItem } from '@/shared/types/protocol';
 

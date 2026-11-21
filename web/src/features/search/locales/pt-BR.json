@@ -99,6 +99,7 @@
     "noOptions": "Nada encontrado"
   },
   "results": {
+    "count_zero": "{{count}} resultados",
     "count_one": "{{count}} resultado",
     "count_other": "{{count}} resultados",
     "many": "Mais de 1.000 resultados",

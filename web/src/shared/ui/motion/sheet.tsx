@@ -40,13 +40,15 @@ function useModalFocus(open: boolean, panelRef: React.RefObject<HTMLDivElement |
     // opening, and focus() on it before then is silently ignored: retry until it
     // lands. The panel itself, not its first control: that may be a tooltip
     // trigger whose tooltip would open on focus and swallow the first Escape.
+    // A sheet opened to type in (the search) marks its field `data-autofocus`.
     let frame = 0;
     let attempts = 0;
     const focusInto = () => {
       const panel = panelRef.current;
       if (!panel) return;
-      panel.focus({ preventScroll: true });
-      if (document.activeElement !== panel && attempts++ < 15) frame = requestAnimationFrame(focusInto);
+      const target = panel.querySelector<HTMLElement>('[data-autofocus]') ?? panel;
+      target.focus({ preventScroll: true });
+      if (document.activeElement !== target && attempts++ < 15) frame = requestAnimationFrame(focusInto);
     };
     frame = requestAnimationFrame(focusInto);
 

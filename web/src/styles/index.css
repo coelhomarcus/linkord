@@ -496,3 +496,9 @@ button:not(:disabled) {
     user-select: text;
   }
 }
+
+/* Where a search result matches the searched words (features/search/useTextHighlight.ts). */
+::highlight(search-match) {
+  background-color: color-mix(in oklab, var(--color-yellow) 30%, transparent);
+  color: var(--color-text-primary);
+}

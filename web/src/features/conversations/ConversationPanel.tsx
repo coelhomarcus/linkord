@@ -28,6 +28,9 @@ import { mutedUntilText } from '@/features/notifications/mutedUntilText';
 import { useLanguage } from '@/shared/i18n/useLanguage';
 import { useTimeFormat } from '@/shared/lib/timeFormat';
 import { PinsButton } from '@/features/pins/PinsButton';
+import { SearchField } from '@/features/search/SearchField';
+import { searchScopeOf } from '@/features/search/searchScope';
+import type { SearchQuery } from '@/features/search/searchQuery';
 
 // Discord's header icons: bare 24px glyphs, gray at rest, white while hovered
 // or while the panel they toggle is open
@@ -41,20 +44,6 @@ function HeaderIcon({ label, pressed, onClick, className, children }: { label: s
       </TooltipTrigger>
       <TooltipContent side="bottom">{label}</TooltipContent>
     </Tooltip>
-  );
-}
-
-/** Discord's header search: a field-shaped button naming where it searches, which opens the message search. */
-function HeaderSearchField({ placeholder, onClick }: { placeholder: string; onClick: () => void }) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className="group ml-1 flex h-8 w-[243px] flex-none items-center gap-2 rounded-lg border border-border-default pl-[9px] pr-2 text-left transition-colors hover:border-border-strong focus-ring max-lg:hidden"
-    >
-      <span className="min-w-0 flex-1 truncate text-label text-text-muted transition-colors group-hover:text-text-secondary">{placeholder}</span>
-      <MagnifyingGlassIcon size={18} className="flex-none text-text-secondary" aria-hidden />
-    </button>
   );
 }
 
@@ -89,7 +78,10 @@ function NotificationHeaderButton({ target }: { target: Extract<NotificationTarg
 interface ConversationPanelProps {
   onOpenProfile: (userId: string) => void;
   onOpenCall: (conversationId: string) => void;
+  /** the search on a screen too narrow for the header's field: the sheet that holds it */
   onOpenSearch: () => void;
+  /** the filters dialog, from the field's "Mais filtros" */
+  onOpenSearchFilters: (query: SearchQuery) => void;
   /** whether each right panel is showing, so its header button reads as pressed */
   detailsOpen: boolean;
   mediaOpen: boolean;
@@ -101,7 +93,7 @@ interface ConversationPanelProps {
   aside?: ReactNode;
 }
 
-export function ConversationPanel({ onOpenProfile, onOpenCall, onOpenSearch, detailsOpen, mediaOpen, onToggleDetails, onToggleMedia, aside }: ConversationPanelProps) {
+export function ConversationPanel({ onOpenProfile, onOpenCall, onOpenSearch, onOpenSearchFilters, detailsOpen, mediaOpen, onToggleDetails, onToggleMedia, aside }: ConversationPanelProps) {
   const { t } = useTranslation('conversations');
   const { dispatch, conversations, servers, activeConversationId, allUsers, activeCallConversationId, startDmCall } = useRoom('dispatch', 'conversations', 'servers', 'activeConversationId', 'allUsers', 'activeCallConversationId', 'startDmCall');
   const state = useRoomState('me', 'callJoinError');
@@ -156,7 +148,7 @@ export function ConversationPanel({ onOpenProfile, onOpenCall, onOpenSearch, det
   }
   const detailsLabel = t('panel.members');
   const serverName = isChannel ? servers.find((server) => server.id === conversation?.serverId)?.name : undefined;
-  const searchPlaceholder = t('panel.searchIn', { name: serverName ?? title });
+  const searchScope = searchScopeOf(conversation);
 
   return (
     <main
@@ -246,7 +238,11 @@ export function ConversationPanel({ onOpenProfile, onOpenCall, onOpenSearch, det
               <HeaderIcon label={t('panel.search')} onClick={onOpenSearch} className="max-md:hidden lg:hidden">
                 <MagnifyingGlassIcon size={24} />
               </HeaderIcon>
-              <HeaderSearchField placeholder={searchPlaceholder} onClick={onOpenSearch} />
+              {searchScope && (
+                <div className="max-lg:hidden">
+                  <SearchField key={'serverId' in searchScope ? searchScope.serverId : searchScope.conversationId} scope={searchScope} scopeName={serverName ?? null} onOpenFilters={onOpenSearchFilters} />
+                </div>
+              )}
             </div>
             {(activeCallConversationId || !isChannel) && !inThisDmCall && <Button type="button" variant="ghost" size="icon" aria-label={activeCallConversationId && activeCallConversationId !== conversation.id ? t('panel.returnToActiveCall') : callBlockedReason ?? callActionLabel} disabled={!activeCallConversationId && !!callBlockedReason} onClick={() => { if (activeCallConversationId && activeCallConversationId !== conversation.id) onOpenCall(activeCallConversationId); else startThisCall(false); }} className="flex-none text-green md:hidden"><PhoneIcon size={22} weight="fill" /></Button>}
             {!isChannel && !inThisCall && !callBlockedReason && !activeCallConversationId && <Button type="button" variant="ghost" size="icon" aria-label={t('panel.videoCall')} onClick={() => startThisCall(true)} className="flex-none md:hidden"><VideoCameraIcon size={22} weight="fill" /></Button>}

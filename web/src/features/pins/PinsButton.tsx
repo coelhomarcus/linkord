@@ -10,7 +10,7 @@ import { cn } from '@/shared/lib/utils';
 import { useRoom, useRoomState } from '@/state/RoomContext';
 import type { Conversation, PinnedItem } from '@/shared/types/protocol';
 import { messagePermissions } from '@/features/chat/messageActions';
-import { MessageCard } from './MessageCard';
+import { MessageCard } from '@/features/chat/MessageCard';
 import { EMPTY_PINS } from './usePins';
 import { closePinsPanel, openPinsPanel, usePinsPanelOpen } from './pinsPanel';
 import { useMessagePinConfirm } from './useMessagePinConfirm';

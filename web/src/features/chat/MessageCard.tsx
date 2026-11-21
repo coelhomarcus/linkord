@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import { useRef, type MouseEvent, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ArrowBendUpLeftIcon } from '@/shared/ui/icons';
 
@@ -17,12 +17,29 @@ import { formatTime } from '@/shared/lib/formatChatTime';
 import { useTimeFormat } from '@/shared/lib/timeFormat';
 import { useLanguage } from '@/shared/i18n/useLanguage';
 import { useRoom, useRoomState } from '@/state/RoomContext';
+import { cn } from '@/shared/lib/utils';
 import type { ChatMessage } from '@/shared/types/protocol';
+import { useTextHighlight } from '@/features/search/useTextHighlight';
 
 /** A message drawn on its own, outside the timeline: a boxed card with its
  * author, time, what it answers, and its content. `actions` sit over its top
  * right corner and show on hover or focus (Discord's "Ir para mensagem"). */
-export function MessageCard({ message, actions, onOpenProfile }: { message: ChatMessage; actions?: ReactNode; onOpenProfile?: (userId: string) => void }) {
+export function MessageCard({ message, actions, onOpenProfile, highlight, onActivate }: {
+  message: ChatMessage;
+  actions?: ReactNode;
+  onOpenProfile?: (userId: string) => void;
+  /** words to mark where they appear (a search's) */
+  highlight?: string[];
+  /** a click on the card itself, not on one of its links, pictures or buttons */
+  onActivate?: () => void;
+}) {
+  const cardRef = useRef<HTMLElement | null>(null);
+  useTextHighlight(cardRef, highlight ?? []);
+  const activate = (event: MouseEvent) => {
+    if (!onActivate || window.getSelection()?.toString()) return;
+    if (event.target instanceof Element && event.target.closest('a, button, img, video, audio, input, [role="button"]')) return;
+    onActivate();
+  };
   const { t } = useTranslation('chat');
   const language = useLanguage();
   const timeFormat = useTimeFormat();
@@ -38,7 +55,9 @@ export function MessageCard({ message, actions, onOpenProfile }: { message: Chat
   const mentionLookup = buildMentionLookup(allUsers);
 
   return (
-    <article className="group/card relative flex gap-3 rounded-lg border border-border-default bg-bg-primary px-3 py-2.5 focus-within:border-border-strong">
+    // the jump is also a button among the card's actions: the click is a shortcut, not the only way
+    // eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-noninteractive-element-interactions
+    <article ref={cardRef} onClick={activate} className={cn('group/card relative flex gap-3 rounded-lg border border-border-default bg-bg-primary px-3 py-2.5 focus-within:border-border-strong', onActivate && 'cursor-pointer hover:border-border-strong')}>
       <div className="w-10 flex-none">
         {message.id && onOpenProfile ? (
           <button type="button" onClick={() => onOpenProfile(message.id!)} className="mt-0.5 block rounded-full focus-ring">
