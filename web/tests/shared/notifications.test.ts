@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { notifyIncomingChatMessage, setNotificationClickHandler, setNotificationsModuleEnabled } from '@/shared/notifications';
+import { notifyIncomingChatMessage, notifyLiveNotice, setNoticeNavigationHandler, setNotificationClickHandler, setNotificationsModuleEnabled, setPushSubscriptionActive } from '@/shared/notifications';
+import type { LiveNotice } from '@/shared/types/protocol';
 import type { IncomingChatEvent } from '@/shared/notifications';
 import { setDoNotDisturb } from '@/shared/doNotDisturb';
 
@@ -144,5 +145,63 @@ describe('notifyIncomingChatMessage — in the desktop app', () => {
     expect(focusWindow).toHaveBeenCalled();
     expect(onClick).toHaveBeenCalledWith('ch-1');
     setNotificationClickHandler(null);
+  });
+});
+
+describe('notifyLiveNotice', () => {
+  const friendRequest: LiveNotice = {
+    kind: 'friend_request', title: 'Fulano quer ser seu amigo', body: '@fulano',
+    path: '/app/friends?tab=pending#received', tag: 'social-n1',
+  };
+
+  afterEach(() => {
+    setNoticeNavigationHandler(null);
+    setPushSubscriptionActive(false);
+  });
+
+  it('shows the notice as the server words it, at once', () => {
+    notifyLiveNotice(friendRequest);
+    expect(created).toHaveLength(1);
+    expect(created[0]!.title).toBe('Fulano quer ser seu amigo');
+    expect(created[0]!.options).toMatchObject({ body: '@fulano', tag: 'social-n1', icon: '/icons/icon-192.png' });
+  });
+
+  it('a click goes to the notice path and brings the desktop window back', () => {
+    const focusWindow = vi.fn(async () => {});
+    window.linkordDesktop = { platform: 'win32', version: '0.6.0', focusWindow };
+    const navigate = vi.fn();
+    setNoticeNavigationHandler(navigate);
+    notifyLiveNotice(friendRequest);
+    created[0]!.onclick?.();
+    expect(navigate).toHaveBeenCalledWith('/app/friends?tab=pending#received');
+    expect(focusWindow).toHaveBeenCalled();
+    delete window.linkordDesktop;
+  });
+
+  it('a path outside the app falls back to the notifications page', () => {
+    const navigate = vi.fn();
+    setNoticeNavigationHandler(navigate);
+    notifyLiveNotice({ ...friendRequest, path: 'https://example.com/app/friends' });
+    created[0]!.onclick?.();
+    expect(navigate).toHaveBeenCalledWith('/app/notifications');
+  });
+
+  it('stays quiet when a push subscription already shows it', () => {
+    setPushSubscriptionActive(true);
+    notifyLiveNotice(friendRequest);
+    expect(created).toHaveLength(0);
+  });
+
+  it('stays quiet when disabled, in do not disturb, or without permission', () => {
+    setNotificationsModuleEnabled(false);
+    notifyLiveNotice(friendRequest);
+    setNotificationsModuleEnabled(true);
+    setDoNotDisturb(true);
+    notifyLiveNotice(friendRequest);
+    setDoNotDisturb(false);
+    FakeNotification.permission = 'denied';
+    notifyLiveNotice(friendRequest);
+    FakeNotification.permission = 'granted';
+    expect(created).toHaveLength(0);
   });
 });

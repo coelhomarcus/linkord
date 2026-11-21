@@ -28,8 +28,19 @@ export type ReactionEmoji = string;
 
 /** Wire protocol version this build speaks; the server refuses older ones
  * (client_outdated). Keep in sync with server/src/realtime/protocolVersion.ts
- * — version 28 syncs account preferences (`welcome.preferences`, `my-preferences`). */
-export const PROTOCOL_VERSION = 28;
+ * — version 29 adds `notice` (friend requests and server invitations shown by a tab without push). */
+export const PROTOCOL_VERSION = 29;
+
+export interface LiveNotice {
+  kind: 'friend_request' | 'friend_accepted' | 'server_invitation';
+  title: string;
+  body: string;
+  path: string;
+  /** the same notice in another tab, or as a push, replaces this one */
+  tag: string;
+  /** own-server upload path of the person's avatar */
+  avatar?: string;
+}
 
 /** One server's or one channel/DM's notification setting (protocol 19). `level` null inherits: a channel
  * from its server, a server or a DM from "all". `mutedUntil` (ISO) is only read while `muted`, and null
@@ -512,6 +523,9 @@ export type ServerMessage =
   // payload-free: "your friends/requests/blocks changed, refetch" — the data
   // itself only ever travels over the authorized HTTP endpoints
   | { t: 'social-changed' }
+  // what the account's push shows for a friend request, an accepted request or a server invitation
+  // (protocol 29), in the account's language; `path` is where a click takes it
+  | { t: 'notice'; notice: LiveNotice }
   // the account changed a setting in some tab (this one included); null is back to the default
   | { t: 'notification-settings'; scope: 'server' | 'conversation'; id: string; setting: NotificationSetting | null }
   // the scoped snapshot re-sent when this connection's known peers change

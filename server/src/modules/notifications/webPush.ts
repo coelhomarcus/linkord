@@ -187,16 +187,24 @@ async function noticeFor(event: OutboxEvent, locale: Locale, showContent: boolea
   return { ...text, path: kind === 'friend_request' ? '/app/friends?tab=pending#received' : '/app/friends', tag: `social-${row.id}`, avatar: pushAvatarPath(person) };
 }
 
-export async function deliverWebPush(event: OutboxEvent): Promise<PushDeliveryResult> {
-  const done = { delivered: true, retryAfterMs: 0 };
-  if (!pushAvailable) return done;
+export interface PreparedNotice { notice: PushNotice; locale: Locale }
+
+/** What an outbox event shows its recipient, in their language, or null when it shows nothing
+ * (the account is inactive or in "do not disturb", the request was already answered, the reader
+ * lost the channel...). Both the push and the open tabs' notice (liveNotices.ts) show this. */
+export async function prepareNotice(event: OutboxEvent): Promise<PreparedNotice | null> {
   const [recipient] = await db.select({
     status: users.status, locale: users.locale, showContent: users.pushShowContent, presenceStatus: users.presenceStatus,
   }).from(users).where(eq(users.id, event.audienceUserId)).limit(1);
-  if (!recipient || !recipientAcceptsPush(recipient)) return done;
+  if (!recipient || !recipientAcceptsPush(recipient)) return null;
   const locale = resolveLocale(recipient.locale);
   const notice = await noticeFor(event, locale, recipient.showContent);
-  if (!notice) return done;
+  return notice ? { notice, locale } : null;
+}
+
+export async function deliverWebPush(event: OutboxEvent, { notice, locale }: PreparedNotice): Promise<PushDeliveryResult> {
+  const done = { delivered: true, retryAfterMs: 0 };
+  if (!pushAvailable) return done;
   const subscriptions = await db.select().from(pushSubscriptions).where(eq(pushSubscriptions.userId, event.audienceUserId));
   if (!subscriptions.length) return done;
   const receipts = await db.select({ endpoint: pushDeliveryReceipts.endpoint }).from(pushDeliveryReceipts)

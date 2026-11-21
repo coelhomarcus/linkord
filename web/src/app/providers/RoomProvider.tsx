@@ -42,7 +42,7 @@ import { useIdleReporter } from '@/features/status/useIdleReporter';
 import { useNotificationSettings } from '@/features/notifications/useNotificationSettings';
 import { badgeCounts, policyAlerts } from '@/features/notifications/notificationSettings';
 import { preloadSounds } from '@/shared/sounds';
-import { setNotificationClickHandler } from '@/shared/notifications';
+import { notifyLiveNotice, setNotificationClickHandler } from '@/shared/notifications';
 import { DEFAULT_MAX_ATTACHMENT_BYTES } from '@/shared/types/protocol';
 import type { ClientMessage, Conversation, ServerMessage } from '@/shared/types/protocol';
 import { logger } from '@/shared/lib/logger';
@@ -501,6 +501,9 @@ export function RoomProvider({ children }: { children: ReactNode }) {
       }
       case 'social-changed':
         setSocialRevision((n) => n + 1);
+        break;
+      case 'notice':
+        notifyLiveNotice(m.notice);
         break;
       case 'notification-settings':
         onNotificationSettingsChanged(m);

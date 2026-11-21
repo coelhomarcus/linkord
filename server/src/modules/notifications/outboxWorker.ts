@@ -2,8 +2,9 @@ import crypto from 'node:crypto';
 import { and, eq, inArray, isNull, lt, lte, or, sql } from 'drizzle-orm';
 import { db } from '../../db/client.js';
 import { outboxEvents, type OutboxEvent } from '../../db/schema.js';
-import { notifySocialChanged } from '../presence/knownPeers.js';
-import { deliverWebPush } from './webPush.js';
+import { notifySocialChanged, sendToAccount } from '../presence/knownPeers.js';
+import { deliverWebPush, prepareNotice, pushAvailable } from './webPush.js';
+import { liveNoticeMessage } from './liveNotices.js';
 import { OUTBOX_BATCH, OUTBOX_CONCURRENCY, OUTBOX_LEASE_MS, OUTBOX_MAX_ATTEMPTS, nextOutboxState, outboxRetryDelayMs } from './notificationsPolicy.js';
 import { logger } from '../../lib/logger.js';
 
@@ -35,8 +36,13 @@ async function processClaim({ event, leaseToken }: ClaimedEvent): Promise<boolea
   let delivered = false;
   let retryAfterMs = 0;
   try {
-    if (event.type !== 'chat_message_push') notifySocialChanged([event.audienceUserId]);
-    const result = await deliverWebPush(event);
+    const social = event.type !== 'chat_message_push';
+    if (social) notifySocialChanged([event.audienceUserId]);
+    // a chat message only ever needs the push: the open tabs notify it from the `chat` message itself
+    const prepared = social || pushAvailable ? await prepareNotice(event) : null;
+    const live = prepared ? liveNoticeMessage(event, prepared.notice) : null;
+    if (live) sendToAccount(event.audienceUserId, live);
+    const result = prepared ? await deliverWebPush(event, prepared) : { delivered: true, retryAfterMs: 0 };
     delivered = result.delivered;
     retryAfterMs = result.retryAfterMs;
   } catch (err) {

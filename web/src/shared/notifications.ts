@@ -3,6 +3,7 @@ import { i18n } from '@/shared/i18n/init';
 import { LOCAL_STORAGE_KEYS, localStorageStore } from '@/shared/lib/localStorage';
 import { isDoNotDisturb } from '@/shared/doNotDisturb';
 import { desktopApp, isDesktopApp } from '@/shared/desktop';
+import type { LiveNotice } from '@/shared/types/protocol';
 
 export function loadNotificationsEnabled(): boolean {
   const stored = localStorageStore.get(LOCAL_STORAGE_KEYS.notificationsEnabled);
@@ -43,6 +44,19 @@ export function setNotificationClickHandler(fn: ((conversationId: string) => voi
   onClick = fn;
 }
 
+let onNavigate: ((path: string) => void) | null = null;
+/** Where a click on a notice (`notifyLiveNotice`) goes: an app path, already checked. */
+export function setNoticeNavigationHandler(fn: ((path: string) => void) | null): void {
+  onNavigate = fn;
+}
+
+function canShowNotifications(): boolean {
+  if (!enabled || isDoNotDisturb()) return false;
+  // a subscribed browser gets the same notice as a push, which shows even with every tab closed
+  if (pushSubscriptionActive) return false;
+  return typeof Notification !== 'undefined' && Notification.permission === 'granted';
+}
+
 interface Buffered {
   conversationName: string;
   senders: Map<string, { name: string; count: number }>;
@@ -70,9 +84,7 @@ export interface IncomingChatEvent {
 }
 
 export function notifyIncomingChatMessage(evt: IncomingChatEvent): void {
-  if (!enabled || isDoNotDisturb()) return;
-  if (pushSubscriptionActive) return;
-  if (typeof Notification === 'undefined' || Notification.permission !== 'granted') return;
+  if (!canShowNotifications()) return;
 
   const key = evt.senderId ?? '?';
   const conversationId = evt.conversationId;
@@ -127,27 +139,48 @@ function flush(conversationId: string): void {
       tag: `chat-${conversationId}`,
       data: { path: `/app/conversations/${encodeURIComponent(conversationId)}` },
     };
-    // The desktop app shows page notifications as the system's; a service
-    // worker's would need a push service it does not have
-    if ('serviceWorker' in navigator && !isDesktopApp()) {
-      void navigator.serviceWorker.getRegistration('/').then((registration) => {
-        if (registration) return registration.showNotification(title, options);
-        showPageNotification(title, options, conversationId);
-      }).catch(() => {});
-    } else {
-      showPageNotification(title, options, conversationId);
-    }
+    show(title, options, () => onClick?.(conversationId));
   } catch {
   }
 }
 
-function showPageNotification(title: string, options: NotificationOptions, conversationId: string): void {
+/** A friend request, an accepted request or a server invitation, as the server words it. */
+export function notifyLiveNotice(notice: LiveNotice): void {
+  if (!canShowNotifications()) return;
+  // the server only sends app paths; anything else would make a click leave the app
+  const path = notice.path.startsWith('/app/') ? notice.path : '/app/notifications';
+  try {
+    show(notice.title, {
+      body: notice.body,
+      icon: '/icons/icon-192.png',
+      badge: '/icons/notification-badge-96.png',
+      tag: notice.tag,
+      data: { path },
+    }, () => onNavigate?.(path));
+  } catch {
+  }
+}
+
+function show(title: string, options: NotificationOptions, onShownClick: () => void): void {
+  // The desktop app shows page notifications as the system's; a service
+  // worker's would need a push service it does not have
+  if ('serviceWorker' in navigator && !isDesktopApp()) {
+    void navigator.serviceWorker.getRegistration('/').then((registration) => {
+      if (registration) return registration.showNotification(title, options);
+      showPageNotification(title, options, onShownClick);
+    }).catch(() => {});
+  } else {
+    showPageNotification(title, options, onShownClick);
+  }
+}
+
+function showPageNotification(title: string, options: NotificationOptions, onShownClick: () => void): void {
   const notif = new Notification(title, options);
   notif.onclick = () => {
     window.focus();
     // a hidden desktop window (closed on macOS) does not come back from window.focus()
     void desktopApp()?.focusWindow?.().catch(() => {});
-    onClick?.(conversationId);
+    onShownClick();
     notif.close();
   };
 }
