@@ -13,8 +13,13 @@ function Avatar({
     <AvatarPrimitive.Root
       data-slot="avatar"
       data-size={size}
+      // `isolate`: the ring's blend only needs the picture under it. Without
+      // it the backdrop is everything up to the page root, and inside a
+      // composited scroller (search results) Chromium gave each avatar a
+      // layer about the size of the page: GPU memory ran out and whole
+      // areas went black.
       className={cn(
-        "group/avatar relative flex size-8 shrink-0 rounded-full select-none after:absolute after:inset-0 after:rounded-full after:border after:border-border after:mix-blend-lighten data-[size=lg]:size-10 data-[size=sm]:size-6",
+        "group/avatar relative isolate flex size-8 shrink-0 rounded-full select-none after:absolute after:inset-0 after:rounded-full after:border after:border-border after:mix-blend-lighten data-[size=lg]:size-10 data-[size=sm]:size-6",
         className
       )}
       {...props}

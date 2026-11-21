@@ -103,11 +103,11 @@ export function MessageCard({ message, actions, onOpenProfile, highlight, onActi
           )}
         </MessageMediaScope>
       </div>
-      {/* will-change keeps the actions on a layer of their own: otherwise the
-          layer appears and goes with every hover (opacity below 1 and back),
-          and each time Chromium lays out the whole page and re-rasters around it */}
+      {/* `isolate` keeps the actions a stacking context at any opacity: fading
+          to 1 would otherwise drop it, and Chromium laid out the whole page on
+          every hover. will-change did the same with a GPU layer per card. */}
       {actions && (
-        <div className="absolute right-2 top-2 flex items-center gap-1 opacity-0 will-change-[opacity] transition-opacity duration-100 group-hover/card:opacity-100 group-focus-within/card:opacity-100 touch-first:opacity-100">
+        <div className="absolute right-2 top-2 isolate flex items-center gap-1 opacity-0 transition-opacity duration-100 group-hover/card:opacity-100 group-focus-within/card:opacity-100 touch-first:opacity-100">
           {actions}
         </div>
       )}
