@@ -6,6 +6,8 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/shared/ui/primitives/
 import { buttonVariants } from '@/shared/ui/primitives/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/shared/ui/primitives/tooltip';
 import { cn } from '@/shared/lib/utils';
+import { Tabs, TabsIndicator, TabsList, TabsTrigger } from '@/shared/ui/primitives/tabs';
+import { SavedMessagesPanel } from '@/features/saved/SavedMessagesPanel';
 import { NotificationList } from './NotificationList';
 import { useNotificationActions } from './useNotificationActions';
 import { NotificationStateProvider } from './NotificationStateProvider';
@@ -22,7 +24,9 @@ export function NotificationBell({ collapsed = false, onNavigate }: { collapsed?
 function NotificationBellContent({ collapsed, onNavigate }: { collapsed: boolean; onNavigate?: () => void }) {
   const { t } = useTranslation('notifications');
   const { unread, error, dismiss, select, markAll, clearAll } = useNotificationActions();
+  const { t: tSaved } = useTranslation('saved');
   const [open, setOpen] = useState(false);
+  const [tab, setTab] = useState<'notifications' | 'saved'>('notifications');
 
   const label = unread > 0 ? t('bell.unread', { count: unread }) : t('title');
 
@@ -43,6 +47,7 @@ function NotificationBellContent({ collapsed, onNavigate }: { collapsed: boolean
         <div className="flex items-center gap-2 border-b border-border-default px-4 py-4">
           <TrayIcon size={24} weight="fill" className="flex-none text-text-primary" aria-hidden />
           <h2 className="flex-1 select-none text-heading font-bold text-text-strong">{t('title')}</h2>
+          {tab === 'notifications' && (<>
           <Tooltip>
             <TooltipTrigger
               aria-label={t('actions.markAllRead')}
@@ -64,11 +69,28 @@ function NotificationBellContent({ collapsed, onNavigate }: { collapsed: boolean
             </TooltipTrigger>
             <TooltipContent side="bottom">{t('actions.clearAll')}</TooltipContent>
           </Tooltip>
+          </>)}
         </div>
-        {error && <p role="alert" className="mx-3 mt-3 rounded-md bg-red/12 px-2.5 py-1.5 text-label text-red-text">{t('actions.updateFailed')}</p>}
-        <div className="p-2">
-          <NotificationList onSelect={(entry) => { setOpen(false); select(entry); onNavigate?.(); }} onDismiss={dismiss} />
-        </div>
+        {/* Discord keeps saved messages in the inbox, one tab over */}
+        <Tabs value={tab} onValueChange={(value) => setTab(value as typeof tab)} className="border-b border-border-default px-3 py-2">
+          <TabsList className="h-9">
+            <TabsIndicator />
+            <TabsTrigger value="notifications" className="h-7">{tSaved('notificationsTab')}</TabsTrigger>
+            <TabsTrigger value="saved" className="h-7">{tSaved('tab')}</TabsTrigger>
+          </TabsList>
+        </Tabs>
+        {tab === 'notifications' ? (
+          <>
+            {error && <p role="alert" className="mx-3 mt-3 rounded-md bg-red/12 px-2.5 py-1.5 text-label text-red-text">{t('actions.updateFailed')}</p>}
+            <div className="p-2">
+              <NotificationList onSelect={(entry) => { setOpen(false); select(entry); onNavigate?.(); }} onDismiss={dismiss} />
+            </div>
+          </>
+        ) : (
+          <div className="max-h-[min(32rem,calc(100dvh-10rem))] overflow-y-auto p-3">
+            <SavedMessagesPanel onNavigate={() => { setOpen(false); onNavigate?.(); }} />
+          </div>
+        )}
       </PopoverContent>
     </Popover>
   );

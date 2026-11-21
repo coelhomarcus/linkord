@@ -1,6 +1,6 @@
 import { describe, test } from 'node:test';
 import assert from 'node:assert/strict';
-import { sanitizeActivityReport, sanitizeActivitySettings, shownActivity, DEFAULT_ACTIVITY_SETTINGS } from '../../../src/modules/presence/activity.js';
+import { keepActivityStart, sanitizeActivityReport, sanitizeActivitySettings, shownActivity, DEFAULT_ACTIVITY_SETTINGS } from '../../../src/modules/presence/activity.js';
 
 const now = Date.parse('2026-11-15T12:00:00Z');
 
@@ -23,6 +23,30 @@ describe('sanitizeActivityReport', () => {
     assert.equal(long?.name.length, 64);
     assert.equal(long?.startedAt, new Date(now).toISOString());
     assert.equal(sanitizeActivityReport({ key: 'x', kind: 'playing', name: 'x', startedAt: now - 30 * 86_400_000 }, now)?.startedAt, new Date(now).toISOString());
+  });
+
+  test('places a report with its send time on this server\'s clock, however far off the reporter\'s is', () => {
+    const HOUR = 3_600_000;
+    // a computer three hours behind: started 10 minutes ago by its own clock
+    const behind = sanitizeActivityReport({ key: 'x', kind: 'playing', name: 'x', startedAt: now - 3 * HOUR - 600_000, sentAt: now - 3 * HOUR }, now);
+    assert.equal(behind?.startedAt, new Date(now - 600_000).toISOString());
+    // three hours ahead: a start that would be in the future here is still 42 seconds ago
+    const ahead = sanitizeActivityReport({ key: 'x', kind: 'playing', name: 'x', startedAt: now + 3 * HOUR - 42_000, sentAt: now + 3 * HOUR }, now);
+    assert.equal(ahead?.startedAt, new Date(now - 42_000).toISOString());
+    // a start after the send is nonsense, and a week-long one a clock gone wrong
+    assert.equal(sanitizeActivityReport({ key: 'x', kind: 'playing', name: 'x', startedAt: now + 5000, sentAt: now }, now)?.startedAt, new Date(now).toISOString());
+    assert.equal(sanitizeActivityReport({ key: 'x', kind: 'playing', name: 'x', startedAt: 0, sentAt: 30 * 86_400_000 }, now)?.startedAt, new Date(now).toISOString());
+  });
+});
+
+describe('keepActivityStart', () => {
+  const at = (ms: number) => ({ key: 'minecraft', kind: 'playing' as const, name: 'Minecraft', icon: null, startedAt: new Date(ms).toISOString() });
+  test('keeps the start already shown when the same activity is reported again a moment later', () => {
+    assert.equal(keepActivityStart(at(now), at(now + 800))?.startedAt, at(now).startedAt);
+    assert.equal(keepActivityStart(at(now), at(now + 60_000))?.startedAt, at(now + 60_000).startedAt);
+    assert.equal(keepActivityStart(at(now), { ...at(now + 800), key: 'spotify' })?.startedAt, at(now + 800).startedAt);
+    assert.equal(keepActivityStart(null, at(now))?.startedAt, at(now).startedAt);
+    assert.equal(keepActivityStart(at(now), null), null);
   });
 });
 

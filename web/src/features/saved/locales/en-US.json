@@ -1,0 +1,16 @@
+{
+  "tab": "Saved",
+  "notificationsTab": "Notifications",
+  "save": "Save message",
+  "unsave": "Remove from saved",
+  "remove": "Remove",
+  "jump": "Jump to message",
+  "loading": "Loading saved messages…",
+  "loadMore": "Load more",
+  "missing": "You lost access to this saved message.",
+  "removeFailed": "Couldn't remove it. Try again.",
+  "empty": {
+    "title": "No saved messages",
+    "description": "Save messages from the context menu to find them here later."
+  }
+}

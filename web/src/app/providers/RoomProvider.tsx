@@ -6,6 +6,7 @@ import { RoomStoreProvider } from '@/state/RoomStoreProvider';
 import type { AudioHandle, OpenCallOptions, TileDomHandle } from '@/state/RoomContext';
 import { roomReducer, initialRoomState } from '@/state/roomReducer';
 import { useAuth } from '@/state/AuthContext';
+import { receivePreferenceChanges, syncAccountPreferences } from '@/shared/preferences/accountPreferences';
 import { saveIdentity } from '@/shared/lib/identitySession';
 import { useSocketConnection } from '@/state/hooks/useSocketConnection';
 import { useScreenShare } from '@/features/calls/useScreenShare';
@@ -20,7 +21,9 @@ import { useChatMessages } from '@/features/chat/useChatMessages';
 import type { ChatView } from '@/features/chat/useChatMessages';
 import { useTypingIndicator } from '@/state/hooks/useTypingIndicator';
 import { useSoundboardEvents } from '@/features/soundboard/useSoundboardEvents';
-import { useMessageSearch } from '@/features/chat/useMessageSearch';
+import { usePins } from '@/features/pins/usePins';
+import { useSavedMessages } from '@/features/saved/useSavedMessages';
+import { useHeaderSearch } from '@/features/search/useHeaderSearch';
 import { usePresence } from '@/state/hooks/usePresence';
 import { useCallLifecycle } from '@/features/calls/useCallLifecycle';
 import { useDmCall } from '@/features/calls/useDmCall';
@@ -34,6 +37,7 @@ import { useProfileUpdate } from '@/features/profile/useProfileUpdate';
 import { useOwnStatus } from '@/features/status/useOwnStatus';
 import { useActivitySettings } from '@/features/activity/useActivitySettings';
 import { useActivityReporter } from '@/features/activity/useActivityReporter';
+import { syncServerClock } from '@/features/activity/serverClock';
 import { useIdleReporter } from '@/features/status/useIdleReporter';
 import { useNotificationSettings } from '@/features/notifications/useNotificationSettings';
 import { badgeCounts, policyAlerts } from '@/features/notifications/notificationSettings';
@@ -167,7 +171,9 @@ export function RoomProvider({ children }: { children: ReactNode }) {
     [allConversations, chatMessages.unreadByConversation, chatMessages.mentionsByConversation, policyFor],
   );
   useEffect(() => { markActiveSeenRef.current = chatMessages.markActiveSeen; }, [chatMessages.markActiveSeen]);
-  const messageSearch = useMessageSearch(sendWs);
+  const pins = usePins(sendWs, myUserIdRef);
+  const saved = useSavedMessages(sendWs);
+  const headerSearch = useHeaderSearch(sendWs);
   const [maxAttachmentBytes, setMaxAttachmentBytes] = useState(DEFAULT_MAX_ATTACHMENT_BYTES);
 
   const { startSharing, stopSharing, changeSource, pauseSharePreview, resumeSharePreview } = useScreenShare(livekitRoom, dispatch);
@@ -292,11 +298,15 @@ export function RoomProvider({ children }: { children: ReactNode }) {
         conversationsList.setInitial(m.conversations ?? []);
         serversList.setInitial(m.servers ?? []);
         chatMessages.onWelcome(m.unreadByConversation, m.mentionsByConversation);
+        pins.onWelcome(m.unseenPins);
+        saved.onWelcome(m.savedMessageIds);
         onNotificationSettingsWelcome(m.notificationSettings);
         presence.setInitial(m.knownUsers, m.onlineUserIds, m.friendIds, m.presence);
         onStatusSnapshot(m.myStatus);
         onIdleWelcome();
+        syncServerClock(m.serverTime);
         onActivitySettingsWelcome(m.activitySettings);
+        if (m.preferences !== undefined) void syncAccountPreferences(m.userId, m.preferences);
         onActivityWelcome();
         setMaxAttachmentBytes(m.maxAttachmentBytes ?? DEFAULT_MAX_ATTACHMENT_BYTES);
         // the first welcome opens nothing: the URL says what to show (the
@@ -414,8 +424,8 @@ export function RoomProvider({ children }: { children: ReactNode }) {
       case 'conversation-history-around':
         chatMessages.onConversationHistoryAround(m);
         break;
-      case 'message-search-results':
-        messageSearch.onMessageSearchResults(m);
+      case 'search-messages-result':
+        headerSearch.onSearchResult(m);
         break;
       case 'conversation-history-more':
         chatMessages.onConversationHistoryMore(m);
@@ -437,9 +447,30 @@ export function RoomProvider({ children }: { children: ReactNode }) {
         break;
       case 'chat-deleted':
         chatMessages.onChatDeleted(m);
+        pins.onMessageDeleted(m.conversationId, m.msgId);
+        saved.onMessageDeleted(m.msgId);
+        headerSearch.onMessageDeleted(m.msgId);
         break;
       case 'chat-edited':
         chatMessages.onChatEdited(m);
+        pins.onMessageChanged(m.message);
+        saved.onMessageChanged(m.message);
+        headerSearch.onMessageChanged(m.message);
+        break;
+      case 'conversation-pins-updated':
+        pins.onPinsUpdated(m);
+        break;
+      case 'pins-list-result':
+        pins.onPinsListResult(m);
+        break;
+      case 'pins-seen':
+        pins.onPinsSeen(m);
+        break;
+      case 'saved-updated':
+        saved.onSavedUpdated(m);
+        break;
+      case 'saved-list-result':
+        saved.onSavedListResult(m);
         break;
       case 'chat-embeds':
         chatMessages.onChatEmbeds(m);
@@ -491,6 +522,9 @@ export function RoomProvider({ children }: { children: ReactNode }) {
       case 'my-activity-settings':
         onActivitySettingsChanged(m);
         break;
+      case 'my-preferences':
+        receivePreferenceChanges(m.changes);
+        break;
       case 'activity-settings-result':
         onActivitySettingsResult(m);
         break;
@@ -537,7 +571,7 @@ export function RoomProvider({ children }: { children: ReactNode }) {
           else if (!callLifecycle.onCallJoinRejected(m.message)) log.warn('unhandled server error', { code: m.code, message: m.message, report: true });
         } else if (m.code === ERROR_CODES['message-not-found']) {
           chatMessages.cancelPendingJump();
-          messageSearch.setSearchErrorMessage(m.message);
+          headerSearch.setSearchError(m.message);
         } else {
           log.warn('unhandled server error', { code: m.code, message: m.message, report: true });
         }
@@ -545,7 +579,7 @@ export function RoomProvider({ children }: { children: ReactNode }) {
     }
   }, [
     dispatch, conversationsList, serversList, presence, openConversation, sendWs, callLifecycle, dmCall,
-    messageSearch, chatMessages, typingIndicator, disconnectIntentionally, profileUpdate, soundboardEvents, livekitRoom,
+    chatMessages, typingIndicator, pins, saved, headerSearch, disconnectIntentionally, profileUpdate, soundboardEvents, livekitRoom,
     onStatusSnapshot, onMyStatus, onPresenceResult, onIdleWelcome, refreshAuth, onNotificationSettingsWelcome, onNotificationSettingsChanged,
     onCallElsewhereRefused, onActivityWelcome, onActivitySettingsWelcome, onActivitySettingsChanged, onActivitySettingsResult,
   ]);
@@ -629,14 +663,18 @@ export function RoomProvider({ children }: { children: ReactNode }) {
         pendingReactions: chatMessages.pendingReactions,
         editChatMessage: chatMessages.editChatMessage, reactToChatMessage: chatMessages.reactToChatMessage,
         removeChatAttachment: chatMessages.removeChatAttachment, suppressChatEmbed: chatMessages.suppressChatEmbed,
+        pinChatMessage: chatMessages.pinChatMessage, saveChatMessage: chatMessages.saveChatMessage,
+        unseenPins: pins.unseenPins, pinsByConversation: pins.pinsByConversation, loadPins: pins.loadPins, ackPins: pins.ackPins,
+        savedMessageIds: saved.savedMessageIds, savedList: saved.savedList, loadSaved: saved.loadSaved, hideSaved: saved.hideSaved,
         replyingTo: chatMessages.replyingTo, setReplyingTo: chatMessages.setReplyingTo,
         editingMsgId: chatMessages.editingMsgId, setEditingMsgId: chatMessages.setEditingMsgId,
         reactionParticipantsTarget: chatMessages.reactionParticipantsTarget,
         openReactionParticipants: chatMessages.openReactionParticipants, closeReactionParticipants: chatMessages.closeReactionParticipants,
         hasMoreAfterByConversation: chatMessages.hasMoreAfterByConversation, pendingJumpTarget: chatMessages.pendingJumpTarget,
         clearPendingJumpTarget: chatMessages.clearPendingJumpTarget, jumpToMessage: chatMessages.jumpToMessage,
-        searchResults: messageSearch.searchResults, searchLoading: messageSearch.searchLoading, searchError: messageSearch.searchError,
-        clearSearchError: messageSearch.clearSearchError, searchMessages: messageSearch.searchMessages,
+        messageSearch: headerSearch.search, runMessageSearch: headerSearch.runSearch,
+        setMessageSearchSort: headerSearch.setSearchSort, setMessageSearchPage: headerSearch.setSearchPage,
+        closeMessageSearch: headerSearch.closeSearch,
         maxAttachmentBytes,
       }}
     >

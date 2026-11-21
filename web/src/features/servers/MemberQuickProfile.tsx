@@ -145,7 +145,7 @@ export function MemberQuickProfile({ server, member, currentUser, offline, open,
             type="button"
             data-avatar-hover
             aria-label={t('members.openProfile', { name: user.displayName })}
-            className={cn('cutout flex h-[42px] w-full items-center gap-3 rounded-lg px-2 text-left focus-ring hover:cutout-subtle hover:bg-nav-hover', offline && 'opacity-30 hover:opacity-100', open && 'bg-nav-active')}
+            className={cn('cutout flex min-h-row-member w-full items-center gap-3 rounded-lg px-2 text-left focus-ring hover:cutout-subtle hover:bg-nav-hover', offline && 'opacity-30 hover:opacity-100', open && 'bg-nav-active')}
           />
         }
       >

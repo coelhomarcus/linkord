@@ -8,21 +8,18 @@ import { loadShareQuality, saveShareQuality } from './useShareQualityPreference'
 import type { ShareQualityId } from '@/features/calls/shareQualityPresets';
 import { setVolume } from '@/shared/sounds';
 import { setNotificationsModuleEnabled, loadNotificationsEnabled, saveNotificationsEnabled } from '@/shared/notifications';
-import { applyColorTheme } from './applyColorTheme';
-import { loadColorTheme, saveColorTheme, type ColorThemeId } from './useColorThemePreference';
+import { loadColorTheme, saveColorTheme } from './useColorThemePreference';
+import { usePreferenceValue } from '@/shared/preferences/accountPreferences';
 
-/** The 8 user-facing toggles/sliders under Ajustes — each backed by its own
- * `features/settings/useXPreference.ts` localStorage pair, wired up here
- * into React state with a setter that persists on change. `notifyVolume`
- * and `notificationsEnabled` also keep the `shared/sounds`/`shared/notifications`
- * module-level singletons in sync, since those modules can't read React
- * state themselves. */
+/** The toggles and sliders under Ajustes that RoomProvider hands out — each backed by its own
+ * `features/settings/useXPreference.ts` load/save pair. Most follow the account and are read from
+ * its preferences, so a change on another device re-renders them; the notification volume, browser
+ * notifications and share quality stay on this device in React state. `notifyVolume` and
+ * `notificationsEnabled` also keep the `shared/sounds`/`shared/notifications` module-level singletons
+ * in sync, since those modules can't read React state themselves. */
 export function useRoomSettings() {
-  const [showStats, setShowStatsState] = useState(loadShowStats);
-  const setShowStats = useCallback((value: boolean) => {
-    setShowStatsState(value);
-    saveShowStats(value);
-  }, []);
+  const showStats = usePreferenceValue(loadShowStats);
+  const setShowStats = saveShowStats;
 
   const [notifyVolume, setNotifyVolumeState] = useState(loadNotifyVolume);
   const setNotifyVolume = useCallback((value: number) => {
@@ -38,29 +35,17 @@ export function useRoomSettings() {
     setNotificationsModuleEnabled(value);
   }, []);
 
-  const [hideAudioOnlyTiles, setHideAudioOnlyTilesState] = useState(loadHideAudioOnlyTiles);
-  const setHideAudioOnlyTiles = useCallback((value: boolean) => {
-    setHideAudioOnlyTilesState(value);
-    saveHideAudioOnlyTiles(value);
-  }, []);
+  const hideAudioOnlyTiles = usePreferenceValue(loadHideAudioOnlyTiles);
+  const setHideAudioOnlyTiles = saveHideAudioOnlyTiles;
 
-  const [showTileBanners, setShowTileBannersState] = useState(loadShowTileBanners);
-  const setShowTileBanners = useCallback((value: boolean) => {
-    setShowTileBannersState(value);
-    saveShowTileBanners(value);
-  }, []);
+  const showTileBanners = usePreferenceValue(loadShowTileBanners);
+  const setShowTileBanners = saveShowTileBanners;
 
-  const [compressImagesDefault, setCompressImagesDefaultState] = useState(loadCompressImages);
-  const setCompressImagesDefault = useCallback((value: boolean) => {
-    setCompressImagesDefaultState(value);
-    saveCompressImages(value);
-  }, []);
+  const compressImagesDefault = usePreferenceValue(loadCompressImages);
+  const setCompressImagesDefault = saveCompressImages;
 
-  const [mirrorCameraPreview, setMirrorCameraPreviewState] = useState(loadMirrorCameraPreview);
-  const setMirrorCameraPreview = useCallback((value: boolean) => {
-    setMirrorCameraPreviewState(value);
-    saveMirrorCameraPreview(value);
-  }, []);
+  const mirrorCameraPreview = usePreferenceValue(loadMirrorCameraPreview);
+  const setMirrorCameraPreview = saveMirrorCameraPreview;
 
   const [shareQuality, setShareQualityState] = useState(loadShareQuality);
   const setShareQuality = useCallback((value: ShareQualityId) => {
@@ -68,12 +53,8 @@ export function useRoomSettings() {
     saveShareQuality(value);
   }, []);
 
-  const [colorTheme, setColorThemeState] = useState(loadColorTheme);
-  const setColorTheme = useCallback((value: ColorThemeId) => {
-    setColorThemeState(value);
-    saveColorTheme(value);
-    applyColorTheme(value);
-  }, []);
+  const colorTheme = usePreferenceValue(loadColorTheme);
+  const setColorTheme = saveColorTheme;
 
   useEffect(() => {
     setVolume(notifyVolume);

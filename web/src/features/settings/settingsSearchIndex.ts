@@ -14,7 +14,7 @@ export interface SearchEntry {
 
 type SearchKey =
   | 'accountInfo' | 'email' | 'session' | 'deleteAccount' | 'dataExport' | 'password' | 'twoFactor' | 'loginAlerts' | 'sessions' | 'connections' | 'blocked' | 'presence'
-  | 'theme' | 'voice' | 'inputProfile' | 'video' | 'calls' | 'uploads'
+  | 'theme' | 'density' | 'typography' | 'voice' | 'inputProfile' | 'video' | 'calls' | 'uploads'
   | 'desktopNotifications' | 'sounds' | 'language' | 'timeFormat' | 'adminArea' | 'desktopDownload' | 'webApp'
   | 'desktopStartup' | 'desktopWindow' | 'desktopUpdates' | 'activity';
 
@@ -36,6 +36,8 @@ export const SETTINGS_SEARCH_INDEX: SearchEntry[] = [
   { categoryId: 'privacy', sectionId: 'blocked', searchKey: 'blocked' },
   { categoryId: 'privacy', sectionId: 'data-export', searchKey: 'dataExport' },
   { categoryId: 'appearance', sectionId: 'theme', searchKey: 'theme' },
+  { categoryId: 'appearance', sectionId: 'density', searchKey: 'density' },
+  { categoryId: 'appearance', sectionId: 'typography', searchKey: 'typography' },
   { categoryId: 'av', sectionId: 'voice', searchKey: 'voice' },
   { categoryId: 'av', sectionId: 'input-profile', searchKey: 'inputProfile' },
   { categoryId: 'av', sectionId: 'video', searchKey: 'video' },

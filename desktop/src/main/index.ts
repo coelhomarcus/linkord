@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { Menu, app, dialog, powerMonitor, session, shell, type BrowserWindow, type Tray } from 'electron';
-import { installActivityBridge, sendActivity } from './activityBridge.js';
+import { installActivityBridge, sendActivity, sendRunningActivities } from './activityBridge.js';
 import { createActivityWatcher } from './activityWatcher.js';
 import { forwardWindowState, installAppBridge } from './appBridge.js';
 import { parseAppConfig, resolveAppUrl } from './appUrl.js';
@@ -273,7 +273,9 @@ if (!resolved.ok) {
     installAppBridge(appUrl.origin);
     const activityWatcher = createActivityWatcher({
       recentFile: path.join(app.getPath('userData'), 'activity-recent.json'),
+      preferredFile: path.join(app.getPath('userData'), 'activity-preferred.json'),
       onChange: (activity) => sendActivity(mainWindow, activity),
+      onRunningChange: (running) => sendRunningActivities(mainWindow, running),
     });
     installActivityBridge(appUrl.origin, activityWatcher);
     installSettingsBridge(appUrl.origin, {

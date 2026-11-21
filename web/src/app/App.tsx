@@ -28,8 +28,12 @@ import { VoiceChannelLobby } from '@/features/servers/VoiceChannelLobby';
 import { TopBar } from '@/app/layout/TopBar';
 import { FloatingUserDock } from '@/features/navigation/FloatingUserDock';
 import { ConversationPanel } from '@/features/conversations/ConversationPanel';
-import { ConversationMediaPanel } from '@/features/conversations/ConversationMediaPanel';
-import { ChatSearchDialog } from '@/features/chat/ChatSearchDialog';
+import { SearchField } from '@/features/search/SearchField';
+import { SearchFiltersDialog } from '@/features/search/SearchFiltersDialog';
+import { SearchResultsPanel } from '@/features/search/SearchResultsPanel';
+import { rememberSearch } from '@/features/search/searchHistory';
+import { sameScope, searchScopeOf } from '@/features/search/searchScope';
+import { EMPTY_QUERY, type SearchQuery } from '@/features/search/searchQuery';
 import { Stage } from '@/features/calls/Stage';
 import { DmCallOverlay } from '@/features/calls/DmCallOverlay';
 import { CallMoveDialog } from '@/features/calls/CallMoveDialog';
@@ -106,8 +110,8 @@ function Shell() {
     dispatch, livekitRoom, closeTileMenu, sendWs, retryConnection, notifyActiveView, registerRequestChatView, registerOpenCall,
     activeCallConversationId, activeConversationId, joinCall, leaveCall, toggleMicMuted, conversations, allUsers, servers,
     dmStageConversationId, clearDmStage, dmCall,
-    serverMemberRevision, setServerMemberSnapshot,
-  } = useRoom('dispatch', 'livekitRoom', 'closeTileMenu', 'sendWs', 'retryConnection', 'notifyActiveView', 'registerRequestChatView', 'registerOpenCall', 'activeCallConversationId', 'activeConversationId', 'joinCall', 'leaveCall', 'toggleMicMuted', 'conversations', 'allUsers', 'servers', 'dmStageConversationId', 'clearDmStage', 'dmCall', 'serverMemberRevision', 'setServerMemberSnapshot');
+    serverMemberRevision, setServerMemberSnapshot, messageSearch, runMessageSearch, closeMessageSearch,
+  } = useRoom('dispatch', 'livekitRoom', 'closeTileMenu', 'sendWs', 'retryConnection', 'notifyActiveView', 'registerRequestChatView', 'registerOpenCall', 'activeCallConversationId', 'activeConversationId', 'joinCall', 'leaveCall', 'toggleMicMuted', 'conversations', 'allUsers', 'servers', 'dmStageConversationId', 'clearDmStage', 'dmCall', 'serverMemberRevision', 'setServerMemberSnapshot', 'messageSearch', 'runMessageSearch', 'closeMessageSearch');
   const state = useRoomState('roomError', 'me', 'joined', 'callJoinError', 'focusedId', 'clientOutdated', 'reconnecting');
   const roster = useCallRoster();
   const roomError = state.roomError;
@@ -142,11 +146,13 @@ function Shell() {
   const wide = useMediaQuery('(min-width: 1280px)');
   const [profileTarget, setProfileTarget] = useState<{ userId: string; tab?: ProfileTab } | null>(null);
   const openProfile = useCallback((userId: string, tab?: ProfileTab) => setProfileTarget({ userId, tab }), []);
-  const [searchOpen, setSearchOpen] = useState(false);
+  // the phone (and narrow window) search: a sheet holding the field and the results
+  const [searchSheetOpen, setSearchSheetOpen] = useState(false);
+  // the filters dialog and the query it starts from
+  const [searchFilters, setSearchFilters] = useState<{ open: boolean; initial: SearchQuery }>({ open: false, initial: EMPTY_QUERY });
   const [memberListOpen, setMemberListPreference] = useMemberListOpen(wide, contentLocation.pathname);
   // A DM's profile sits beside it unless closed, as in Discord.
   const [profilePanelOpen, setProfilePanelOpen] = useState(true);
-  const [mediaOpen, setMediaOpen] = useState(false);
   const pendingStageRef = useRef<string | null>(null);
 
   useConversationRouteSync();
@@ -293,14 +299,20 @@ function Shell() {
   }, [roleDataServerId, roleDataRevision, setServerMemberSnapshot]);
   const shownType = visibleConversationId ? activeConversation?.type ?? null : null;
   const directShown = shownType === 'direct';
-  const { details: detailsVisible, media: mediaVisible } = rightPanelsVisible({
-    detailsOpen: directShown ? profilePanelOpen && wide : memberListOpen, mediaOpen, onChatPage: !!visibleConversationId, stageShown: showStage, conversationType: shownType,
+  const { details: detailsVisible } = rightPanelsVisible({
+    detailsOpen: directShown ? profilePanelOpen && wide : memberListOpen, onChatPage: !!visibleConversationId, stageShown: showStage, conversationType: shownType,
   });
   const membersVisible = detailsVisible && !directShown;
   const profileVisible = detailsVisible && directShown;
   const profilePanelUser = profileVisible ? directUser(activeConversation, state.me.userId, allUsers) : null;
   const setDetails = (open: boolean) => (directShown ? setProfilePanelOpen(open) : setMemberListPreference(open));
   const activeConversationName = conversationTitle(activeConversation, state.me.userId, allUsers);
+  const searchScope = searchScopeOf(visibleConversationId ? activeConversation : null);
+  // results belong to the server (or DM) they were searched in: elsewhere they hide
+  const searchVisible = !!messageSearch && sameScope(messageSearch.scope, searchScope) && !!visibleConversationId && !showStage;
+  const searchName = currentServer?.name ?? null;
+  const openSearchFilters = (initial: SearchQuery) => setSearchFilters({ open: true, initial });
+  const searchPanel = <SearchResultsPanel onOpenFilters={() => openSearchFilters(messageSearch?.query ?? EMPTY_QUERY)} onOpenProfile={openProfile} />;
 
   const tabTitle = onConversations || showStage ? conversationDocumentTitle(activeConversation, state.me.userId, allUsers, currentServer?.name) : APP_TITLE;
   // the pages a phone reaches from its tab bar (the column pages count: home and a server's channel list)
@@ -377,13 +389,13 @@ function Shell() {
                 <ConversationPanel
                   onOpenProfile={openProfile}
                   onOpenCall={handleOpenCall}
-                  onOpenSearch={() => setSearchOpen(true)}
+                  onOpenSearch={() => setSearchSheetOpen(true)}
+                  onOpenSearchFilters={openSearchFilters}
                   detailsOpen={directShown ? profileVisible : memberListOpen}
-                  mediaOpen={mediaVisible}
                   onOpenDetails={() => { setDetails(true); }}
                   onToggleDetails={() => { setDetails(directShown ? !(membersVisible || profileVisible) : !memberListOpen); }}
-                  onToggleMedia={() => { setMediaOpen(!mediaVisible); }}
-                  aside={profilePanelUser ? <DirectProfilePanel user={profilePanelUser} onOpenProfile={openProfile} />
+                  aside={searchVisible && wide ? <div className="flex w-[420px] flex-none border-l border-border-subtle">{searchPanel}</div>
+                    : profilePanelUser ? <DirectProfilePanel user={profilePanelUser} onOpenProfile={openProfile} />
                     : membersVisible && currentServer && wide ? <MemberListPanel server={currentServer} onOpenProfile={openProfile} /> : null}
                 />
               )}
@@ -420,23 +432,42 @@ function Shell() {
             <MemberListPanel server={currentServer} onOpenProfile={openProfile} active={membersVisible} />
           </Sheet>
         )}
-        <ConversationMediaPanel
-          conversationId={activeConversation?.id ?? null}
-          open={mediaVisible}
-          onOpenChange={setMediaOpen}
-        />
         <TileMenu onOpenProfile={openProfile} />
         <ProfileModal userId={profileTarget?.userId ?? null} initialTab={profileTarget?.tab} onClose={() => setProfileTarget(null)} onOpenProfile={openProfile} />
         <AppModals modal={modal} onClose={closeModal} onOpenProfile={openProfile} />
         <EmojiUploadHost />
         <StickerEditorHost />
         <ReactionSheetHost />
-        <ChatSearchDialog
-          open={searchOpen}
-          onOpenChange={setSearchOpen}
-          activeConversationId={activeConversationId}
-          activeConversationName={activeConversationName}
-        />
+        {searchScope && (
+          <>
+            {!wide && (
+            <Sheet
+              open={searchSheetOpen || searchVisible}
+              onOpenChange={(open) => { if (!open) { setSearchSheetOpen(false); closeMessageSearch(); } }}
+              side="right"
+              ariaLabel={activeConversationName}
+              className="w-[min(420px,100vw)]"
+            >
+              <div className="flex h-full min-h-0 flex-col">
+                <div className="flex-none border-b border-border-subtle p-3">
+                  <SearchField scope={searchScope} scopeName={searchName} onOpenFilters={openSearchFilters} fullWidth autoFocus={!searchVisible} />
+                </div>
+                {searchVisible && <div className="flex min-h-0 flex-1">{searchPanel}</div>}
+              </div>
+            </Sheet>
+            )}
+            <SearchFiltersDialog
+              open={searchFilters.open}
+              onOpenChange={(open) => setSearchFilters((current) => ({ ...current, open }))}
+              scope={searchScope}
+              initial={searchFilters.initial}
+              onApply={(query) => {
+                rememberSearch('serverId' in searchScope ? searchScope.serverId : searchScope.conversationId, query);
+                runMessageSearch(searchScope, query);
+              }}
+            />
+          </>
+        )}
       </SidebarProvider>
       </div>
       </ServerSettingsProvider>

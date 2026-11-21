@@ -2,7 +2,7 @@ import { i18n } from '@/shared/i18n/init';
 import { useCallback, useEffect, useRef } from 'react';
 import type { ClientMessage, ServerMessage } from '@/shared/types/protocol';
 
-type ActionMessage = Extract<ClientMessage, { t: 'chat-edit' } | { t: 'chat-delete' } | { t: 'chat-react' } | { t: 'chat-remove-attachment' } | { t: 'chat-suppress-embed' }>;
+type ActionMessage = Extract<ClientMessage, { t: 'chat-edit' } | { t: 'chat-delete' } | { t: 'chat-react' } | { t: 'chat-remove-attachment' } | { t: 'chat-suppress-embed' } | { t: 'message-pin' } | { t: 'message-save' }>;
 
 // Edits and deletes are idempotent on the server (same text; already gone
 // counts as done), so a lost answer only costs the user a retry click.

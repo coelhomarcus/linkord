@@ -1,7 +1,7 @@
 import { createContext, useContext, useEffect, useMemo, useRef, useSyncExternalStore } from 'react';
 import type { Dispatch, MutableRefObject } from 'react';
 import type { Room } from 'livekit-client';
-import type { ActivitySettings, ChatMessage, ClientMessage, Conversation, OwnStatus, PublicUser, ReactionEmoji, SearchResult, ServerSummary, StickerCard, VisiblePresence } from '@/shared/types/protocol';
+import type { ActivitySettings, ChatMessage, ClientMessage, Conversation, OwnStatus, PublicUser, ReactionEmoji, ServerSummary, StickerCard, VisiblePresence } from '@/shared/types/protocol';
 import type { PresencePatch } from '@/features/status/useOwnStatus';
 import type { DmCallNotice } from '@/features/calls/useDmCall';
 import type { CallElsewhere } from '@/features/calls/callElsewhere';
@@ -16,6 +16,10 @@ import type { FloatingSoundEmoji } from '@/features/soundboard/useSoundboardEven
 import type { CropRect } from '@/shared/lib/imageCrop';
 import type { NotificationPolicy, NotificationSettingChange, NotificationSettings } from '@/features/notifications/notificationSettings';
 import type { NotificationScope, PolicyTarget } from '@/features/notifications/useNotificationSettings';
+import type { PinsList } from '@/features/pins/usePins';
+import type { SavedList } from '@/features/saved/useSavedMessages';
+import type { MessageSearchState } from '@/features/search/useHeaderSearch';
+import type { SearchQuery, SearchScope, SearchSort } from '@/features/search/searchQuery';
 
 export interface TileDomHandle {
   root: HTMLDivElement;
@@ -232,6 +236,20 @@ export interface RoomContextValue {
   removeChatAttachment: (msgId: number, attachmentId: string) => Promise<void>;
   /** Author only: the link stays, its card goes. A refusal lands in messageActionErrors. */
   suppressChatEmbed: (msgId: number, url: string) => Promise<void>;
+  /** Pins (or unpins) for everyone. True once done; a refusal lands in messageActionErrors. */
+  pinChatMessage: (msgId: number, pinned: boolean) => Promise<boolean>;
+  /** Saves (or unsaves) for this account. True once done; a refusal lands in messageActionErrors. */
+  saveChatMessage: (msgId: number, saved: boolean) => Promise<boolean>;
+  /** Conversations pinned to since this account last opened their pins. */
+  unseenPins: Set<string>;
+  pinsByConversation: Map<string, PinsList>;
+  loadPins: (conversationId: string, more?: boolean) => void;
+  ackPins: (conversationId: string) => void;
+  savedMessageIds: Set<number>;
+  savedList: SavedList;
+  loadSaved: (more?: boolean) => void;
+  /** Takes a saved message off the list before the server confirms; the returned function puts it back. */
+  hideSaved: (msgId: number) => () => void;
   deletingMsgIds: Set<number>;
   /** The viewer's unconfirmed reaction intents (see reactionState.ts). */
   pendingReactions: Map<string, boolean>;
@@ -250,11 +268,12 @@ export interface RoomContextValue {
   pendingJumpTarget: { conversationId: string; msgId: number } | null;
   clearPendingJumpTarget: () => void;
   jumpToMessage: (conversationId: string, msgId: number) => void;
-  searchResults: SearchResult[];
-  searchLoading: boolean;
-  searchError: string | null;
-  clearSearchError: () => void;
-  searchMessages: (query: string, conversationId?: string) => void;
+  /** The header search and its results; null while the results panel is closed. */
+  messageSearch: MessageSearchState | null;
+  runMessageSearch: (scope: SearchScope, query: SearchQuery) => void;
+  setMessageSearchSort: (sort: SearchSort) => void;
+  setMessageSearchPage: (page: number) => void;
+  closeMessageSearch: () => void;
   /** the largest file the server takes, from `welcome` */
   maxAttachmentBytes: number;
 }

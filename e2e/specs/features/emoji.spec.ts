@@ -85,6 +85,11 @@ test('a server emoji goes into a DM with someone outside the server, who sees th
   await expect(picture).toBeVisible();
   await expect(picture).toHaveAttribute('src', `/api/emojis/${emoji.id}`);
   await expect.poll(() => picture.evaluate((img: HTMLImageElement) => img.naturalWidth)).toBe(128);
+  // a click says what it is and which server it is from, to someone outside it too
+  await b.page.locator('[data-message-id]').getByRole('button', { name: ':e2e_sun:' }).click();
+  await expect(b.page.getByText('Este emoji é de um servidor em que você não está. Só os membros dele podem usá-lo.')).toBeVisible();
+  await expect(b.page.getByRole('dialog').getByText('E2E emojis')).toBeVisible();
+  await b.page.keyboard.press('Escape');
 
   // and in another server's channel, typed in full
   const c = await carol.app();
@@ -92,6 +97,10 @@ test('a server emoji goes into a DM with someone outside the server, who sees th
   await c.openChannel(other.id, other.text.id);
   await a.send('bom dia :e2e_sun:');
   await expect(c.page.locator('[data-message-id]').getByRole('img', { name: ':e2e_sun:' })).toBeVisible();
+  // its author is told which of their servers it is from
+  await a.page.locator('[data-message-id]').filter({ hasText: 'bom dia' }).getByRole('button', { name: ':e2e_sun:' }).click();
+  await expect(a.page.getByText('Este emoji é de um dos seus servidores. Você pode usá-lo em qualquer lugar.')).toBeVisible();
+  await expect(a.page.getByRole('dialog').getByText('E2E emojis')).toBeVisible();
 });
 
 test('an admin uploads and crops an emoji from the server settings', async ({ users }) => {

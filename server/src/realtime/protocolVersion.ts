@@ -60,9 +60,26 @@
 // client, an optional `activity` in `presence-status`, `my-status` and the presence snapshot,
 // `welcome.activitySettings`, `my-activity-settings` and `activity-settings-result`. An old tab ignores
 // all of it and shows no activity, so the minimum stays at 7.
+// Version 25 adds pinned and saved messages: `message-pin`, `pins-list`, `pins-ack`, `message-save` and
+// `saved-list` from the client; `conversation-pins-updated`, `pins-list-result`, `pins-seen`,
+// `saved-updated` and `saved-list-result` from the server; an optional `pinned` on messages, a
+// `pin_notice` message kind, and `welcome.unseenPins` and `welcome.savedMessageIds`. An old tab ignores
+// the new messages and fields and shows a pin notice as an empty message from whoever pinned, so the
+// minimum stays at 7.
+// Version 26 adds the header search: `search-messages` (full text plus author, channel, content type,
+// mention, date, author type and pinned filters, a sort and a page) answered with
+// `search-messages-result`. An old tab keeps its search dialog on `message-search`, which stays until
+// the minimum is raised, so the minimum stays at 7.
+// Version 27 places activity starts on the server's clock: an optional `sentAt` in `activity-set` (the
+// reporter's clock when it sent the report) and `welcome.serverTime` (the server's clock, for the
+// viewer's timers). An old tab sends no `sentAt` and is taken at its word, as before, and ignores
+// `serverTime`, so the minimum stays at 7.
+// Version 28 syncs account preferences across devices: `welcome.preferences` and `my-preferences` (set
+// through `PATCH /api/me/preferences`). An old tab ignores both and keeps the settings saved in its
+// browser, so the minimum stays at 7.
 // Raising MIN_PROTOCOL_VERSION also drops open tabs out of their calls (they are refused and
 // disconnect), so keep it for changes an old client cannot tolerate.
-export const PROTOCOL_VERSION = 24;
+export const PROTOCOL_VERSION = 28;
 export const MIN_PROTOCOL_VERSION = 7;
 export const MIC_STARTING_PROTOCOL_VERSION = 18;
 export const CALL_ELSEWHERE_PROTOCOL_VERSION = 20;

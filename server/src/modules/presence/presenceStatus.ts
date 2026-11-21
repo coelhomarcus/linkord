@@ -7,7 +7,7 @@ import {
   visiblePresenceOf, shownActivityOf, setAccountConnectionsChangedHook, type VisiblePresence,
 } from './participants.js';
 import {
-  DEFAULT_ACTIVITY_SETTINGS, forgetActivitySettings, getActivitySettings, hasActivitySettings, isActivityKey, sameActivity,
+  DEFAULT_ACTIVITY_SETTINGS, forgetActivitySettings, getActivitySettings, hasActivitySettings, isActivityKey, keepActivityStart, sameActivity,
   sanitizeActivityReport, sanitizeActivitySettings, setActivitySettings, HIDDEN_ACTIVITIES_MAX, type Activity, type ActivitySettings,
 } from './activity.js';
 import { runSerialized } from './profileQueue.js';
@@ -317,9 +317,10 @@ async function handleActivitySet(socket: AppSocket, msg: { activity?: unknown } 
   latestReport.set(p, at);
   const reported = sanitizeActivityReport(msg?.activity ?? null);
   // a game shows with its own icon, the same for everyone, whatever icon this client sent
-  const activity = reported ? (await withSharedIcons([reported], sharedIconSource))[0]! : null;
+  const withIcon = reported ? (await withSharedIcons([reported], sharedIconSource))[0]! : null;
   // a later report from this connection, or the connection leaving, overtook this one
   if (latestReport.get(p) !== at || p.socket !== socket || participants.get(p.id) !== p) return;
+  const activity = keepActivityStart(p.activity, withIcon);
   if (sameActivity(p.activity, activity)) return;
   p.activity = activity;
   p.activityAt = at;

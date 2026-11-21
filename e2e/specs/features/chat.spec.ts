@@ -116,10 +116,10 @@ test.describe('chat', () => {
     await b.send(`tem uma ${word} escondida aqui`);
     await a.expectMessage(`tem uma ${word} escondida aqui`);
 
-    await a.page.getByRole('button', { name: 'Buscar' }).first().click();
-    await a.page.getByPlaceholder('Buscar mensagens...').fill(word);
-    await a.page.getByPlaceholder('Buscar mensagens...').press('Enter');
-    await expect(a.page.getByRole('dialog').getByText(word)).toBeVisible();
+    const field = a.page.getByRole('combobox', { name: 'Buscar mensagens' });
+    await field.fill(word);
+    await field.press('Enter');
+    await expect(a.page.getByRole('complementary', { name: 'Buscar mensagens' }).getByText(word)).toBeVisible();
   });
 
   test('an image attachment reaches the other member', async ({ users }, testInfo) => {

@@ -5,6 +5,8 @@ import { parseCookies } from '../../http/cookies.js';
 import { resolveSession } from '../auth/session.js';
 import { updateLocale } from '../auth/accounts.js';
 import { isLocale } from './locale.js';
+import { seedPreferences, updatePreferences } from './preferences.js';
+import { parsePreferenceChanges } from './preferencesPolicy.js';
 import { findById, publicUser } from './users.js';
 import { friendsSince, listMutualFriends } from '../friendships/friendshipsRepository.js';
 import { canViewProfile } from './profileAccess.js';
@@ -81,8 +83,38 @@ async function handleSetLocale(request: FastifyRequest, reply: FastifyReply): Pr
   sendJson(reply, 200, { locale });
 }
 
+/** `PATCH /api/me/preferences` — `{ changes: { key: value | null } }`, null putting a key back to its
+ * default. Every tab of the account hears `my-preferences`. */
+async function handleUpdatePreferences(request: FastifyRequest, reply: FastifyReply): Promise<void> {
+  const cookies = parseCookies(request.headers.cookie || '');
+  const sess = await resolveSession(cookies[config.SESSION_COOKIE]);
+  if (!sess) return sendError(reply, 401, 'unauthenticated', 'Não autenticado.');
+
+  const changes = parsePreferenceChanges(jsonBody(request.body).changes);
+  if (!changes) return sendError(reply, 400, 'invalid_request', 'Preferência inválida.');
+  const preferences = await updatePreferences(sess.userId, changes);
+  if (preferences === 'too_many') return sendError(reply, 400, 'invalid_request', 'Preferências demais.');
+  sendJson(reply, 200, { preferences });
+}
+
+/** `POST /api/me/preferences/seed` — `{ values }`, what the first device to sign in after the account had
+ * none had saved. A later seed changes nothing and gets the account's values back. */
+async function handleSeedPreferences(request: FastifyRequest, reply: FastifyReply): Promise<void> {
+  const cookies = parseCookies(request.headers.cookie || '');
+  const sess = await resolveSession(cookies[config.SESSION_COOKIE]);
+  if (!sess) return sendError(reply, 401, 'unauthenticated', 'Não autenticado.');
+
+  const values = parsePreferenceChanges(jsonBody(request.body).values, { allowNull: false });
+  if (!values) return sendError(reply, 400, 'invalid_request', 'Preferência inválida.');
+  const preferences = await seedPreferences(sess.userId, values);
+  if (preferences === 'too_many') return sendError(reply, 400, 'invalid_request', 'Preferências demais.');
+  sendJson(reply, 200, { preferences });
+}
+
 export function registerUserRoutes(fastify: FastifyInstance): void {
   fastify.patch('/api/me/locale', handleSetLocale);
+  fastify.patch('/api/me/preferences', handleUpdatePreferences);
+  fastify.post('/api/me/preferences/seed', handleSeedPreferences);
   fastify.get('/api/users/:userId/profile', handleGetProfile);
   fastify.get('/api/users/:userId/profile-details', handleGetProfileDetails);
 }

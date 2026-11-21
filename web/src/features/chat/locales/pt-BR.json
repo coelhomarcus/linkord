@@ -127,20 +127,6 @@
     "header": "Convite para servidor",
     "hint": "Ao entrar, você verá o histórico do servidor."
   },
-  "search": {
-    "title": "Buscar mensagens",
-    "placeholder": "Buscar mensagens...",
-    "scopeAll": "Buscando em todas as conversas",
-    "scopeOne": "Buscando em {{name}}",
-    "conversationFallback": "conversa",
-    "all": "Todas",
-    "scopeAria": "Buscar em todas as conversas",
-    "searching": "Buscando…",
-    "none": "Nenhuma mensagem encontrada",
-    "noneText": "Tente outras palavras.",
-    "noneTextScoped": "Tente outras palavras ou busque em todas as conversas.",
-    "searchEverywhere": "Buscar em todas as conversas"
-  },
   "code": {
     "copy": "Copiar código",
     "copyLabel": "Copiar"
@@ -182,7 +168,8 @@
     "notice": "Aviso",
     "attachment": "Anexo",
     "sticker": "Figurinha: {{name}}",
-    "stickerUnnamed": "Figurinha"
+    "stickerUnnamed": "Figurinha",
+    "pinNotice": "{{name}} fixou uma mensagem"
   },
   "errors": {
     "unknown": "erro desconhecido",
@@ -194,7 +181,11 @@
     "noResponse": "O servidor não respondeu. Tente de novo.",
     "unconfirmed": "Não foi possível confirmar o envio.",
     "attachmentFailed_one": "Um anexo não foi enviado.",
-    "attachmentFailed_other": "{{count}} anexos não foram enviados."
+    "attachmentFailed_other": "{{count}} anexos não foram enviados.",
+    "pinFailed": "Não foi possível fixar: {{message}}",
+    "unpinFailed": "Não foi possível desafixar: {{message}}",
+    "saveFailed": "Não foi possível salvar: {{message}}",
+    "unsaveFailed": "Não foi possível remover dos salvos: {{message}}"
   },
   "callInvite": {
     "header": "Convite para chamada de voz",

@@ -1,4 +1,4 @@
-import { ArrowBendUpLeftIcon, ChecksIcon, CopyIcon, DownloadSimpleIcon, FileXIcon, FlagIcon, LinkBreakIcon, PencilSimpleIcon, TrashIcon, UserIcon, UsersIcon, XIcon } from '@/shared/ui/icons';
+import { ArrowBendUpLeftIcon, BookmarkSimpleIcon, ChecksIcon, CopyIcon, DownloadSimpleIcon, FileXIcon, FlagIcon, LinkBreakIcon, PencilSimpleIcon, PushPinIcon, PushPinSlashIcon, TrashIcon, UserIcon, UsersIcon, XIcon } from '@/shared/ui/icons';
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { ReactNode } from 'react';
@@ -15,6 +15,7 @@ import { ReactionParticipantsDialog } from '@/features/chat/ReactionParticipants
 import { useKeepPopoverWarm } from '@/shared/hooks/useKeepPopoverWarm';
 import { messagePermissions } from '@/features/chat/messageActions';
 import { useMessageDeleteConfirm } from '@/features/chat/useMessageDeleteConfirm';
+import { useMessagePinConfirm } from '@/features/pins/useMessagePinConfirm';
 import { serverUnread } from '@/features/servers/serverUtils';
 import { NotificationMenuItems } from '@/features/notifications/NotificationMenuItems';
 import { useRoom, useRoomState } from '@/state/RoomContext';
@@ -66,12 +67,15 @@ export function GlobalContextMenu({ children, onOpenProfile }: GlobalContextMenu
   const {
     activeConversationId, messagesByConversation, reactToChatMessage, setReplyingTo, setEditingMsgId,
     conversations, servers, closeConversation, openReactionParticipants, removeChatAttachment, suppressChatEmbed,
-    unreadByConversation, unreadStartByConversation, markConversationRead, markServerRead,
-  } = useRoom('activeConversationId', 'messagesByConversation', 'reactToChatMessage', 'setReplyingTo', 'setEditingMsgId', 'conversations', 'servers', 'closeConversation', 'openReactionParticipants', 'removeChatAttachment', 'suppressChatEmbed', 'unreadByConversation', 'unreadStartByConversation', 'markConversationRead', 'markServerRead');
+    unreadByConversation, unreadStartByConversation, markConversationRead, markServerRead, savedMessageIds, saveChatMessage,
+  } = useRoom('activeConversationId', 'messagesByConversation', 'reactToChatMessage', 'setReplyingTo', 'setEditingMsgId', 'conversations', 'servers', 'closeConversation', 'openReactionParticipants', 'removeChatAttachment', 'suppressChatEmbed', 'unreadByConversation', 'unreadStartByConversation', 'markConversationRead', 'markServerRead', 'savedMessageIds', 'saveChatMessage');
+  const { t: tPins } = useTranslation('pins');
+  const { t: tSaved } = useTranslation('saved');
   const state = useRoomState('me');
   const [hasSelection, setHasSelection] = useState(false);
   const [downloadTarget, setDownloadTarget] = useState<{ url: string; name: string } | null>(null);
   const { requestDelete, confirmDialog } = useMessageDeleteConfirm();
+  const { requestPin, pinConfirmDialog } = useMessagePinConfirm();
   const [messageTarget, setMessageTarget] = useState<number | null>(null);
   // which of the message's attachments / link cards was right-clicked: a message can carry several
   const [attachmentTarget, setAttachmentTarget] = useState<string | null>(null);
@@ -338,6 +342,18 @@ export function GlobalContextMenu({ children, onOpenProfile }: GlobalContextMenu
                   <span>{t('contextMenu.edit')}</span>
                 </ContextMenuItem>
               )}
+              {can?.pin && (
+                <ContextMenuItem onClick={(event) => requestPin(targetMessage.msgId, !targetMessage.pinned, event.shiftKey)}>
+                  {targetMessage.pinned ? <PushPinSlashIcon size={16} /> : <PushPinIcon size={16} />}
+                  <span>{targetMessage.pinned ? tPins('unpinMessage') : tPins('pin')}</span>
+                </ContextMenuItem>
+              )}
+              {can?.save && (
+                <ContextMenuItem onClick={() => { void saveChatMessage(targetMessage.msgId, !savedMessageIds.has(targetMessage.msgId)); }}>
+                  <BookmarkSimpleIcon size={16} weight={savedMessageIds.has(targetMessage.msgId) ? 'fill' : 'regular'} />
+                  <span>{savedMessageIds.has(targetMessage.msgId) ? tSaved('unsave') : tSaved('save')}</span>
+                </ContextMenuItem>
+              )}
               {targetAttachment && (
                 <ContextMenuItem variant="destructive" onClick={() => setPartRemoval({ kind: 'attachment', msgId: targetMessage.msgId, id: targetAttachment.id, name: targetAttachment.name })}>
                   <FileXIcon size={16} />
@@ -425,6 +441,7 @@ export function GlobalContextMenu({ children, onOpenProfile }: GlobalContextMenu
       <ReportDialog target={reportTarget} open={!!reportTarget} onOpenChange={(open) => { if (!open) setReportTarget(null); }} />
       <ReactionParticipantsDialog />
       {confirmDialog}
+      {pinConfirmDialog}
       <ConfirmDialog
         open={!!partRemoval}
         onOpenChange={(open) => { if (!open) setPartRemoval(null); }}

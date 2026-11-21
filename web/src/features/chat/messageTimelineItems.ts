@@ -68,7 +68,8 @@ export function buildTimelineItems(messages: ChatMessage[], pending: OutboxEntry
       }
     }
     if (!entry) storedBefore = true;
-    const isCallLog = message.kind === 'dm_call';
+    // a call log or a pin notice is a line of its own: the next message starts a group
+    const isCallLog = message.kind === 'dm_call' || message.kind === 'pin_notice';
     const showHeader = !isCallLog && (!lastMsg || lastMsg.id !== message.id || message.ts - lastMsg.ts > GROUP_GAP_MS);
     // a date or new-messages line already spaces the group below it: the
     // group's own gap on top of the line's would leave it hanging off the

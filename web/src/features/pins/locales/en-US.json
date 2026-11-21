@@ -1,0 +1,39 @@
+{
+  "title": "Pinned Messages",
+  "button": "Pinned Messages",
+  "buttonUnseen": "Pinned Messages (new)",
+  "jump": "Jump to message",
+  "unpin": "Unpin",
+  "pin": "Pin message",
+  "unpinMessage": "Unpin message",
+  "loading": "Loading pinned messages…",
+  "loadMore": "Load more",
+  "end": "You've reached the end",
+  "unpinFailed": "Couldn't unpin. Try again.",
+  "empty": {
+    "channel": "This channel doesn't have any pinned messages... yet.",
+    "direct": "This conversation doesn't have any pinned messages... yet.",
+    "tipTitle": "Pro tip:",
+    "tipChannel": "Users with the “Pin Messages” permission can pin a message from the context menu.",
+    "tipDirect": "Either of you can pin important messages here from the context menu, for both to see."
+  },
+  "notice": {
+    "text": "<b>{{name}}</b> pinned <jump>a message</jump> to this channel. <all>See all pinned messages.</all>",
+    "textDirect": "<b>{{name}}</b> pinned <jump>a message</jump> to this conversation. <all>See all pinned messages.</all>",
+    "deleted": "<b>{{name}}</b> pinned a message that was deleted. <all>See all pinned messages.</all>"
+  },
+  "confirm": {
+    "pin": {
+      "title": "Pin Message",
+      "description": "Pin this message to the conversation for everyone to see?",
+      "descriptionShift": "Pin this message to the conversation for everyone to see? Hold Shift when choosing Pin message to skip this confirmation.",
+      "confirm": "Pin"
+    },
+    "unpin": {
+      "title": "Unpin Message",
+      "description": "Are you sure you want to unpin this message?",
+      "descriptionShift": "Are you sure you want to unpin this message? Hold Shift when clicking unpin to skip this confirmation.",
+      "confirm": "Unpin"
+    }
+  }
+}

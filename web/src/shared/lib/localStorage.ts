@@ -5,18 +5,19 @@ export const LOCAL_STORAGE_KEYS = {
   language: 'ss-locale',
   mediaVolume: 'ss-media-volume',
   lastChannel: (serverId: string) => `ss-last-channel:${serverId}` as const,
-  collapsedCategories: (serverId: string) => `ss-collapsed-categories:${serverId}` as const,
   shareQuality: 'ss-share-quality',
   notificationsEnabled: 'ss-notifications-enabled',
-  compressImages: 'ss-compress-images',
-  callVolumes: 'ss-call-volumes',
-  hideAudioOnlyTiles: 'ss-hide-audio-only-tiles',
-  showTileBanners: 'ss-show-tile-banners',
-  showStats: 'ss-show-stats',
   notifyVolume: 'ss-notify-volume',
-  mirrorCameraPreview: 'ss-mirror-camera-preview',
   device: (kind: MediaDeviceKind) => `ss-device-${kind}` as const,
+  /** the settings that follow the account, as last known (shared/preferences/accountPreferences.ts) */
+  preferences: 'linkord.preferences',
+  /** which account `preferences` was last synced with */
+  preferencesOwner: 'linkord.preferencesOwner',
+  /** colorTheme, density and font are kept beside `preferences` for index.html's boot script */
   colorTheme: 'linkord.colorTheme',
+  density: 'linkord.density',
+  textSize: 'linkord.textSize',
+  font: 'linkord.font',
   inputVolume: 'ss-input-volume',
   inputProfile: 'ss-input-profile',
   outputVolume: 'ss-output-volume',
@@ -26,10 +27,9 @@ export const LOCAL_STORAGE_KEYS = {
   channelListOverlayOpen: 'ss-channel-list-open:overlay',
   dmCallHeight: 'ss-dm-call-height',
   legacyNoiseSuppression: 'ss-noise-suppression',
-  timeFormat: 'ss-time-format',
-  sounds: 'ss-sounds',
   autoIdleMinutes: 'ss-auto-idle-minutes',
-  emojiSkinTone: 'ss-emoji-skin-tone',
+  /** the recent searches of one server, or of one DM */
+  searchHistory: (contextId: string) => `ss-search-history:${contextId}` as const,
 } as const;
 
 type RegistryValue = (typeof LOCAL_STORAGE_KEYS)[keyof typeof LOCAL_STORAGE_KEYS];

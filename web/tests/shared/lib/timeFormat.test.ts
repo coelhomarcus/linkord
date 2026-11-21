@@ -3,6 +3,7 @@ import { act, renderHook } from '@testing-library/react';
 import { formatTime } from '@/shared/lib/formatChatTime';
 import { i18n } from '@/shared/i18n/init';
 import { getTimeFormat, setTimeFormat, timeOptions, useTimeFormat } from '@/shared/lib/timeFormat';
+import { getPreference } from '@/shared/preferences/accountPreferences';
 
 afterEach(() => setTimeFormat('auto'));
 
@@ -34,8 +35,14 @@ describe('time format', () => {
     const { result } = renderHook(() => useTimeFormat());
     act(() => setTimeFormat('12h'));
     expect(result.current).toBe('12h');
-    expect(localStorage.getItem('ss-time-format')).toBe('12h');
+    expect(getPreference('timeFormat')).toBe('12h');
     act(() => setTimeFormat('auto'));
-    expect(localStorage.getItem('ss-time-format')).toBeNull();
+    expect(getPreference('timeFormat')).toBeUndefined();
+  });
+
+  it('picks up the format an older build saved', () => {
+    localStorage.clear();
+    localStorage.setItem('ss-time-format', '24h');
+    expect(getTimeFormat()).toBe('24h');
   });
 });

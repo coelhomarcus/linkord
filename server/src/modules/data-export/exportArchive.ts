@@ -11,6 +11,7 @@ import {
 } from '../../db/schema.js';
 import { filePathFor } from '../attachments/attachmentStorage.js';
 import { exportActivityHistory } from '../activity/activityHistory.js';
+import { getPreferences } from '../users/preferences.js';
 
 // Builds the ZIP of a data export: what the account is (profile, settings, connections), who it knows
 // (friends, blocks, servers) and what it sent (messages and their files). JSON for the records, the
@@ -67,8 +68,9 @@ async function readRecords(userId: string) {
 
   const notificationRows = await db.select().from(notificationSettings).where(eq(notificationSettings.userId, userId))
     .orderBy(asc(notificationSettings.updatedAt));
+  const preferences = await getPreferences(userId);
 
-  return { user, connections, wallWidgets, games, activity, friendRows, blockRows, serverRows, roleRows, notificationRows };
+  return { user, connections, wallWidgets, games, activity, friendRows, blockRows, serverRows, roleRows, notificationRows, preferences };
 }
 
 /** Where each conversation the account wrote in is, named for a person: a server channel or a DM partner. */
@@ -158,7 +160,7 @@ Dates are in UTC (ISO 8601). Messages other people sent are not included.
 export async function writeExportArchive(userId: string, destination: string, now = new Date()): Promise<number | null> {
   const records = await readRecords(userId);
   if (!records) return null;
-  const { user, connections, wallWidgets, games, activity, friendRows, blockRows, serverRows, roleRows, notificationRows } = records;
+  const { user, connections, wallWidgets, games, activity, friendRows, blockRows, serverRows, roleRows, notificationRows, preferences } = records;
 
   const files: StoredFile[] = [];
 
@@ -220,6 +222,8 @@ export async function writeExportArchive(userId: string, destination: string, no
       notifications: notificationRows.map((n) => ({
         serverId: n.serverId, conversationId: n.conversationId, level: n.level, muted: n.muted, mutedUntil: iso(n.mutedUntil),
       })),
+      // what follows the account to every device; only what differs from the default is kept
+      preferences: preferences ?? {},
     },
   }), 'account.json', options);
   zip.addBuffer(json({

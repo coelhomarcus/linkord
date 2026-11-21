@@ -1,10 +1,9 @@
-
-import { LOCAL_STORAGE_KEYS, localStorageStore } from '@/shared/lib/localStorage';
+import { getPreference, setPreference } from '@/shared/preferences/accountPreferences';
 
 export function loadHideAudioOnlyTiles(): boolean {
-  return localStorageStore.get(LOCAL_STORAGE_KEYS.hideAudioOnlyTiles) === '1';
+  return getPreference('hideAudioOnlyTiles') === true;
 }
 
 export function saveHideAudioOnlyTiles(value: boolean): void {
-  localStorageStore.set(LOCAL_STORAGE_KEYS.hideAudioOnlyTiles, value ? '1' : '0');
+  setPreference('hideAudioOnlyTiles', value ? true : null);
 }

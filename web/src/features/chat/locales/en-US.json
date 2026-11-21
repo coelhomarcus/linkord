@@ -126,20 +126,6 @@
     "header": "Server invitation",
     "hint": "When you join, you'll see the server's history."
   },
-  "search": {
-    "title": "Search messages",
-    "placeholder": "Search messages...",
-    "scopeAll": "Searching all conversations",
-    "scopeOne": "Searching in {{name}}",
-    "conversationFallback": "conversation",
-    "all": "All",
-    "scopeAria": "Search all conversations",
-    "searching": "Searching…",
-    "none": "No messages found",
-    "noneText": "Try other words.",
-    "noneTextScoped": "Try other words or search every conversation.",
-    "searchEverywhere": "Search every conversation"
-  },
   "code": {
     "copy": "Copy code",
     "copyLabel": "Copy"
@@ -181,7 +167,8 @@
     "notice": "Notice",
     "attachment": "Attachment",
     "sticker": "Sticker: {{name}}",
-    "stickerUnnamed": "Sticker"
+    "stickerUnnamed": "Sticker",
+    "pinNotice": "{{name}} pinned a message"
   },
   "errors": {
     "unknown": "unknown error",
@@ -193,7 +180,11 @@
     "noResponse": "The server didn't respond. Try again.",
     "unconfirmed": "Couldn't confirm the send.",
     "attachmentFailed_one": "One attachment wasn't sent.",
-    "attachmentFailed_other": "{{count}} attachments weren't sent."
+    "attachmentFailed_other": "{{count}} attachments weren't sent.",
+    "pinFailed": "Couldn't pin: {{message}}",
+    "unpinFailed": "Couldn't unpin: {{message}}",
+    "saveFailed": "Couldn't save: {{message}}",
+    "unsaveFailed": "Couldn't remove from saved: {{message}}"
   },
   "callInvite": {
     "header": "Voice call invite",

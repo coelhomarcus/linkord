@@ -22,6 +22,9 @@ export function messagePreviewText(
       durationSeconds: message.callDurationSeconds ?? null,
     }, i18n.getFixedT(null, 'chat'));
   }
+  if (message.kind === 'pin_notice') {
+    return i18n.t('chat:preview.pinNotice', { name: message.name ?? '' });
+  }
   if (message.kind === 'server_invite') {
     return message.invitation ? i18n.t('chat:preview.invite', { title: message.invitation.serverName }) : i18n.t('chat:preview.inviteUnavailable');
   }

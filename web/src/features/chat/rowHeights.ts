@@ -6,16 +6,21 @@ import { INLINE_VIDEO_MAX_HEIGHT, INLINE_VIDEO_MAX_WIDTH, videoBoxHeight } from 
 import { VIDEO_MIME_TYPES } from './ChatAttachment';
 import { MEDIA_MAX_WIDTH, mosaicLayout, singleImageHeight, splitAttachments } from './mediaLayout';
 import type { TimelineItem } from './messageTimelineItems';
+import { TEXT_SCALE, appearanceLayoutKey, getAppearance, type Density } from '@/features/settings/appearancePreferences';
 
 // What a row is made of, in px, as MessageRow and the timeline lay it out.
 // Only a first guess: every row is measured once it mounts, and that size is
 // what the list remembers (below).
+// At the default text size and density; metricsFor adjusts what those change.
 const DIVIDER = 49;
-const HEADER = 45;
-const NO_HEADER = 4;
+// the author's name and time
+const HEADER_LINE = 24;
 const TEXT_LINE = 22;
 // a glyph of the body font, plus what breaking at words leaves at line ends
 const CHAR_WIDTH = 8.5;
+// --spacing-message-group and --spacing-message-row-y in styles/index.css
+const GROUP_GAP: Record<Density, number> = { compact: 8, default: 17, comfortable: 24 };
+const ROW_Y: Record<Density, number> = { compact: 0, default: 2, comfortable: 4 };
 const BLOCK_GAP = 6;
 const LEGACY_IMAGE = 320;
 const STICKER = 162;
@@ -31,12 +36,26 @@ const LINK_CARD = 100;
 // the bars a card adds around its content
 const CARD_BORDER = 2;
 
-function textHeight(text: string, bodyWidth: number): number {
+interface Metrics {
+  header: number;
+  noHeader: number;
+  textLine: number;
+  charWidth: number;
+}
+
+function metricsFor(): Metrics {
+  const { density, textSize } = getAppearance();
+  const scale = TEXT_SCALE[textSize];
+  const rowY = 2 * ROW_Y[density];
+  return { header: GROUP_GAP[density] + rowY + HEADER_LINE * scale, noHeader: rowY, textLine: TEXT_LINE * scale, charWidth: CHAR_WIDTH * scale };
+}
+
+function textHeight(text: string, bodyWidth: number, metrics: Metrics): number {
   if (!text) return 0;
-  const perLine = Math.max(1, Math.floor(bodyWidth / CHAR_WIDTH));
+  const perLine = Math.max(1, Math.floor(bodyWidth / metrics.charWidth));
   let lines = 0;
   for (const line of text.split('\n')) lines += Math.max(1, Math.ceil(line.length / perLine));
-  return lines * TEXT_LINE;
+  return lines * metrics.textLine;
 }
 
 // only previews stored with the message: a link whose card is fetched later
@@ -74,27 +93,28 @@ function mediaHeight(message: ChatMessage, surfaceWidth: number, bodyWidth: numb
 }
 
 // the list asks for every unmeasured row's guess on each render
-const guesses = new WeakMap<TimelineItem, { width: number; height: number }>();
+const guesses = new WeakMap<TimelineItem, { width: number; layout: string; height: number }>();
 
 /** A first guess at a row's height in a chat surface `surfaceWidth` px wide,
  * close enough that measuring it moves little. */
 export function estimateRowHeight(item: TimelineItem, surfaceWidth: number): number {
+  const layout = appearanceLayoutKey();
   const cached = guesses.get(item);
-  if (cached?.width === surfaceWidth) return cached.height;
-  const height = guessRowHeight(item, surfaceWidth);
-  guesses.set(item, { width: surfaceWidth, height });
+  if (cached?.width === surfaceWidth && cached.layout === layout) return cached.height;
+  const height = guessRowHeight(item, surfaceWidth, metricsFor());
+  guesses.set(item, { width: surfaceWidth, layout, height });
   return height;
 }
 
-function guessRowHeight(item: TimelineItem, surfaceWidth: number): number {
+function guessRowHeight(item: TimelineItem, surfaceWidth: number, metrics: Metrics): number {
   if (item.type !== 'message') return DIVIDER;
   const { message } = item;
   const bodyWidth = Math.max(1, surfaceWidth - 100);
-  let height = item.showHeader ? HEADER : NO_HEADER;
+  let height = item.showHeader ? metrics.header : metrics.noHeader;
   if (message.replyTo) height += REPLY;
   if (message.kind === 'call_invite' || message.kind === 'server_invite') return height + INVITE_CARD;
   if (message.sticker !== undefined) return height + STICKER;
-  height += textHeight(message.text, bodyWidth);
+  height += textHeight(message.text, bodyWidth, metrics);
   const cardWidth = availableAttachmentWidth(surfaceWidth, 384);
   for (const embed of message.embeds ?? []) height += BLOCK_GAP + CARD_BORDER + cardHeight(embed, cardWidth);
   height += (message.richEmbeds?.length ?? 0) * (BLOCK_GAP + RICH_EMBED);
@@ -106,17 +126,19 @@ function guessRowHeight(item: TimelineItem, surfaceWidth: number): number {
 // Measured heights outlive the list: going back to a conversation, or
 // scrolling over rows seen before, starts from the real sizes instead of
 // guesses that each move the list when corrected. A height only counts at
-// the width it was measured at and for the row as it was then.
+// the width it was measured at, for the row as it was then, and at the
+// density, text size and font it was laid out with.
 const MAX_REMEMBERED = 5000;
 const remembered = new Map<string, { width: number; signature: string; height: number }>();
 
 function signatureOf(item: TimelineItem): string {
-  if (item.type !== 'message') return item.type;
+  if (item.type !== 'message') return `${item.type}:${appearanceLayoutKey()}`;
   const m = item.message;
   const reactions = m.reactions ? Object.values(m.reactions).filter((ids) => ids?.length).length : 0;
   return [
     item.showHeader ? 1 : 0, m.text.length, m.editedAt ?? 0, reactions, m.attachments?.length ?? 0,
     m.embeds?.length ?? 0, m.suppressedEmbeds?.length ?? 0, m.richEmbeds?.length ?? 0, m.replyTo ? 1 : 0, m.sticker === null ? 0 : 1,
+    appearanceLayoutKey(),
   ].join(':');
 }
 

@@ -70,6 +70,14 @@ contextBridge.exposeInMainWorld('linkordDesktop', Object.freeze({
       ipcRenderer.on('linkord:activity:changed', listener);
       return () => { ipcRenderer.removeListener('linkord:activity:changed', listener); };
     },
+    running: () => ipcRenderer.invoke('linkord:activity:running'),
+    prefer: (key: string | null) => ipcRenderer.invoke('linkord:activity:prefer', typeof key === 'string' ? key : null),
+    setHidden: (keys: string[]) => ipcRenderer.invoke('linkord:activity:hidden', Array.isArray(keys) ? keys.map(String) : []),
+    onRunningChange: (callback: (running: unknown) => void) => {
+      const listener = (_event: unknown, running: unknown) => callback(running);
+      ipcRenderer.on('linkord:activity:running-changed', listener);
+      return () => { ipcRenderer.removeListener('linkord:activity:running-changed', listener); };
+    },
   }),
   screenShare: Object.freeze({
     picker: flag('linkord-share-picker') === 'system' ? 'system' : 'app',

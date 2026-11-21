@@ -243,9 +243,9 @@ async function handleDelete(request: FastifyRequest<EmojiParams>, reply: Fastify
 const MAX_META_IDS = 50;
 
 /** `GET /api/emojis/meta?ids=a,b` — the name of emojis seen somewhere (a
- * reaction, mostly) by someone who may not be in their server. Never which
- * server: that stays for its members, who already have it. Ids that no
- * longer exist are left out. */
+ * reaction, mostly) by someone who may not be in their server. Ids that no
+ * longer exist are left out. Which server one is from is asked one emoji at
+ * a time (`/source`), when someone clicks it. */
 async function handleMeta(request: FastifyRequest<{ Querystring: { ids?: string } }>, reply: FastifyReply): Promise<void> {
   const sess = await requireSession(request, reply);
   if (!sess) return;
@@ -254,6 +254,24 @@ async function handleMeta(request: FastifyRequest<{ Querystring: { ids?: string 
     ? await db.select({ id: serverEmojis.id, name: serverEmojis.name, animated: serverEmojis.animated }).from(serverEmojis).where(inArray(serverEmojis.id, ids))
     : [];
   sendJson(reply, 200, { emojis: rows });
+}
+
+/** `GET /api/emojis/:emojiId/source` — the server an emoji comes from, for
+ * the card a click on it opens, member or not (Discord shows it too): its
+ * name and icon, as an invitation card shows them. `server` is null when
+ * that server is suspended. */
+async function handleSource(request: FastifyRequest<{ Params: { emojiId: string } }>, reply: FastifyReply): Promise<void> {
+  const sess = await requireSession(request, reply);
+  if (!sess) return;
+  const emojiId = String(request.params.emojiId || '');
+  if (!/^[0-9a-f]{32}$/.test(emojiId)) return sendError(reply, 404, 'not_found', 'Emoji não encontrado.');
+  const [row] = await db.select({ id: servers.id, name: servers.name, icon: servers.icon, status: servers.status })
+    .from(serverEmojis)
+    .innerJoin(servers, eq(servers.id, serverEmojis.serverId))
+    .where(eq(serverEmojis.id, emojiId))
+    .limit(1);
+  if (!row) return sendError(reply, 404, 'not_found', 'Emoji não encontrado.');
+  sendJson(reply, 200, { server: row.status === 'active' ? { id: row.id, name: row.name, icon: row.icon } : null });
 }
 
 /** `GET /api/emojis/:emojiId` — open to any signed-in account, member or not:
@@ -285,6 +303,7 @@ export function registerServerEmojiRoutes(fastify: FastifyInstance): void {
   fastify.get('/api/me/emojis', handleMine);
   fastify.get('/api/emojis/meta', handleMeta);
   fastify.get('/api/emojis/:emojiId', handleFile);
+  fastify.get('/api/emojis/:emojiId/source', handleSource);
   fastify.get('/api/servers/:serverId/emojis', handleList);
   fastify.patch('/api/servers/:serverId/emojis/:emojiId', handleRename);
   fastify.delete('/api/servers/:serverId/emojis/:emojiId', handleDelete);

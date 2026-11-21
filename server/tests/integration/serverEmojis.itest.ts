@@ -8,7 +8,7 @@ import { and, eq, sql } from 'drizzle-orm';
 import type { FastifyInstance } from 'fastify';
 import sharp from 'sharp';
 import { config } from '../../src/config/env.js';
-import { messages, serverRoles } from '../../src/db/schema.js';
+import { messages, serverRoles, servers } from '../../src/db/schema.js';
 import { createApp } from '../../src/http/app.js';
 import { createSession } from '../../src/modules/auth/session.js';
 import { PERMISSIONS } from '../../src/modules/servers/permissions.js';
@@ -120,6 +120,35 @@ describe('server emojis (real Postgres)', () => {
     assert.deepEqual(JSON.parse(mine.body).servers.find((s: { serverId: string }) => s.serverId === serverId).emojis.map((e: { name: string }) => e.name), ['wave']);
     const meta = await app.inject({ method: 'GET', url: `/api/emojis/meta?ids=${id}`, headers: cookie(stranger) });
     assert.deepEqual(JSON.parse(meta.body).emojis, [{ id, name: 'wave', animated: false }]);
+  });
+
+  it('any signed-in account learns which server an emoji or sticker is from, unless it is suspended', async () => {
+    const { owner, stranger, serverId } = await world();
+    await db.update(servers).set({ name: 'Origem', icon: '/uploads/icon.webp' }).where(eq(servers.id, serverId));
+    const emojiId = (await upload(owner, serverId, 'origin')).body.emoji.id as string;
+    const sticker = await app.inject({
+      method: 'POST',
+      url: `/api/servers/${serverId}/stickers?${new URLSearchParams({ name: 'origem', emoji: '👋' })}`,
+      payload: await png(),
+      headers: { ...cookie(owner), 'content-type': 'image/png' },
+    });
+    assert.equal(sticker.statusCode, 201, sticker.body);
+    const stickerId: string = JSON.parse(sticker.body).sticker.id;
+
+    const source = (url: string, as?: Actor) => app.inject({ method: 'GET', url, headers: as ? cookie(as) : {} });
+    const expected = { server: { id: serverId, name: 'Origem', icon: '/uploads/icon.webp' } };
+    for (const url of [`/api/emojis/${emojiId}/source`, `/api/stickers/${stickerId}/source`]) {
+      const res = await source(url, stranger);
+      assert.equal(res.statusCode, 200, url);
+      assert.deepEqual(JSON.parse(res.body), expected);
+      assert.equal((await source(url)).statusCode, 401);
+    }
+    assert.equal((await source(`/api/emojis/${'0'.repeat(32)}/source`, stranger)).statusCode, 404);
+    assert.equal((await source(`/api/stickers/${'0'.repeat(32)}/source`, stranger)).statusCode, 404);
+
+    await db.update(servers).set({ status: 'suspended' }).where(eq(servers.id, serverId));
+    assert.deepEqual(JSON.parse((await source(`/api/emojis/${emojiId}/source`, stranger)).body), { server: null });
+    assert.deepEqual(JSON.parse((await source(`/api/stickers/${stickerId}/source`, stranger)).body), { server: null });
   });
 
   it('reacting with a server emoji takes being its member; taking the reaction back does not', async () => {

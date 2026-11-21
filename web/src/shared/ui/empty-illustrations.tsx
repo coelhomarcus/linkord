@@ -189,6 +189,22 @@ const SCENES = {
       <path d="M72 70l16-18" stroke={ACCENT} strokeWidth="5" strokeLinecap="round" />
     </>
   ),
+  pin: (
+    <>
+      <path d="M68 30h24l-3 22 13 12v6H58v-6l13-12z" fill={FRONT} {...stroke} />
+      <path d="M80 70v26" stroke={DETAIL} strokeWidth="4" strokeLinecap="round" />
+      <rect x="72" y="38" width="16" height="4" rx="2" fill={DETAIL} />
+      <Badge cx={108} cy={86}>{plusAt(108, 86)}</Badge>
+    </>
+  ),
+  bookmark: (
+    <>
+      <path d="M58 30h44v66l-22-14-22 14z" fill={FRONT} {...stroke} />
+      <rect x="68" y="42" width="24" height="4" rx="2" fill={DETAIL} />
+      <rect x="68" y="52" width="16" height="4" rx="2" fill={DETAIL} />
+      <Badge cx={106} cy={88}>{checkAt(106, 88)}</Badge>
+    </>
+  ),
 } satisfies Record<string, ReactNode>;
 
 export type EmptyIllustrationName = keyof typeof SCENES;

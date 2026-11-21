@@ -52,7 +52,7 @@ function DirectRow({ conversation, active, onClick, onClose }: {
         aria-current={active ? 'page' : undefined}
         className={cn(
           'relative isolate flex w-full items-center gap-3 rounded-lg px-2 text-left focus-ring',
-          inCall ? 'h-auto min-h-11 py-1' : 'h-11',
+          inCall ? 'min-h-row-dm py-1' : 'min-h-row-dm',
           unread > 0 ? 'pr-10' : 'group-hover/dm:pr-10 group-focus-within/dm:pr-10',
           active ? 'cutout-active text-text-primary' : cn('cutout md:hover:cutout-subtle md:hover:bg-nav-hover', unread ? 'text-text-primary' : 'text-text-muted md:hover:text-text-primary'),
         )}

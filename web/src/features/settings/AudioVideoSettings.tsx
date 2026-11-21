@@ -69,7 +69,7 @@ export function AudioVideoSettings() {
 
   return (
     <SettingsSections>
-      <SettingsSection id="voice" title={t('catalog.sections.voice')}>
+      <SettingsSection id="voice" title={t('catalog.sections.voice')} description={t('av.deviceOnly')}>
         <div className="grid grid-cols-1 gap-x-6 gap-y-6 @[560px]:grid-cols-2">
           <DeviceSelect label={t('av.microphone')} devices={mic} icon={<MicrophoneIcon size={18} />} />
           <DeviceSelect label={t('av.speaker')} devices={speaker} icon={<HeadphonesIcon size={18} />} />

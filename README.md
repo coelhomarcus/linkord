@@ -19,7 +19,9 @@ Linkord is a self-hosted place to chat and call with friends. Talk in direct mes
 
 **Chat**
 - Direct messages and private servers with text channels, organized into categories.
-- Replies, reactions, edits, deletes, and message search.
+- Replies, reactions, edits, and deletes.
+- Message search in the header, as in Discord: filters for author (`de:`), channel (`em:`), content type (`tem:` image, video, link, file, audio, GIF, sticker, embed) and mentions (`menciona:`), plus dates, author type and pinned in the filters dialog; results beside the chat, by channel, sorted newest, oldest or by relevance, with recent searches kept per server.
+- Pinned messages per channel and DM (with their own role permission), and saved messages, private to each account, in the inbox.
 - Attachments, voice messages, and link cards: rich previews with galleries, YouTube and Twitch players (one playing at a time), and `||spoiler||` text and links.
 - A video player with keyboard shortcuts (Space/K, J/L, arrows, M, F, 0–9), playback speed, picture-in-picture, a frame preview when hovering the timeline, and one saved volume for every player; uploaded videos keep their shape before they load.
 - A media viewer that opens a message's pictures, link-card images, GIFs and videos as one set: zoom (wheel, pinch, double-click), pan and rotate, a thumbnail strip, download, open original, copy link or image, reply and jump to the message; swipe between items and back to close on phones.
@@ -51,7 +53,8 @@ Linkord is a self-hosted place to chat and call with friends. Talk in direct mes
 **Account**
 - Two-step login by email, sign-in alerts, and a list of active sessions you can end.
 - Username and password changes, account deletion, and a download of your data.
-- Themes, languages (Portuguese and English), device settings, and notification sounds.
+- Themes, density, text size and font, languages (Portuguese and English), device settings, and notification sounds.
+- Settings follow the account: the theme, density, font, language, clock format, which sounds play, the emoji skin tone, call view options, image compression, camera mirroring, the volume given to each person in a call and the folded channel categories are the same on every device, and change on the others as soon as you change them on one. What depends on the device stays on it: microphone, camera and speaker and their volumes, the input profile, the notification and soundboard volumes, text size, browser notifications, screen share quality, auto-away, panel sizes and recent searches.
 - Installable as a web app (PWA), with share-to-Linkord on Android; Settings → Baixar o app explains it beside the Windows app download.
 
 **Administration**

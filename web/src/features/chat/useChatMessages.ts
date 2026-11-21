@@ -415,6 +415,23 @@ export function useChatMessages(deps: ChatMessagesDeps) {
       setMessageActionErrors((prev) => new Map(prev).set(msgId, i18n.t(key, { message: err instanceof Error ? err.message : i18n.t('chat:errors.unknown') })));
     }
   }, [requestAction, dismissMessageActionError]);
+  /** Pins or saves a message. True once the server did it; a refusal stays
+   * visible on the row, like a failed delete. */
+  const markMessage = useCallback(async (msgId: number, action: { t: 'message-pin'; pinned: boolean } | { t: 'message-save'; saved: boolean }): Promise<boolean> => {
+    dismissMessageActionError(msgId);
+    try {
+      await requestAction({ ...action, msgId });
+      return true;
+    } catch (err) {
+      const key = action.t === 'message-pin'
+        ? (action.pinned ? 'chat:errors.pinFailed' : 'chat:errors.unpinFailed')
+        : (action.saved ? 'chat:errors.saveFailed' : 'chat:errors.unsaveFailed');
+      setMessageActionErrors((prev) => new Map(prev).set(msgId, i18n.t(key, { message: err instanceof Error ? err.message : i18n.t('chat:errors.unknown') })));
+      return false;
+    }
+  }, [requestAction, dismissMessageActionError]);
+  const pinChatMessage = useCallback((msgId: number, pinned: boolean) => markMessage(msgId, { t: 'message-pin', pinned }), [markMessage]);
+  const saveChatMessage = useCallback((msgId: number, saved: boolean) => markMessage(msgId, { t: 'message-save', saved }), [markMessage]);
   const removeChatAttachment = useCallback((msgId: number, attachmentId: string) => removeFromMessage(msgId, { t: 'chat-remove-attachment', attachmentId }), [removeFromMessage]);
   const suppressChatEmbed = useCallback((msgId: number, url: string) => removeFromMessage(msgId, { t: 'chat-suppress-embed', url }), [removeFromMessage]);
 
@@ -540,8 +557,9 @@ export function useChatMessages(deps: ChatMessagesDeps) {
     // The message itself is proof they stopped typing — don't wait for
     // their typing:false (or the local expiry timer) to catch up.
     if (m.message.id) clearTypingEntry(conversationId, m.message.id);
-    // a muted conversation, or one whose level leaves this message out, stays quiet: no sound, no notification
-    if (fromSomeoneElse && !amLookingAtIt && (alertsForRef.current?.(conversationId, mentioned) ?? true)) {
+    // a muted conversation, or one whose level leaves this message out, stays quiet: no sound, no notification.
+    // A pin notice too: the header's dot says it, as Discord does
+    if (fromSomeoneElse && !amLookingAtIt && m.message.kind !== 'pin_notice' && (alertsForRef.current?.(conversationId, mentioned) ?? true)) {
       if (shouldChime(conversationId, mentioned)) playSound(mentioned ? 'mention' : 'newMessage');
       notifyIncomingChatMessage({
         conversationId,
@@ -648,6 +666,7 @@ export function useChatMessages(deps: ChatMessagesDeps) {
     messagesByConversation, hasMoreByConversation, hasMoreAfterByConversation, loadingOlderByConversation, unreadByConversation, unreadStartByConversation, mentionsByConversation,
     clearUnread, markActiveSeen, markConversationRead, markServerRead, loadOlderMessages, pendingJumpTarget, clearPendingJumpTarget, cancelPendingJump, jumpToMessage,
     sendChatMessage, sendSticker, deleteChatMessage, editChatMessage, reactToChatMessage, removeChatAttachment, suppressChatEmbed,
+    pinChatMessage, saveChatMessage,
     onWelcome, onChatSendResult: outbox.onChatSendResult, queueMessageWithFiles,
     onChatActionResult: actionRequests.onChatActionResult,
     deletingMsgIds, messageActionErrors, dismissMessageActionError,

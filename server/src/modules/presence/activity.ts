@@ -34,6 +34,9 @@ const KEY = /^[a-z0-9][a-z0-9:._-]{0,79}$/;
 const LOCAL_ICON = /^[0-9a-f]{64}$/;
 // a start further back than this is a clock gone wrong, not a week-long session
 const MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
+// a report sent again (after a reconnect, a hidden key shown again) lands a little later than the first
+// one: a start this close to the one already shown is the same start, not a new session
+const SAME_START_MS = 5_000;
 
 const settings = new Map<string, ActivitySettings>();
 
@@ -72,16 +75,30 @@ function iconPath(value: unknown): string | null {
   return null;
 }
 
-/** An `activity-set` report, or null for "nothing" (and for anything malformed). */
+const finite = (value: unknown): value is number => typeof value === 'number' && Number.isFinite(value);
+
+/**
+ * An `activity-set` report, or null for "nothing" (and for anything malformed). The start is the
+ * reporting computer's clock, which may be hours off (a dual-boot PC keeping local time in the
+ * hardware clock is off by the time zone). A report with `sentAt` (protocol 27), that same clock when
+ * it was sent, is read as a duration and placed on this server's clock; an older one is taken as is.
+ */
 export function sanitizeActivityReport(raw: unknown, now = Date.now()): Activity | null {
   if (!raw || typeof raw !== 'object') return null;
-  const report = raw as { key?: unknown; kind?: unknown; name?: unknown; icon?: unknown; startedAt?: unknown };
+  const report = raw as { key?: unknown; kind?: unknown; name?: unknown; icon?: unknown; startedAt?: unknown; sentAt?: unknown };
   if (!isActivityKey(report.key) || (report.kind !== 'playing' && report.kind !== 'using')) return null;
   const name = sanitizeName(report.name);
   if (!name) return null;
-  const reported = typeof report.startedAt === 'number' && Number.isFinite(report.startedAt) ? report.startedAt : now;
+  let reported = finite(report.startedAt) ? report.startedAt : now;
+  if (finite(report.startedAt) && finite(report.sentAt)) reported = now - (report.sentAt - report.startedAt);
   const startedAt = reported > now || reported < now - MAX_AGE_MS ? now : reported;
   return { key: report.key, kind: report.kind, name, icon: iconPath(report.icon), startedAt: new Date(startedAt).toISOString() };
+}
+
+/** The new report, keeping the start already shown when it is the same activity reported again. */
+export function keepActivityStart(previous: Activity | null | undefined, next: Activity | null): Activity | null {
+  if (!previous || !next || previous.key !== next.key || previous.kind !== next.kind) return next;
+  return Math.abs(Date.parse(previous.startedAt) - Date.parse(next.startedAt)) < SAME_START_MS ? { ...next, startedAt: previous.startedAt } : next;
 }
 
 /** An `activity-settings-set` body over the current settings, or null when it is not one. */

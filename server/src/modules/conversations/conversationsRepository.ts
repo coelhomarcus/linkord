@@ -371,6 +371,16 @@ export async function conversationDisplayName(conversationId: string, viewerUser
   return other ? resolveDisplayName(other.displayName, other.username) : 'Conversa direta';
 }
 
+/** The channels of one server the account can see; empty when it is not a
+ * member (or the server is gone): what a search inside a server covers. */
+export async function visibleChannelIdsInServer(serverId: string, userId: string): Promise<string[]> {
+  const snapshot = await loadServerSnapshot(serverId);
+  if (!snapshot || !snapshot.members.has(userId)) return [];
+  return snapshot.channels
+    .filter((channel) => hasPermission(channelPermissionsIn(snapshot, channel.id, userId), PERMISSIONS.VIEW_CHANNEL))
+    .map((channel) => channel.id);
+}
+
 /** Every conversation the account can read: its DMs and each channel it can
  * see in its servers — what a search across everything covers. */
 export async function visibleConversationIds(userId: string): Promise<string[]> {

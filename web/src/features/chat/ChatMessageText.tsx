@@ -87,14 +87,14 @@ function Mention({ name, ctx }: { name: string; ctx: RenderContext }) {
 function renderInline(nodes: Inline[], ctx: RenderContext): ReactNode[] {
   return nodes.map((node, index) => {
     switch (node.type) {
-      case 'text': return <EmojiText key={index} text={node.text} emojiClassName={ctx.jumbo ? undefined : 'size-[1.375em] align-[-0.3em]'} />;
+      case 'text': return <EmojiText key={index} text={node.text} emojiClassName={ctx.jumbo ? undefined : 'size-[1.375em] align-[-0.3em]'} details />;
       case 'code': return <code key={index} className="rounded-sm bg-fill-code px-1 py-0.5 font-mono text-[0.875em]">{node.text}</code>;
       case 'link': return <a key={index} href={node.url} target="_blank" rel="noopener noreferrer" className="break-all text-link hover:underline">{node.url}</a>;
       case 'mention': return GROUP_MENTION_NAMES.includes(node.name.toLowerCase())
         ? <GroupMention key={index} name={node.name} ctx={ctx} />
         : <Mention key={index} name={node.name} ctx={ctx} />;
       case 'roleMention': return <RoleMention key={index} roleId={node.roleId} ctx={ctx} />;
-      case 'customEmoji': return <CustomEmojiImage key={index} id={node.id} name={node.name} size={ctx.jumbo ? 'jumbo' : 'inline'} />;
+      case 'customEmoji': return <CustomEmojiImage key={index} id={node.id} name={node.name} size={ctx.jumbo ? 'jumbo' : 'inline'} details />;
       case 'bold': return <strong key={index} className="font-semibold text-text-primary">{renderInline(node.children, ctx)}</strong>;
       case 'italic': return <em key={index}>{renderInline(node.children, ctx)}</em>;
       case 'strike': return <s key={index}>{renderInline(node.children, ctx)}</s>;

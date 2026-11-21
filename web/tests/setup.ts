@@ -3,6 +3,7 @@ import { afterEach } from 'vitest';
 import { cleanup } from '@testing-library/react';
 import { initI18n } from '@/shared/i18n/init';
 import { clearResourceCaches } from '@/shared/lib/resourceCache';
+import { forgetAccountPreferences } from '@/shared/preferences/accountPreferences';
 
 // jsdom reports en-US; the suite asserts the Portuguese UI text.
 initI18n('pt-BR');
@@ -10,6 +11,8 @@ initI18n('pt-BR');
 afterEach(() => {
   // profiles and relationships are cached per module, and would leak into the next test
   clearResourceCaches();
+  // the account sync is per module too: nothing a test queued may be sent in the next one
+  forgetAccountPreferences();
   if (typeof document === 'undefined') return;
   cleanup();
   // the live region lives on <body>, outside what cleanup unmounts, and outlasts a test

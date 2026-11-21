@@ -16,6 +16,7 @@ import { buildTimelineItems } from './messageTimelineItems';
 import type { OutboxEntry } from './useMessageOutbox';
 import { readingPositionFor, saveReadingPosition } from './readingPositions';
 import { estimateRowHeight, rememberedRowHeight, rememberRowHeight } from './rowHeights';
+import { appearanceLayoutKey, useAppearance } from '@/features/settings/appearancePreferences';
 import { useChatSurfaceWidth } from '@/shared/lib/chatSurfaceWidth';
 
 const EMPTY_MESSAGES: ChatMessage[] = [];
@@ -322,6 +323,16 @@ export function MessageTimeline({ surfaceId = 'main', conversationId, onReply, o
   const itemsRef = useRef(items);
   const virtualizerRef = useRef(virtualizer);
   useLayoutEffect(() => { itemsRef.current = items; virtualizerRef.current = virtualizer; });
+
+  // Rows measured at another density or text size (settings open over this
+  // chat) would keep those heights in the list until each is seen again.
+  const layoutKey = appearanceLayoutKey(useAppearance());
+  const measuredLayoutRef = useRef(layoutKey);
+  useEffect(() => {
+    if (measuredLayoutRef.current === layoutKey) return;
+    measuredLayoutRef.current = layoutKey;
+    virtualizerRef.current.measure();
+  }, [layoutKey]);
   const hasItems = items.length > 0;
   useEffect(() => {
     if (!hasItems) return;

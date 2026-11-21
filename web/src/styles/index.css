@@ -116,22 +116,26 @@
   --color-avatar-teal: oklch(55% 0.094 190);
   --color-avatar-blue: oklch(55% 0.138 245);
 
+  /* Every step times --text-scale, the reader's text size (Appearance
+     settings; data-text-size below), so text grows while spacing stays put. */
   /* badges and keyboard hints only: below this nothing is comfortably readable */
-  --text-micro: 0.6875rem;
+  --text-micro: calc(0.6875rem * var(--text-scale));
   --text-micro--line-height: 1.2;
-  --text-caption: 0.75rem;
+  --text-caption: calc(0.75rem * var(--text-scale));
   --text-caption--line-height: 1.4;
-  --text-label: 0.875rem;
+  --text-label: calc(0.875rem * var(--text-scale));
   --text-label--line-height: 1.45;
-  --text-body: 1rem;
+  --text-body: calc(1rem * var(--text-scale));
   --text-body--line-height: 1.5;
-  --text-title: 1.125rem;
+  --text-title: calc(1.125rem * var(--text-scale));
   --text-title--line-height: 1.35;
   /* page, panel and dialog titles; 1.2 keeps the line at 24px, on the 4px grid */
-  --text-heading: 1.25rem;
+  --text-heading: calc(1.25rem * var(--text-scale));
   --text-heading--line-height: 1.2;
-  --text-display: 1.5rem;
+  --text-display: calc(1.5rem * var(--text-scale));
   --text-display--line-height: 1.25;
+  /* message text: 22px under 16px text, a ratio so lines open up with the text size */
+  --leading-message: 1.375;
 
   /* the one gap between the shell's surfaces (the content panel's margins, the conversation list's inner edge) so they stay equal */
   --spacing-shell: 0.5rem;
@@ -143,6 +147,16 @@
   --spacing-titlebar: 2rem;
   /* the conversation list's column */
   --spacing-sidebar: 18.75rem;
+  /* Density (Appearance settings; data-density below). These are the
+     default's; compact and comfortable override them. */
+  /* above the first message of a group */
+  --spacing-message-group: 17px;
+  /* above and below each message */
+  --spacing-message-row-y: 0.125rem;
+  /* a DM in the conversation list, a channel, a server member */
+  --spacing-row-dm: 2.75rem;
+  --spacing-row-channel: 2rem;
+  --spacing-row-member: 42px;
 
   --font-sans: "Figtree Variable", system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
 
@@ -251,6 +265,16 @@
    place. Exits are
    shorter than entrances: nothing waits on them, and they are hidden from
    input as they start (Base UI's popups; the floating save bar is inert). */
+
+/* Set by applyColorTheme for the frame the theme changes in: each element's
+   own color transition would otherwise run at its own pace, and the old and
+   new themes show side by side for a moment. */
+.theme-switching,
+.theme-switching *,
+.theme-switching *::before,
+.theme-switching *::after {
+  transition: none !important;
+}
 
 /* The desktop app's own title bar (app/layout/DesktopFrame.tsx): Electron moves
    the window when a drag starts on an app-drag area, and swallows its clicks,
@@ -369,6 +393,33 @@
   --safe-bottom: env(safe-area-inset-bottom, 0px);
 }
 
+/* Appearance settings (features/settings/appearancePreferences.ts, applied
+   before the bundle by the boot script in index.html). Default values set no
+   attribute. The factors match TEXT_SCALE there. */
+:root { --text-scale: 1; }
+:root[data-text-size="small"] { --text-scale: 0.875; }
+:root[data-text-size="large"] { --text-scale: 1.125; }
+:root[data-text-size="larger"] { --text-scale: 1.25; }
+
+:root[data-font="system"] {
+  --font-sans: system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+}
+
+:root[data-density="compact"] {
+  --spacing-message-group: 0.5rem;
+  --spacing-message-row-y: 0px;
+  --spacing-row-dm: 2.25rem;
+  --spacing-row-channel: 1.75rem;
+  --spacing-row-member: 2.25rem;
+}
+:root[data-density="comfortable"] {
+  --spacing-message-group: 1.5rem;
+  --spacing-message-row-y: 0.25rem;
+  --spacing-row-dm: 3.25rem;
+  --spacing-row-channel: 2.375rem;
+  --spacing-row-member: 3rem;
+}
+
 html, body {
   margin: 0;
   padding: 0;
@@ -485,4 +536,10 @@ button:not(:disabled) {
   input, textarea, [contenteditable="true"] {
     user-select: text;
   }
+}
+
+/* Where a search result matches the searched words (features/search/useTextHighlight.ts). */
+::highlight(search-match) {
+  background-color: color-mix(in oklab, var(--color-yellow) 30%, transparent);
+  color: var(--color-text-primary);
 }
