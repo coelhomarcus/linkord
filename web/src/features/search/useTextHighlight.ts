@@ -24,7 +24,11 @@ export function useTextHighlight(ref: RefObject<HTMLElement | null>, words: stri
     if (!root || !terms.length) return;
     const owner = {};
     const ranges: Range[] = [];
-    const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+    // a control's label is not what was said (a code block's hidden copy button),
+    // and a closed spoiler must not show where its words are
+    const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
+      acceptNode: (node) => (node.parentElement?.closest('button, [role="button"]') ? NodeFilter.FILTER_REJECT : NodeFilter.FILTER_ACCEPT),
+    });
     for (let node = walker.nextNode(); node; node = walker.nextNode()) {
       const text = node.textContent ?? '';
       const folded = fold(text);
