@@ -3,6 +3,7 @@ import { act, screen } from '@testing-library/react';
 import { initialRoomState } from '@/state/roomReducer';
 import { renderWithRoom } from '@tests/fixtures/roomContextFixture';
 import { UserActivityCard, UserActivityInline } from '@/features/activity/ActivityLine';
+import { syncServerClock } from '@/features/activity/serverClock';
 import type { Activity, VisiblePresence } from '@/shared/types/protocol';
 
 const activity: Activity = { key: 'minecraft', kind: 'playing', name: 'Minecraft', icon: `/api/activity/icons/${'a'.repeat(64)}.webp`, startedAt: new Date(Date.now() - 25 * 60_000).toISOString() };
@@ -16,7 +17,10 @@ function renderFor(ui: React.ReactElement, presence: Record<string, VisiblePrese
 }
 
 describe('activity display', () => {
-  afterEach(() => { vi.useRealTimers(); });
+  afterEach(() => {
+    syncServerClock(Date.now());
+    vi.useRealTimers();
+  });
 
   it('shows what someone online is playing, with its icon and for how long', () => {
     const { container } = renderFor(<UserActivityCard userId="ana" />, { ana: { status: 'online', customStatus: null, activity } }, ['ana']);
@@ -34,6 +38,16 @@ describe('activity display', () => {
     expect(screen.getByRole('timer')).toHaveTextContent('41:27');
     act(() => { vi.advanceTimersByTime(1000); });
     expect(screen.getByRole('timer')).toHaveTextContent('41:28');
+  });
+
+  it('counts on the server\'s clock when this device\'s clock is hours off', () => {
+    vi.useFakeTimers({ now: new Date('2026-11-16T12:00:00Z') });
+    const justStarted = { ...activity, startedAt: new Date(Date.now() - 42_000).toISOString() };
+    // this device reads 15:00 while the server reads 12:00, as a dual-boot PC three hours off does
+    vi.setSystemTime(new Date('2026-11-16T15:00:00Z'));
+    syncServerClock(new Date('2026-11-16T12:00:00Z').getTime());
+    renderFor(<UserActivityCard userId="ana" />, { ana: { status: 'online', customStatus: null, activity: justStarted } }, ['ana']);
+    expect(screen.getByRole('timer')).toHaveTextContent('0:42');
   });
 
   it('reads as one line under a name', () => {

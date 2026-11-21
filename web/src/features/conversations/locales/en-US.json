@@ -31,9 +31,7 @@
   "panel": {
     "back": "Back to conversations",
     "viewProfile": "View profile",
-    "media": "Media and links",
     "search": "Search messages",
-    "searchIn": "Search {{name}}",
     "blocked": "You can't call while this person is blocked.",
     "needFriends": "You need to be friends to make calls.",
     "joinCall": "Join the call",
@@ -57,48 +55,6 @@
     "noneToInvite": "You have no friends to invite.",
     "loadingMore": "Loading…",
     "loadMore": "Load more"
-  },
-  "media": {
-    "title": "Media and links",
-    "tabs": {
-      "uploads": "All",
-      "images": "Images",
-      "gifs": "GIFs",
-      "videos": "Videos",
-      "audios": "Audio",
-      "documents": "Documents",
-      "embeds": "Links"
-    },
-    "empty": {
-      "uploads": "No files sent yet.",
-      "images": "No images sent yet.",
-      "gifs": "No GIFs sent yet.",
-      "videos": "No videos sent yet.",
-      "audios": "No audio sent yet.",
-      "documents": "No documents sent yet.",
-      "embeds": "No embeddable links shared yet."
-    },
-    "list": {
-      "uploads": "Files sent",
-      "images": "Images sent",
-      "gifs": "GIFs sent",
-      "videos": "Videos sent",
-      "audios": "Audio sent",
-      "documents": "Documents sent",
-      "embeds": "Links shared"
-    },
-    "noResults": "Nothing found for that search.",
-    "searchLinks": "Search links",
-    "searchFiles": "Search files",
-    "today": "Today",
-    "yesterday": "Yesterday",
-    "thisWeek": "This week",
-    "loadFailed": "Couldn't load.",
-    "jumpToMessage": "Go to message",
-    "open": "Open {{name}}",
-    "download": "Download {{name}}",
-    "retry": "Try again",
-    "loading": "Loading…"
   },
   "newDirect": {
     "title": "Select a Friend",

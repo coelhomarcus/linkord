@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import type { ChatAttachment, ChatMessage } from '@/shared/types/protocol';
 import type { TimelineItem } from '@/features/chat/messageTimelineItems';
 import { __resetRowHeightsForTests, estimateRowHeight, rememberedRowHeight, rememberRowHeight } from '@/features/chat/rowHeights';
+import { setDensity, setTextSize } from '@/features/settings/appearancePreferences';
 
 // the heights below were measured in the app, in a surface 651 px wide
 const WIDTH = 651;
@@ -12,7 +13,11 @@ const message = (over: Partial<ChatMessage> = {}): ChatMessage => ({
 const row = (over: Partial<ChatMessage> = {}, showHeader = true): TimelineItem => ({ type: 'message', key: String(over.msgId ?? 1), message: message(over), showHeader });
 const attachment = (over: Partial<ChatAttachment>): ChatAttachment => ({ id: 'a1', name: 'file', mime: 'image/png', size: 1, ...over }) as ChatAttachment;
 
-afterEach(() => { __resetRowHeightsForTests(); });
+afterEach(() => {
+  __resetRowHeightsForTests();
+  setDensity('default');
+  setTextSize('default');
+});
 
 describe('estimateRowHeight', () => {
   it('matches the measured rows of plain text, with and without a header', () => {
@@ -64,5 +69,35 @@ describe('remembered row heights', () => {
     expect(rememberedRowHeight('main', row({ text: 'hello, edited', editedAt: 5 }), WIDTH)).toBeUndefined();
     expect(rememberedRowHeight('main', row({ text: 'hello', reactions: { '👍': ['u2'] } }), WIDTH)).toBeUndefined();
     expect(rememberedRowHeight('main', row({ text: 'hello' }, false), WIDTH)).toBeUndefined();
+  });
+
+  it('forgets every measured row once the density or the text size changes', () => {
+    const item = row({ text: 'hello' });
+    rememberRowHeight('main', item, WIDTH, 90);
+    setDensity('compact');
+    expect(rememberedRowHeight('main', item, WIDTH)).toBeUndefined();
+    setDensity('default');
+    expect(rememberedRowHeight('main', item, WIDTH)).toBe(90);
+    setTextSize('large');
+    expect(rememberedRowHeight('main', item, WIDTH)).toBeUndefined();
+  });
+});
+
+describe('estimateRowHeight with another appearance', () => {
+  it('follows the density: the gap above a group and the padding of each row', () => {
+    setDensity('compact');
+    expect(estimateRowHeight(row({ text: 'short line' }), WIDTH)).toBe(8 + 24 + 22);
+    expect(estimateRowHeight(row({ text: 'short line' }, false), WIDTH)).toBe(22);
+    setDensity('comfortable');
+    expect(estimateRowHeight(row({ text: 'short line' }), WIDTH)).toBe(24 + 8 + 24 + 22);
+  });
+
+  it('scales the lines with the text size, and wraps sooner', () => {
+    // two lines at the default size
+    const text = 'word '.repeat(25);
+    expect(estimateRowHeight(row({ text }, false), WIDTH)).toBe(4 + 22 * 2);
+    setTextSize('larger');
+    expect(estimateRowHeight(row({ text: 'short line' }, false), WIDTH)).toBe(Math.round(4 + 27.5));
+    expect(estimateRowHeight(row({ text }, false), WIDTH)).toBe(Math.round(4 + 27.5 * 3));
   });
 });

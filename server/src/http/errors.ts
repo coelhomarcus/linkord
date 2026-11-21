@@ -166,6 +166,9 @@ export const ERROR_REGISTRY = {
   message_deleted: { statuses: [], channel: 'socket' },
   attachments_unavailable: { statuses: [], channel: 'socket' },
   sticker_unavailable: { statuses: [], channel: 'socket' },
+  // a conversation at its pin limit, an account at its saved-messages limit (protocol 25)
+  pins_full: { statuses: [], channel: 'socket' },
+  saved_full: { statuses: [], channel: 'socket' },
 } as const satisfies Record<string, ErrorSpec>;
 
 export type ErrorCode = keyof typeof ERROR_REGISTRY;

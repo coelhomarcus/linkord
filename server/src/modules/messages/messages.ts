@@ -4,7 +4,7 @@ import { eq, and, desc, asc, lt, gt, gte, inArray, sql } from 'drizzle-orm';
 import { config } from '../../config/env.js';
 import { db } from '../../db/client.js';
 import { conversations, messages, users, webhooks, type Message, type Attachment } from '../../db/schema.js';
-import { MESSAGE_SEARCH_CONFIGS, searchConfig } from '../../db/textSearch.js';
+import { MESSAGE_SEARCH_CONFIGS, messageSearchQueries, searchConfig } from '../../db/textSearch.js';
 import { participants, send, sendSocketError } from '../presence/participants.js';
 import { isSingleEmoji } from './emoji.js';
 import {
@@ -92,7 +92,7 @@ async function settleMentions(userId: string, conversationId: string, upToMessag
   if (await markMentionsRead(userId, conversationId, upToMessageId)) notifySocialChanged([userId]);
 }
 
-interface ChatMessagePayload {
+export interface ChatMessagePayload {
   msgId: number;
   conversationId: string;
   id: string | null;
@@ -108,7 +108,7 @@ interface ChatMessagePayload {
   // pending copy with the stored message
   clientMessageId?: string;
   // only set for structured messages — absent means a plain text message
-  kind?: 'server_invite' | 'call_invite' | 'dm_call';
+  kind?: 'server_invite' | 'call_invite' | 'dm_call' | 'pin_notice';
   /** Whole seconds of talk time. Null when a dm_call was never answered. */
   callDurationSeconds?: number | null;
   // the invitation's CURRENT state, resolved at read time so a card is right
@@ -133,6 +133,10 @@ interface ChatMessagePayload {
   // its author could not notify
   mentionEveryone?: true;
   mentionRoleIds?: string[];
+  // pinned to its conversation (protocol 25)
+  pinned?: true;
+  // what a `pin_notice` announces; null once that message was deleted
+  pinnedMessageId?: number | null;
 }
 
 export interface MessageWithAuthor {
@@ -156,6 +160,9 @@ export interface MessageWithAuthor {
   stickerId: string | null;
   mentionEveryone: boolean;
   mentionRoleIds: string[] | null;
+  // optional so a row built by hand (tests, older callers) reads as unpinned
+  pinnedAt?: Date | null;
+  pinnedMessageId?: number | null;
   // null unless the bot's webhook posted it; '' is a bot without a title/photo
   botName: string | null;
   botAvatar: string | null;
@@ -165,7 +172,7 @@ function sanitizeChatText(text: unknown): string {
   return String(text == null ? '' : text).trim().slice(0, config.MAX_CHAT_LEN);
 }
 
-const messageWithAuthorSelect = {
+export const messageWithAuthorSelect = {
   id: messages.id,
   conversationId: messages.conversationId,
   authorId: messages.authorId,
@@ -186,6 +193,8 @@ const messageWithAuthorSelect = {
   stickerId: messages.stickerId,
   mentionEveryone: messages.mentionEveryone,
   mentionRoleIds: messages.mentionRoleIds,
+  pinnedAt: messages.pinnedAt,
+  pinnedMessageId: messages.pinnedMessageId,
   // read live from the webhook, so a rename shows on its whole history
   botName: sql<string | null>`case when ${messages.webhookId} is null then null else coalesce((select ${webhooks.name} from ${webhooks} where ${webhooks.id} = ${messages.webhookId}), '') end`,
   botAvatar: sql<string | null>`case when ${messages.webhookId} is null then null else (select ${webhooks.avatar} from ${webhooks} where ${webhooks.id} = ${messages.webhookId}) end`,
@@ -193,7 +202,7 @@ const messageWithAuthorSelect = {
 
 /** Who wrote a message, as the clients show it: the author's own participant
  * when they are the one acting, their stored profile when someone else is. */
-interface AuthorIdentity { name: string | null; displayName: string | null; avatar: string | null; bot?: { name: string; avatar: string } }
+export interface AuthorIdentity { name: string | null; displayName: string | null; avatar: string | null; bot?: { name: string; avatar: string } }
 
 function rowWithParticipant(row: Message, participant: AuthorIdentity): MessageWithAuthor {
   return {
@@ -217,6 +226,8 @@ function rowWithParticipant(row: Message, participant: AuthorIdentity): MessageW
     stickerId: row.stickerId,
     mentionEveryone: row.mentionEveryone,
     mentionRoleIds: row.mentionRoleIds,
+    pinnedAt: row.pinnedAt,
+    pinnedMessageId: row.pinnedMessageId,
     botName: participant.bot?.name ?? null,
     botAvatar: participant.bot?.avatar ?? null,
   };
@@ -254,6 +265,7 @@ export function rowToMessage(row: MessageWithAuthor, attachments?: Attachment[],
   if (row.stickerId) out.sticker = sticker ?? null;
   if (row.mentionEveryone) out.mentionEveryone = true;
   if (row.mentionRoleIds?.length) out.mentionRoleIds = row.mentionRoleIds;
+  if (row.pinnedAt) out.pinned = true;
   const embeds = storedEmbedsFor(row.text, row.embeds, row.suppressedEmbeds);
   if (embeds.length) out.embeds = embeds.map(withProxiedImages);
   const suppressed = suppressedLinksFor(row.text, row.suppressedEmbeds);
@@ -269,6 +281,10 @@ export function rowToMessage(row: MessageWithAuthor, attachments?: Attachment[],
   if (row.kind === 'dm_call') {
     out.kind = 'dm_call';
     out.callDurationSeconds = row.callDurationSeconds;
+  }
+  if (row.kind === 'pin_notice') {
+    out.kind = 'pin_notice';
+    out.pinnedMessageId = row.pinnedMessageId ?? null;
   }
   const replyTo = normalizeReplyRef(row.replyTo);
   if (replyTo) out.replyTo = replyTo;
@@ -287,7 +303,7 @@ export function rowToMessage(row: MessageWithAuthor, attachments?: Attachment[],
 /** Serializes a page of rows with everything that lives outside the messages
  * table, each fetched ONCE for the whole page (attachments, reactions and
  * invitation cards) — never a query per message. */
-async function serializeRows(rows: MessageWithAuthor[]): Promise<ChatMessagePayload[]> {
+export async function serializeRows(rows: MessageWithAuthor[]): Promise<ChatMessagePayload[]> {
   const messageIds = rows.map((r) => r.id);
   const cardIds = rows.flatMap((r) => (r.kind === 'server_invite' && r.serverInvitationId ? [r.serverInvitationId] : []));
   const callChannelIds = rows.flatMap((r) => (r.kind === 'call_invite' && r.callConversationId ? [r.callConversationId] : []));
@@ -536,6 +552,8 @@ const HEADLINE_OPTIONS = 'StartSel=\uE000, StopSel=\uE001, MaxFragments=1, MaxWo
  * indexed side; websearch_to_tsquery never throws on malformed input
  * (quoted phrases / -exclude / or all work, garbage input just matches
  * nothing), so it's safe to feed raw user text directly into it. */
+// Kept for tabs on a build before protocol 26, whose search dialog still sends
+// it; the header search is messageSearch.ts. Goes when the minimum is raised.
 async function handleMessageSearch(socket: AppSocket, msg: { query?: string; conversationId?: string }): Promise<void> {
   const p = participants.get(socket.participantId ?? '');
   if (!p || p.socket !== socket) return;
@@ -548,10 +566,7 @@ async function handleMessageSearch(socket: AppSocket, msg: { query?: string; con
   if (conversationId && !(await conversationExistsForUser(conversationId, p.userId))) return;
   const searchable = conversationId ? [conversationId] : await visibleConversationIds(p.userId);
 
-  // The query is parsed once per configuration the vector holds, and a message
-  // matches when any of them does (the exact word, or its stem in either language).
-  const perConfig = MESSAGE_SEARCH_CONFIGS.map((name) => ({ name, tsQuery: sql`websearch_to_tsquery(${searchConfig(name)}, ${query})` }));
-  const tsQuery = sql`(${sql.join(perConfig.map((c) => c.tsQuery), sql` || `)})`;
+  const { perConfig, tsQuery } = messageSearchQueries(query);
   const rank = sql`ts_rank(${messages.searchVector}, ${tsQuery})`;
   // ts_headline highlights only the words its own configuration maps onto the
   // query, so the snippet is drawn by the first configuration that matched
@@ -755,14 +770,14 @@ export async function postBotMessage(input: { conversationId: string; webhookId:
 /** Only the original author edits — not even admin (Discord-like; admin
  * can only delete, see handleChatDelete). Compared by userId, not
  * connection id — stays "yours" after reconnecting/reloading. */
-type ActionFailure = { code: ErrorCode; message: string };
+export type ActionFailure = { code: ErrorCode; message: string };
 
 const isRequestId = (value: unknown): value is string => typeof value === 'string' && value.length > 0 && value.length <= 64;
 
 /** Edit and delete answer a client that sent a requestId (protocol 4) with
  * chat-action-result, so it can keep the editor open on failure instead of
  * assuming success. Without one they stay silent, as before. */
-function answerAction(socket: AppSocket, msg: { requestId?: unknown }, failure: ActionFailure | null): void {
+export function answerAction(socket: AppSocket, msg: { requestId?: unknown }, failure: ActionFailure | null): void {
   if (!isRequestId(msg.requestId)) return;
   send(socket, { t: 'chat-action-result', requestId: msg.requestId, ...(failure ? { error: failure } : {}) });
 }
@@ -811,7 +826,7 @@ async function editMessage(p: Participant, msg: { msgId?: unknown; text?: string
  * the client replaces the message with what arrives in 'chat-edited' (see
  * RoomProvider.tsx), so leaving out its attachments or reactions made them
  * disappear for everyone. */
-async function broadcastChanged(row: Message, author: AuthorIdentity): Promise<void> {
+export async function broadcastChanged(row: Message, author: AuthorIdentity): Promise<void> {
   const [attachment, reactionsByEmoji, stickerCards] = await Promise.all([
     attachments.getByMessageIds([row.id]).then((m) => m.get(row.id)),
     reactions.getByMessageIds([row.id]).then((m) => m.get(row.id)),
@@ -839,7 +854,7 @@ async function removableTextMessage(p: Participant, rawId: unknown, what: string
 }
 
 /** The identity to show on a message someone else changed. */
-async function authorIdentityOf(row: Message): Promise<AuthorIdentity> {
+export async function authorIdentityOf(row: Message): Promise<AuthorIdentity> {
   const authorId = row.authorId;
   if (row.webhookId) {
     const [bot] = await db.select({ name: webhooks.name, avatar: webhooks.avatar }).from(webhooks).where(eq(webhooks.id, row.webhookId)).limit(1);

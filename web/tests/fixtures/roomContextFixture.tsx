@@ -1,4 +1,5 @@
 import type { ReactElement } from 'react';
+import { EMPTY_SAVED } from '@/features/saved/useSavedMessages';
 import { render } from '@testing-library/react';
 import type { RenderResult } from '@testing-library/react';
 import { Room } from 'livekit-client';
@@ -139,6 +140,16 @@ export function createFakeRoomContextValue(overrides: Partial<RoomContextValue> 
     editChatMessage: asyncNoop,
     removeChatAttachment: asyncNoop,
     suppressChatEmbed: asyncNoop,
+    pinChatMessage: async () => true,
+    saveChatMessage: async () => true,
+    unseenPins: new Set(),
+    pinsByConversation: new Map(),
+    loadPins: noop,
+    ackPins: noop,
+    savedMessageIds: new Set(),
+    savedList: EMPTY_SAVED,
+    loadSaved: noop,
+    hideSaved: () => noop,
     deletingMsgIds: new Set(),
     messageActionErrors: new Map(),
     dismissMessageActionError: noop,
@@ -155,11 +166,11 @@ export function createFakeRoomContextValue(overrides: Partial<RoomContextValue> 
     pendingJumpTarget: null,
     clearPendingJumpTarget: noop,
     jumpToMessage: noop,
-    searchResults: [],
-    searchLoading: false,
-    searchError: null,
-    clearSearchError: noop,
-    searchMessages: noop,
+    messageSearch: null,
+    runMessageSearch: noop,
+    setMessageSearchSort: noop,
+    setMessageSearchPage: noop,
+    closeMessageSearch: noop,
     maxAttachmentBytes: DEFAULT_MAX_ATTACHMENT_BYTES,
   };
   return { ...base, ...overrides };

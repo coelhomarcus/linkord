@@ -6,7 +6,7 @@ import { cn } from '@/shared/lib/utils';
 import type { Activity } from '@/shared/types/protocol';
 import { useUserActivity } from './activityDisplay';
 import { formatActivityTimer } from './activityTime';
-import { useNow } from './useNow';
+import { useServerNow } from './serverClock';
 
 type ActivityKind = Activity['kind'];
 
@@ -38,7 +38,7 @@ export function KindGlyph({ kind, size }: { kind: ActivityKind; size: number }) 
 /** "🎮 1:19:35" in green, ticking every second while it shows. */
 export function ActivityTimer({ activity, className }: { activity: Pick<Activity, 'kind' | 'startedAt'>; className?: string }) {
   const { t } = useTranslation('activity');
-  const now = useNow(1000);
+  const now = useServerNow(1000);
   const time = formatActivityTimer(now - Date.parse(activity.startedAt));
   return (
     <span role="timer" aria-label={t(`timer.${activity.kind}`, { time })} className={cn('flex items-center gap-1 font-mono text-caption font-semibold tabular-nums text-green', className)}>

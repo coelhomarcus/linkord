@@ -6,7 +6,7 @@ import { ConfirmDialog } from '@/shared/ConfirmDialog';
 import { useHasRoom, useRoom, useRoomState } from '@/state/RoomContext';
 import { MediaViewer } from '@/features/media/viewer/MediaViewer';
 import type { ViewerAction } from '@/features/media/viewer/ViewerActions';
-import type { ViewerContext, ViewerItem } from '@/features/media/viewer/viewerItem';
+import type { ViewerItem } from '@/features/media/viewer/viewerItem';
 import { messagePermissions } from './messageActions';
 import { useMessageDeleteConfirm } from './useMessageDeleteConfirm';
 import { MediaViewerContext } from './useMediaViewer';
@@ -33,13 +33,11 @@ export function MediaViewerProvider({ children }: { children: ReactNode }) {
 interface MessageMediaViewerProps {
   state: MediaViewerState | null;
   onChange: (state: MediaViewerState | null) => void;
-  /** instead of the room's own jump (the media panel closes itself first) */
-  onJumpToMessage?: (context: ViewerContext) => void;
 }
 
 /** The viewer with the actions on the message the shown item came from, when it has one and the
  * room is there to act on it. */
-export function MessageMediaViewer({ state, onChange, onJumpToMessage }: MessageMediaViewerProps) {
+function MessageMediaViewer({ state, onChange }: MessageMediaViewerProps) {
   const hasRoom = useHasRoom();
   const viewer = (extraActions: ViewerAction[], dialogs: ReactNode) => (
     <MediaViewer
@@ -56,16 +54,15 @@ export function MessageMediaViewer({ state, onChange, onJumpToMessage }: Message
   // the same tree whether or not the item has a message, so moving between them never remounts the viewer
   if (!hasRoom) return viewer([], null);
   return (
-    <MessageActions item={state ? state.items[state.index] : undefined} close={() => onChange(null)} onJumpToMessage={onJumpToMessage}>
+    <MessageActions item={state ? state.items[state.index] : undefined} close={() => onChange(null)}>
       {viewer}
     </MessageActions>
   );
 }
 
-function MessageActions({ item, close, onJumpToMessage, children }: {
+function MessageActions({ item, close, children }: {
   item: ViewerItem | undefined;
   close: () => void;
-  onJumpToMessage?: (context: ViewerContext) => void;
   children: (actions: ViewerAction[], dialogs: ReactNode) => ReactNode;
 }) {
   const { t } = useTranslation('media');
@@ -90,8 +87,7 @@ function MessageActions({ item, close, onJumpToMessage, children }: {
       icon: ChatTextIcon,
       onSelect: () => {
         close();
-        if (onJumpToMessage) onJumpToMessage(context);
-        else jumpToMessage(context.conversationId, context.msgId);
+        jumpToMessage(context.conversationId, context.msgId);
       },
     });
   }

@@ -17,8 +17,7 @@
   "message": {
     "open": "Sticker {{name}}",
     "named": "Sticker: {{name}}",
-    "unavailable": "Sticker unavailable",
-    "otherServer": "From a server you're not in"
+    "unavailable": "Sticker unavailable"
   },
   "panel": {
     "title": "Stickers",
@@ -75,5 +74,11 @@
     "sticker_too_large": "That sticker comes out too heavy. Try a shorter animation.",
     "sticker_name_taken": "There's already a sticker with that name in this server.",
     "stickers_full": "The server has used all of its sticker slots."
+  },
+  "details": {
+    "here": "This sticker is from this server. You can use it anywhere.",
+    "mine": "This sticker is from one of your servers. You can use it anywhere.",
+    "elsewhere": "This sticker is from a server you're not in. Only its members can use it.",
+    "source": "This sticker is from"
   }
 }

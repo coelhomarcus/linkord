@@ -5,6 +5,7 @@ import { loadCallVolume } from '../settings/useCallVolumePreference';
 import { loadDevicePreference } from '../settings/useDevicePreference';
 import { useAudioPreferences } from './audioPreferences';
 import { getParticipantVolume, setParticipantVolume } from './participantVolume';
+import { usePreferenceValue } from '@/shared/preferences/accountPreferences';
 
 function ParticipantAudio({ participantId }: { participantId: string }) {
   const { audioRegistry, audioUnlocked, deafened } = useRoom('audioRegistry', 'audioUnlocked', 'deafened');
@@ -53,6 +54,14 @@ function ParticipantAudio({ participantId }: { participantId: string }) {
       registry.delete(screenKey);
     };
   }, [participantId, userId, audioRegistry, media.screenAudioTrack]);
+
+  // a volume given to this person on another device (or in another tab) applies at once
+  const micVolume = usePreferenceValue(() => (userId ? loadCallVolume(userId) : 1));
+  const screenVolume = usePreferenceValue(() => (userId ? loadCallVolume(`${userId}:screen`) : 1));
+  useEffect(() => {
+    if (micRef.current) setParticipantVolume(micRef.current, micVolume);
+    if (screenRef.current) setParticipantVolume(screenRef.current, screenVolume);
+  }, [micVolume, screenVolume]);
 
   useEffect(() => {
     for (const el of [micRef.current, screenRef.current]) {

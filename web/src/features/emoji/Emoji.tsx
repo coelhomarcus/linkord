@@ -1,7 +1,12 @@
 import { useEffect } from 'react';
 import type { CSSProperties } from 'react';
+import { useTranslation } from 'react-i18next';
 
+import { Popover, PopoverContent, PopoverTrigger } from '@/shared/ui/primitives/popover';
 import { cn } from '@/shared/lib/utils';
+import { useEmojiData } from './emojiData';
+import { ExpressionDetails } from './ExpressionPopover';
+import { EXPRESSION_POPOVER_CLASS } from './expressionOrigin';
 import { resolveTwemoji, resolvedTwemoji, splitEmoji, twemojiUrls, useResolvedTwemoji } from './twemoji';
 
 interface EmojiProps {
@@ -37,13 +42,48 @@ export function Emoji({ emoji, className }: EmojiProps) {
   );
 }
 
-/** Text with its Unicode emojis drawn as Twemoji, the rest left as it is. */
-export function EmojiText({ text, emojiClassName }: { text: string; emojiClassName?: string }) {
+/** Text with its Unicode emojis drawn as Twemoji, the rest left as it is.
+ * `details`: a click on one says what it is (in message text). */
+export function EmojiText({ text, emojiClassName, details = false }: { text: string; emojiClassName?: string; details?: boolean }) {
   const parts = splitEmoji(text);
   if (parts.length === 1 && typeof parts[0] === 'string') return <>{text}</>;
   return (
     <>
-      {parts.map((part, index) => (typeof part === 'string' ? part : <Emoji key={index} emoji={part.emoji} className={emojiClassName} />))}
+      {parts.map((part, index) => {
+        if (typeof part === 'string') return part;
+        return details
+          ? <StandardEmojiButton key={index} emoji={part.emoji} className={emojiClassName} />
+          : <Emoji key={index} emoji={part.emoji} className={emojiClassName} />;
+      })}
     </>
+  );
+}
+
+function StandardEmojiButton({ emoji, className }: { emoji: string; className?: string }) {
+  return (
+    <Popover>
+      <PopoverTrigger className="select-text rounded-sm focus-ring">
+        <Emoji emoji={emoji} className={className} />
+      </PopoverTrigger>
+      <PopoverContent side="top" align="start" className={EXPRESSION_POPOVER_CLASS}>
+        <StandardEmojiDetails emoji={emoji} />
+      </PopoverContent>
+    </Popover>
+  );
+}
+
+/** Mounted only while open: the emoji dataset (its `:name:`) is fetched the
+ * first time someone asks. */
+function StandardEmojiDetails({ emoji }: { emoji: string }) {
+  const { t } = useTranslation('emoji');
+  const data = useEmojiData();
+  const shortcode = data?.byEmoji.get(emoji)?.shortcodes[0];
+  return (
+    <ExpressionDetails
+      // off-scale: a glyph drawn as a 48px picture, not type
+      picture={<span className="text-[48px] leading-none"><Emoji emoji={emoji} /></span>}
+      name={shortcode ? `:${shortcode}:` : emoji}
+      description={t('details.standard')}
+    />
   );
 }

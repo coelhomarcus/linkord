@@ -6,7 +6,7 @@ import type { ActivityHistoryItem } from './activityApi';
 import { useUserActivity } from './activityDisplay';
 import { useActivityHistory } from './activityHistory';
 import { playedAgo } from './activityTime';
-import { useNow } from './useNow';
+import { useServerNow } from './serverClock';
 
 const HEADING = 'pb-2 text-caption font-semibold text-text-muted';
 
@@ -58,7 +58,7 @@ export function ProfileActivity({ userId, name, self = false }: {
   const current = useUserActivity(userId);
   const history = useActivityHistory(userId);
   // the "1h atrás" of each row moves on while the tab stays open
-  const now = useNow(60_000);
+  const now = useServerNow(60_000);
   const recent = (history.value?.items ?? []).filter((item) => item.key !== current?.key);
 
   let recentBody;

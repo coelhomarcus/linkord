@@ -9,6 +9,7 @@ import { disablePush, restorePush } from '@/shared/pushNotifications';
 import { clearAppBadge } from '@/features/notifications/appBadge';
 import { applyLanguage } from '@/shared/i18n/applyLanguage';
 import { saveNotificationsEnabled, setNotificationsModuleEnabled } from '@/shared/notifications';
+import { forgetAccountPreferences, syncAccountPreferences } from '@/shared/preferences/accountPreferences';
 
 
 type AuthStatus = 'loading' | 'anon' | 'authed';
@@ -48,7 +49,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const refresh = useCallback(async () => {
     try {
-      const { user: u } = await fetchMe();
+      const { user: u, preferences } = await fetchMe();
+      if (preferences !== undefined) void syncAccountPreferences(u.id, preferences);
       setUser(u);
       setStatus('authed');
     } catch {
@@ -131,6 +133,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (endSession) try { await apiLogout(); } catch {  }
     clearAllDrafts();
     clearPendingShares();
+    forgetAccountPreferences();
     // profiles and relationships were read as this account
     clearResourceCaches();
     setUser(null);

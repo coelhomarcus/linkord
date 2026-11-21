@@ -1,0 +1,129 @@
+{
+  "placeholder": "Buscar {{name}}",
+  "placeholderDirect": "Buscar",
+  "field": "Buscar mensagens",
+  "clear": "Limpar busca",
+  "removeChip": "Remover filtro {{label}}",
+  "keys": {
+    "from": "de:",
+    "in": "em:",
+    "has": "tem:",
+    "mentions": "menciona:"
+  },
+  "filters": {
+    "title": "Filtros",
+    "from": {
+      "title": "De um usuário específico",
+      "hint": "usuário"
+    },
+    "in": {
+      "title": "Enviado em um canal específico",
+      "hint": "canal"
+    },
+    "has": {
+      "title": "Inclui um tipo específico de dados",
+      "hint": "link, anexo ou arquivo"
+    },
+    "mentions": {
+      "title": "Menciona um usuário específico",
+      "hint": "usuário"
+    },
+    "more": {
+      "title": "Mais filtros",
+      "hint": "datas, tipo de autor e muito mais"
+    }
+  },
+  "sections": {
+    "from": "Do usuário",
+    "in": "No canal",
+    "has": "A mensagem contém",
+    "mentions": "Menciona o usuário",
+    "history": "Histórico",
+    "noMatch": "Nada encontrado"
+  },
+  "clearHistory": "Limpar histórico",
+  "kinds": {
+    "image": "imagem",
+    "video": "vídeo",
+    "link": "link",
+    "file": "arquivo",
+    "audio": "áudio",
+    "gif": "GIF",
+    "sticker": "figurinha",
+    "embed": "incorporação"
+  },
+  "dialog": {
+    "title": "Filtros",
+    "from": {
+      "label": "De",
+      "hint": "Enviado por um dos usuários selecionados",
+      "placeholder": "ex. {{example}}"
+    },
+    "in": {
+      "label": "Em",
+      "hint": "Enviado em um dos canais selecionados",
+      "placeholder": "ex. {{example}}"
+    },
+    "has": {
+      "label": "Contém",
+      "hint": "Inclui um dos tipos de dados selecionados",
+      "placeholder": "Qualquer conteúdo"
+    },
+    "mentions": {
+      "label": "Menções",
+      "hint": "Menciona um dos usuários selecionados",
+      "placeholder": "ex. {{example}}"
+    },
+    "date": {
+      "label": "Data",
+      "hint": "Quando a mensagem foi enviada",
+      "add": "Adicionar data",
+      "remove": "Remover data",
+      "picker": "Período"
+    },
+    "authorType": {
+      "label": "Tipo de autor",
+      "hint": "Quem enviou a mensagem",
+      "user": "Pessoa",
+      "bot": "Bot"
+    },
+    "pinned": {
+      "label": "Fixadas",
+      "hint": "Só mensagens fixadas"
+    },
+    "clear": "Limpar filtros",
+    "clearCount": "Limpar filtros ({{count}})",
+    "cancel": "Cancelar",
+    "apply": "Aplicar filtros",
+    "search": "Buscar",
+    "noOptions": "Nada encontrado"
+  },
+  "results": {
+    "count_zero": "{{count}} resultados",
+    "count_one": "{{count}} resultado",
+    "count_other": "{{count}} resultados",
+    "many": "Mais de 1.000 resultados",
+    "searching": "Buscando…",
+    "filters": "Filtros",
+    "filtersCount": "Filtros ({{count}})",
+    "sort": "Ordenar",
+    "sorts": {
+      "newest": "Mais novos",
+      "oldest": "Mais antigos",
+      "relevant": "Mais relevantes"
+    },
+    "jump": "Ir para mensagem",
+    "close": "Fechar busca",
+    "previous": "Página anterior",
+    "next": "Próxima página",
+    "page": "Página {{page}}",
+    "pages": "Páginas de resultados",
+    "empty": {
+      "title": "Nenhum resultado",
+      "description": "Tente outras palavras ou tire algum filtro."
+    }
+  },
+  "errors": {
+    "offline": "Sem conexão com o servidor. Tente de novo quando reconectar."
+  }
+}

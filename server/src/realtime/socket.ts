@@ -7,11 +7,15 @@ import {
 } from '../modules/presence/participants.js';
 import { isInvisible } from '../modules/presence/userStatus.js';
 import * as presenceStatus from '../modules/presence/presenceStatus.js';
+import { getPreferences } from '../modules/users/preferences.js';
 import { applyPeerVisibility, buildPresenceSnapshot } from '../modules/presence/knownPeers.js';
 import * as livekit from '../integrations/livekit/livekit.js';
 import * as soundboard from '../modules/soundboard/soundboard.js';
 import * as floodControl from './floodControl.js';
 import * as chat from '../modules/messages/messages.js';
+import * as pins from '../modules/messages/pins.js';
+import * as savedMessages from '../modules/messages/savedMessages.js';
+import * as messageSearch from '../modules/messages/messageSearch.js';
 import * as conversations from '../modules/conversations/conversations.js';
 import { listForUser, getConversationForUser, unreadCountsForUser } from '../modules/conversations/conversationsRepository.js';
 import { listNotificationSettings } from '../modules/notifications/notificationSettings.js';
@@ -44,6 +48,9 @@ export const handlers: HandlerTable = Object.assign(
   presenceStatus.handlers,
   soundboard.handlers,
   chat.handlers,
+  pins.handlers,
+  savedMessages.handlers,
+  messageSearch.handlers,
   conversations.handlers,
   moderation.handlers,
   streamPreview.handlers,
@@ -69,6 +76,11 @@ export const ACTION_LIMITS: Record<string, ActionLimit> = {
   'chat-remove-attachment': { windowMs: 10_000, max: 10 },
   'chat-suppress-embed': { windowMs: 10_000, max: 10 },
   'chat-react': { windowMs: 10_000, max: 20 },
+  'message-pin': { windowMs: 10_000, max: 10 },
+  'message-save': { windowMs: 10_000, max: 20 },
+  'pins-list': { windowMs: 10_000, max: 20, silent: true },
+  'pins-ack': { windowMs: 10_000, max: 20, silent: true },
+  'saved-list': { windowMs: 10_000, max: 20, silent: true },
   // the composer sends at most one every 3 s per conversation, plus the stop
   typing: { windowMs: 10_000, max: 20, silent: true },
   'conversation-open': { windowMs: 10_000, max: 40, silent: true },
@@ -79,6 +91,7 @@ export const ACTION_LIMITS: Record<string, ActionLimit> = {
   'soundboard-play': { windowMs: 10_000, max: 6 },
   profile: { windowMs: 60_000, max: 10 },
   'message-search': { windowMs: 10_000, max: 20 },
+  'search-messages': { windowMs: 10_000, max: 20 },
   'direct-open': { windowMs: 10_000, max: 10 },
   'conversation-mark-read': { windowMs: 10_000, max: 30 },
   'conversation-mark-all-read': { windowMs: 10_000, max: 30 },
@@ -196,8 +209,13 @@ async function handleJoin(socket: AppSocket, msg: JoinMessage): Promise<void> {
     // and the unread mentions a muted conversation still shows
     notificationSettings: await listNotificationSettings(p.userId),
     mentionsByConversation: await unreadMentionCounts(p.userId),
+    // conversations pinned to since this account last opened their pins, and every message it saved (protocol 25)
+    unseenPins: await pins.conversationsWithUnseenPins(p.userId, [...conversationList.map((c) => c.id), ...textChannelIds]),
+    savedMessageIds: await savedMessages.savedMessageIds(p.userId),
     // whether this account shares its activity and which it hides (protocol 24), kept current by `my-activity-settings`
     activitySettings: presenceStatus.activitySettingsPayload(p.userId),
+    // the settings that follow the account (protocol 28), kept current by `my-preferences`; null until a device seeds them
+    preferences: await getPreferences(p.userId),
     // the largest file this server takes, so the composer refuses a bigger one before uploading it
     maxAttachmentBytes: config.MAX_ATTACHMENT_BYTES,
     // tabs from before accounts lost their storage quota (protocol 7) read this; nothing counts it any more
@@ -209,6 +227,9 @@ async function handleJoin(socket: AppSocket, msg: JoinMessage): Promise<void> {
     // lets a newer client use what this server supports (3: correlated,
     // idempotent chat sends) and fall back otherwise
     protocolVersion: PROTOCOL_VERSION,
+    // this server's clock, read last (after every await above), so a client whose own clock is off
+    // still counts how long an activity has run from the same clock as the start (protocol 27)
+    serverTime: Date.now(),
   });
   announceParticipantJoined(p);
   // the status before `user-online`, so nobody sees "online" for an instant before "do not disturb"

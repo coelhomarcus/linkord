@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next';
-import { ArrowBendUpLeftIcon, CopyIcon, DotsThreeIcon, FlagIcon, PencilSimpleIcon, PhoneIcon, SmileyIcon, TrashIcon, UsersIcon } from '@/shared/ui/icons';
+import { ArrowBendUpLeftIcon, BookmarkSimpleIcon, CopyIcon, DotsThreeIcon, FlagIcon, PencilSimpleIcon, PhoneIcon, PushPinIcon, PushPinSlashIcon, SmileyIcon, TrashIcon, UsersIcon } from '@/shared/ui/icons';
 import { GroupAvatar } from '@/features/conversations/GroupAvatar';
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
@@ -44,6 +44,8 @@ import { Emoji, EmojiText } from '@/features/emoji/Emoji';
 import { useSwipeToReply } from './useSwipeToReply';
 import { SWIPE } from '@/shared/lib/swipe';
 import { useLanguage } from '@/shared/i18n/useLanguage';
+import { PinNotice } from '@/features/pins/PinNotice';
+import { useMessagePinConfirm } from '@/features/pins/useMessagePinConfirm';
 
 // A bot's message is usually something to acknowledge or flag — a deploy, an
 // alert — so its toolbar answers in one click, before the rest of the actions.
@@ -153,8 +155,10 @@ export const MessageRow = memo(function MessageRow({ message, showHeader, afterD
   const deletedAuthorName = t('deletedAuthor');
   const {
     conversations, servers, serverMemberRoleIds, editChatMessage, reactToChatMessage, editingMsgId, setEditingMsgId, retryPendingMessage, discardPendingMessage,
-    deletingMsgIds, messageActionErrors, dismissMessageActionError, pendingReactions, openReactionParticipants,
-  } = useRoom('conversations', 'servers', 'serverMemberRoleIds', 'editChatMessage', 'reactToChatMessage', 'editingMsgId', 'setEditingMsgId', 'retryPendingMessage', 'discardPendingMessage', 'deletingMsgIds', 'messageActionErrors', 'dismissMessageActionError', 'pendingReactions', 'openReactionParticipants');
+    deletingMsgIds, messageActionErrors, dismissMessageActionError, pendingReactions, openReactionParticipants, savedMessageIds, saveChatMessage,
+  } = useRoom('conversations', 'servers', 'serverMemberRoleIds', 'editChatMessage', 'reactToChatMessage', 'editingMsgId', 'setEditingMsgId', 'retryPendingMessage', 'discardPendingMessage', 'deletingMsgIds', 'messageActionErrors', 'dismissMessageActionError', 'pendingReactions', 'openReactionParticipants', 'savedMessageIds', 'saveChatMessage');
+  const { t: tPins } = useTranslation('pins');
+  const { t: tSaved } = useTranslation('saved');
   const state = useRoomState('me', 'reconnecting');
   const [editText, setEditText] = useState(() => customEmojisAsText(message.text));
   const myEmojis = useMyEmojis(state.me.userId ?? null, false);
@@ -172,6 +176,7 @@ export const MessageRow = memo(function MessageRow({ message, showHeader, afterD
     return () => document.removeEventListener('pointerdown', clearOutside);
   }, [mobileSelected]);
   const { requestDelete, confirmDialog } = useMessageDeleteConfirm();
+  const { requestPin, pinConfirmDialog } = useMessagePinConfirm();
   const isMine = message.id === state.me.userId;
   const conversation = conversations.find((c) => c.id === message.conversationId);
   const messageServer = conversation?.serverId ? servers.find((server) => server.id === conversation.serverId) : undefined;
@@ -179,6 +184,8 @@ export const MessageRow = memo(function MessageRow({ message, showHeader, afterD
   const authorRoleColor = messageServer ? memberColor(messageServer, authorRoleIds) : '';
   const can = messagePermissions(message, { userId: state.me.userId, role: state.me.role }, conversation);
   const canDelete = can.delete;
+  const isSaved = savedMessageIds.has(message.msgId);
+  const toggleSaved = () => { void saveChatMessage(message.msgId, !isSaved); };
   const deleting = deletingMsgIds.has(message.msgId);
   const actionError = pending ? undefined : messageActionErrors.get(message.msgId);
   const author = message.id ? allUsers.get(message.id) : undefined;
@@ -247,6 +254,20 @@ export const MessageRow = memo(function MessageRow({ message, showHeader, afterD
     }
   }
 
+  if (message.kind === 'pin_notice') {
+    return (
+      <div className="relative">
+        <PinNotice message={message} onJumpTo={onJumpTo} />
+        {actionError && (
+          <p role="alert" className="ml-[4.25rem] flex items-center gap-2 px-4 text-caption text-red-text">
+            <span>{actionError}</span>
+            <CloseButton size="xs" label={t('dismissNotice')} onClick={() => dismissMessageActionError(message.msgId)} />
+          </p>
+        )}
+      </div>
+    );
+  }
+
   if (message.kind === 'dm_call') {
     const answered = message.callDurationSeconds != null;
     return (
@@ -259,7 +280,7 @@ export const MessageRow = memo(function MessageRow({ message, showHeader, afterD
   }
 
   return (
-    <div className={cn('relative', showHeader && !afterDivider ? 'mt-[17px]' : 'mt-0')}>
+    <div className={cn('relative', showHeader && !afterDivider ? 'mt-message-group' : 'mt-0')}>
       {swipe.enabled && (
         <div
           aria-hidden
@@ -284,7 +305,7 @@ export const MessageRow = memo(function MessageRow({ message, showHeader, afterD
       {...swipe.handlers}
       style={swipe.offset ? { transform: `translateX(${swipe.offset}px)` } : undefined}
       className={cn(
-        'group/row relative flex gap-3 rounded-md px-4 py-0.5 transition-colors duration-100',
+        'group/row relative flex gap-3 rounded-md px-4 py-message-row-y transition-colors duration-100',
         'hover:bg-message-hover',
         mentionsMe && 'bg-yellow/[0.06] hover:bg-yellow/[0.08]',
         highlighted && 'bg-primary/10',
@@ -384,7 +405,7 @@ export const MessageRow = memo(function MessageRow({ message, showHeader, afterD
                 </div>
               ) : (
               <>
-                <div className={cn('message-press-text text-body leading-5.5 text-text-secondary', pending && pending.state !== 'failed' && 'opacity-60')}>
+                <div className={cn('message-press-text text-body leading-message text-text-secondary', pending && pending.state !== 'failed' && 'opacity-60')}>
                   <ChatMessageText
                     text={message.text}
                     mentionLookup={mentionLookup}
@@ -455,6 +476,11 @@ export const MessageRow = memo(function MessageRow({ message, showHeader, afterD
             <PencilSimpleIcon size={18} />
           </Button>
         )}
+        {can.save && (
+          <Button type="button" variant="ghost" size="icon-sm" aria-label={isSaved ? tSaved('unsave') : tSaved('save')} aria-pressed={isSaved} onClick={toggleSaved}>
+            <BookmarkSimpleIcon size={18} weight={isSaved ? 'fill' : 'regular'} />
+          </Button>
+        )}
         {canReport && (
           <Button type="button" variant="ghost" size="icon-sm" aria-label={t('actions.report')} onClick={() => setReportOpen(true)}>
             <FlagIcon size={18} />
@@ -483,12 +509,19 @@ export const MessageRow = memo(function MessageRow({ message, showHeader, afterD
             )}
             {can.copy && <DropdownMenuItem onClick={copyText}><CopyIcon size={16} />{t('actions.copyText')}</DropdownMenuItem>}
             {can.edit && <DropdownMenuItem onClick={startEdit}><PencilSimpleIcon size={16} />{t('actions.edit')}</DropdownMenuItem>}
+            {can.pin && (
+              <DropdownMenuItem onClick={() => requestPin(message.msgId, !message.pinned)}>
+                {message.pinned ? <PushPinSlashIcon size={16} /> : <PushPinIcon size={16} />}{message.pinned ? tPins('unpinMessage') : tPins('pin')}
+              </DropdownMenuItem>
+            )}
+            {can.save && <DropdownMenuItem onClick={toggleSaved}><BookmarkSimpleIcon size={16} weight={isSaved ? 'fill' : 'regular'} />{isSaved ? tSaved('unsave') : tSaved('save')}</DropdownMenuItem>}
             {canReport && <DropdownMenuItem onClick={() => setReportOpen(true)}><FlagIcon size={16} />{t('actions.report')}</DropdownMenuItem>}
             {canDelete && <DropdownMenuItem variant="destructive" disabled={deleting} onClick={(event) => requestDelete(message.msgId, event.shiftKey)}><TrashIcon size={16} />{t('actions.delete')}</DropdownMenuItem>}
           </DropdownMenuContent>
         </DropdownMenu>
       </div>}
       {confirmDialog}
+      {pinConfirmDialog}
       {reportOpen && (
         <ReportDialog target={{ type: 'message', id: String(message.msgId), label: t('actions.reportLabel', { name: displayedName }) }} open onOpenChange={setReportOpen} />
       )}

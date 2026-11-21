@@ -37,6 +37,24 @@
         document.head.appendChild(style);
       })();
     </script>
+    <script>
+      (function () {
+        // Density, text size and font, set before the first paint so the page
+        // never lays out at the defaults first. Keep in step with
+        // appearancePreferences.ts; a default value has no attribute.
+        var prefs = [
+          ['linkord.density', 'density', ['compact', 'comfortable']],
+          ['linkord.textSize', 'textSize', ['small', 'large', 'larger']],
+          ['linkord.font', 'font', ['system']]
+        ];
+        var root = document.documentElement;
+        for (var i = 0; i < prefs.length; i++) {
+          var raw = null;
+          try { raw = localStorage.getItem(prefs[i][0]); } catch (e) {}
+          if (prefs[i][2].indexOf(raw) !== -1) root.dataset[prefs[i][1]] = raw;
+        }
+      })();
+    </script>
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     <link rel="manifest" href="/manifest.webmanifest" />
     <!-- iOS takes the home-screen icon and name from these, not from the manifest -->

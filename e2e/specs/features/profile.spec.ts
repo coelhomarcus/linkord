@@ -70,7 +70,7 @@ test.describe('profile', () => {
 
     const a = await alice.app();
     await a.openDmWith(bob.username);
-    await expect(a.page.getByText('1 amigo em comum').first()).toBeVisible();
+    await expect(a.page.getByText('1 amigo mútuo').first()).toBeVisible();
   });
 
   test('the games widgets are on offer without any connection, and the search says it is unavailable without IGDB credentials', async ({ users }) => {

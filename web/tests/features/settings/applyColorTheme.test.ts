@@ -22,6 +22,22 @@ describe('applyColorTheme', () => {
     expect(document.querySelector('meta[name="theme-color"]')?.getAttribute('content')).toBe('#202225');
   });
 
+  it('turns transitions off for the frame the theme changes in', async () => {
+    const root = document.documentElement;
+    root.dataset.theme = 'black';
+    applyColorTheme('latte');
+    expect(root.classList.contains('theme-switching')).toBe(true);
+    await new Promise((resolve) => requestAnimationFrame(resolve));
+    expect(root.classList.contains('theme-switching')).toBe(false);
+  });
+
+  it('leaves transitions alone when the theme stays the same', () => {
+    const root = document.documentElement;
+    root.dataset.theme = 'black';
+    applyColorTheme('black');
+    expect(root.classList.contains('theme-switching')).toBe(false);
+  });
+
   it('paints the browser chrome with each theme\'s shell color', () => {
     applyColorTheme('old');
     expect(document.querySelector('meta[name="theme-color"]')?.getAttribute('content')).toBe('#0d0d0f');

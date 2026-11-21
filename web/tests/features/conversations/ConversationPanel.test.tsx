@@ -34,7 +34,7 @@ describe('ConversationPanel — call button', () => {
     const onOpenCall = vi.fn();
     renderSocial(
       <SidebarProvider>
-        <ConversationPanel onOpenProfile={() => {}} onOpenCall={onOpenCall} onOpenSearch={() => {}} detailsOpen={false} mediaOpen={false} onOpenDetails={() => {}} onToggleDetails={() => {}} onToggleMedia={() => {}} />
+        <ConversationPanel onOpenProfile={() => {}} onOpenCall={onOpenCall} onOpenSearch={() => {}} onOpenSearchFilters={() => {}} detailsOpen={false} onOpenDetails={() => {}} onToggleDetails={() => {}} />
       </SidebarProvider>,
       { room: { state: me, conversations: [direct], activeConversationId: 'c1', ...room } },
     );
@@ -109,7 +109,7 @@ describe('ConversationPanel — DM header', () => {
     mockedApi.fetchRelationship.mockResolvedValue({ relation: 'friends', retryAfter: null });
     renderSocial(
       <SidebarProvider>
-        <ConversationPanel onOpenProfile={() => {}} onOpenCall={() => {}} onOpenSearch={() => {}} detailsOpen={false} mediaOpen={false} onOpenDetails={() => {}} onToggleDetails={() => {}} onToggleMedia={() => {}} />
+        <ConversationPanel onOpenProfile={() => {}} onOpenCall={() => {}} onOpenSearch={() => {}} onOpenSearchFilters={() => {}} detailsOpen={false} onOpenDetails={() => {}} onToggleDetails={() => {}} />
       </SidebarProvider>,
       {
         room: {
@@ -154,7 +154,7 @@ describe('ConversationPanel — right panel buttons', () => {
     const onOpenDetails = vi.fn();
     renderSocial(
       <SidebarProvider>
-        <ConversationPanel onOpenProfile={() => {}} onOpenCall={() => {}} onOpenSearch={() => {}} detailsOpen={detailsOpen} mediaOpen={false} onOpenDetails={onOpenDetails} onToggleDetails={onToggleDetails} onToggleMedia={() => {}} />
+        <ConversationPanel onOpenProfile={() => {}} onOpenCall={() => {}} onOpenSearch={() => {}} onOpenSearchFilters={() => {}} detailsOpen={detailsOpen} onOpenDetails={onOpenDetails} onToggleDetails={onToggleDetails} />
       </SidebarProvider>,
       { room: { state: me, conversations: [group], activeConversationId: 'g1' } },
     );
@@ -179,25 +179,28 @@ describe('ConversationPanel — right panel buttons', () => {
     expect(toggle).toHaveAttribute('aria-pressed', 'false');
   });
 
-  it('the header search field names the server and opens the search', () => {
+  it('the header search field names the server and runs a search there on Enter', () => {
     mockedApi.fetchRequestSummary.mockResolvedValue({ incoming: 0, invitations: 0 });
-    const onOpenSearch = vi.fn();
+    const runMessageSearch = vi.fn();
     const servers = [{ id: 's1', name: 'Equipe' }] as RoomContextValue['servers'];
     renderSocial(
       <SidebarProvider>
-        <ConversationPanel onOpenProfile={() => {}} onOpenCall={() => {}} onOpenSearch={onOpenSearch} detailsOpen={false} mediaOpen={false} onOpenDetails={() => {}} onToggleDetails={() => {}} onToggleMedia={() => {}} />
+        <ConversationPanel onOpenProfile={() => {}} onOpenCall={() => {}} onOpenSearch={() => {}} onOpenSearchFilters={() => {}} detailsOpen={false} onOpenDetails={() => {}} onToggleDetails={() => {}} />
       </SidebarProvider>,
-      { room: { state: me, conversations: [group], servers, activeConversationId: 'g1' } },
+      { room: { state: me, conversations: [group], servers, activeConversationId: 'g1', runMessageSearch } },
     );
-    fireEvent.click(screen.getByRole('button', { name: 'Buscar Equipe' }));
-    expect(onOpenSearch).toHaveBeenCalledTimes(1);
+    const field = screen.getByRole('combobox', { name: 'Buscar mensagens' });
+    expect(field).toHaveAttribute('placeholder', 'Buscar Equipe');
+    fireEvent.change(field, { target: { value: 'deploy' } });
+    fireEvent.keyDown(field, { key: 'Enter' });
+    expect(runMessageSearch).toHaveBeenCalledWith({ serverId: 's1' }, expect.objectContaining({ text: 'deploy' }));
   });
 
   it('shows the aside beside the chat, under the header', () => {
     mockedApi.fetchRequestSummary.mockResolvedValue({ incoming: 0, invitations: 0 });
     renderSocial(
       <SidebarProvider>
-        <ConversationPanel onOpenProfile={() => {}} onOpenCall={() => {}} onOpenSearch={() => {}} detailsOpen mediaOpen={false} onOpenDetails={() => {}} onToggleDetails={() => {}} onToggleMedia={() => {}} aside={<aside aria-label="Members" />} />
+        <ConversationPanel onOpenProfile={() => {}} onOpenCall={() => {}} onOpenSearch={() => {}} onOpenSearchFilters={() => {}} detailsOpen onOpenDetails={() => {}} onToggleDetails={() => {}} aside={<aside aria-label="Members" />} />
       </SidebarProvider>,
       { room: { state: me, conversations: [group], activeConversationId: 'g1' } },
     );
@@ -217,7 +220,7 @@ describe('ConversationPanel — phone list route', () => {
   function renderAt(path: string) {
     renderSocial(
       <SidebarProvider>
-        <ConversationPanel onOpenProfile={() => {}} onOpenCall={() => {}} onOpenSearch={() => {}} detailsOpen={false} mediaOpen={false} onOpenDetails={() => {}} onToggleDetails={() => {}} onToggleMedia={() => {}} />
+        <ConversationPanel onOpenProfile={() => {}} onOpenCall={() => {}} onOpenSearch={() => {}} onOpenSearchFilters={() => {}} detailsOpen={false} onOpenDetails={() => {}} onToggleDetails={() => {}} />
       </SidebarProvider>,
       { path, room: { state: joinedState, conversations: [group], activeConversationId: 'g1' } },
     );
@@ -263,7 +266,7 @@ describe('ConversationPanel — edge swipe opens the list', () => {
     const onOpenMobileChange = vi.fn();
     renderSocial(
       <SidebarProvider openMobile={false} onOpenMobileChange={onOpenMobileChange}>
-        <ConversationPanel onOpenProfile={() => {}} onOpenCall={() => {}} onOpenSearch={() => {}} detailsOpen={false} mediaOpen={false} onOpenDetails={() => {}} onToggleDetails={() => {}} onToggleMedia={() => {}} />
+        <ConversationPanel onOpenProfile={() => {}} onOpenCall={() => {}} onOpenSearch={() => {}} onOpenSearchFilters={() => {}} detailsOpen={false} onOpenDetails={() => {}} onToggleDetails={() => {}} />
       </SidebarProvider>,
       { path: '/app/channels/@me/c1', room: { state: { ...joinedState, me: { ...joinedState.me, userId: 'me' } }, conversations: [direct], activeConversationId: 'c1' } },
     );
@@ -291,7 +294,7 @@ describe('ConversationPanel — edge swipe opens the list', () => {
     const onOpenMobileChange = vi.fn();
     renderSocial(
       <SidebarProvider openMobile onOpenMobileChange={onOpenMobileChange}>
-        <ConversationPanel onOpenProfile={() => {}} onOpenCall={() => {}} onOpenSearch={() => {}} detailsOpen={false} mediaOpen={false} onOpenDetails={() => {}} onToggleDetails={() => {}} onToggleMedia={() => {}} />
+        <ConversationPanel onOpenProfile={() => {}} onOpenCall={() => {}} onOpenSearch={() => {}} onOpenSearchFilters={() => {}} detailsOpen={false} onOpenDetails={() => {}} onToggleDetails={() => {}} />
       </SidebarProvider>,
       { path: '/app/channels/@me/c1', room: { state: { ...joinedState, me: { ...joinedState.me, userId: 'me' } }, conversations: [direct], activeConversationId: 'c1' } },
     );
@@ -322,7 +325,7 @@ describe('ConversationPanel — phone Voltar', () => {
       <MemoryRouter initialEntries={entries} initialIndex={(entries?.length ?? 1) - 1}>
         <FriendsProvider>
           <SidebarProvider>
-            <ConversationPanel onOpenProfile={() => {}} onOpenCall={() => {}} onOpenSearch={() => {}} detailsOpen={false} mediaOpen={false} onOpenDetails={() => {}} onToggleDetails={() => {}} onToggleMedia={() => {}} />
+            <ConversationPanel onOpenProfile={() => {}} onOpenCall={() => {}} onOpenSearch={() => {}} onOpenSearchFilters={() => {}} detailsOpen={false} onOpenDetails={() => {}} onToggleDetails={() => {}} />
           </SidebarProvider>
           <WhereAmI />
         </FriendsProvider>

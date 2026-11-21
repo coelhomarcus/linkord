@@ -28,8 +28,8 @@ export type ReactionEmoji = string;
 
 /** Wire protocol version this build speaks; the server refuses older ones
  * (client_outdated). Keep in sync with server/src/realtime/protocolVersion.ts
- * — version 23 adds `imageAnimated` to link previews and `||spoiler||` text. */
-export const PROTOCOL_VERSION = 24;
+ * — version 28 syncs account preferences (`welcome.preferences`, `my-preferences`). */
+export const PROTOCOL_VERSION = 28;
 
 /** One server's or one channel/DM's notification setting (protocol 19). `level` null inherits: a channel
  * from its server, a server or a DM from "all". `mutedUntil` (ISO) is only read while `muted`, and null
@@ -81,8 +81,11 @@ export interface ActivityReport {
   kind: 'playing' | 'using';
   name: string;
   icon: { local: string } | null;
-  /** ms */
+  /** ms, this computer's clock */
   startedAt: number;
+  /** ms, this computer's clock when the report was sent, so the server reads the start as a duration
+   * and a clock that is off does not move it (protocol 27) */
+  sentAt?: number;
 }
 
 /** Someone else's status while they appear online. */
@@ -150,7 +153,7 @@ export interface ChatMessage {
   editedAt?: number;
   reactions?: Partial<Record<ReactionEmoji, string[]>>;
   attachments?: ChatAttachment[];
-  kind?: 'text' | 'server_invite' | 'call_invite' | 'dm_call';
+  kind?: 'text' | 'server_invite' | 'call_invite' | 'dm_call' | 'pin_notice';
   /** Whole seconds of talk time on a dm_call. Null when nobody answered. */
   callDurationSeconds?: number | null;
   // `null` on a group_invite message = the group is gone (tombstone)
@@ -176,7 +179,23 @@ export interface ChatMessage {
   // server with the author's permission (absent: nobody, or an older server)
   mentionEveryone?: true;
   mentionRoleIds?: string[];
+  /** pinned to its conversation (protocol 25) */
+  pinned?: true;
+  /** what a `pin_notice` announces; null once that message was deleted */
+  pinnedMessageId?: number | null;
 }
+
+/** One pinned message, with when it was pinned (the list's order and cursor). */
+export interface PinnedItem {
+  message: ChatMessage;
+  pinnedAt: number;
+}
+
+/** One saved message. `missing`: the account can no longer read its
+ * conversation, so only removing it is left. */
+export type SavedItem =
+  | { msgId: number; conversationId: string; conversationName: string; savedAt: number; status: 'available'; message: ChatMessage }
+  | { msgId: number; conversationId: string; conversationName: string; savedAt: number; status: 'missing'; message: null };
 
 /** What a message carries about its sticker. Which server it is from is
  * known only to that server's members (features/stickers/myStickers.ts). */
@@ -234,17 +253,6 @@ export const MAX_AVATAR_BYTES = 12 * 1024 * 1024;
 export const AVATAR_MIME_TYPES = ['image/png', 'image/jpeg', 'image/gif', 'image/webp'] as const;
 export const MAX_BANNER_LEN = 500;
 export const MAX_PROFILE_BIO_LEN = 300;
-
-export interface SearchResult {
-  msgId: number;
-  conversationId: string;
-  conversationName: string;
-  id: string | null;
-  name: string;
-  avatar: string;
-  ts: number;
-  snippet: string;
-}
 
 /** A DM, or a server channel seen as a place to chat. The server sends a DM
  * summary as is; a channel is built on the client from its server's summary
@@ -362,13 +370,24 @@ export type ClientMessage =
   | { t: 'load-more-messages'; conversationId: string; beforeMsgId: number; requestId?: string }
   | { t: 'load-messages-after'; conversationId: string; afterMsgId: number; requestId?: string }
   | { t: 'load-messages-around'; conversationId: string; msgId: number; requestId?: string }
-  | { t: 'message-search'; query: string; conversationId?: string }
+  | {
+      t: 'search-messages'; requestId: string; scope: { serverId: string } | { conversationId: string };
+      content?: string; authorIds?: string[]; channelIds?: string[]; mentionIds?: string[];
+      has?: ('image' | 'video' | 'audio' | 'file' | 'link' | 'gif' | 'sticker' | 'embed')[];
+      before?: number; after?: number; authorType?: ('user' | 'bot')[]; pinned?: boolean;
+      sort: 'newest' | 'oldest' | 'relevant'; page: number;
+    }
   | { t: 'chat'; conversationId: string; text: string; replyTo?: number; requestId?: string; clientMessageId?: string; attachmentIds?: string[]; stickerId?: string }
   | { t: 'chat-delete'; msgId: number; requestId?: string }
   | { t: 'chat-edit'; msgId: number; text: string; requestId?: string }
   | { t: 'chat-remove-attachment'; msgId: number; attachmentId: string; requestId?: string }
   | { t: 'chat-suppress-embed'; msgId: number; url: string; requestId?: string }
   | { t: 'chat-react'; msgId: number; emoji: ReactionEmoji; present?: boolean; requestId?: string }
+  | { t: 'message-pin'; msgId: number; pinned: boolean; requestId?: string }
+  | { t: 'pins-list'; conversationId: string; before?: number }
+  | { t: 'pins-ack'; conversationId: string }
+  | { t: 'message-save'; msgId: number; saved: boolean; requestId?: string }
+  | { t: 'saved-list'; before?: number }
   | { t: 'typing'; conversationId: string; value: boolean }
   // `replace`: the person agreed to move the call the account holds on another connection to this one
   | { t: 'call-join'; conversationId: string; replace?: boolean }
@@ -420,11 +439,18 @@ export type ServerMessage =
       callConversationId?: string | null;
       // absent from servers before protocol 3 (no correlated chat sends)
       protocolVersion?: number;
+      // the server's clock when it sent this, ms; absent from servers before protocol 27
+      serverTime?: number;
       // both absent from servers before protocol 10: everyone online reads as plain "online"
       presence?: Record<string, VisiblePresence>;
       myStatus?: OwnStatus;
       // absent from servers before protocol 24: activity is shared, nothing hidden
       activitySettings?: ActivitySettings;
+      // the settings that follow the account (protocol 28); null until a device seeds them, absent before
+      preferences?: Record<string, unknown> | null;
+      // both absent from servers before protocol 25: no pins, nothing saved
+      unseenPins?: string[];
+      savedMessageIds?: number[];
       dmCall?: DmCallView;
     }
   | { t: 'call-token'; conversationId: string; livekitUrl: string; livekitToken: string }
@@ -461,7 +487,7 @@ export type ServerMessage =
   | { t: 'server-sounds-changed'; serverId: string }
   | { t: 'server-emojis-changed'; serverId: string }
   | { t: 'server-stickers-changed'; serverId: string }
-  | { t: 'message-search-results'; query: string; conversationId?: string; results: SearchResult[] }
+  | { t: 'search-messages-result'; requestId: string; total: number; page: number; messages: ChatMessage[] }
   | { t: 'chat'; message: ChatMessage }
   | { t: 'chat-send-result'; requestId: string; clientMessageId: string; message?: ChatMessage; error?: { code: string; message: string } }
   | { t: 'chat-deleted'; conversationId: string; msgId: number }
@@ -476,6 +502,13 @@ export type ServerMessage =
   | { t: 'chat-reaction-updated'; conversationId: string; msgId: number; emoji: ReactionEmoji; userIds: string[] }
   | { t: 'typing'; conversationId: string; userId: string; value: boolean }
   | { t: 'chat-attachment-added'; conversationId: string; msgId: number; attachment: ChatAttachment }
+  // someone pinned (`pinned`) or unpinned a message here; `lastPinAt` only moves forward
+  | { t: 'conversation-pins-updated'; conversationId: string; lastPinAt: number | null; pinned: boolean; by: string }
+  | { t: 'pins-list-result'; conversationId: string; before: number | null; items: PinnedItem[]; hasMore: boolean }
+  // this account opened the pins in another tab
+  | { t: 'pins-seen'; conversationId: string }
+  | { t: 'saved-updated'; msgId: number; saved: boolean; savedAt?: number }
+  | { t: 'saved-list-result'; before: number | null; items: SavedItem[]; hasMore: boolean }
   // payload-free: "your friends/requests/blocks changed, refetch" — the data
   // itself only ever travels over the authorized HTTP endpoints
   | { t: 'social-changed' }
@@ -493,6 +526,8 @@ export type ServerMessage =
   | ({ t: 'my-status' } & OwnStatus)
   | { t: 'presence-result'; requestId: string; ok: boolean }
   | ({ t: 'my-activity-settings' } & ActivitySettings)
+  // a change to the account's preferences from any of its tabs (protocol 28); null puts a key back to its default
+  | { t: 'my-preferences'; changes: Record<string, unknown> }
   | { t: 'activity-settings-result'; requestId: string; ok: boolean }
   | { t: 'user-online'; userId: string }
   | { t: 'user-offline'; userId: string; lastSeenAt?: string | null }

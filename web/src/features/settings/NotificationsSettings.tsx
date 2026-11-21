@@ -179,7 +179,7 @@ export function NotificationsSettings() {
 
       <SettingsSection id="sounds" title={t('catalog.sections.sounds')}>
         <div className="flex flex-col gap-4">
-          <SettingsRow label={t('notifications.volume.label')}>
+          <SettingsRow label={t('notifications.volume.label')} description={t('notifications.volume.deviceOnly')}>
             <span className="text-label tabular-nums text-text-muted">{percent === 0 ? t('notifications.volume.muted') : `${percent}%`}</span>
           </SettingsRow>
           <Slider aria-label={t('notifications.volume.label')} value={[percent]} onValueChange={handleVolumeChange} min={0} max={100} />

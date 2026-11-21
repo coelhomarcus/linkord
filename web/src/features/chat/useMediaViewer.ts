@@ -21,7 +21,7 @@ export interface MessageMediaScopeApi {
 export const MessageMediaScopeContext = createContext<MessageMediaScopeApi | null>(null);
 
 /** How a media control opens the viewer: inside a message, on the message's whole set; elsewhere
- * (a card on its own, the media panel's grid) on what it was given. */
+ * (a card on its own) on what it was given. */
 export function useOpenMedia(): (items: ViewerItem[], index: number) => void {
   const scope = useContext(MessageMediaScopeContext);
   const viewer = useMediaViewer();

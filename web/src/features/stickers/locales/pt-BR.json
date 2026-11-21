@@ -17,8 +17,7 @@
   "message": {
     "open": "Figurinha {{name}}",
     "named": "Figurinha: {{name}}",
-    "unavailable": "Figurinha indisponível",
-    "otherServer": "De um servidor em que você não está"
+    "unavailable": "Figurinha indisponível"
   },
   "panel": {
     "title": "Figurinhas",
@@ -75,5 +74,11 @@
     "sticker_too_large": "Essa figurinha fica pesada demais. Tente uma animação mais curta.",
     "sticker_name_taken": "Já existe uma figurinha com esse nome nesse servidor.",
     "stickers_full": "O servidor já usou todos os espaços de figurinha."
+  },
+  "details": {
+    "here": "Esta figurinha é deste servidor. Você pode usá-la em qualquer lugar.",
+    "mine": "Esta figurinha é de um dos seus servidores. Você pode usá-la em qualquer lugar.",
+    "elsewhere": "Esta figurinha é de um servidor em que você não está. Só os membros dele podem usá-la.",
+    "source": "Esta figurinha é de"
   }
 }

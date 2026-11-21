@@ -18,3 +18,11 @@ export const searchConfig = (name: MessageSearchConfig): SQL => sql.raw(`'${name
 /** The concatenation stored in messages.search_vector. */
 export const messageSearchVector = (text: AnyPgColumn): SQL =>
   sql.join(MESSAGE_SEARCH_CONFIGS.map((name) => sql`to_tsvector(${searchConfig(name)}, ${text})`), sql` || `);
+
+/** A query in every configuration the vector holds, OR'd: a message matches
+ * when any of them does (the exact word, or its stem in either language).
+ * websearch_to_tsquery never throws, so raw user text is safe here. */
+export function messageSearchQueries(query: string): { perConfig: { name: MessageSearchConfig; tsQuery: SQL }[]; tsQuery: SQL } {
+  const perConfig = MESSAGE_SEARCH_CONFIGS.map((name) => ({ name, tsQuery: sql`websearch_to_tsquery(${searchConfig(name)}, ${query})` }));
+  return { perConfig, tsQuery: sql`(${sql.join(perConfig.map((c) => c.tsQuery), sql` || `)})` };
+}

@@ -83,7 +83,7 @@ export const SERVER_AUDIT_ACTIONS = [
   'permissions.update',
   'invite.create', 'invite.revoke',
   'webhook.create', 'webhook.update', 'webhook.rotate', 'webhook.delete',
-  'message.delete',
+  'message.delete', 'message.pin', 'message.unpin',
   'sound.create', 'sound.update', 'sound.delete',
   'emoji.create', 'emoji.update', 'emoji.delete',
   'sticker.create', 'sticker.update', 'sticker.delete',

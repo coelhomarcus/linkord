@@ -11,6 +11,7 @@ import {
 import { dropSessionConnections } from './sessionConnections.js';
 import { findByEmailLower, findById, findByUsernameLower, isValidEmail, normalizeEmail, privateUser } from '../users/users.js';
 import { resolveLocale } from '../users/locale.js';
+import { getPreferences } from '../users/preferences.js';
 import { createUser, updateEmail, updatePassword, updateUsername } from './accounts.js';
 import { invalidUsernameMessage, isReservedUsername, isValidUsername } from './usernameRules.js';
 import { renameParticipants } from '../presence/participants.js';
@@ -390,6 +391,8 @@ async function handleMe(request: FastifyRequest, reply: FastifyReply): Promise<v
       role: sess.role,
       locale: sess.locale,
     },
+    // the settings that follow the account (modules/users/preferences.ts); null until a device seeds them
+    preferences: await getPreferences(sess.userId),
   });
 }
 

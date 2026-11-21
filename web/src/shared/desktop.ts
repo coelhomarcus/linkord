@@ -90,6 +90,18 @@ export interface DesktopActivityApi {
   /** the current program's own icon as a data URL, or null */
   icon: () => Promise<string | null>;
   onChange: (callback: (activity: DesktopActivity | null) => void) => () => void;
+  /** what runs now and the one picked by hand; absent in builds that pick the first one found */
+  running?: () => Promise<DesktopRunningActivities>;
+  /** the activity to show whenever it runs, or null to choose automatically */
+  prefer?: (key: string | null) => Promise<void>;
+  /** the keys the account hides, so the app shows another one instead of nothing */
+  setHidden?: (keys: string[]) => Promise<void>;
+  onRunningChange?: (callback: (running: DesktopRunningActivities) => void) => () => void;
+}
+
+export interface DesktopRunningActivities {
+  running: { key: string; kind: 'playing' | 'using'; name: string }[];
+  preferred: string | null;
 }
 
 export interface LinkordDesktop {

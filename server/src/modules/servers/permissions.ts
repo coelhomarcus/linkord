@@ -5,7 +5,7 @@
 // server/tests/modules/servers/permissions.test.ts fails if the two drift.
 //
 // Stored as a Postgres integer and combined with JS bitwise operators, both
-// of which top out at 31 usable bits; 22 are in use. When they run out:
+// of which top out at 31 usable bits; 23 are in use. When they run out:
 // server_roles.permissions and the overwrites' allow/deny become bigint, the
 // math here moves to BigInt, and the wire carries the bits as a decimal
 // string in a new field next to today's number (additive, so an old tab keeps
@@ -39,6 +39,8 @@ export const PERMISSIONS = {
   CREATE_EXPRESSIONS: 1 << 20,
   // @everyone, @here, and roles whose own "mentionable" is off
   MENTION_EVERYONE: 1 << 21,
+  // pinning and unpinning; was part of MANAGE_MESSAGES until migration 0075
+  PIN_MESSAGES: 1 << 22,
 } as const;
 
 export const ALL_PERMISSIONS = Object.values(PERMISSIONS).reduce((all, bit) => all | bit, 0);

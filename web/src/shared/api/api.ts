@@ -1,6 +1,5 @@
 
-import type { ChatAttachment, InvitationCard, PublicUser } from '@/shared/types/protocol';
-import type { DetectedEmbed } from '@/shared/lib/chatEmbeds';
+import type { InvitationCard, PublicUser } from '@/shared/types/protocol';
 import { logger } from '@/shared/lib/logger';
 import { i18n } from '@/shared/i18n/init';
 import type { Language } from '@/shared/i18n/languages';
@@ -61,7 +60,8 @@ export async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> 
   return body as T;
 }
 
-export function fetchMe(): Promise<{ user: ApiUser }> {
+/** `preferences`: the settings that follow the account, null until a device seeds them (absent from an older server). */
+export function fetchMe(): Promise<{ user: ApiUser; preferences?: Record<string, unknown> | null }> {
   return apiFetch('/api/auth/me');
 }
 
@@ -248,37 +248,6 @@ export const dataExportDownloadUrl = (id: string) => `/api/account/data-export/$
 
 export function logout(): Promise<void> {
   return apiFetch('/api/auth/logout', { method: 'POST' });
-}
-
-/** uploads is every file ("Todos"); embeds is the shared links */
-export type MediaKind = 'uploads' | 'images' | 'videos' | 'audios' | 'documents' | 'gifs' | 'embeds';
-
-export interface MediaItem {
-  msgId: number;
-  conversationId: string;
-  conversationName: string;
-  authorId: string | null;
-  authorName: string;
-  authorAvatar: string;
-  authorAvatarColor: string;
-  ts: number;
-  attachment?: ChatAttachment;
-  embed?: DetectedEmbed;
-  /** a direct image link's picture through the media proxy; absent from an
-   * older server and for GIFs */
-  imageUrl?: string | null;
-}
-
-export interface MediaPage {
-  items: MediaItem[];
-  nextBefore: number | null;
-}
-
-export function fetchMedia(kind: MediaKind, before: number | null, conversationId: string, q = '', limit = 24): Promise<MediaPage> {
-  const params = new URLSearchParams({ kind, limit: String(limit), conversationId });
-  if (q) params.set('q', q);
-  if (before != null) params.set('before', String(before));
-  return apiFetch(`/api/media?${params.toString()}`);
 }
 
 export interface LinkPreviewData {

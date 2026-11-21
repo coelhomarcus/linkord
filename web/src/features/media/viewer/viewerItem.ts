@@ -31,7 +31,7 @@ export interface ViewerItem {
 }
 
 /** The message the set belongs to, for the actions that act on it. */
-export interface ViewerContext {
+interface ViewerContext {
   conversationId: string;
   msgId: number;
 }

@@ -288,7 +288,8 @@
     "MANAGE_EXPRESSIONS": "Gerenciar expressões",
     "VIEW_AUDIT_LOG": "Ver registro de auditoria",
     "CREATE_EXPRESSIONS": "Criar expressões",
-    "MENTION_EVERYONE": "Mencionar @everyone, @here e todos os cargos"
+    "MENTION_EVERYONE": "Mencionar @everyone, @here e todos os cargos",
+    "PIN_MESSAGES": "Fixar mensagens"
   },
   "permissionHints": {
     "ADMINISTRATOR": "Concede todas as permissões e ignora as regras de cada canal. Cuidado ao dar esta.",
@@ -312,7 +313,8 @@
     "MANAGE_EXPRESSIONS": "Editar e remover os sons e emojis de qualquer pessoa.",
     "VIEW_AUDIT_LOG": "Ver quem mudou o quê no servidor.",
     "CREATE_EXPRESSIONS": "Adicionar sons ao soundboard e emojis ao servidor. Cada um ocupa um dos espaços do servidor.",
-    "MENTION_EVERYONE": "Notificar o canal inteiro com @everyone, quem está online com @here, e qualquer cargo, mesmo os que não estão marcados como mencionáveis. Sem isso a menção é enviada, mas não notifica ninguém."
+    "MENTION_EVERYONE": "Notificar o canal inteiro com @everyone, quem está online com @here, e qualquer cargo, mesmo os que não estão marcados como mencionáveis. Sem isso a menção é enviada, mas não notifica ninguém.",
+    "PIN_MESSAGES": "Fixar e desafixar mensagens no canal, para todos verem."
   },
   "voiceMembers": {
     "inChannel": "Na chamada de {{channel}}",
@@ -404,7 +406,9 @@
         "delete": "Excluir webhook"
       },
       "message": {
-        "delete": "Apagar mensagem"
+        "delete": "Apagar mensagem",
+        "pin": "Fixar mensagem",
+        "unpin": "Desafixar mensagem"
       },
       "sound": {
         "create": "Adicionar som",
@@ -465,7 +469,9 @@
         "delete": "<actor>{{actor}}</actor> excluiu o webhook <target>{{target}}</target>"
       },
       "message": {
-        "delete": "<actor>{{actor}}</actor> apagou uma mensagem de <b>{{author}}</b> em <b>{{channel}}</b>"
+        "delete": "<actor>{{actor}}</actor> apagou uma mensagem de <b>{{author}}</b> em <b>{{channel}}</b>",
+        "pin": "<actor>{{actor}}</actor> fixou uma mensagem de <b>{{author}}</b> em <b>{{channel}}</b>",
+        "unpin": "<actor>{{actor}}</actor> desafixou uma mensagem de <b>{{author}}</b> em <b>{{channel}}</b>"
       },
       "sound": {
         "create": "<actor>{{actor}}</actor> adicionou o som <target>{{target}}</target>",

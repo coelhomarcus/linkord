@@ -24,6 +24,7 @@ export const PERMISSIONS = {
   VIEW_AUDIT_LOG: 1 << 19,
   CREATE_EXPRESSIONS: 1 << 20,
   MENTION_EVERYONE: 1 << 21,
+  PIN_MESSAGES: 1 << 22,
 } as const;
 
 export type PermissionName = keyof typeof PERMISSIONS;

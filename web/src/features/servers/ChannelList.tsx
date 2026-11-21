@@ -15,7 +15,7 @@ import { describeApiError } from '@/shared/api/errorText';
 import { ROUTES } from '@/shared/lib/routes';
 import { cn } from '@/shared/lib/utils';
 import { useRoom, useRoomState } from '@/state/RoomContext';
-import { LOCAL_STORAGE_KEYS, localStorageStore } from '@/shared/lib/localStorage';
+import { getPreference, setPreference, usePreferenceValue } from '@/shared/preferences/accountPreferences';
 import type { ChannelSummary, ServerSummary } from '@/shared/types/protocol';
 import { PERMISSIONS } from './permissionBits';
 import { CreateChannelDialog, type CreateTarget } from './CreateChannelDialog';
@@ -26,8 +26,14 @@ import { useServerSettings } from './ServerSettingsContext';
 import { NotificationMenuItems } from '@/features/notifications/NotificationMenuItems';
 import { VoiceMembers, type VoiceDrag } from './VoiceMembers';
 
-function loadCollapsed(serverId: string): Set<string> {
-  try { return new Set(JSON.parse(localStorageStore.get(LOCAL_STORAGE_KEYS.collapsedCategories(serverId)) ?? '[]') as string[]); } catch { return new Set(); }
+const NO_CATEGORIES: readonly string[] = [];
+
+/** The categories this account folded in one server, the same on every device. */
+function useCollapsedCategories(serverId: string): readonly string[] {
+  return usePreferenceValue(() => {
+    const ids = getPreference(`collapsed:${serverId}`);
+    return Array.isArray(ids) ? ids : NO_CATEGORIES;
+  });
 }
 
 function ChannelRow({ server, channel, active, onOpen, onInvite, onOpenProfile, onNavigate, drag, onDragChange }: {
@@ -61,14 +67,14 @@ function ChannelRow({ server, channel, active, onOpen, onInvite, onOpenProfile, 
     <li data-channel-id={channel.id} data-drop-target={accepts && dropping ? '' : undefined} {...dropHandlers}>
       {/* a text channel's row opens the conversation menu (mark as read), on a long press too */}
       <div data-conversation-id={channel.type === 'text' ? channel.id : undefined} className={cn(
-        'group/channel relative isolate mx-2 flex h-8 items-center rounded-lg',
+        'group/channel relative isolate mx-2 flex min-h-row-channel items-center rounded-lg',
         active ? 'text-text-primary' : unread ? 'text-text-primary' : 'text-text-muted hover:bg-nav-hover hover:text-text-primary',
         muted && !active && !unread && 'opacity-60',
         accepts && dropping && 'bg-nav-hover text-text-primary ring-2 ring-ring',
       )}>
         {active && <ActiveFill />}
         {unread > 0 && !active && <span aria-hidden className="absolute -left-2 top-1/2 h-2 w-1 -translate-y-1/2 rounded-r-full bg-text-primary" />}
-        <button type="button" onClick={onOpen} aria-current={active ? 'page' : undefined} className="flex h-full min-w-0 flex-1 items-center gap-1.5 rounded-lg px-2 text-left focus-ring">
+        <button type="button" onClick={onOpen} aria-current={active ? 'page' : undefined} className="flex min-w-0 flex-1 items-center gap-1.5 self-stretch rounded-lg px-2 text-left focus-ring">
           <Icon size={20} className={cn('flex-none', active || unread > 0 ? 'text-text-secondary' : 'text-text-muted')} />
           <span className={cn('truncate text-body', unread > 0 ? 'font-semibold' : 'font-medium')}>{channel.name}</span>
           {muted && <BellSlashIcon size={14} className="flex-none text-text-muted" aria-label={tn('preferences.muted')} role="img" />}
@@ -110,7 +116,8 @@ export function ChannelList({ server, activeChannelId, onNavigate, onOpenProfile
   const state = useRoomState('me');
   const { openServerSettings } = useServerSettings();
   const hasUnread = serverUnread(server, unreadByConversation) > 0 || server.channels.some((c) => unreadStartByConversation.has(c.id));
-  const [collapsed, setCollapsed] = useState(() => loadCollapsed(server.id));
+  const collapsedIds = useCollapsedCategories(server.id);
+  const collapsed = new Set(collapsedIds);
   const [inviteOpen, setInviteOpen] = useState<{ channelId?: string } | null>(null);
   const [createTarget, setCreateTarget] = useState<CreateTarget | null>(null);
   const [confirmLeave, setConfirmLeave] = useState(false);
@@ -121,12 +128,8 @@ export function ChannelList({ server, activeChannelId, onNavigate, onOpenProfile
   const headerRef = useRef<HTMLDivElement | null>(null);
 
   function toggleCategory(id: string) {
-    setCollapsed((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id); else next.add(id);
-      localStorageStore.set(LOCAL_STORAGE_KEYS.collapsedCategories(server.id), JSON.stringify([...next]));
-      return next;
-    });
+    const next = collapsedIds.includes(id) ? collapsedIds.filter((c) => c !== id) : [...collapsedIds, id];
+    setPreference(`collapsed:${server.id}`, next.length > 0 ? next : null);
   }
 
   function open(channel: ChannelSummary) {

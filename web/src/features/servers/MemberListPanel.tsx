@@ -101,7 +101,7 @@ function MemberListSkeleton({ label }: { label: string }) {
     <SkeletonGroup label={label} className="mb-4">
       <div className="flex h-[1lh] items-center px-2 pb-1 text-label box-content"><Skeleton shape="text" className="w-20" /></div>
       {MEMBER_NAME_WIDTHS.map((width, index) => (
-        <div key={index} className="flex h-[42px] items-center gap-3 px-2">
+        <div key={index} className="flex min-h-row-member items-center gap-3 px-2">
           <Skeleton shape="circle" className="size-8" />
           <Skeleton shape="text" className={width} />
         </div>

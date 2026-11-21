@@ -16,7 +16,7 @@ describe('messagePermissions', () => {
   });
 
   it('own message: can edit and delete, cannot report', () => {
-    expect(messagePermissions(msg(), { userId: 'autor', role: 'user' })).toEqual({ react: true, reply: true, copy: true, edit: true, delete: true, report: false, removeAttachment: true, removeEmbed: true });
+    expect(messagePermissions(msg(), { userId: 'autor', role: 'user' })).toEqual({ react: true, reply: true, copy: true, edit: true, delete: true, report: false, removeAttachment: true, removeEmbed: true, pin: true, save: true });
   });
 
   it('own sticker: reacted to, replied to and deleted, never edited or copied', () => {
@@ -33,15 +33,15 @@ describe('messagePermissions', () => {
   });
 
   it('invitation card: no react, reply, edit or report', () => {
-    expect(messagePermissions(msg({ kind: 'server_invite', text: '' }), { userId: 'autor', role: 'user' })).toEqual({ react: false, reply: false, copy: false, edit: false, delete: true, report: false, removeAttachment: false, removeEmbed: false });
+    expect(messagePermissions(msg({ kind: 'server_invite', text: '' }), { userId: 'autor', role: 'user' })).toEqual({ react: false, reply: false, copy: false, edit: false, delete: true, report: false, removeAttachment: false, removeEmbed: false, pin: false, save: false });
   });
 
   it('dm call line: nothing, including delete', () => {
-    expect(messagePermissions(msg({ kind: 'dm_call', text: '', callDurationSeconds: null }), { userId: 'autor', role: 'admin' })).toEqual({ react: false, reply: false, copy: false, edit: false, delete: false, report: false, removeAttachment: false, removeEmbed: false });
+    expect(messagePermissions(msg({ kind: 'dm_call', text: '', callDurationSeconds: null }), { userId: 'autor', role: 'admin' })).toEqual({ react: false, reply: false, copy: false, edit: false, delete: false, report: false, removeAttachment: false, removeEmbed: false, pin: false, save: false });
   });
 
   it('call invite card: no react, reply, edit or report, but its author may delete it', () => {
-    expect(messagePermissions(msg({ kind: 'call_invite', text: '' }), { userId: 'autor', role: 'user' })).toEqual({ react: false, reply: false, copy: false, edit: false, delete: true, report: false, removeAttachment: false, removeEmbed: false });
+    expect(messagePermissions(msg({ kind: 'call_invite', text: '' }), { userId: 'autor', role: 'user' })).toEqual({ react: false, reply: false, copy: false, edit: false, delete: true, report: false, removeAttachment: false, removeEmbed: false, pin: false, save: false });
   });
 
   it('removing an attachment: only while the message keeps something else, by its author or an admin', () => {
@@ -62,6 +62,20 @@ describe('messagePermissions', () => {
     expect(messagePermissions(msg(), { userId: 'autor', role: 'user' }, readOnly)).toMatchObject({ edit: false, delete: true, reply: false });
     const open = { type: 'text' as const, permissions: PERMISSIONS.VIEW_CHANNEL | PERMISSIONS.SEND_MESSAGES };
     expect(messagePermissions(msg(), { userId: 'autor', role: 'user' }, open).edit).toBe(true);
+  });
+
+  it('pinning: anyone in a DM, PIN_MESSAGES in a channel, never a card or a notice', () => {
+    const viewer = { userId: 'eu', role: 'user' as const };
+    expect(messagePermissions(msg(), viewer).pin).toBe(true);
+    expect(messagePermissions(msg(), viewer, { type: 'text', permissions: PERMISSIONS.VIEW_CHANNEL | PERMISSIONS.MANAGE_MESSAGES }).pin).toBe(false);
+    expect(messagePermissions(msg(), viewer, { type: 'text', permissions: PERMISSIONS.VIEW_CHANNEL | PERMISSIONS.PIN_MESSAGES }).pin).toBe(true);
+    expect(messagePermissions(msg({ kind: 'pin_notice', text: '' }), viewer).pin).toBe(false);
+  });
+
+  it('a pin notice: nothing but its pinner deleting it', () => {
+    const notice = msg({ kind: 'pin_notice', text: '', pinnedMessageId: 7 });
+    expect(messagePermissions(notice, { userId: 'autor', role: 'user' })).toEqual({ react: false, reply: false, copy: false, edit: false, delete: true, report: false, removeAttachment: false, removeEmbed: false, pin: false, save: false });
+    expect(messagePermissions(notice, { userId: 'eu', role: 'user' }).delete).toBe(false);
   });
 
   it('deleted author: no one to report', () => {

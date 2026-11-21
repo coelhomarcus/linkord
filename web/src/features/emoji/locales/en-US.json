@@ -41,9 +41,6 @@
     "emoji_name_taken": "There's already an emoji with that name in this server.",
     "emojis_full": "The server has used all of its slots for that kind of emoji."
   },
-  "custom": {
-    "from": "From {{server}}"
-  },
   "picker": {
     "search": "Find the perfect emoji",
     "searchLabel": "Search emoji",
@@ -76,5 +73,15 @@
       "5": "Dark"
     },
     "hint": "Hover over an emoji to see its name"
+  },
+  "details": {
+    "custom": {
+      "here": "This emoji is from this server. You can use it anywhere.",
+      "mine": "This emoji is from one of your servers. You can use it anywhere.",
+      "elsewhere": "This emoji is from a server you're not in. Only its members can use it.",
+      "source": "This emoji is from"
+    },
+    "standard": "A default emoji. You can use this emoji anywhere on Linkord.",
+    "inviteOnly": "Invite-only server"
   }
 }
