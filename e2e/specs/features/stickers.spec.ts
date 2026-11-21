@@ -53,6 +53,11 @@ test('a sticker goes into a DM with someone outside its server, who sees it and 
   await a.page.getByRole('gridcell', { name: 'cores' }).first().click();
   await expect(a.composer()).toHaveText('rascunho');
   await expect(a.page.locator('[data-message-id]').getByRole('img', { name: 'Três cores' })).toBeVisible();
+  // a member is told which of their servers it is from
+  await a.page.getByRole('button', { name: 'Figurinha cores' }).click();
+  await expect(a.page.getByText('Esta figurinha é de um dos seus servidores. Você pode usá-la em qualquer lugar.')).toBeVisible();
+  await expect(a.page.getByRole('dialog').getByText('E2E stickers')).toBeVisible();
+  await a.page.keyboard.press('Escape');
 
   await b.openDm(dm);
   const picture = b.page.locator('[data-message-id]').getByRole('img', { name: 'Três cores' });
@@ -60,7 +65,8 @@ test('a sticker goes into a DM with someone outside its server, who sees it and 
   await expect(picture).toHaveAttribute('src', `/api/stickers/${sticker.id}`);
   await expect.poll(() => picture.evaluate((img: HTMLImageElement) => img.naturalWidth)).toBe(320);
   await b.page.getByRole('button', { name: 'Figurinha cores' }).click();
-  await expect(b.page.getByText('De um servidor em que você não está')).toBeVisible();
+  await expect(b.page.getByText('Esta figurinha é de um servidor em que você não está.')).toBeVisible();
+  await expect(b.page.getByText('Servidor apenas para convidados')).toBeHidden();
   await b.page.keyboard.press('Escape');
 
   // bob has no stickers of his own to send

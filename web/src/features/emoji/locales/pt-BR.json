@@ -41,9 +41,6 @@
     "emoji_name_taken": "Já existe um emoji com esse nome nesse servidor.",
     "emojis_full": "O servidor já usou todos os espaços desse tipo de emoji."
   },
-  "custom": {
-    "from": "De {{server}}"
-  },
   "picker": {
     "search": "Encontre o emoji perfeito",
     "searchLabel": "Buscar emoji",
@@ -76,5 +73,15 @@
       "5": "Escura"
     },
     "hint": "Passe o cursor sobre um emoji para ver o nome"
+  },
+  "details": {
+    "custom": {
+      "here": "Este emoji é deste servidor. Você pode usá-lo em qualquer lugar.",
+      "mine": "Este emoji é de um dos seus servidores. Você pode usá-lo em qualquer lugar.",
+      "elsewhere": "Este emoji é de um servidor em que você não está.",
+      "source": "Este emoji é de"
+    },
+    "standard": "Um emoji padrão. Você pode usar este emoji em qualquer lugar do Linkord.",
+    "inviteOnly": "Servidor apenas para convidados"
   }
 }

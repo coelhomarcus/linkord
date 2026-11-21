@@ -3,6 +3,8 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { Popover, PopoverContent, PopoverTrigger } from '@/shared/ui/primitives/popover';
+import { ExpressionDetails } from '@/features/emoji/ExpressionPopover';
+import { EXPRESSION_POPOVER_CLASS, useExpressionOrigin } from '@/features/emoji/expressionOrigin';
 import { useOptionalRoomSelector } from '@/state/RoomContext';
 import type { StickerCard } from '@/shared/types/protocol';
 import { useKnownSticker, useMyStickers } from './myStickers';
@@ -10,14 +12,11 @@ import { stickerImageUrl } from './stickersApi';
 
 /** A sent sticker, drawn large and without a bubble, like Discord's. Clicking
  * it says what it is, and which server it is from when the viewer is a member
- * there. `null` is a sticker deleted since. */
+ * there (ExpressionDetails). `null` is a sticker deleted since. */
 export function StickerMessage({ sticker }: { sticker: StickerCard | null }) {
   const { t } = useTranslation('stickers');
   const [broken, setBroken] = useState(false);
-  // the account's own list says whether the viewer is a member of the sticker's server
-  const mine = useMyStickers(useOptionalRoomSelector((room) => room.state.me.userId) ?? null, !!sticker);
   const known = useKnownSticker(sticker?.id ?? '');
-  const server = useOptionalRoomSelector((room) => room.servers.find((s) => s.id === known?.serverId));
 
   if (!sticker || broken) {
     return (
@@ -48,12 +47,27 @@ export function StickerMessage({ sticker }: { sticker: StickerCard | null }) {
           className="size-40 object-contain"
         />
       </PopoverTrigger>
-      <PopoverContent side="top" align="start" className="flex w-64 flex-col gap-1 p-3">
-        <span className="text-label font-semibold text-text-primary">{name}</span>
-        {description && <span className="text-caption text-text-secondary">{description}</span>}
-        {server && <span className="text-caption text-text-muted">{t('from', { server: server.name })}</span>}
-        {!server && mine.status === 'ready' && <span className="text-caption text-text-muted">{t('message.otherServer')}</span>}
+      <PopoverContent side="top" align="start" className={EXPRESSION_POPOVER_CLASS}>
+        <StickerDetails id={sticker.id} name={name} />
       </PopoverContent>
     </Popover>
+  );
+}
+
+/** Mounted only while the popover is open: that is when the account's
+ * sticker list has to be read, if nothing else has asked for it yet. */
+function StickerDetails({ id, name }: { id: string; name: string }) {
+  const { t } = useTranslation('stickers');
+  const mine = useMyStickers(useOptionalRoomSelector((room) => room.state.me.userId) ?? null);
+  const known = useKnownSticker(id);
+  const origin = useExpressionOrigin(known?.serverId, mine.status === 'ready');
+  return (
+    <ExpressionDetails
+      picture={<img src={stickerImageUrl(id)} alt="" draggable={false} className="size-12 object-contain" />}
+      name={name}
+      description={origin ? t(`details.${origin.kind}`) : undefined}
+      sourceLabel={t('details.source')}
+      server={origin && origin.kind !== 'elsewhere' ? origin.server : undefined}
+    />
   );
 }

@@ -1,10 +1,11 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { ChatMessageText } from '@/features/chat/ChatMessageText';
 import { buildMentionLookup } from '@/shared/lib/mentions';
 import type { PublicUser, RoleSummary } from '@/shared/types/protocol';
 import { resetMyEmojis, setMyEmojisForTests } from '@/features/emoji/myEmojis';
+import { buildEmojiData, primeEmojiData } from '@/features/emoji/emojiData';
 import { type RoomContextValue } from '@/state/RoomContext';
 import { RoomStoreProvider } from '@/state/RoomStoreProvider';
 import { liveAnnouncements } from '@tests/fixtures/announcerFixture';
@@ -136,12 +137,12 @@ describe('ChatMessageText — server emojis', () => {
     render(<ChatMessageText text="oi <:wave:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa> pessoal" />);
     const image = screen.getByRole('img', { name: ':wave:' });
     expect(image).toHaveAttribute('src', '/api/emojis/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa');
-    expect(image.className).toContain('size-[1.375em]');
+    expect(image.closest('button')!.className).toContain('size-[1.375em]');
   });
 
   it('a message of emojis alone shows them big', () => {
     render(<ChatMessageText text="<:wave:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa> <a:party:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb> 😂" />);
-    expect(screen.getByRole('img', { name: ':wave:' }).className).toContain('size-12');
+    expect(screen.getByRole('img', { name: ':wave:' }).closest('button')!.className).toContain('size-12');
     expect(screen.getByRole('img', { name: ':party:' }).closest('p')!.className).toContain('text-[48px]');
   });
 
@@ -152,13 +153,49 @@ describe('ChatMessageText — server emojis', () => {
     expect(screen.getByText(':gone:')).toBeInTheDocument();
   });
 
-  it('the tooltip names the server it comes from, for its members', async () => {
+  it('the tooltip names it', async () => {
+    const user = userEvent.setup();
+    render(<ChatMessageText text="<:wave:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa> oi" />);
+    await user.hover(screen.getByRole('button', { name: ':wave:' }));
+    expect(await screen.findByText(':wave:', { selector: '[data-slot="tooltip-content"]' })).toBeInTheDocument();
+  });
+
+  it('a click tells a member which of their servers it is from', async () => {
     const user = userEvent.setup();
     setMyEmojisForTests('me', [{ serverId: 's1', emojis: [{ id: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa', name: 'wave', animated: false, serverId: 's1' }] }]);
-    const servers = [{ id: 's1', name: 'Equipe' }] as RoomContextValue['servers'];
-    render(<RoomStoreProvider value={{ servers } as RoomContextValue}><ChatMessageText text="<:wave:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa> oi" /></RoomStoreProvider>);
-    await user.hover(screen.getByRole('img', { name: ':wave:' }));
-    expect(await screen.findByText('De Equipe')).toBeInTheDocument();
+    const servers = [{ id: 's1', name: 'Equipe', icon: '', channels: [{ id: 'c1' }] }] as unknown as RoomContextValue['servers'];
+    const value = { state: { me: { userId: 'me' } }, servers, activeConversationId: 'c1' } as unknown as RoomContextValue;
+    render(<RoomStoreProvider value={value}><ChatMessageText text="<:wave:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa> oi" /></RoomStoreProvider>);
+    await user.click(screen.getByRole('button', { name: ':wave:' }));
+    const dialog = await screen.findByRole('dialog');
+    expect(dialog).toHaveTextContent('Este emoji é deste servidor. Você pode usá-lo em qualquer lugar.');
+    expect(dialog).toHaveTextContent('Este emoji é de');
+    expect(dialog).toHaveTextContent('Equipe');
+    expect(dialog).toHaveTextContent('Servidor apenas para convidados');
+  });
+
+  it('never names the server to someone who is not in it', async () => {
+    const user = userEvent.setup();
+    setMyEmojisForTests('me', []);
+    const value = { state: { me: { userId: 'me' } }, servers: [], activeConversationId: null } as unknown as RoomContextValue;
+    render(<RoomStoreProvider value={value}><ChatMessageText text="<:wave:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa>" /></RoomStoreProvider>);
+    await user.click(screen.getByRole('button', { name: ':wave:' }));
+    const dialog = await screen.findByRole('dialog');
+    expect(dialog).toHaveTextContent('Este emoji é de um servidor em que você não está.');
+    expect(within(dialog).queryByText('Este emoji é de')).not.toBeInTheDocument();
+    expect(dialog).not.toHaveTextContent('Servidor apenas para convidados');
+  });
+});
+
+describe('ChatMessageText — default emojis', () => {
+  it('a click names it and says anyone can use it', async () => {
+    const user = userEvent.setup();
+    primeEmojiData(buildEmojiData([['💰', 'saco de dinheiro', 6, ['moneybag'], []]]));
+    render(<ChatMessageText text="olha 💰" />);
+    await user.click(screen.getByRole('button', { name: '💰' }));
+    const dialog = await screen.findByRole('dialog');
+    expect(dialog).toHaveTextContent(':moneybag:');
+    expect(dialog).toHaveTextContent('Um emoji padrão. Você pode usar este emoji em qualquer lugar do Linkord.');
   });
 });
 
