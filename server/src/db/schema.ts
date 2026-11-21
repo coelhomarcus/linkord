@@ -1078,3 +1078,13 @@ export const userExpressionUsage = pgTable('user_expression_usage', {
   primaryKey({ columns: [t.userId, t.kind, t.key] }),
   check('user_expression_usage_kind_check', sql`${t.kind} IN ('emoji','sound','sticker')`),
 ]);
+
+/** The account's own settings that follow it to every device (theme, clock, which sounds play, the
+ * volume given to each person, ...), as one flat map of key -> value: modules/users/preferencesPolicy.ts
+ * lists the keys. Only what differs from the client's default is stored. No row means the account never
+ * synced, so the first device to sign in seeds it from what that browser had saved. */
+export const userPreferences = pgTable('user_preferences', {
+  userId: text('user_id').primaryKey().references(() => users.id, { onDelete: 'cascade' }),
+  data: jsonb('data').$type<Record<string, unknown>>().notNull().default({}),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+});

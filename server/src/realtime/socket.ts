@@ -7,6 +7,7 @@ import {
 } from '../modules/presence/participants.js';
 import { isInvisible } from '../modules/presence/userStatus.js';
 import * as presenceStatus from '../modules/presence/presenceStatus.js';
+import { getPreferences } from '../modules/users/preferences.js';
 import { applyPeerVisibility, buildPresenceSnapshot } from '../modules/presence/knownPeers.js';
 import * as livekit from '../integrations/livekit/livekit.js';
 import * as soundboard from '../modules/soundboard/soundboard.js';
@@ -213,6 +214,8 @@ async function handleJoin(socket: AppSocket, msg: JoinMessage): Promise<void> {
     savedMessageIds: await savedMessages.savedMessageIds(p.userId),
     // whether this account shares its activity and which it hides (protocol 24), kept current by `my-activity-settings`
     activitySettings: presenceStatus.activitySettingsPayload(p.userId),
+    // the settings that follow the account (protocol 28), kept current by `my-preferences`; null until a device seeds them
+    preferences: await getPreferences(p.userId),
     // the largest file this server takes, so the composer refuses a bigger one before uploading it
     maxAttachmentBytes: config.MAX_ATTACHMENT_BYTES,
     // tabs from before accounts lost their storage quota (protocol 7) read this; nothing counts it any more
