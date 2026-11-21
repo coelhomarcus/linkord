@@ -3,7 +3,7 @@ import { createResourceCache, useResource } from '@/shared/lib/resourceCache';
 import type { ServerSummary } from '@/shared/types/protocol';
 import { useOptionalRoomSelector } from '@/state/RoomContext';
 
-export type SourceServer = Pick<ServerSummary, 'id' | 'name' | 'icon'>;
+type SourceServer = Pick<ServerSummary, 'id' | 'name' | 'icon'>;
 
 /** Where a server emoji or sticker comes from, as the viewer sees it. A
  * member's own servers are already in the room; anyone else's is asked for
