@@ -1,0 +1,39 @@
+{
+  "title": "Mensagens fixadas",
+  "button": "Mensagens fixadas",
+  "buttonUnseen": "Mensagens fixadas (novas)",
+  "jump": "Ir para mensagem",
+  "unpin": "Desafixar",
+  "pin": "Fixar mensagem",
+  "unpinMessage": "Desafixar mensagem",
+  "loading": "Carregando mensagens fixadas…",
+  "loadMore": "Carregar mais",
+  "end": "Você chegou ao fim",
+  "unpinFailed": "Não foi possível desafixar. Tente de novo.",
+  "empty": {
+    "channel": "Este canal não tem mensagens fixadas... por enquanto.",
+    "direct": "Esta conversa não tem mensagens fixadas... por enquanto.",
+    "tipTitle": "Fica a dica:",
+    "tipChannel": "Usuários com a permissão “Fixar mensagens” podem fixar uma mensagem no menu contextual.",
+    "tipDirect": "Vocês dois podem fixar mensagens importantes aqui, pelo menu contextual, para todos verem."
+  },
+  "notice": {
+    "text": "<b>{{name}}</b> fixou <jump>uma mensagem</jump> neste canal. <all>Ver todas as mensagens fixadas.</all>",
+    "textDirect": "<b>{{name}}</b> fixou <jump>uma mensagem</jump> nesta conversa. <all>Ver todas as mensagens fixadas.</all>",
+    "deleted": "<b>{{name}}</b> fixou uma mensagem que foi apagada. <all>Ver todas as mensagens fixadas.</all>"
+  },
+  "confirm": {
+    "pin": {
+      "title": "Fixar mensagem",
+      "description": "Fixar esta mensagem na conversa para todos verem?",
+      "descriptionShift": "Fixar esta mensagem na conversa para todos verem? Segure Shift ao escolher Fixar mensagem para pular esta confirmação.",
+      "confirm": "Fixar"
+    },
+    "unpin": {
+      "title": "Desafixar mensagem",
+      "description": "Tem certeza de que quer desafixar esta mensagem?",
+      "descriptionShift": "Tem certeza de que quer desafixar esta mensagem? Segure Shift ao clicar em desafixar para pular esta confirmação.",
+      "confirm": "Desafixar"
+    }
+  }
+}

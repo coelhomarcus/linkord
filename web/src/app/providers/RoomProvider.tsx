@@ -21,6 +21,8 @@ import type { ChatView } from '@/features/chat/useChatMessages';
 import { useTypingIndicator } from '@/state/hooks/useTypingIndicator';
 import { useSoundboardEvents } from '@/features/soundboard/useSoundboardEvents';
 import { useMessageSearch } from '@/features/chat/useMessageSearch';
+import { usePins } from '@/features/pins/usePins';
+import { useSavedMessages } from '@/features/saved/useSavedMessages';
 import { usePresence } from '@/state/hooks/usePresence';
 import { useCallLifecycle } from '@/features/calls/useCallLifecycle';
 import { useDmCall } from '@/features/calls/useDmCall';
@@ -168,6 +170,8 @@ export function RoomProvider({ children }: { children: ReactNode }) {
   );
   useEffect(() => { markActiveSeenRef.current = chatMessages.markActiveSeen; }, [chatMessages.markActiveSeen]);
   const messageSearch = useMessageSearch(sendWs);
+  const pins = usePins(sendWs, myUserIdRef);
+  const saved = useSavedMessages(sendWs);
   const [maxAttachmentBytes, setMaxAttachmentBytes] = useState(DEFAULT_MAX_ATTACHMENT_BYTES);
 
   const { startSharing, stopSharing, changeSource, pauseSharePreview, resumeSharePreview } = useScreenShare(livekitRoom, dispatch);
@@ -292,6 +296,8 @@ export function RoomProvider({ children }: { children: ReactNode }) {
         conversationsList.setInitial(m.conversations ?? []);
         serversList.setInitial(m.servers ?? []);
         chatMessages.onWelcome(m.unreadByConversation, m.mentionsByConversation);
+        pins.onWelcome(m.unseenPins);
+        saved.onWelcome(m.savedMessageIds);
         onNotificationSettingsWelcome(m.notificationSettings);
         presence.setInitial(m.knownUsers, m.onlineUserIds, m.friendIds, m.presence);
         onStatusSnapshot(m.myStatus);
@@ -437,9 +443,28 @@ export function RoomProvider({ children }: { children: ReactNode }) {
         break;
       case 'chat-deleted':
         chatMessages.onChatDeleted(m);
+        pins.onMessageDeleted(m.conversationId, m.msgId);
+        saved.onMessageDeleted(m.msgId);
         break;
       case 'chat-edited':
         chatMessages.onChatEdited(m);
+        pins.onMessageChanged(m.message);
+        saved.onMessageChanged(m.message);
+        break;
+      case 'conversation-pins-updated':
+        pins.onPinsUpdated(m);
+        break;
+      case 'pins-list-result':
+        pins.onPinsListResult(m);
+        break;
+      case 'pins-seen':
+        pins.onPinsSeen(m);
+        break;
+      case 'saved-updated':
+        saved.onSavedUpdated(m);
+        break;
+      case 'saved-list-result':
+        saved.onSavedListResult(m);
         break;
       case 'chat-embeds':
         chatMessages.onChatEmbeds(m);
@@ -545,7 +570,7 @@ export function RoomProvider({ children }: { children: ReactNode }) {
     }
   }, [
     dispatch, conversationsList, serversList, presence, openConversation, sendWs, callLifecycle, dmCall,
-    messageSearch, chatMessages, typingIndicator, disconnectIntentionally, profileUpdate, soundboardEvents, livekitRoom,
+    messageSearch, chatMessages, typingIndicator, pins, saved, disconnectIntentionally, profileUpdate, soundboardEvents, livekitRoom,
     onStatusSnapshot, onMyStatus, onPresenceResult, onIdleWelcome, refreshAuth, onNotificationSettingsWelcome, onNotificationSettingsChanged,
     onCallElsewhereRefused, onActivityWelcome, onActivitySettingsWelcome, onActivitySettingsChanged, onActivitySettingsResult,
   ]);
@@ -629,6 +654,9 @@ export function RoomProvider({ children }: { children: ReactNode }) {
         pendingReactions: chatMessages.pendingReactions,
         editChatMessage: chatMessages.editChatMessage, reactToChatMessage: chatMessages.reactToChatMessage,
         removeChatAttachment: chatMessages.removeChatAttachment, suppressChatEmbed: chatMessages.suppressChatEmbed,
+        pinChatMessage: chatMessages.pinChatMessage, saveChatMessage: chatMessages.saveChatMessage,
+        unseenPins: pins.unseenPins, pinsByConversation: pins.pinsByConversation, loadPins: pins.loadPins, ackPins: pins.ackPins,
+        savedMessageIds: saved.savedMessageIds, savedList: saved.savedList, loadSaved: saved.loadSaved, hideSaved: saved.hideSaved,
         replyingTo: chatMessages.replyingTo, setReplyingTo: chatMessages.setReplyingTo,
         editingMsgId: chatMessages.editingMsgId, setEditingMsgId: chatMessages.setEditingMsgId,
         reactionParticipantsTarget: chatMessages.reactionParticipantsTarget,

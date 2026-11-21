@@ -149,6 +149,9 @@ export const conversations = pgTable('conversations', {
   dmKey: text('dm_key'),
   lastMessageAt: timestamp('last_message_at', { withTimezone: true }),
   lastActivityAt: timestamp('last_activity_at', { withTimezone: true }),
+  // When a message was last pinned here. Only moves forward: an unpin or a
+  // deleted pin never takes anyone's "new pins" dot away, it only re-reads the list.
+  lastPinAt: timestamp('last_pin_at', { withTimezone: true }),
   // Set on a server channel, null on a DM. Suspension lives on the server.
   serverId: text('server_id').references((): AnyPgColumn => servers.id, { onDelete: 'cascade' }),
   categoryId: text('category_id').references((): AnyPgColumn => serverCategories.id, { onDelete: 'set null' }),
@@ -176,6 +179,8 @@ export const conversationMembers = pgTable('conversation_members', {
   userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
   role: varchar('role', { length: 16 }).notNull().default('member'), // 'owner' | 'member'
   lastReadMessageId: integer('last_read_message_id'),
+  // when this member last opened the DM's pinned messages (against conversations.lastPinAt)
+  pinsSeenAt: timestamp('pins_seen_at', { withTimezone: true }),
   // set when this member "closes" a direct conversation (Discord-style —
   // leaves their own history list without deleting anything). listForUser
   // hides it again until a message newer than this arrives.
@@ -289,6 +294,8 @@ export const channelReadStates = pgTable('channel_read_states', {
   channelId: text('channel_id').notNull().references(() => conversations.id, { onDelete: 'cascade' }),
   userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
   lastReadMessageId: integer('last_read_message_id'),
+  // when this member last opened the channel's pinned messages (against conversations.lastPinAt)
+  pinsSeenAt: timestamp('pins_seen_at', { withTimezone: true }),
 }, (t) => [
   primaryKey({ columns: [t.channelId, t.userId] }),
   index('channel_read_states_user_id_idx').on(t.userId),
@@ -444,7 +451,7 @@ export const messages = pgTable('messages', {
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   editedAt: timestamp('edited_at', { withTimezone: true }),
   replyTo: jsonb('reply_to'),
-  kind: varchar('kind', { length: 16 }).notNull().default('text'), // 'text' | 'server_invite' | 'call_invite' | 'dm_call'
+  kind: varchar('kind', { length: 16 }).notNull().default('text'), // 'text' | 'server_invite' | 'call_invite' | 'dm_call' | 'pin_notice'
   // Keep the card as a tombstone if its invitation is deleted.
   serverInvitationId: text('server_invitation_id').references(() => serverInvitations.id, { onDelete: 'set null' }),
   // The voice channel (or DM) whose call a `call_invite` card asks the
@@ -484,6 +491,12 @@ export const messages = pgTable('messages', {
   // `mentionEveryone` covers @here too.
   mentionEveryone: boolean('mention_everyone').notNull().default(false),
   mentionRoleIds: text('mention_role_ids').array(),
+  // Set while the message is pinned to its conversation, with who pinned it.
+  pinnedAt: timestamp('pinned_at', { withTimezone: true }),
+  pinnedBy: text('pinned_by').references(() => users.id, { onDelete: 'set null' }),
+  // The message a `pin_notice` announces. Only a reference, never a copy of
+  // its text; SET NULL so the notice outlives a deleted pin.
+  pinnedMessageId: integer('pinned_message_id').references((): AnyPgColumn => messages.id, { onDelete: 'set null' }),
   // Postgres computes/maintains this itself (GENERATED ALWAYS AS ... STORED)
   // on every insert/update of `text` — never set from the app. Stored rather
   // than an expression index so ranking reads it instead of re-parsing every
@@ -502,7 +515,12 @@ export const messages = pgTable('messages', {
   index('messages_webhook_id_idx').on(t.webhookId),
   uniqueIndex('messages_webhook_delivery_key_unique').on(t.webhookId, t.webhookDeliveryKey).where(sql`${t.webhookDeliveryKey} IS NOT NULL`),
   index('messages_call_conversation_id_idx').on(t.callConversationId),
-  check('messages_kind_reference_check', sql`(${t.kind} = 'text' AND ${t.serverInvitationId} IS NULL AND ${t.callConversationId} IS NULL) OR (${t.kind} = 'server_invite' AND ${t.callConversationId} IS NULL) OR (${t.kind} = 'call_invite' AND ${t.serverInvitationId} IS NULL) OR (${t.kind} = 'dm_call' AND ${t.serverInvitationId} IS NULL AND ${t.callConversationId} IS NULL)`),
+  // a conversation's pins, newest first (the pins list pages on pinned_at)
+  index('messages_pinned_idx').on(t.conversationId, t.pinnedAt.desc()).where(sql`${t.pinnedAt} IS NOT NULL`),
+  index('messages_pinned_message_id_idx').on(t.pinnedMessageId),
+  check('messages_kind_reference_check', sql`(${t.kind} = 'text' AND ${t.serverInvitationId} IS NULL AND ${t.callConversationId} IS NULL) OR (${t.kind} = 'server_invite' AND ${t.callConversationId} IS NULL) OR (${t.kind} = 'call_invite' AND ${t.serverInvitationId} IS NULL) OR (${t.kind} = 'dm_call' AND ${t.serverInvitationId} IS NULL AND ${t.callConversationId} IS NULL) OR (${t.kind} = 'pin_notice' AND ${t.serverInvitationId} IS NULL AND ${t.callConversationId} IS NULL)`),
+  check('messages_pinned_message_kind_check', sql`${t.pinnedMessageId} IS NULL OR ${t.kind} = 'pin_notice'`),
+  check('messages_pinned_kind_check', sql`${t.pinnedAt} IS NULL OR ${t.kind} = 'text'`),
   check('messages_call_duration_kind_check', sql`${t.callDurationSeconds} IS NULL OR ${t.kind} = 'dm_call'`),
 ]);
 
@@ -558,6 +576,21 @@ export const messageReactions = pgTable('message_reactions', {
 }, (t) => [
   primaryKey({ columns: [t.messageId, t.userId, t.emoji] }),
   index('message_reactions_message_id_idx').on(t.messageId),
+]);
+
+/** A message one account saved for later. Private to that account; both
+ * foreign keys cascade, so a deleted message leaves every saved list at once.
+ * `conversationId` is kept to answer "can this account still see it" without
+ * a join per entry. */
+export const savedMessages = pgTable('saved_messages', {
+  userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  messageId: integer('message_id').notNull().references(() => messages.id, { onDelete: 'cascade' }),
+  conversationId: text('conversation_id').notNull().references(() => conversations.id, { onDelete: 'cascade' }),
+  savedAt: timestamp('saved_at', { withTimezone: true }).notNull().defaultNow(),
+}, (t) => [
+  primaryKey({ columns: [t.userId, t.messageId] }),
+  index('saved_messages_user_saved_at_idx').on(t.userId, t.savedAt.desc()),
+  index('saved_messages_message_id_idx').on(t.messageId),
 ]);
 
 /** Attachment rows may represent message files, profile images, or generated thumbnails.

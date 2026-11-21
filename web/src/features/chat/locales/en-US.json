@@ -181,7 +181,8 @@
     "notice": "Notice",
     "attachment": "Attachment",
     "sticker": "Sticker: {{name}}",
-    "stickerUnnamed": "Sticker"
+    "stickerUnnamed": "Sticker",
+    "pinNotice": "{{name}} pinned a message"
   },
   "errors": {
     "unknown": "unknown error",
@@ -193,7 +194,11 @@
     "noResponse": "The server didn't respond. Try again.",
     "unconfirmed": "Couldn't confirm the send.",
     "attachmentFailed_one": "One attachment wasn't sent.",
-    "attachmentFailed_other": "{{count}} attachments weren't sent."
+    "attachmentFailed_other": "{{count}} attachments weren't sent.",
+    "pinFailed": "Couldn't pin: {{message}}",
+    "unpinFailed": "Couldn't unpin: {{message}}",
+    "saveFailed": "Couldn't save: {{message}}",
+    "unsaveFailed": "Couldn't remove from saved: {{message}}"
   },
   "callInvite": {
     "header": "Voice call invite",

@@ -12,6 +12,8 @@ import * as livekit from '../integrations/livekit/livekit.js';
 import * as soundboard from '../modules/soundboard/soundboard.js';
 import * as floodControl from './floodControl.js';
 import * as chat from '../modules/messages/messages.js';
+import * as pins from '../modules/messages/pins.js';
+import * as savedMessages from '../modules/messages/savedMessages.js';
 import * as conversations from '../modules/conversations/conversations.js';
 import { listForUser, getConversationForUser, unreadCountsForUser } from '../modules/conversations/conversationsRepository.js';
 import { listNotificationSettings } from '../modules/notifications/notificationSettings.js';
@@ -44,6 +46,8 @@ export const handlers: HandlerTable = Object.assign(
   presenceStatus.handlers,
   soundboard.handlers,
   chat.handlers,
+  pins.handlers,
+  savedMessages.handlers,
   conversations.handlers,
   moderation.handlers,
   streamPreview.handlers,
@@ -69,6 +73,11 @@ export const ACTION_LIMITS: Record<string, ActionLimit> = {
   'chat-remove-attachment': { windowMs: 10_000, max: 10 },
   'chat-suppress-embed': { windowMs: 10_000, max: 10 },
   'chat-react': { windowMs: 10_000, max: 20 },
+  'message-pin': { windowMs: 10_000, max: 10 },
+  'message-save': { windowMs: 10_000, max: 20 },
+  'pins-list': { windowMs: 10_000, max: 20, silent: true },
+  'pins-ack': { windowMs: 10_000, max: 20, silent: true },
+  'saved-list': { windowMs: 10_000, max: 20, silent: true },
   // the composer sends at most one every 3 s per conversation, plus the stop
   typing: { windowMs: 10_000, max: 20, silent: true },
   'conversation-open': { windowMs: 10_000, max: 40, silent: true },
@@ -196,6 +205,9 @@ async function handleJoin(socket: AppSocket, msg: JoinMessage): Promise<void> {
     // and the unread mentions a muted conversation still shows
     notificationSettings: await listNotificationSettings(p.userId),
     mentionsByConversation: await unreadMentionCounts(p.userId),
+    // conversations pinned to since this account last opened their pins, and every message it saved (protocol 25)
+    unseenPins: await pins.conversationsWithUnseenPins(p.userId, [...conversationList.map((c) => c.id), ...textChannelIds]),
+    savedMessageIds: await savedMessages.savedMessageIds(p.userId),
     // whether this account shares its activity and which it hides (protocol 24), kept current by `my-activity-settings`
     activitySettings: presenceStatus.activitySettingsPayload(p.userId),
     // the largest file this server takes, so the composer refuses a bigger one before uploading it

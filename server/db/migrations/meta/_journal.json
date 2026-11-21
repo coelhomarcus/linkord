@@ -526,6 +526,13 @@
       "when": 1794860557415,
       "tag": "0074_activity_history",
       "breakpoints": true
+    },
+    {
+      "idx": 75,
+      "version": "7",
+      "when": 1795254687548,
+      "tag": "0075_pinned_saved_messages",
+      "breakpoints": true
     }
   ]
 }

@@ -182,7 +182,8 @@
     "notice": "Aviso",
     "attachment": "Anexo",
     "sticker": "Figurinha: {{name}}",
-    "stickerUnnamed": "Figurinha"
+    "stickerUnnamed": "Figurinha",
+    "pinNotice": "{{name}} fixou uma mensagem"
   },
   "errors": {
     "unknown": "erro desconhecido",
@@ -194,7 +195,11 @@
     "noResponse": "O servidor não respondeu. Tente de novo.",
     "unconfirmed": "Não foi possível confirmar o envio.",
     "attachmentFailed_one": "Um anexo não foi enviado.",
-    "attachmentFailed_other": "{{count}} anexos não foram enviados."
+    "attachmentFailed_other": "{{count}} anexos não foram enviados.",
+    "pinFailed": "Não foi possível fixar: {{message}}",
+    "unpinFailed": "Não foi possível desafixar: {{message}}",
+    "saveFailed": "Não foi possível salvar: {{message}}",
+    "unsaveFailed": "Não foi possível remover dos salvos: {{message}}"
   },
   "callInvite": {
     "header": "Convite para chamada de voz",

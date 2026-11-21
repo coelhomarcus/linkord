@@ -28,8 +28,8 @@ export type ReactionEmoji = string;
 
 /** Wire protocol version this build speaks; the server refuses older ones
  * (client_outdated). Keep in sync with server/src/realtime/protocolVersion.ts
- * — version 23 adds `imageAnimated` to link previews and `||spoiler||` text. */
-export const PROTOCOL_VERSION = 24;
+ * — version 25 adds pinned and saved messages. */
+export const PROTOCOL_VERSION = 25;
 
 /** One server's or one channel/DM's notification setting (protocol 19). `level` null inherits: a channel
  * from its server, a server or a DM from "all". `mutedUntil` (ISO) is only read while `muted`, and null
@@ -150,7 +150,7 @@ export interface ChatMessage {
   editedAt?: number;
   reactions?: Partial<Record<ReactionEmoji, string[]>>;
   attachments?: ChatAttachment[];
-  kind?: 'text' | 'server_invite' | 'call_invite' | 'dm_call';
+  kind?: 'text' | 'server_invite' | 'call_invite' | 'dm_call' | 'pin_notice';
   /** Whole seconds of talk time on a dm_call. Null when nobody answered. */
   callDurationSeconds?: number | null;
   // `null` on a group_invite message = the group is gone (tombstone)
@@ -176,7 +176,23 @@ export interface ChatMessage {
   // server with the author's permission (absent: nobody, or an older server)
   mentionEveryone?: true;
   mentionRoleIds?: string[];
+  /** pinned to its conversation (protocol 25) */
+  pinned?: true;
+  /** what a `pin_notice` announces; null once that message was deleted */
+  pinnedMessageId?: number | null;
 }
+
+/** One pinned message, with when it was pinned (the list's order and cursor). */
+export interface PinnedItem {
+  message: ChatMessage;
+  pinnedAt: number;
+}
+
+/** One saved message. `missing`: the account can no longer read its
+ * conversation, so only removing it is left. */
+export type SavedItem =
+  | { msgId: number; conversationId: string; conversationName: string; savedAt: number; status: 'available'; message: ChatMessage }
+  | { msgId: number; conversationId: string; conversationName: string; savedAt: number; status: 'missing'; message: null };
 
 /** What a message carries about its sticker. Which server it is from is
  * known only to that server's members (features/stickers/myStickers.ts). */
@@ -369,6 +385,11 @@ export type ClientMessage =
   | { t: 'chat-remove-attachment'; msgId: number; attachmentId: string; requestId?: string }
   | { t: 'chat-suppress-embed'; msgId: number; url: string; requestId?: string }
   | { t: 'chat-react'; msgId: number; emoji: ReactionEmoji; present?: boolean; requestId?: string }
+  | { t: 'message-pin'; msgId: number; pinned: boolean; requestId?: string }
+  | { t: 'pins-list'; conversationId: string; before?: number }
+  | { t: 'pins-ack'; conversationId: string }
+  | { t: 'message-save'; msgId: number; saved: boolean; requestId?: string }
+  | { t: 'saved-list'; before?: number }
   | { t: 'typing'; conversationId: string; value: boolean }
   // `replace`: the person agreed to move the call the account holds on another connection to this one
   | { t: 'call-join'; conversationId: string; replace?: boolean }
@@ -425,6 +446,9 @@ export type ServerMessage =
       myStatus?: OwnStatus;
       // absent from servers before protocol 24: activity is shared, nothing hidden
       activitySettings?: ActivitySettings;
+      // both absent from servers before protocol 25: no pins, nothing saved
+      unseenPins?: string[];
+      savedMessageIds?: number[];
       dmCall?: DmCallView;
     }
   | { t: 'call-token'; conversationId: string; livekitUrl: string; livekitToken: string }
@@ -476,6 +500,13 @@ export type ServerMessage =
   | { t: 'chat-reaction-updated'; conversationId: string; msgId: number; emoji: ReactionEmoji; userIds: string[] }
   | { t: 'typing'; conversationId: string; userId: string; value: boolean }
   | { t: 'chat-attachment-added'; conversationId: string; msgId: number; attachment: ChatAttachment }
+  // someone pinned (`pinned`) or unpinned a message here; `lastPinAt` only moves forward
+  | { t: 'conversation-pins-updated'; conversationId: string; lastPinAt: number | null; pinned: boolean; by: string }
+  | { t: 'pins-list-result'; conversationId: string; before: number | null; items: PinnedItem[]; hasMore: boolean }
+  // this account opened the pins in another tab
+  | { t: 'pins-seen'; conversationId: string }
+  | { t: 'saved-updated'; msgId: number; saved: boolean; savedAt?: number }
+  | { t: 'saved-list-result'; before: number | null; items: SavedItem[]; hasMore: boolean }
   // payload-free: "your friends/requests/blocks changed, refetch" — the data
   // itself only ever travels over the authorized HTTP endpoints
   | { t: 'social-changed' }

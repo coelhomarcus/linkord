@@ -27,6 +27,7 @@ import { NotificationMenuItems, type NotificationTarget } from '@/features/notif
 import { mutedUntilText } from '@/features/notifications/mutedUntilText';
 import { useLanguage } from '@/shared/i18n/useLanguage';
 import { useTimeFormat } from '@/shared/lib/timeFormat';
+import { PinsButton } from '@/features/pins/PinsButton';
 
 // Discord's header icons: bare 24px glyphs, gray at rest, white while hovered
 // or while the panel they toggle is open
@@ -228,6 +229,7 @@ export function ConversationPanel({ onOpenProfile, onOpenCall, onOpenSearch, det
                 </>
               )}
               {conversation.type !== 'voice' && <NotificationHeaderButton target={{ scope: 'conversation', id: conversation.id, serverId: conversation.serverId ?? null }} />}
+              {conversation.type !== 'voice' && <PinsButton conversation={conversation} className={HEADER_ICON} onOpenProfile={onOpenProfile} />}
               <HeaderIcon label={t('panel.media')} pressed={mediaOpen} onClick={onToggleMedia} className="max-md:hidden">
                 <ImageIcon size={24} weight={mediaOpen ? 'fill' : 'regular'} />
               </HeaderIcon>

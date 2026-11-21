@@ -16,6 +16,8 @@ import type { FloatingSoundEmoji } from '@/features/soundboard/useSoundboardEven
 import type { CropRect } from '@/shared/lib/imageCrop';
 import type { NotificationPolicy, NotificationSettingChange, NotificationSettings } from '@/features/notifications/notificationSettings';
 import type { NotificationScope, PolicyTarget } from '@/features/notifications/useNotificationSettings';
+import type { PinsList } from '@/features/pins/usePins';
+import type { SavedList } from '@/features/saved/useSavedMessages';
 
 export interface TileDomHandle {
   root: HTMLDivElement;
@@ -232,6 +234,20 @@ export interface RoomContextValue {
   removeChatAttachment: (msgId: number, attachmentId: string) => Promise<void>;
   /** Author only: the link stays, its card goes. A refusal lands in messageActionErrors. */
   suppressChatEmbed: (msgId: number, url: string) => Promise<void>;
+  /** Pins (or unpins) for everyone. True once done; a refusal lands in messageActionErrors. */
+  pinChatMessage: (msgId: number, pinned: boolean) => Promise<boolean>;
+  /** Saves (or unsaves) for this account. True once done; a refusal lands in messageActionErrors. */
+  saveChatMessage: (msgId: number, saved: boolean) => Promise<boolean>;
+  /** Conversations pinned to since this account last opened their pins. */
+  unseenPins: Set<string>;
+  pinsByConversation: Map<string, PinsList>;
+  loadPins: (conversationId: string, more?: boolean) => void;
+  ackPins: (conversationId: string) => void;
+  savedMessageIds: Set<number>;
+  savedList: SavedList;
+  loadSaved: (more?: boolean) => void;
+  /** Takes a saved message off the list before the server confirms; the returned function puts it back. */
+  hideSaved: (msgId: number) => () => void;
   deletingMsgIds: Set<number>;
   /** The viewer's unconfirmed reaction intents (see reactionState.ts). */
   pendingReactions: Map<string, boolean>;
