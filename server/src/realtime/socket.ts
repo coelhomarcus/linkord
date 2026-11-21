@@ -224,6 +224,9 @@ async function handleJoin(socket: AppSocket, msg: JoinMessage): Promise<void> {
     // lets a newer client use what this server supports (3: correlated,
     // idempotent chat sends) and fall back otherwise
     protocolVersion: PROTOCOL_VERSION,
+    // this server's clock, read last (after every await above), so a client whose own clock is off
+    // still counts how long an activity has run from the same clock as the start (protocol 27)
+    serverTime: Date.now(),
   });
   announceParticipantJoined(p);
   // the status before `user-online`, so nobody sees "online" for an instant before "do not disturb"

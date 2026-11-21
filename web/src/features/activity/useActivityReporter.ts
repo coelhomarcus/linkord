@@ -80,7 +80,8 @@ export function useActivityReporter({ sendWs, settings }: { sendWs: (msg: Client
   const send = useCallback(() => {
     const report = reportRef.current;
     const { sharing, hidden } = settingsRef.current;
-    sendWs({ t: 'activity-set', activity: report && sharing && !hidden.includes(report.key) ? report : null });
+    // the send time on the same clock as the start, so the server reads it as a duration
+    sendWs({ t: 'activity-set', activity: report && sharing && !hidden.includes(report.key) ? { ...report, sentAt: Date.now() } : null });
   }, [sendWs]);
 
   const onDetected = useCallback((activity: DesktopActivity | null) => {

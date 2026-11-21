@@ -28,8 +28,8 @@ export type ReactionEmoji = string;
 
 /** Wire protocol version this build speaks; the server refuses older ones
  * (client_outdated). Keep in sync with server/src/realtime/protocolVersion.ts
- * — version 26 adds the header search with filters (`search-messages`). */
-export const PROTOCOL_VERSION = 26;
+ * — version 27 places activity starts on the server's clock (`activity-set.sentAt`, `welcome.serverTime`). */
+export const PROTOCOL_VERSION = 27;
 
 /** One server's or one channel/DM's notification setting (protocol 19). `level` null inherits: a channel
  * from its server, a server or a DM from "all". `mutedUntil` (ISO) is only read while `muted`, and null
@@ -81,8 +81,11 @@ export interface ActivityReport {
   kind: 'playing' | 'using';
   name: string;
   icon: { local: string } | null;
-  /** ms */
+  /** ms, this computer's clock */
   startedAt: number;
+  /** ms, this computer's clock when the report was sent, so the server reads the start as a duration
+   * and a clock that is off does not move it (protocol 27) */
+  sentAt?: number;
 }
 
 /** Someone else's status while they appear online. */
@@ -436,6 +439,8 @@ export type ServerMessage =
       callConversationId?: string | null;
       // absent from servers before protocol 3 (no correlated chat sends)
       protocolVersion?: number;
+      // the server's clock when it sent this, ms; absent from servers before protocol 27
+      serverTime?: number;
       // both absent from servers before protocol 10: everyone online reads as plain "online"
       presence?: Record<string, VisiblePresence>;
       myStatus?: OwnStatus;

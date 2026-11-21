@@ -36,6 +36,7 @@ import { useProfileUpdate } from '@/features/profile/useProfileUpdate';
 import { useOwnStatus } from '@/features/status/useOwnStatus';
 import { useActivitySettings } from '@/features/activity/useActivitySettings';
 import { useActivityReporter } from '@/features/activity/useActivityReporter';
+import { syncServerClock } from '@/features/activity/serverClock';
 import { useIdleReporter } from '@/features/status/useIdleReporter';
 import { useNotificationSettings } from '@/features/notifications/useNotificationSettings';
 import { badgeCounts, policyAlerts } from '@/features/notifications/notificationSettings';
@@ -302,6 +303,7 @@ export function RoomProvider({ children }: { children: ReactNode }) {
         presence.setInitial(m.knownUsers, m.onlineUserIds, m.friendIds, m.presence);
         onStatusSnapshot(m.myStatus);
         onIdleWelcome();
+        syncServerClock(m.serverTime);
         onActivitySettingsWelcome(m.activitySettings);
         onActivityWelcome();
         setMaxAttachmentBytes(m.maxAttachmentBytes ?? DEFAULT_MAX_ATTACHMENT_BYTES);

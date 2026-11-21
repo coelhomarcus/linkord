@@ -70,9 +70,13 @@
 // mention, date, author type and pinned filters, a sort and a page) answered with
 // `search-messages-result`. An old tab keeps its search dialog on `message-search`, which stays until
 // the minimum is raised, so the minimum stays at 7.
+// Version 27 places activity starts on the server's clock: an optional `sentAt` in `activity-set` (the
+// reporter's clock when it sent the report) and `welcome.serverTime` (the server's clock, for the
+// viewer's timers). An old tab sends no `sentAt` and is taken at its word, as before, and ignores
+// `serverTime`, so the minimum stays at 7.
 // Raising MIN_PROTOCOL_VERSION also drops open tabs out of their calls (they are refused and
 // disconnect), so keep it for changes an old client cannot tolerate.
-export const PROTOCOL_VERSION = 26;
+export const PROTOCOL_VERSION = 27;
 export const MIN_PROTOCOL_VERSION = 7;
 export const MIC_STARTING_PROTOCOL_VERSION = 18;
 export const CALL_ELSEWHERE_PROTOCOL_VERSION = 20;

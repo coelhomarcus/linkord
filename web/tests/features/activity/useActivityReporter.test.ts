@@ -51,7 +51,7 @@ describe('useActivityReporter', () => {
     upload.mockResolvedValue('c'.repeat(64));
     lookup.mockResolvedValue({ name: 'Minecraft', image: 'co49x5', icon: 'b'.repeat(64) });
     const { reports } = render();
-    await waitFor(() => expect(reports().at(-1)).toEqual({ key: 'minecraft', kind: 'playing', name: 'Minecraft', icon: { local: 'b'.repeat(64) }, startedAt: 1000 }));
+    await waitFor(() => expect(reports().at(-1)).toEqual({ key: 'minecraft', kind: 'playing', name: 'Minecraft', icon: { local: 'b'.repeat(64) }, startedAt: 1000, sentAt: expect.any(Number) }));
     expect(lookup).toHaveBeenCalledWith({ steamAppId: undefined, name: 'Minecraft', ref: 'c'.repeat(64) });
     expect(upload).toHaveBeenCalledTimes(1);
   });
@@ -125,6 +125,17 @@ describe('useActivityReporter', () => {
     expect(reports().at(-1)).toBeNull();
     rerender({ s: { sharing: true, hidden: [] } });
     await waitFor(() => expect(reports().at(-1)).toMatchObject({ key: 'minecraft' }));
+  });
+
+  it('sends each report with the time it left, on the same clock as the start', async () => {
+    stubDesktop(spotify);
+    upload.mockResolvedValue(null);
+    const before = Date.now();
+    const { reports } = render();
+    await waitFor(() => expect(reports().at(-1)).toMatchObject({ key: 'spotify', startedAt: 2000 }));
+    const { sentAt } = reports().at(-1) as { sentAt: number };
+    expect(sentAt).toBeGreaterThanOrEqual(before);
+    expect(sentAt).toBeLessThanOrEqual(Date.now());
   });
 
   it('stops detection and clears the activity when sharing is turned off', async () => {
