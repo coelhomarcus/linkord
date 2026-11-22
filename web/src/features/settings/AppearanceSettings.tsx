@@ -152,7 +152,7 @@ function AppearancePreview() {
                   <span className="flex-none text-caption text-text-muted">{time}</span>
                 </div>
               )}
-              <p className="text-body leading-message text-text-secondary">{line}</p>
+              <p className="text-body leading-message text-text-message">{line}</p>
             </div>
           </div>
         </div>

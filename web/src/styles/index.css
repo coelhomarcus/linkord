@@ -67,6 +67,8 @@
   /* headings a step above body text, and placeholders a step below muted */
   --color-text-strong: oklch(98.00% 0.0020 279.30);
   --color-text-faint: oklch(62.00% 0.0020 279.30);
+  /* the words of a chat message: secondary unless a theme's secondary is too dim to read as sent */
+  --color-text-message: var(--color-text-secondary);
 
   --color-border-subtle: oklch(100% 0 0 / 0.06);
   --color-border-default: oklch(100% 0 0 / 0.10);

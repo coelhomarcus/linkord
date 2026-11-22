@@ -42,6 +42,9 @@ html[data-theme="black"] {
   --color-text-secondary: #9c9da1;
   --color-text-muted: #818289;
   --color-text-faint: #6d6f78;
+  /* brighter than secondary: at #9c9da1 a sent message looked like one still
+     sending, and opacity-60 on it is what pending really looks like */
+  --color-text-message: #c8c9cd;
 
   --color-fill-subtle: oklch(100% 0 0 / 0.04);
   --color-fill-hover: oklch(100% 0 0 / 0.08);
