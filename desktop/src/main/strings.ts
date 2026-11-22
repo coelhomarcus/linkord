@@ -54,6 +54,7 @@ const PT_BR = {
   restartNow: 'Reiniciar agora',
   later: 'Depois',
   close: 'Fechar',
+  unreadBadge: '{{count}} não lidas',
 };
 
 export type Strings = typeof PT_BR;
@@ -109,6 +110,7 @@ const EN_US: Strings = {
   restartNow: 'Restart now',
   later: 'Later',
   close: 'Close',
+  unreadBadge: '{{count}} unread',
 };
 
 export const STRINGS = { 'pt-BR': PT_BR, 'en-US': EN_US } as const;

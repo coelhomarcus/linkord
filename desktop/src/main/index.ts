@@ -264,7 +264,7 @@ if (!resolved.ok) {
     const barStyle = titleBarStyle({ platform: process.platform, env: process.env, isPackaged: app.isPackaged });
     installPermissionHandlers(session.defaultSession, appUrl.origin);
     installScreenShare(session.defaultSession, appUrl.origin);
-    installAppBridge(appUrl.origin);
+    installAppBridge(appUrl.origin, strings);
     installNotificationBridge(appUrl.origin);
     const activityWatcher = createActivityWatcher({
       recentFile: path.join(app.getPath('userData'), 'activity-recent.json'),

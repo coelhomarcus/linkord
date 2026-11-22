@@ -133,7 +133,8 @@ export interface LinkordDesktop {
   /** `linkord://` links opened while the app runs, as paths on this origin (an invite, a
    * conversation); returns the unsubscribe. Absent in builds without deep links. */
   onDeepLink?: (callback: (path: string) => void) => () => void;
-  /** the dock or launcher count, only in old macOS and Linux installs (0.3.x): the Windows taskbar shows none */
+  /** the unread count on the taskbar button (0 clears it); absent in Windows builds up to 0.7.0,
+   * which show none. Old macOS and Linux installs (0.3.x) put it on the dock or launcher. */
   setBadgeCount?: (count: number) => Promise<boolean>;
   /** absent in builds that show the page's web notifications instead */
   notifications?: DesktopNotifications;

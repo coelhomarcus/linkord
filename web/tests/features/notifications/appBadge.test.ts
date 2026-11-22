@@ -50,7 +50,21 @@ describe('app icon badge', () => {
 describe('app icon badge — in the desktop app', () => {
   afterEach(() => { delete window.linkordDesktop; });
 
-  it('leaves the Windows taskbar icon alone, which shows no count', async () => {
+  it('puts the count on the Windows taskbar button, and clears it', async () => {
+    const setBadgeCount = vi.fn(async () => true);
+    window.linkordDesktop = { platform: 'win32', version: '0.7.1', setBadgeCount };
+    const setAppBadge = vi.fn(async () => {});
+    vi.stubGlobal('navigator', { setAppBadge });
+    fetchBadge.mockResolvedValueOnce({ count: 5 });
+
+    await refreshAppBadge();
+    await clearAppBadge();
+
+    expect(setBadgeCount.mock.calls).toEqual([[5], [0]]);
+    expect(setAppBadge).not.toHaveBeenCalled();
+  });
+
+  it('leaves the taskbar alone in a Windows build without the count', async () => {
     window.linkordDesktop = { platform: 'win32', version: '0.7.0' };
     const setAppBadge = vi.fn(async () => {});
     vi.stubGlobal('navigator', { setAppBadge });

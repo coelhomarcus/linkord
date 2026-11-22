@@ -1,8 +1,8 @@
 import { apiFetch } from '@/shared/api/api';
 import { desktopApp, isDesktopApp } from '@/shared/desktop';
 
-// A browser counts through the Badging API, which only an installed web app has. The desktop app is
-// a Windows one, whose taskbar shows no count; only an old macOS or Linux install still sets its own
+// A browser counts through the Badging API, which only an installed web app has. The desktop app
+// sets its own (the taskbar button's overlay); a build older than that shows no count at all
 async function setBadge(count: number): Promise<void> {
   const setDesktopBadge = desktopApp()?.setBadgeCount;
   if (setDesktopBadge) {
