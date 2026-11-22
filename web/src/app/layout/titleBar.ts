@@ -38,9 +38,6 @@ export interface TitleBarHost {
   platform: string;
 }
 
-export function hostFor(controls: DesktopWindowControls, platform: string): TitleBarHost {
-  return { controls, platform };
-}
 
 /**
  * For a bar that takes the title bar's place (TopBar): the frame hides its
@@ -51,6 +48,6 @@ export function useTitleBarHost(): TitleBarHost | null {
   const register = useContext(TitleBarHostContext);
   useEffect(() => register?.(), [register]);
   const desktop = desktopApp();
-  return register && desktop?.windowControls ? hostFor(desktop.windowControls, desktop.platform) : null;
+  return register && desktop?.windowControls ? { controls: desktop.windowControls, platform: desktop.platform } : null;
 }
 

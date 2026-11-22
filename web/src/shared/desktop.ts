@@ -106,7 +106,7 @@ export interface DesktopRunningActivities {
 }
 
 /** A notification for the system's own centre (desktop/src/main/notificationLayout.ts checks it). */
-export interface DesktopNotificationRequest {
+interface DesktopNotificationRequest {
   /** the notification's tag: a newer one with the same id replaces it */
   id: string;
   title: string;
