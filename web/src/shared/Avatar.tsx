@@ -1,4 +1,5 @@
 import { Avatar as AvatarRoot, AvatarFallback, AvatarImage } from '@/shared/ui/primitives/avatar';
+import { personInitials } from '@/shared/lib/initials';
 
 export const AVATAR_COLOR_OPTIONS = [
   { value: 'blurple', labelKey: 'avatar.colors.blurple', css: 'var(--color-avatar-indigo)' },
@@ -25,13 +26,6 @@ export function normalizeAvatarColor(value: unknown): AvatarColorValue | string 
   return HEX_COLOR_RE.test(raw) ? raw.toLowerCase() : '';
 }
 
-function initialsOf(name: string): string {
-  const parts = name.trim().split(/\s+/).filter(Boolean);
-  if (!parts.length) return '?';
-  const a = parts[0][0] || '';
-  const b = parts.length > 1 ? parts[parts.length - 1][0] : '';
-  return (a + b).toUpperCase();
-}
 function fallbackColorFor(id: string): string {
   if (!id) return AVATAR_COLORS[0];
   let h = 0;
@@ -79,7 +73,7 @@ export function Avatar({ id, name, avatar, avatarColor, size, className, poster,
         className="select-none font-bold text-white"
         style={{ background: colorFor(id, avatarColor), fontSize: Math.round(size * 0.4) }}
       >
-        {initialsOf(name)}
+        {personInitials(name)}
       </AvatarFallback>
       {/* laid over the still frame and hidden by CSS until hovered (see
           index.css); lazy, so a GIF nobody hovers is never downloaded */}

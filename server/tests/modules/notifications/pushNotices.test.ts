@@ -1,8 +1,8 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import {
-  chatNoticeText, friendAcceptedNoticeText, friendRequestNoticeText, handleLine, mentionNoticeText, previewText, pushAvatarPath,
-  serverInvitationNoticeText, type ChatNoticeInput,
+  chatNoticeText, friendAcceptedNoticeText, friendRequestNoticeText, handleLine, mentionNoticeText, noticePerson, previewText, pushAvatarPath,
+  serverIconPath, serverInvitationNoticeText, type ChatNoticeInput,
 } from '../../../src/modules/notifications/pushNotices.js';
 
 const chat: ChatNoticeInput = {
@@ -87,5 +87,18 @@ describe('push helpers', () => {
     assert.equal(pushAvatarPath({ avatar: `/uploads/${id}`, avatarPoster: `/uploads/${'b'.repeat(32)}` }), `/uploads/${'b'.repeat(32)}`);
     assert.equal(pushAvatarPath({ avatar: 'https://example.com/a.png', avatarPoster: '' }), undefined);
     assert.equal(pushAvatarPath(null), undefined);
+  });
+
+  it('names a person by display name, with their avatar only when it is our own upload', () => {
+    const user = { id: 'u1', username: 'ana', displayName: '', avatar: 'https://example.com/a.png', avatarPoster: '', avatarColor: 'teal' };
+    assert.deepEqual(noticePerson(user), { id: 'u1', name: 'ana', avatarColor: 'teal' });
+    const avatar = `/uploads/${'c'.repeat(32)}`;
+    assert.deepEqual(noticePerson({ ...user, displayName: 'Ana', avatar }), { id: 'u1', name: 'Ana', avatarColor: 'teal', avatar });
+  });
+
+  it('uses a server icon only when it is our own upload', () => {
+    assert.equal(serverIconPath(`/uploads/${'d'.repeat(32)}`), `/uploads/${'d'.repeat(32)}`);
+    assert.equal(serverIconPath(''), undefined);
+    assert.equal(serverIconPath('https://example.com/icon.png'), undefined);
   });
 });

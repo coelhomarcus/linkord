@@ -4,7 +4,7 @@ import { TITLE_BAR_HEIGHT, titleBarOptions, titleBarStyle, windowState } from '.
 
 describe('titleBarOptions', () => {
   it('hides the system title bar everywhere', () => {
-    for (const platform of ['darwin', 'win32', 'linux'] as const) assert.equal(titleBarOptions(platform).titleBarStyle, 'hidden');
+    for (const platform of ['darwin', 'win32'] as const) assert.equal(titleBarOptions(platform).titleBarStyle, 'hidden');
   });
 
   it('centres the macOS traffic lights in the page bar', () => {
@@ -28,8 +28,7 @@ describe('titleBarStyle', () => {
   it('follows the system', () => {
     assert.equal(style('darwin'), 'mac');
     assert.equal(style('win32'), 'windows');
-    assert.equal(style('linux'), 'linux');
-    assert.equal(style('freebsd'), 'linux');
+    assert.equal(style('linux'), 'windows');
   });
 
   it('takes LINKORD_TITLE_BAR only in a development run', () => {

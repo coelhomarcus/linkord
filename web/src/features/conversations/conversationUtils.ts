@@ -24,12 +24,6 @@ export function conversationDocumentTitle(conversation: Conversation | null | un
   return serverName ? `${APP_TITLE} | ${channel} | ${serverName}` : `${APP_TITLE} | ${channel}`;
 }
 
-export function conversationInitials(title: string): string {
-  const words = title.trim().split(/\s+/).filter(Boolean);
-  if (!words.length) return 'L';
-  return words.slice(0, 2).map((word) => word[0]?.toUpperCase()).join('');
-}
-
 export function directUser(conversation: Conversation | null | undefined, meUserId: string | null, users: Map<string, PublicUser>): PublicUser | null {
   if (!conversation || conversation.type !== 'direct') return null;
   const otherId = conversation.memberIds.find((id) => id !== meUserId);

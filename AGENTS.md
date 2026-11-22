@@ -124,14 +124,15 @@ desktop/
                  # (permission handlers), contentsGuard.ts (navigation and popups), plus the
                  # rules they apply as plain modules: appUrl, navigation, permissions, windowState, loadRetry,
                  # titleBar, loginItem, menus, strings, updates, preferences, trayMenuLayout, activityCatalog,
-                 # activityDetect (tray.ts, trayMenuWindow.ts, startAtLogin.ts, updater.ts, settingsBridge.ts,
-                 # activityWatcher.ts, activityBridge.ts wire them)
+                 # activityDetect, notificationLayout (tray.ts, trayMenuWindow.ts, startAtLogin.ts, updater.ts,
+                 # settingsBridge.ts, activityWatcher.ts, activityBridge.ts, notificationBridge.ts wire them)
   src/preload/   # index.cts, the only bridge into the page (trayMenu.cts serves the drawn tray menu)
   scripts/       # package.mjs (`npm run package`: bakes LINKORD_URL in, runs electron-builder)
   resources/     # installer icons; electron-builder.config.cjs sits next to package.json
 desktop/tests/   # mirrors desktop/src/ — NO tests inside src/
 ```
 
+- **Windows only.** The app ships for Windows and nothing else (`electron-builder.config.cjs` builds the NSIS installer; see `docs/DEPLOY.md`). Build and test new desktop work for Windows; don't add macOS- or Linux-specific behaviour or layouts. The only macOS code left is what lets a development run start on a Mac (its title bar buttons and native tray menu, the microphone and camera prompt, staying open when the window closes); keep it working, but add no features there. The web app still accepts what old macOS and Linux installs (0.3.x) send (`'linux'` title bar style, `setBadgeCount`, the `'system'` share picker, the `'notify'` update mode).
 - **The window loads the server, not a bundled copy of `web/`.** Same origin means the server's cookies, `originGuard` and CSP work unchanged and a deploy updates the interface. Don't load local files or add an API proxy without a reason that outweighs that.
 - **Rules live in plain modules with no `electron` import**, so `node --test` covers them without Electron; the files that import `electron` only wire those rules to events. A new decision (what to allow, where to go, how long to wait) goes in a plain module with a test.
 - **The page is untrusted as far as the main process is concerned**: `contextIsolation`, `sandbox`, no `nodeIntegration` on every window (`SECURE_WEB_PREFERENCES`). Permissions are an allowlist checked against the app's origin (`permissions.ts`); add a permission only for a feature the web app really uses.

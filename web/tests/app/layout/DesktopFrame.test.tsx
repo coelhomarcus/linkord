@@ -67,12 +67,18 @@ describe('DesktopFrame', () => {
   });
 
   it('offers to restore a maximised window, following the window as it changes', async () => {
-    const { emit } = stubWindowControls('linux', { maximized: true });
+    const { emit } = stubWindowControls('win32', { maximized: true });
     render(<DesktopFrame><p>page</p></DesktopFrame>);
     expect(await screen.findByRole('button', { name: 'Restaurar' })).toBeInTheDocument();
     emit({ maximized: false, fullScreen: false, focused: true });
     expect(screen.getByRole('button', { name: 'Maximizar' })).toBeInTheDocument();
-    expect(screen.getByRole('group', { name: 'Controles da janela' })).toHaveAttribute('data-title-bar-style', 'linux');
+  });
+
+  it('draws the Windows buttons for an old Linux install too', () => {
+    stubWindowControls('linux');
+    window.linkordDesktop!.windowControls!.style = 'linux';
+    render(<DesktopFrame><p>page</p></DesktopFrame>);
+    expect(screen.getByRole('group', { name: 'Controles da janela' })).toHaveAttribute('data-title-bar-style', 'windows');
   });
 
   it('keeps the drag strip on macOS but leaves the buttons to the system', () => {
@@ -82,21 +88,11 @@ describe('DesktopFrame', () => {
     expect(screen.queryByRole('button', { name: 'Fechar' })).not.toBeInTheDocument();
   });
 
-  it('maximises on a double click in the bar on Linux only', () => {
-    const linux = stubWindowControls('linux');
-    const { unmount } = render(<DesktopFrame><p>page</p></DesktopFrame>);
-    fireEvent.doubleClick(screen.getByTestId('desktop-title-bar'));
-    expect(linux.controls.toggleMaximize).toHaveBeenCalledTimes(1);
-    // a double click on one of its buttons is two clicks on that button, not a maximise
-    fireEvent.doubleClick(screen.getByRole('button', { name: 'Minimizar' }));
-    expect(linux.controls.toggleMaximize).toHaveBeenCalledTimes(1);
-    unmount();
-
-    // Windows does it itself: a second toggle would undo it
-    const windows = stubWindowControls('win32');
+  it('leaves a double click in the bar to Windows, which maximises itself', () => {
+    const { controls } = stubWindowControls('win32');
     render(<DesktopFrame><p>page</p></DesktopFrame>);
     fireEvent.doubleClick(screen.getByTestId('desktop-title-bar'));
-    expect(windows.controls.toggleMaximize).not.toHaveBeenCalled();
+    expect(controls.toggleMaximize).not.toHaveBeenCalled();
   });
 
   it('gives way to the top bar where the top bar shows', async () => {

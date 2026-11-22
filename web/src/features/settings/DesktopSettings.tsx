@@ -1,6 +1,5 @@
 import { ArrowClockwiseIcon, ArrowSquareOutIcon, CheckCircleIcon } from '@/shared/ui/icons';
 import { useTranslation } from 'react-i18next';
-import { desktopApp } from '@/shared/desktop';
 import { Button } from '@/shared/ui/primitives/button';
 import { Switch } from '@/shared/ui/primitives/switch';
 import { SettingsRow, SettingsRowList, SettingsSection, SettingsSections } from '@/shared/ui/settings-layout';
@@ -12,8 +11,6 @@ import type { DesktopSettingsSnapshot } from '@/shared/desktop';
 export function DesktopSettings() {
   const { t } = useTranslation('settings');
   const { settings, change, check, checkForUpdates, applyUpdate } = useDesktopSettings();
-  // "the tray" is the menu bar on macOS
-  const where = desktopApp()?.platform === 'darwin' ? 'mac' : 'other';
   if (!settings) return null;
 
   return (
@@ -24,7 +21,7 @@ export function DesktopSettings() {
             <SettingsRow label={t('desktop.startAtLogin.label')} description={t('desktop.startAtLogin.description')}>
               <Switch size="lg" checked={settings.startAtLogin.enabled} onCheckedChange={(enabled) => change({ startAtLogin: enabled })} aria-label={t('desktop.startAtLogin.label')} />
             </SettingsRow>
-            <SettingsRow label={t('desktop.startMinimized.label')} description={t(`desktop.startMinimized.description.${where}`)} disabled={!settings.startAtLogin.enabled}>
+            <SettingsRow label={t('desktop.startMinimized.label')} description={t('desktop.startMinimized.description')} disabled={!settings.startAtLogin.enabled}>
               <Switch size="lg" checked={settings.startMinimized} disabled={!settings.startAtLogin.enabled} onCheckedChange={(enabled) => change({ startMinimized: enabled })} aria-label={t('desktop.startMinimized.label')} />
             </SettingsRow>
           </SettingsRowList>
@@ -32,7 +29,7 @@ export function DesktopSettings() {
       )}
 
       <SettingsSection id="desktop-window" title={t('catalog.sections.desktopWindow')}>
-        <SettingsRow label={t('desktop.closeToTray.label')} description={t(`desktop.closeToTray.description.${where}`)}>
+        <SettingsRow label={t('desktop.closeToTray.label')} description={t('desktop.closeToTray.description')}>
           <Switch size="lg" checked={settings.closeToTray} onCheckedChange={(enabled) => change({ closeToTray: enabled })} aria-label={t('desktop.closeToTray.label')} />
         </SettingsRow>
       </SettingsSection>

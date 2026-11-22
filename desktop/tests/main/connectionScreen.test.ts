@@ -32,9 +32,9 @@ describe('connectionView', () => {
 
   it('draws the window buttons where the system has none', () => {
     assert.equal(connectionView({ kind: 'connecting' }, strings, { ...context, titleBar: 'mac' }).windowControls, null);
-    const linux = connectionView({ kind: 'connecting' }, strings, { ...context, titleBar: 'linux' }).windowControls;
-    assert.equal(linux?.style, 'linux');
-    assert.equal(linux?.maximize, 'Maximize');
+    const windows = connectionView({ kind: 'connecting' }, strings, context).windowControls;
+    assert.equal(windows?.style, 'windows');
+    assert.equal(windows?.maximize, 'Maximize');
     const maximized = connectionView({ kind: 'connecting' }, strings, { ...context, maximized: true }).windowControls;
     assert.equal(maximized?.maximize, 'Restore');
   });

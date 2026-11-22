@@ -29,6 +29,7 @@ export interface DesktopWindowState {
 /** The window has no system title bar: the page draws one with these buttons. */
 export interface DesktopWindowControls {
   /** whose buttons to draw; the platform's when absent */
+  /** 'linux' only from an old Linux install (0.3.x), drawn as 'windows' */
   style?: 'mac' | 'windows' | 'linux';
   minimize: () => Promise<void>;
   toggleMaximize: () => Promise<void>;
@@ -104,6 +105,25 @@ export interface DesktopRunningActivities {
   preferred: string | null;
 }
 
+/** A notification for the system's own centre (desktop/src/main/notificationLayout.ts checks it). */
+interface DesktopNotificationRequest {
+  /** the notification's tag: a newer one with the same id replaces it */
+  id: string;
+  title: string;
+  body: string;
+  /** a PNG data URL; anything else shows the app icon */
+  icon?: string | null;
+  /** a conversation's notifications stack together */
+  group?: string | null;
+}
+
+export interface DesktopNotifications {
+  /** false when it was not shown (a request it refused, or no notifications on this system) */
+  show: (request: DesktopNotificationRequest) => Promise<boolean>;
+  /** the id of the notification clicked, once the window is back; returns the unsubscribe */
+  onClick: (callback: (id: string) => void) => () => void;
+}
+
 export interface LinkordDesktop {
   platform: string;
   version: string;
@@ -113,8 +133,10 @@ export interface LinkordDesktop {
   /** `linkord://` links opened while the app runs, as paths on this origin (an invite, a
    * conversation); returns the unsubscribe. Absent in builds without deep links. */
   onDeepLink?: (callback: (path: string) => void) => () => void;
-  /** the count on the dock or launcher icon; false where the system shows none (Windows) */
+  /** the dock or launcher count, only in old macOS and Linux installs (0.3.x): the Windows taskbar shows none */
   setBadgeCount?: (count: number) => Promise<boolean>;
+  /** absent in builds that show the page's web notifications instead */
+  notifications?: DesktopNotifications;
   /** absent in builds that keep the system title bar */
   windowControls?: DesktopWindowControls;
   /** absent in builds without the app's own settings */

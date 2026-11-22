@@ -27,7 +27,6 @@ describe('updateMode', () => {
 
   it('is off anywhere else, in a development run or in a build without a repository', () => {
     assert.equal(mode('darwin'), 'off');
-    assert.equal(mode('linux'), 'off');
     assert.equal(mode('win32', { isPackaged: false }), 'off');
     assert.equal(mode('win32', { noRepo: true }), 'off');
   });

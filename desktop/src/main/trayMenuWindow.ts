@@ -7,7 +7,7 @@ import { echoesTrayClick, trayMenuPosition, trayMenuSize } from './trayMenuLayou
 // Windows draws a tray's context menu as a classic Win32 menu, which looks
 // nothing like the app. There the tray opens this small window instead: the
 // same items (menus.ts), drawn by assets/tray-menu.html in the app's colours.
-// macOS and Linux keep the native menu (a Linux tray only takes a native one).
+// A development run on a Mac keeps the native menu.
 
 const PAGE = path.join(import.meta.dirname, '../../assets/tray-menu.html');
 const PRELOAD = path.join(import.meta.dirname, '../preload/trayMenu.cjs');

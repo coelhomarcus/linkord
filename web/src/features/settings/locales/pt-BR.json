@@ -577,17 +577,11 @@
     },
     "startMinimized": {
       "label": "Iniciar minimizado",
-      "description": {
-        "mac": "Ao iniciar com o computador, o Linkord fica na barra de menus até você abri-lo.",
-        "other": "Ao iniciar com o computador, o Linkord fica na bandeja do sistema até você abri-lo."
-      }
+      "description": "Ao iniciar com o computador, o Linkord fica na bandeja do sistema até você abri-lo."
     },
     "closeToTray": {
       "label": "Manter aberto ao fechar a janela",
-      "description": {
-        "mac": "O Linkord continua na barra de menus e você segue recebendo mensagens e chamadas. Desligado, fechar a janela encerra o app.",
-        "other": "O Linkord continua na bandeja do sistema e você segue recebendo mensagens e chamadas. Desligado, fechar a janela encerra o app."
-      }
+      "description": "O Linkord continua na bandeja do sistema e você segue recebendo mensagens e chamadas. Desligado, fechar a janela encerra o app."
     },
     "updates": {
       "version": "Versão {{version}}",

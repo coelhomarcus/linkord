@@ -6,7 +6,6 @@ import type { UpdateMode, UpdateStatus } from './updates.js';
 // Electron; index.ts builds them again whenever the state changes.
 
 export interface MenuState {
-  platform: NodeJS.Platform;
   strings: Strings;
   startAtLogin: { available: boolean; enabled: boolean };
   update: { mode: UpdateMode; status: UpdateStatus };
@@ -46,7 +45,7 @@ function updateItems(state: MenuState, actions: MenuActions): MenuItemConstructo
   return [{ label: s.checkForUpdates, click: () => actions.checkForUpdates() }];
 }
 
-/** The tray menu as data: the native menu (macOS, Linux) and the drawn one (Windows, trayMenuWindow.ts) both come from it. */
+/** The tray menu as data: the drawn one (trayMenuWindow.ts) and the native one a development run on a Mac uses both come from it. */
 export type TrayMenuItem =
   | { kind: 'action'; id: 'open' | 'update' | 'quit'; label: string }
   | { kind: 'toggle'; id: 'startAtLogin'; label: string; checked: boolean }
@@ -118,59 +117,22 @@ function viewMenu(state: MenuState): MenuItemConstructorOptions {
   };
 }
 
-/**
- * The application menu. macOS shows it in the menu bar, with the app menu
- * first; Windows and Linux keep it hidden in the window until Alt is pressed.
- */
+/** The application menu, hidden in the window until Alt is pressed. */
 export function appMenuTemplate(state: MenuState, actions: MenuActions): MenuItemConstructorOptions[] {
   const s = state.strings;
-  const help: MenuItemConstructorOptions = {
-    role: 'help',
-    label: s.help,
-    submenu: [
-      { label: s.openInBrowser, click: () => actions.openInBrowser() },
-      ...(state.platform === 'darwin' ? [] : [separator, ...section(updateItems(state, actions)), { role: 'about', label: s.about } as const]),
-    ],
-  };
-
-  if (state.platform !== 'darwin') {
-    return [
-      { label: s.file, submenu: [...section(startAtLoginItems(state, actions)), { role: 'quit', label: s.quit }] },
-      editMenu(s),
-      viewMenu(state),
-      help,
-    ];
-  }
-
   return [
-    {
-      label: 'Linkord',
-      submenu: [
-        { role: 'about', label: s.about },
-        separator,
-        ...section(updateItems(state, actions)),
-        ...section(startAtLoginItems(state, actions)),
-        { role: 'services', label: s.services },
-        separator,
-        { role: 'hide', label: s.hide },
-        { role: 'hideOthers', label: s.hideOthers },
-        { role: 'unhide', label: s.showAll },
-        separator,
-        { role: 'quit', label: s.quit },
-      ],
-    },
+    { label: s.file, submenu: [...section(startAtLoginItems(state, actions)), { role: 'quit', label: s.quit }] },
     editMenu(s),
     viewMenu(state),
     {
-      role: 'window',
-      label: s.window,
+      role: 'help',
+      label: s.help,
       submenu: [
-        { role: 'minimize', label: s.minimize },
-        { role: 'zoom', label: s.zoom },
+        { label: s.openInBrowser, click: () => actions.openInBrowser() },
         separator,
-        { role: 'front', label: s.front },
+        ...section(updateItems(state, actions)),
+        { role: 'about', label: s.about },
       ],
     },
-    help,
   ];
 }

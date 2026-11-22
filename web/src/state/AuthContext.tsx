@@ -1,6 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
 import { clearResourceCaches } from '@/shared/lib/resourceCache';
+import { clearNotificationIcons } from '@/shared/notificationIcon';
 import { fetchMe, login as apiLogin, logout as apiLogout, register as apiRegister, verifyLoginCode } from '@/shared/api/api';
 import type { ApiUser, LoginChallenge, SignedIn } from '@/shared/api/api';
 import { clearAllDrafts } from '@/features/chat/conversationDrafts';
@@ -102,6 +103,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signIn = useCallback((result: SignedIn) => {
     // a session that expired never went through signOut: whatever was cached may be another account's
     clearResourceCaches();
+    clearNotificationIcons();
     setAccountNotice(result.deletionCancelled ? { kind: 'deletionCancelled' } : null);
     setUser(result.user);
     setStatus('authed');
@@ -121,6 +123,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const register = useCallback(async (username: string, email: string, password: string, confirmPassword: string, code: string) => {
     const { user: u } = await apiRegister(username, email, password, confirmPassword, code);
     clearResourceCaches();
+    clearNotificationIcons();
     setUser(u);
     setStatus('authed');
   }, []);
@@ -136,6 +139,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     forgetAccountPreferences();
     // profiles and relationships were read as this account
     clearResourceCaches();
+    clearNotificationIcons();
     setUser(null);
     setStatus('anon');
   }, []);

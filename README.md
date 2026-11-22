@@ -47,7 +47,7 @@ Linkord is a self-hosted place to chat and call with friends. Talk in direct mes
 - Profile with connected accounts and a Wall of widgets: MyAnimeList, GitHub, and games from IGDB.
 
 **Notifications**
-- Web Push for messages, mentions, friend requests, and invites, plus an unread badge on the app icon.
+- Web Push for messages, mentions, friend requests, and invites, plus an unread badge on the app icon. The desktop app and a browser without push get the same system notifications while the app is open.
 - Notification level and mute per server, channel, and DM.
 
 **Account**

@@ -77,9 +77,13 @@
 // Version 28 syncs account preferences across devices: `welcome.preferences` and `my-preferences` (set
 // through `PATCH /api/me/preferences`). An old tab ignores both and keeps the settings saved in its
 // browser, so the minimum stays at 7.
+// Version 29 adds `notice` (a friend request, an accepted request or a server invitation, as its push
+// shows it) to every open connection of the account, so a tab or desktop app without push can show
+// it. An old tab ignores it and only refreshes its lists on `social-changed`, as before, so the
+// minimum stays at 7.
 // Raising MIN_PROTOCOL_VERSION also drops open tabs out of their calls (they are refused and
 // disconnect), so keep it for changes an old client cannot tolerate.
-export const PROTOCOL_VERSION = 28;
+export const PROTOCOL_VERSION = 29;
 export const MIN_PROTOCOL_VERSION = 7;
 export const MIC_STARTING_PROTOCOL_VERSION = 18;
 export const CALL_ELSEWHERE_PROTOCOL_VERSION = 20;

@@ -50,7 +50,17 @@ describe('app icon badge', () => {
 describe('app icon badge — in the desktop app', () => {
   afterEach(() => { delete window.linkordDesktop; });
 
-  it('sets the count through the desktop app instead of the Badging API', async () => {
+  it('leaves the Windows taskbar icon alone, which shows no count', async () => {
+    window.linkordDesktop = { platform: 'win32', version: '0.7.0' };
+    const setAppBadge = vi.fn(async () => {});
+    vi.stubGlobal('navigator', { setAppBadge });
+    await refreshAppBadge();
+    await clearAppBadge();
+    expect(fetchBadge).not.toHaveBeenCalled();
+    expect(setAppBadge).not.toHaveBeenCalled();
+  });
+
+  it('an old macOS install sets the count itself instead of the Badging API', async () => {
     const setBadgeCount = vi.fn(async () => true);
     window.linkordDesktop = { platform: 'darwin', version: '0.1.0', setBadgeCount };
     const setAppBadge = vi.fn(async () => {});
@@ -64,7 +74,7 @@ describe('app icon badge — in the desktop app', () => {
     expect(setAppBadge).not.toHaveBeenCalled();
   });
 
-  it('still badges when the browser has no Badging API, as Electron does', async () => {
+  it('an old Linux install badges without the Badging API', async () => {
     const setBadgeCount = vi.fn(async () => true);
     window.linkordDesktop = { platform: 'linux', version: '0.1.0', setBadgeCount };
     vi.stubGlobal('navigator', {});

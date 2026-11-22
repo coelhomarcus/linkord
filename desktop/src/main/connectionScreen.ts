@@ -15,8 +15,8 @@ export type ConnectionScreen =
 
 /**
  * Everything the screen may ask for. Besides trying again, the window's own
- * buttons: on Windows and Linux the window has no system title bar, and the
- * app's page, which draws one, is not there.
+ * buttons: on Windows the window has no system title bar, and the app's page,
+ * which draws one, is not there.
  */
 export type ConnectionAction = 'retry' | 'minimize' | 'toggle-maximize' | 'close';
 
@@ -36,8 +36,8 @@ export interface ConnectionView {
   countdown: string;
   tone: 'neutral' | 'error';
   actions: { id: 'retry'; label: string }[];
-  /** drawn by the page where the system draws none (macOS keeps its traffic lights) */
-  windowControls: { style: 'windows' | 'linux'; maximized: boolean; group: string; minimize: string; maximize: string; close: string } | null;
+  /** drawn by the page where the system draws none (a development run on a Mac keeps its traffic lights) */
+  windowControls: { style: 'windows'; maximized: boolean; group: string; minimize: string; maximize: string; close: string } | null;
 }
 
 export function secondsUntil(retryAt: number, now: number): number {

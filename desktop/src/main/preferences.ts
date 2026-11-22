@@ -3,7 +3,7 @@
 // so only what the system does not keep lives here.
 
 export interface DesktopPreferences {
-  /** closing the window keeps the app in the tray (the menu bar on macOS) instead of quitting */
+  /** closing the window keeps the app in the tray instead of quitting */
   closeToTray: boolean;
   /** a start with the system leaves the window closed, in the tray */
   startMinimized: boolean;

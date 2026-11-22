@@ -561,11 +561,21 @@ export function useChatMessages(deps: ChatMessagesDeps) {
     // A pin notice too: the header's dot says it, as Discord does
     if (fromSomeoneElse && !amLookingAtIt && m.message.kind !== 'pin_notice' && (alertsForRef.current?.(conversationId, mentioned) ?? true)) {
       if (shouldChime(conversationId, mentioned)) playSound(mentioned ? 'mention' : 'newMessage');
+      const conversation = conversationsRef.current.find((c) => c.id === conversationId);
+      const server = conversation?.serverId ? serversRef.current.find((s) => s.id === conversation.serverId) : undefined;
+      const author = m.message.id ? allUsersRef.current.get(m.message.id) : undefined;
+      const title = conversationTitle(conversation, myUserIdRef.current, allUsersRef.current);
       notifyIncomingChatMessage({
         conversationId,
-        conversationName: conversationTitle(conversationsRef.current.find((c) => c.id === conversationId), myUserIdRef.current, allUsersRef.current),
+        // a channel as the push titles it: `#channel · Server`
+        conversationName: server ? `${conversation?.type === 'text' ? '#' : ''}${title} · ${server.name}` : title,
+        direct: conversation?.type === 'direct',
+        server: server ? { id: server.id, name: server.name, icon: server.icon } : null,
         senderId: m.message.id,
-        senderName: (m.message.id ? allUsersRef.current.get(m.message.id)?.displayName : undefined) ?? m.message.name,
+        senderName: author?.displayName || author?.username || m.message.name,
+        // the still frame of an animated avatar; a bot's is on the message
+        senderAvatar: author ? author.avatarPoster || author.avatar : m.message.avatar,
+        senderAvatarColor: author?.avatarColor,
         text: messagePreviewText(m.message, myUserIdRef.current, serversRef.current),
         mentioned,
       });

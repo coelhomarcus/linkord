@@ -1,11 +1,9 @@
-import { BrowserWindow, app, ipcMain, type IpcMainInvokeEvent } from 'electron';
+import { BrowserWindow, ipcMain, type IpcMainInvokeEvent } from 'electron';
 import { isAppPage } from './appPage.js';
-import { parseBadgeCount } from './badge.js';
 import { windowState } from './titleBar.js';
 
 // The same names are spelled out in src/preload/index.cts, which cannot import this file
 const FOCUS_WINDOW = 'linkord:window:focus';
-const SET_BADGE = 'linkord:badge:set';
 const MINIMIZE = 'linkord:window:minimize';
 const TOGGLE_MAXIMIZE = 'linkord:window:toggle-maximize';
 const CLOSE = 'linkord:window:close';
@@ -13,15 +11,12 @@ const GET_STATE = 'linkord:window:get-state';
 const STATE_CHANGED = 'linkord:window:state';
 
 export function installAppBridge(appOrigin: string): void {
-  // A notification clicked while the window is hidden (closed on macOS) or
+  // A notification clicked while the window is hidden (in the tray) or
   // minimised: window.focus() from the page cannot bring it back
   ipcMain.handle(FOCUS_WINDOW, (event) => {
     if (!isAppPage(event.senderFrame, appOrigin)) return;
     const window = BrowserWindow.fromWebContents(event.sender);
-    if (!window) return;
-    if (window.isMinimized()) window.restore();
-    window.show();
-    window.focus();
+    if (window) bringBack(window);
   });
 
   // The page's own title bar buttons (the system's are hidden, see titleBar.ts)
@@ -40,13 +35,14 @@ export function installAppBridge(appOrigin: string): void {
     const window = appWindow(event);
     return window ? windowState(window) : null;
   });
+}
 
-  // macOS dock and Linux launchers; Windows has no count on the taskbar icon
-  ipcMain.handle(SET_BADGE, (event, value: unknown) => {
-    if (!isAppPage(event.senderFrame, appOrigin)) return false;
-    const count = parseBadgeCount(value);
-    return count === null ? false : app.setBadgeCount(count);
-  });
+/** Shows the window, from the tray, and puts it in front. */
+export function bringBack(window: BrowserWindow): void {
+  if (window.isDestroyed()) return;
+  if (window.isMinimized()) window.restore();
+  window.show();
+  window.focus();
 }
 
 /** Tells the page when its maximise button should read "restore", fullscreen hides the bar's inset, or focus dims it. */

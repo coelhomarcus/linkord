@@ -76,6 +76,7 @@ import { chatViewFor } from '@/app/chatView';
 import { rightPanelsVisible } from '@/app/rightPanels';
 import { isJoiningStage } from '@/app/stageJoin';
 import { i18n } from '@/shared/i18n/init';
+import { setNoticeNavigationHandler } from '@/shared/notifications';
 import { SidebarInset, SidebarProvider } from '@/shared/ui/motion/sidebar';
 import { useMemberListOpen } from '@/features/servers/memberListPreference';
 import { TooltipProvider } from '@/shared/ui/primitives/tooltip';
@@ -522,6 +523,10 @@ function AppProviders() {
     };
     navigator.serviceWorker.addEventListener('message', onPushNavigation);
     return () => navigator.serviceWorker.removeEventListener('message', onPushNavigation);
+  }, [navigate]);
+  useEffect(() => {
+    setNoticeNavigationHandler(navigate);
+    return () => setNoticeNavigationHandler(null);
   }, [navigate]);
   useDesktopLinks();
   // "user": with reduced motion asked for, Motion drops transforms and layout moves and keeps fades, the

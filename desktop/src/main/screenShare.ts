@@ -1,6 +1,6 @@
 import { BrowserWindow, app, desktopCapturer, ipcMain, webContents, type Session } from 'electron';
 import { isAppPage } from './appPage.js';
-import { SourceSelections, sourceKind, streamsFor, type SharePicker } from './displayMedia.js';
+import { SourceSelections, sourceKind, streamsFor } from './displayMedia.js';
 
 // The same names are spelled out in src/preload/index.cts, which cannot import this file
 const LIST_SOURCES = 'linkord:screen-share:list-sources';
@@ -8,7 +8,7 @@ const SELECT_SOURCE = 'linkord:screen-share:select';
 
 const THUMBNAIL = { width: 320, height: 180 };
 
-export function installScreenShare(session: Session, appOrigin: string, picker: SharePicker): void {
+export function installScreenShare(session: Session, appOrigin: string): void {
   const selections = new SourceSelections();
   app.on('web-contents-created', (_event, contents) => {
     const id = contents.id;
@@ -42,16 +42,8 @@ export function installScreenShare(session: Session, appOrigin: string, picker: 
       callback(null);
       return;
     }
-    if (picker === 'system') {
-      // Reached only where the OS picker is not built into Electron's handler
-      // (the Wayland portal): listing the sources is what shows that picker,
-      // and it returns the one the person chose
-      desktopCapturer.getSources({ types: ['screen', 'window'], thumbnailSize: { width: 0, height: 0 } })
-        .then(([source]) => callback(source ? { video: source } : null), () => callback(null));
-      return;
-    }
     const contents = webContents.fromFrame(frame);
     const selection = contents ? selections.take(contents.id, Date.now()) : null;
     callback(selection ? streamsFor(selection, { audioRequested: request.audioRequested, platform: process.platform }) : null);
-  }, { useSystemPicker: picker === 'system' && process.platform === 'darwin' });
+  });
 }

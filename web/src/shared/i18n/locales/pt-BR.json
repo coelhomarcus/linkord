@@ -61,6 +61,7 @@
     }
   },
   "browserNotifications": {
+    "mentionedDirect": "{{name}} mencionou você",
     "mentioned": "Você foi mencionado em {{conversation}}",
     "sentMessages_one": "{{name}} enviou {{count}} mensagem",
     "sentMessages_other": "{{name}} enviou {{count}} mensagens",

@@ -1,26 +1,7 @@
 // How a screen share is chosen and granted. Chromium in a browser shows its
-// own picker for getDisplayMedia; Electron shows none, so the app either hands
-// the request to the system's picker or lets the page pick from the sources it
-// lists, remembers the pick, and grants exactly that source when the page then
-// calls getDisplayMedia.
-
-/** 'system': the OS shows the picker. 'app': the page shows its own, fed by listSources. */
-export type SharePicker = 'system' | 'app';
-
-export function sharePicker(input: {
-  platform: NodeJS.Platform;
-  systemVersion: string;
-  env: Readonly<Record<string, string | undefined>>;
-}): SharePicker {
-  if (input.env.LINKORD_SYSTEM_PICKER === '0') return 'app';
-  // macOS 15's picker (ScreenCaptureKit) also needs no Screen Recording
-  // permission: the person grants each share by picking it, which an unsigned
-  // build would otherwise lose with every update
-  if (input.platform === 'darwin') return Number.parseInt(input.systemVersion, 10) >= 15 ? 'system' : 'app';
-  // On Wayland only the desktop portal may capture, and it shows its own picker
-  if (input.platform === 'linux') return input.env.XDG_SESSION_TYPE === 'wayland' ? 'system' : 'app';
-  return 'app';
-}
+// own picker for getDisplayMedia; Electron shows none, so the page picks from
+// the sources the app lists, the app remembers the pick, and grants exactly
+// that source when the page then calls getDisplayMedia.
 
 /** Electron can mix the system's sound into a share only on Windows. */
 export function capturesSystemAudio(platform: NodeJS.Platform): boolean {

@@ -96,9 +96,12 @@ export async function refreshKnownPeers(userIds: string[]): Promise<void> {
 /** A payload-free signal: "your friends/requests/blocks changed, refetch".
  * The data itself only ever travels over the authorized HTTP endpoints. */
 export function notifySocialChanged(userIds: string[]): void {
-  for (const userId of new Set(userIds)) {
-    for (const p of connectionsOf(userId)) send(p.socket, { t: 'social-changed' });
-  }
+  for (const userId of new Set(userIds)) sendToAccount(userId, { t: 'social-changed' });
+}
+
+/** Every live connection of the account: its tabs, devices and the desktop app. */
+export function sendToAccount(userId: string, message: { t: string; [key: string]: unknown }): void {
+  for (const p of connectionsOf(userId)) send(p.socket, message);
 }
 
 /** The pair-level convenience every friendship/block mutation calls. */

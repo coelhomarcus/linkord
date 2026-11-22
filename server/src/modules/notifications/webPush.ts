@@ -12,7 +12,7 @@ import { notificationPolicyFor } from './notificationSettings.js';
 import { policyAlerts } from './notificationSettingsPolicy.js';
 import { canSendDirectMessage } from '../friendships/friendshipsRepository.js';
 import { resolveLocale, type Locale } from '../users/locale.js';
-import { chatNoticeText, type ChatNoticeInput, friendAcceptedNoticeText, friendRequestNoticeText, mentionNoticeText, previewText, pushAvatarPath, serverInvitationNoticeText, type PushNotice } from './pushNotices.js';
+import { chatNoticeText, type ChatNoticeInput, friendAcceptedNoticeText, friendRequestNoticeText, mentionNoticeText, noticePerson, previewText, pushAvatarPath, serverIconPath, serverInvitationNoticeText, type PushNotice } from './pushNotices.js';
 
 const log = logger.child({ component: 'web-push' });
 
@@ -112,7 +112,9 @@ async function visibleMessage(messageId: number, userId: string, showContent: bo
 }
 
 async function userCard(userId: string) {
-  const [user] = await db.select({ username: users.username, displayName: users.displayName, avatar: users.avatar, avatarPoster: users.avatarPoster })
+  const [user] = await db.select({
+    id: users.id, username: users.username, displayName: users.displayName, avatar: users.avatar, avatarPoster: users.avatarPoster, avatarColor: users.avatarColor,
+  })
     .from(users).where(eq(users.id, userId)).limit(1);
   return user ?? null;
 }
@@ -168,14 +170,20 @@ async function noticeFor(event: OutboxEvent, locale: Locale, showContent: boolea
     return { ...text, path: conversationPath(found.conversation), tag: `mention-${row.id}`, avatar: found.avatar };
   }
   if (kind === 'server_invitation') {
-    const [invitation] = await db.select({ status: serverInvitations.status, serverName: servers.name, inviterId: serverInvitations.inviterId })
+    const [invitation] = await db.select({
+      status: serverInvitations.status, serverId: servers.id, serverName: servers.name, serverIcon: servers.icon, inviterId: serverInvitations.inviterId,
+    })
       .from(serverInvitations).innerJoin(servers, eq(servers.id, serverInvitations.serverId))
       .where(eq(serverInvitations.id, String(reference))).limit(1);
     if (!invitation || invitation.status !== 'pending') return null;
     const inviter = await userCard(invitation.inviterId);
     if (!inviter) return null;
     const text = serverInvitationNoticeText({ inviterName: inviter.displayName || inviter.username, serverName: invitation.serverName }, locale);
-    return { ...text, path: '/app/friends?tab=pending#invitations', tag: `social-${row.id}`, avatar: pushAvatarPath(inviter) };
+    const icon = serverIconPath(invitation.serverIcon);
+    return {
+      ...text, path: '/app/friends?tab=pending#invitations', tag: `social-${row.id}`, avatar: pushAvatarPath(inviter),
+      person: noticePerson(inviter), server: { id: invitation.serverId, name: invitation.serverName, ...(icon ? { icon } : {}) },
+    };
   }
   const [friendship] = await db.select({ status: friendships.status, low: friendships.userLowId, high: friendships.userHighId })
     .from(friendships).where(eq(friendships.id, String(reference))).limit(1);
@@ -184,19 +192,30 @@ async function noticeFor(event: OutboxEvent, locale: Locale, showContent: boolea
   const person = await userCard(friendship.low === event.audienceUserId ? friendship.high : friendship.low);
   if (!person) return null;
   const text = kind === 'friend_request' ? friendRequestNoticeText(person, locale) : friendAcceptedNoticeText(person, locale);
-  return { ...text, path: kind === 'friend_request' ? '/app/friends?tab=pending#received' : '/app/friends', tag: `social-${row.id}`, avatar: pushAvatarPath(person) };
+  return {
+    ...text, path: kind === 'friend_request' ? '/app/friends?tab=pending#received' : '/app/friends', tag: `social-${row.id}`,
+    avatar: pushAvatarPath(person), person: noticePerson(person),
+  };
 }
 
-export async function deliverWebPush(event: OutboxEvent): Promise<PushDeliveryResult> {
-  const done = { delivered: true, retryAfterMs: 0 };
-  if (!pushAvailable) return done;
+export interface PreparedNotice { notice: PushNotice; locale: Locale }
+
+/** What an outbox event shows its recipient, in their language, or null when it shows nothing
+ * (the account is inactive or in "do not disturb", the request was already answered, the reader
+ * lost the channel...). Both the push and the open tabs' notice (liveNotices.ts) show this. */
+export async function prepareNotice(event: OutboxEvent): Promise<PreparedNotice | null> {
   const [recipient] = await db.select({
     status: users.status, locale: users.locale, showContent: users.pushShowContent, presenceStatus: users.presenceStatus,
   }).from(users).where(eq(users.id, event.audienceUserId)).limit(1);
-  if (!recipient || !recipientAcceptsPush(recipient)) return done;
+  if (!recipient || !recipientAcceptsPush(recipient)) return null;
   const locale = resolveLocale(recipient.locale);
   const notice = await noticeFor(event, locale, recipient.showContent);
-  if (!notice) return done;
+  return notice ? { notice, locale } : null;
+}
+
+export async function deliverWebPush(event: OutboxEvent, { notice, locale }: PreparedNotice): Promise<PushDeliveryResult> {
+  const done = { delivered: true, retryAfterMs: 0 };
+  if (!pushAvailable) return done;
   const subscriptions = await db.select().from(pushSubscriptions).where(eq(pushSubscriptions.userId, event.audienceUserId));
   if (!subscriptions.length) return done;
   const receipts = await db.select({ endpoint: pushDeliveryReceipts.endpoint }).from(pushDeliveryReceipts)

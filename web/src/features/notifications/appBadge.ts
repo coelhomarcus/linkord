@@ -1,8 +1,8 @@
 import { apiFetch } from '@/shared/api/api';
-import { desktopApp } from '@/shared/desktop';
+import { desktopApp, isDesktopApp } from '@/shared/desktop';
 
-// The desktop app sets the dock or launcher count itself; a browser does it
-// through the Badging API, which only an installed web app has
+// A browser counts through the Badging API, which only an installed web app has. The desktop app is
+// a Windows one, whose taskbar shows no count; only an old macOS or Linux install still sets its own
 async function setBadge(count: number): Promise<void> {
   const setDesktopBadge = desktopApp()?.setBadgeCount;
   if (setDesktopBadge) {
@@ -14,10 +14,12 @@ async function setBadge(count: number): Promise<void> {
 }
 
 function canBadge(): boolean {
-  return Boolean(desktopApp()?.setBadgeCount) || typeof navigator.setAppBadge === 'function';
+  if (isDesktopApp()) return Boolean(desktopApp()?.setBadgeCount);
+  return typeof navigator.setAppBadge === 'function';
 }
 
 export async function clearAppBadge(): Promise<void> {
+  if (!canBadge()) return;
   try {
     await setBadge(0);
   } catch { /* the OS may refuse badges even when the browser exposes the API */ }

@@ -1,29 +1,8 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  SELECTION_TTL_MS, SourceSelections, capturesSystemAudio, sharePicker, sourceKind, streamsFor,
+  SELECTION_TTL_MS, SourceSelections, capturesSystemAudio, sourceKind, streamsFor,
 } from '../../src/main/displayMedia.js';
-
-describe('sharePicker', () => {
-  const picker = (platform: NodeJS.Platform, systemVersion: string, env: Record<string, string> = {}) =>
-    sharePicker({ platform, systemVersion, env });
-
-  it('uses the system picker on macOS 15 and later', () => {
-    assert.equal(picker('darwin', '15.0.1'), 'system');
-    assert.equal(picker('darwin', '26.0'), 'system');
-    assert.equal(picker('darwin', '14.7'), 'app');
-  });
-
-  it('uses the desktop portal on Wayland and the app picker on X11 and Windows', () => {
-    assert.equal(picker('linux', '6.8', { XDG_SESSION_TYPE: 'wayland' }), 'system');
-    assert.equal(picker('linux', '6.8', { XDG_SESSION_TYPE: 'x11' }), 'app');
-    assert.equal(picker('win32', '10.0.22631'), 'app');
-  });
-
-  it('LINKORD_SYSTEM_PICKER=0 forces the app picker', () => {
-    assert.equal(picker('darwin', '15.0', { LINKORD_SYSTEM_PICKER: '0' }), 'app');
-  });
-});
 
 describe('sourceKind and capturesSystemAudio', () => {
   it('reads the kind from the source id', () => {
@@ -34,7 +13,6 @@ describe('sourceKind and capturesSystemAudio', () => {
   it('captures system sound only on Windows', () => {
     assert.equal(capturesSystemAudio('win32'), true);
     assert.equal(capturesSystemAudio('darwin'), false);
-    assert.equal(capturesSystemAudio('linux'), false);
   });
 });
 

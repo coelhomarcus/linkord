@@ -20,7 +20,6 @@ function recorder() {
 }
 
 const state = (overrides: Partial<MenuState> = {}): MenuState => ({
-  platform: 'darwin',
   strings,
   startAtLogin: { available: true, enabled: false },
   update: { mode: 'install', status: { kind: 'idle' } },
@@ -70,27 +69,23 @@ describe('trayMenuTemplate', () => {
 });
 
 describe('appMenuTemplate', () => {
-  it('starts with the app menu on macOS and a File menu elsewhere', () => {
+  it('starts with a File menu', () => {
     const { actions } = recorder();
-    assert.equal(appMenuTemplate(state(), actions)[0]?.label, 'Linkord');
-    assert.equal(appMenuTemplate(state({ platform: 'win32' }), actions)[0]?.label, strings.file);
-    assert.equal(appMenuTemplate(state({ platform: 'linux' }), actions)[0]?.label, strings.file);
+    assert.equal(appMenuTemplate(state(), actions)[0]?.label, strings.file);
   });
 
-  it('keeps the edit roles, which the copy and paste shortcuts need on macOS', () => {
+  it('keeps the edit roles, which the copy and paste shortcuts need', () => {
     const { actions } = recorder();
     const roles = flatten(appMenuTemplate(state(), actions)).map((item) => item.role);
     for (const role of ['copy', 'paste', 'cut', 'selectAll', 'undo', 'quit'] as const) assert.ok(roles.includes(role), role);
   });
 
   it('offers start at login and opening the server in the browser', () => {
-    for (const platform of ['darwin', 'win32', 'linux'] as const) {
-      const { calls, actions } = recorder();
-      const items = appMenuTemplate(state({ platform }), actions);
-      click(find(items, strings.startAtLogin), true);
-      click(find(items, strings.openInBrowser));
-      assert.deepEqual(calls, ['login:true', 'browser'], platform);
-    }
+    const { calls, actions } = recorder();
+    const items = appMenuTemplate(state(), actions);
+    click(find(items, strings.startAtLogin), true);
+    click(find(items, strings.openInBrowser));
+    assert.deepEqual(calls, ['login:true', 'browser']);
   });
 
   it('shows the developer tools only in a development run', () => {
@@ -102,13 +97,11 @@ describe('appMenuTemplate', () => {
 
   it('never puts two separators together', () => {
     const { actions } = recorder();
-    for (const platform of ['darwin', 'win32'] as const) {
-      for (const available of [true, false]) {
-        for (const mode of ['install', 'off'] as const) {
-          const menuState = state({ platform, startAtLogin: { available, enabled: false }, update: { mode, status: { kind: 'idle' } } });
-          assertNoAdjacentSeparators(appMenuTemplate(menuState, actions));
-          assertNoAdjacentSeparators(trayMenuTemplate(menuState, actions));
-        }
+    for (const available of [true, false]) {
+      for (const mode of ['install', 'off'] as const) {
+        const menuState = state({ startAtLogin: { available, enabled: false }, update: { mode, status: { kind: 'idle' } } });
+        assertNoAdjacentSeparators(appMenuTemplate(menuState, actions));
+        assertNoAdjacentSeparators(trayMenuTemplate(menuState, actions));
       }
     }
   });
@@ -119,7 +112,7 @@ describe('update items', () => {
     const { actions } = recorder();
     return {
       tray: flatten(trayMenuTemplate(state({ update }), actions)).map((item) => item.label),
-      app: flatten(appMenuTemplate(state({ update, platform: 'win32' }), actions)).map((item) => item.label),
+      app: flatten(appMenuTemplate(state({ update }), actions)).map((item) => item.label),
     };
   };
 
