@@ -2,14 +2,13 @@ import type { CatalogEntry } from './activityCatalog.js';
 
 // Turns what the system lists (activityWatcher.ts runs the commands) into the activities running now:
 // the Steam game Steam says is running and every catalog entry with a running program. Which one is
-// shared is activityResolve.ts's choice. Plain functions, so every system's output format is tested
-// without that system.
+// shared is activityResolve.ts's choice. Plain functions, so what Windows prints is tested without it.
 
 export interface RunningProcess {
   pid: number;
   /** the executable's full path where the system gives it, else its name */
   path: string;
-  /** the command line, read only for the few programs that need it (Java, Wine) */
+  /** the command line, read only for the few programs that need it (Java) */
   args?: string;
 }
 
@@ -40,60 +39,36 @@ export interface ForegroundProcess {
   path: string | null;
 }
 
-/** The executable's name, lowercased, from a Windows or POSIX path. */
+/** The executable's name, lowercased, from its path or name. */
 export function processName(path: string): string {
   return (path.split(/[\\/]/).pop() ?? '').trim().toLowerCase();
 }
 
-/** The outermost `.app` bundle in a macOS path, lowercased, without `.app`: a helper process inside
- * `Spotify.app/Contents/Frameworks/Spotify Helper.app` still belongs to Spotify. */
-export function macAppName(path: string): string | null {
-  const match = /\/([^/]+)\.app(?:\/|$)/i.exec(path);
-  return match ? match[1]!.toLowerCase() : null;
-}
-
 const JAVA = /^javaw?(?:\.exe)?$/;
 
-/** The Windows program a Wine or Proton command line runs (Linux), lowercased. */
-function wineProgram(args: string | undefined): string | null {
-  const match = /([^\\/"]+\.exe)\b/i.exec(args ?? '');
-  return match ? match[1]!.toLowerCase() : null;
-}
-
 /** Whether a process is an entry's program. */
-function matches(entry: CatalogEntry, process: RunningProcess, platform: NodeJS.Platform): boolean {
+function matches(entry: CatalogEntry, process: RunningProcess): boolean {
   const name = processName(process.path);
   if (entry.exe?.includes(name)) return true;
-  if (platform === 'darwin' && entry.app) {
-    const app = macAppName(process.path);
-    if (app && entry.app.includes(app)) return true;
-  }
-  if (entry.java && JAVA.test(name) && process.args && entry.java.test(process.args)) return true;
-  if (platform === 'linux' && entry.exe) {
-    const program = wineProgram(process.args);
-    if (program && entry.exe.includes(program)) return true;
-  }
-  return false;
+  return !!entry.java && JAVA.test(name) && !!process.args && entry.java.test(process.args);
 }
 
-/** Processes whose command line is worth reading: Java (Minecraft) everywhere, Wine on Linux. */
-export function needsArgs(process: RunningProcess, platform: NodeJS.Platform): boolean {
-  const name = processName(process.path);
-  return JAVA.test(name) || (platform === 'linux' && /^(?:wine|wine64|wine-preloader|wine64-preloader|proton)$/.test(name));
+/** Processes whose command line is worth reading: Java, which runs Minecraft. */
+export function needsArgs(process: RunningProcess): boolean {
+  return JAVA.test(processName(process.path));
 }
 
 export function detectCandidates(input: {
   processes: RunningProcess[];
   steam: SteamGame | null;
   catalog: readonly CatalogEntry[];
-  platform: NodeJS.Platform;
 }): DetectedActivity[] {
   const found: DetectedActivity[] = [];
   if (input.steam && input.steam.appId > 0) {
     found.push({ key: `steam:${input.steam.appId}`, kind: 'playing', name: input.steam.name ?? '', steamAppId: input.steam.appId, pids: [] });
   }
   for (const entry of input.catalog) {
-    const running = input.processes.filter((candidate) => matches(entry, candidate, input.platform));
+    const running = input.processes.filter((candidate) => matches(entry, candidate));
     const first = running[0];
     if (!first) continue;
     const exePath = /[\\/]/.test(first.path) ? first.path : undefined;
@@ -105,7 +80,7 @@ export function detectCandidates(input: {
 const normalizePath = (value: string) => value.replace(/\\/g, '/').toLowerCase();
 
 /** Which candidate owns the window in front: a Steam game by its folder (the foreground program's
- * path, or the Wine/Proton command line that runs it), a catalog entry by its processes. */
+ * path), a catalog entry by its processes. */
 export function foregroundKey(
   candidates: readonly DetectedActivity[],
   foreground: ForegroundProcess | null,
@@ -139,16 +114,6 @@ export function parseTasklistCsv(text: string): RunningProcess[] {
   return processes;
 }
 
-/** `ps -axo pid=,comm=`: a pid and the executable's path per line (macOS). */
-export function parsePsOutput(text: string): RunningProcess[] {
-  const processes: RunningProcess[] = [];
-  for (const line of text.split('\n')) {
-    const match = /^\s*(\d+)\s+(.+?)\s*$/.exec(line);
-    if (match) processes.push({ pid: Number(match[1]), path: match[2]! });
-  }
-  return processes;
-}
-
 /** `reg query HKCU\Software\Valve\Steam /v RunningAppID`: `RunningAppID    REG_DWORD    0x23a`. */
 export function parseRegDword(text: string, name: string): number | null {
   const match = new RegExp(`${name}\\s+REG_DWORD\\s+0x([0-9a-f]+)`, 'i').exec(text);
@@ -173,24 +138,6 @@ export function parseLibraryFolders(text: string): string[] {
   return [...text.matchAll(/"path"\s+"((?:[^"\\]|\\.)*)"/gi)].map((match) => match[1]!.replace(/\\\\/g, '\\'));
 }
 
-/** `lsappinfo info -only pid <ASN>` (macOS): `"pid"=812`. */
-export function parseLsappinfoPid(text: string): number | null {
-  const match = /"pid"\s*=\s*(\d+)/.exec(text);
-  return match ? Number(match[1]) : null;
-}
-
-/** `xprop -root _NET_ACTIVE_WINDOW` (Linux, X11): `... window id # 0x3a00007`; null for none (0x0). */
-export function parseXpropWindow(text: string): string | null {
-  const match = /#\s*(0x[0-9a-f]+)/i.exec(text);
-  return match && Number.parseInt(match[1]!, 16) > 0 ? match[1]! : null;
-}
-
-/** `xprop -id <window> _NET_WM_PID`: `_NET_WM_PID(CARDINAL) = 4120`. */
-export function parseXpropPid(text: string): number | null {
-  const match = /_NET_WM_PID\(CARDINAL\)\s*=\s*(\d+)/.exec(text);
-  return match ? Number(match[1]) : null;
-}
-
 /** The Windows foreground query's answer: `<pid>\t<path>`, the path empty when it could not be read. */
 export function parseForegroundLine(text: string): ForegroundProcess | null {
   const match = /^\s*(\d+)\t?(.*?)\s*$/m.exec(text);
@@ -198,8 +145,8 @@ export function parseForegroundLine(text: string): ForegroundProcess | null {
   return { pid: Number(match[1]), path: match[2] || null };
 }
 
-/** A running Steam game's app id from `registry.vdf` (macOS, Linux) or the registry (Windows); 0 is none. */
-export function runningAppId(value: string | number | null): number | null {
-  const id = typeof value === 'number' ? value : value ? Number.parseInt(value, 10) : NaN;
+/** A running Steam game's app id from the registry; 0 is none. */
+export function runningAppId(value: number | null): number | null {
+  const id = value ?? NaN;
   return Number.isSafeInteger(id) && id > 0 ? id : null;
 }

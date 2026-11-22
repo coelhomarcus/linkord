@@ -19,11 +19,6 @@ module.exports = {
   // releases. Uploading them is the workflow's job (--publish never).
   publish: updateRepo ? { provider: 'github', owner: updateRepo.owner, repo: updateRepo.repo } : null,
 
-  // linkord:// links (src/main/deepLink.ts). This entry covers macOS and
-  // Linux builds; the Windows installer ignores it and registers the scheme
-  // in resources/installer.nsh
-  protocols: [{ name: 'Linkord', schemes: ['linkord'] }],
-
   // Without these the installed, familiar binary would run any script as Node
   // (ELECTRON_RUN_AS_NODE, NODE_OPTIONS), take a debugger (--inspect) or load
   // a swapped app.asar or loose app folder. docs/DEPLOY.md, "Desktop app".

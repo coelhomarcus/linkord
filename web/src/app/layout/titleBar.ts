@@ -1,17 +1,16 @@
 import { createContext, useContext, useEffect, useState } from 'react';
-import type { MouseEvent } from 'react';
 import { desktopApp, type DesktopWindowControls, type DesktopWindowState } from '@/shared/desktop';
 
 // The desktop app's title bar, shared by DesktopFrame (its own bar) and
 // TopBar (which takes its place where it shows).
 
-export type TitleBarStyle = 'mac' | 'windows' | 'linux';
+export type TitleBarStyle = 'mac' | 'windows';
 
+/** The desktop app ships for Windows; 'mac' is a development run on a Mac, or an old macOS install.
+ * An old Linux install (0.3.x) asks for 'linux' and gets the Windows buttons, which work the same. */
 export function titleBarStyle(platform: string, controls?: DesktopWindowControls): TitleBarStyle {
-  if (controls?.style) return controls.style;
-  if (platform === 'darwin') return 'mac';
-  if (platform === 'win32') return 'windows';
-  return 'linux';
+  const style = controls?.style ?? (platform === 'darwin' ? 'mac' : 'windows');
+  return style === 'mac' ? 'mac' : 'windows';
 }
 
 const INITIAL_STATE: DesktopWindowState = { maximized: false, fullScreen: false, focused: true };
@@ -37,20 +36,10 @@ export const TitleBarHostContext = createContext<(() => () => void) | null>(null
 export interface TitleBarHost {
   controls: DesktopWindowControls;
   platform: string;
-  /** Linux window managers do not maximise on a double click in a drawn bar; Windows and macOS do it themselves */
-  onDoubleClick: (event: MouseEvent) => void;
 }
 
 export function hostFor(controls: DesktopWindowControls, platform: string): TitleBarHost {
-  return {
-    controls,
-    platform,
-    onDoubleClick: (event) => {
-      // on the bar or its text, not on a button or link inside it
-      if (titleBarStyle(platform, controls) !== 'linux' || (event.target as Element).closest?.('button, a, input, [role="button"]')) return;
-      void controls.toggleMaximize();
-    },
-  };
+  return { controls, platform };
 }
 
 /**

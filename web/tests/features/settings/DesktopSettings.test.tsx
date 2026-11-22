@@ -69,10 +69,10 @@ describe('DesktopSettings', () => {
     expect(screen.getByRole('switch', { name: 'Iniciar com o computador' })).toBeChecked();
   });
 
-  it('names the tray after the system', async () => {
-    stubSettings(snapshot(), 'darwin');
+  it('says closing keeps the app in the tray', async () => {
+    stubSettings(snapshot());
     render(<DesktopSettings />);
-    expect(await screen.findByText(/continua na barra de menus/)).toBeInTheDocument();
+    expect(await screen.findByText(/continua na bandeja do sistema/)).toBeInTheDocument();
   });
 
   it('leaves start with the computer out where the app cannot offer it', async () => {

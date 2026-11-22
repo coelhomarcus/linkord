@@ -29,6 +29,7 @@ export interface DesktopWindowState {
 /** The window has no system title bar: the page draws one with these buttons. */
 export interface DesktopWindowControls {
   /** whose buttons to draw; the platform's when absent */
+  /** 'linux' only from an old Linux install (0.3.x), drawn as 'windows' */
   style?: 'mac' | 'windows' | 'linux';
   minimize: () => Promise<void>;
   toggleMaximize: () => Promise<void>;
@@ -132,7 +133,7 @@ export interface LinkordDesktop {
   /** `linkord://` links opened while the app runs, as paths on this origin (an invite, a
    * conversation); returns the unsubscribe. Absent in builds without deep links. */
   onDeepLink?: (callback: (path: string) => void) => () => void;
-  /** the count on the dock or launcher icon; false where the system shows none (Windows) */
+  /** the dock or launcher count, only in old macOS and Linux installs (0.3.x): the Windows taskbar shows none */
   setBadgeCount?: (count: number) => Promise<boolean>;
   /** absent in builds that show the page's web notifications instead */
   notifications?: DesktopNotifications;

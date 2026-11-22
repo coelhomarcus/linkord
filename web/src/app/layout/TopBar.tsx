@@ -23,7 +23,7 @@ export function TopBar({ className, title, server }: { className?: string; title
   const onFriends = pathname === ROUTES.home || pathname === ROUTES.friends;
   const label = server ? server.name : onFriends ? t('topBar.friends') : isHomePath(pathname) ? t('topBar.directMessages') : title ?? 'Linkord';
   return (
-    <header onDoubleClick={host?.onDoubleClick} className={cn('relative h-titlebar flex-none items-center justify-center bg-surface-rail px-3', host && 'app-drag', className)}>
+    <header className={cn('relative h-titlebar flex-none items-center justify-center bg-surface-rail px-3', host && 'app-drag', className)}>
       <span className="flex min-w-0 items-center gap-2 text-label font-medium text-text-primary">
         {server ? <ServerIcon id={server.id} name={server.name} icon={server.icon} size={18} /> : onFriends ? <UsersIcon size={18} weight="fill" /> : <LinkordMark className="size-4 text-logo" />}
         <span className="truncate">{label}</span>

@@ -14,15 +14,6 @@ function FluentGlyph({ children }: { children: ReactNode }) {
   );
 }
 
-// GNOME's symbolic window icons (libadwaita), drawn at the size its round buttons show them
-function AdwaitaGlyph({ children }: { children: ReactNode }) {
-  return (
-    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-      {children}
-    </svg>
-  );
-}
-
 interface ButtonSpec {
   kind: 'minimize' | 'maximize' | 'close';
   label: string;
@@ -59,35 +50,9 @@ function WindowsButtons({ buttons, state }: { buttons: ButtonSpec[]; state: Desk
   ));
 }
 
-function LinuxButtons({ buttons, state }: { buttons: ButtonSpec[]; state: DesktopWindowState }) {
-  const glyph = (kind: ButtonSpec['kind']) => {
-    if (kind === 'minimize') return <AdwaitaGlyph><path d="M4.75 11h6.5" /></AdwaitaGlyph>;
-    if (kind === 'close') return <AdwaitaGlyph><path d="M5 5l6 6M11 5l-6 6" /></AdwaitaGlyph>;
-    return state.maximized
-      ? <AdwaitaGlyph><rect x="4.75" y="6.25" width="5" height="5" rx="1" /><path d="M6.75 4.75h3.5a1 1 0 0 1 1 1v3.5" /></AdwaitaGlyph>
-      : <AdwaitaGlyph><rect x="4.75" y="4.75" width="6.5" height="6.5" rx="1" /></AdwaitaGlyph>;
-  };
-  return buttons.map((button) => (
-    <button
-      key={button.kind}
-      type="button"
-      aria-label={button.label}
-      title={button.label}
-      onClick={button.onClick}
-      // libadwaita's window buttons: a 24 px circle with a faint fill that darkens on hover and press
-      className={cn(
-        'flex size-6 items-center justify-center rounded-full bg-fill-hover transition-colors duration-100 hover:bg-fill-active active:bg-border-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary',
-        state.focused ? 'text-text-primary' : 'text-text-faint',
-      )}
-    >
-      {glyph(button.kind)}
-    </button>
-  ));
-}
-
 /**
- * Minimise, maximise and close for a window without a system title bar,
- * drawn the way each system draws its own. macOS keeps its native traffic
+ * Minimise, maximise and close for a window without a system title bar, drawn
+ * as Windows draws its own. A development run on a Mac keeps its native traffic
  * lights (the desktop app places them in this bar), so it gets nothing here.
  */
 export function WindowControls({ controls, platform, className }: { controls: DesktopWindowControls; platform: string; className?: string }) {
@@ -107,9 +72,9 @@ export function WindowControls({ controls, platform, className }: { controls: De
       role="group"
       aria-label={t('layout.window.controls')}
       data-title-bar-style={style}
-      className={cn('app-no-drag flex flex-none self-stretch', style === 'windows' ? 'items-stretch' : 'items-center gap-2 px-2', className)}
+      className={cn('app-no-drag flex flex-none items-stretch self-stretch', className)}
     >
-      {style === 'windows' ? <WindowsButtons buttons={buttons} state={state} /> : <LinuxButtons buttons={buttons} state={state} />}
+      <WindowsButtons buttons={buttons} state={state} />
     </div>
   );
 }

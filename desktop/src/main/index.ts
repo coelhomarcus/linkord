@@ -7,10 +7,10 @@ import { forwardWindowState, installAppBridge } from './appBridge.js';
 import { parseAppConfig, resolveAppUrl } from './appUrl.js';
 import { guardContents } from './contentsGuard.js';
 import { forbiddenSwitch } from './debugSwitches.js';
-import { deepLinkFromArgv, deepLinkPath, protocolRegistration } from './deepLink.js';
+import { deepLinkFromArgv, protocolRegistration } from './deepLink.js';
 import { installDeepLinkBridge } from './deepLinkBridge.js';
 import { installNotificationBridge } from './notificationBridge.js';
-import { capturesSystemAudio, sharePicker } from './displayMedia.js';
+import { capturesSystemAudio } from './displayMedia.js';
 import { createMainWindow, type MainWindow } from './mainWindow.js';
 import { appMenuTemplate, runTrayItem, trayMenuItems, trayMenuTemplate, type MenuActions, type MenuState } from './menus.js';
 import { installScreenShare } from './screenShare.js';
@@ -85,7 +85,6 @@ if (!resolved.ok) {
 
   // `linkord://` links (deepLink.ts). One that started the app is the first
   // page it loads; later ones reach this instance through second-instance
-  // (Windows, Linux) or open-url (macOS)
   const registration = protocolRegistration({
     isPackaged: app.isPackaged,
     defaultApp: process.defaultApp === true,
@@ -109,10 +108,6 @@ if (!resolved.ok) {
   app.on('second-instance', (_event, argv) => {
     showMainWindow();
     followLink(deepLinkFromArgv(argv));
-  });
-  app.on('open-url', (event, link) => {
-    event.preventDefault();
-    followLink(deepLinkPath(link));
   });
   app.on('before-quit', () => { quitting = true; });
   app.on('activate', showMainWindow);
@@ -245,7 +240,6 @@ if (!resolved.ok) {
       quit: () => app.quit(),
     };
     const menuState = (): MenuState => ({
-      platform: process.platform,
       strings,
       startAtLogin: { available: loginItem.available, enabled: loginItem.isEnabled() },
       update: { mode: updater.mode, status: updater.status() },
@@ -268,9 +262,8 @@ if (!resolved.ok) {
     refresh();
 
     const barStyle = titleBarStyle({ platform: process.platform, env: process.env, isPackaged: app.isPackaged });
-    const picker = sharePicker({ platform: process.platform, systemVersion: process.getSystemVersion(), env: process.env });
     installPermissionHandlers(session.defaultSession, appUrl.origin);
-    installScreenShare(session.defaultSession, appUrl.origin, picker);
+    installScreenShare(session.defaultSession, appUrl.origin);
     installAppBridge(appUrl.origin);
     installNotificationBridge(appUrl.origin);
     const activityWatcher = createActivityWatcher({
@@ -318,7 +311,6 @@ if (!resolved.ok) {
         titleBar: barStyle,
         preloadArguments: [
           `--linkord-desktop-version=${app.getVersion()}`,
-          `--linkord-share-picker=${picker}`,
           `--linkord-system-audio=${capturesSystemAudio(process.platform) ? '1' : '0'}`,
           `--linkord-title-bar=${barStyle}`,
         ],
@@ -331,8 +323,8 @@ if (!resolved.ok) {
       // Previewing another system's bar on a Mac: its buttons replace the traffic lights
       if (process.platform === 'darwin' && barStyle !== 'mac') window.setWindowButtonVisibility(false);
       forwardWindowState(window);
-      // Closing the window only hides it (to the tray, the menu bar and dock
-      // on macOS), so a call keeps going; quitting is in the tray and menu.
+      // Closing the window only hides it (to the tray), so a call keeps going;
+      // quitting is in the tray and menu.
       // Turned off in settings, closing quits.
       window.on('close', (event) => {
         if (quitting) return;

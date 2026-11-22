@@ -24,7 +24,6 @@ contextBridge.exposeInMainWorld('linkordDesktop', Object.freeze({
   platform: process.platform,
   version: flag('linkord-desktop-version') ?? '',
   focusWindow: () => ipcRenderer.invoke('linkord:window:focus'),
-  setBadgeCount: (count: number) => ipcRenderer.invoke('linkord:badge:set', Number(count)),
   // The system's own notifications (src/main/notificationBridge.ts); a click names the one clicked
   notifications: Object.freeze({
     show: (request: unknown) => ipcRenderer.invoke('linkord:notification:show', request),
@@ -45,7 +44,7 @@ contextBridge.exposeInMainWorld('linkordDesktop', Object.freeze({
   },
   // Present means the window has no system title bar and the page draws one
   windowControls: Object.freeze({
-    style: (['mac', 'windows', 'linux'] as const).find((style) => style === flag('linkord-title-bar')) ?? 'linux',
+    style: flag('linkord-title-bar') === 'mac' ? 'mac' : 'windows',
     minimize: () => ipcRenderer.invoke('linkord:window:minimize'),
     toggleMaximize: () => ipcRenderer.invoke('linkord:window:toggle-maximize'),
     close: () => ipcRenderer.invoke('linkord:window:close'),
@@ -89,7 +88,7 @@ contextBridge.exposeInMainWorld('linkordDesktop', Object.freeze({
     },
   }),
   screenShare: Object.freeze({
-    picker: flag('linkord-share-picker') === 'system' ? 'system' : 'app',
+    picker: 'app',
     systemAudio: flag('linkord-system-audio') === '1',
     listSources: () => ipcRenderer.invoke('linkord:screen-share:list-sources'),
     select: (id: string, audio: boolean) => ipcRenderer.invoke('linkord:screen-share:select', String(id), audio === true),

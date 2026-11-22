@@ -60,8 +60,8 @@
   .actions button:hover { background: var(--accent-hover); }
   .actions button:focus-visible { box-shadow: 0 0 0 2px var(--background), 0 0 0 4px var(--accent); }
 
-  /* Windows and Linux: the window's buttons, as the app's page draws them
-     (web/src/app/layout/WindowControls.tsx). macOS keeps its traffic lights. */
+  /* The window's buttons, as the app's page draws them
+     (web/src/app/layout/WindowControls.tsx). A development run on a Mac keeps its traffic lights. */
   .controls { position: fixed; top: 0; right: 0; display: flex; height: var(--title-bar); -webkit-app-region: no-drag; }
   .controls:empty { display: none; }
   .controls button {
@@ -72,11 +72,6 @@
   .controls[data-style="windows"] button { width: 46px; height: 100%; }
   .controls[data-style="windows"] button:hover { background: var(--control-hover); }
   .controls[data-style="windows"] button[data-kind="close"]:hover { background: #c42b1c; color: white; }
-  .controls[data-style="linux"] { align-items: center; gap: 8px; padding: 0 8px; }
-  .controls[data-style="linux"] button { width: 24px; height: 24px; border-radius: 50%; background: var(--control); }
-  .controls[data-style="linux"] button:hover { background: var(--control-hover); }
-  .controls[data-style="linux"] button:active { background: var(--control-active); }
-  .controls[data-style="linux"] button:focus-visible { box-shadow: 0 0 0 2px var(--accent); }
 
   @media (prefers-reduced-motion: reduce) {
     .logo { animation: none; }
@@ -99,7 +94,7 @@
 <div class="actions" id="actions"></div>
 <script>
   const SVG = 'http://www.w3.org/2000/svg';
-  // web/src/app/layout/WindowControls.tsx's glyphs: Windows 11's and GNOME's
+  // web/src/app/layout/WindowControls.tsx's glyphs: Windows 11's
   const GLYPHS = {
     windows: {
       size: 10, stroke: 1, cap: 'butt',
@@ -107,13 +102,6 @@
       maximize: ['M1.5 0.5h7a1 1 0 0 1 1 1v7a1 1 0 0 1-1 1h-7a1 1 0 0 1-1-1v-7a1 1 0 0 1 1-1z'],
       restore: ['M1.5 2.5h5a1 1 0 0 1 1 1v5a1 1 0 0 1-1 1h-5a1 1 0 0 1-1-1v-5a1 1 0 0 1 1-1z', 'M2.5 2.5V1.5a1 1 0 0 1 1-1h5a1 1 0 0 1 1 1v5a1 1 0 0 1-1 1h-1'],
       close: ['M0.5 0.5l9 9M9.5 0.5l-9 9'],
-    },
-    linux: {
-      size: 16, stroke: 1.5, cap: 'round',
-      minimize: ['M4.75 11h6.5'],
-      maximize: ['M5.75 4.75h4.5a1 1 0 0 1 1 1v4.5a1 1 0 0 1-1 1h-4.5a1 1 0 0 1-1-1v-4.5a1 1 0 0 1 1-1z'],
-      restore: ['M5.75 6.25h3a1 1 0 0 1 1 1v3a1 1 0 0 1-1 1h-3a1 1 0 0 1-1-1v-3a1 1 0 0 1 1-1z', 'M6.75 4.75h3.5a1 1 0 0 1 1 1v3.5'],
-      close: ['M5 5l6 6M11 5l-6 6'],
     },
   };
   const bridge = window.linkordConnection;
@@ -151,7 +139,7 @@
     drawn.controls = key;
     const group = el('controls');
     if (!controls) { group.replaceChildren(); return; }
-    const set = GLYPHS[controls.style] ?? GLYPHS.linux;
+    const set = GLYPHS.windows;
     group.dataset.style = controls.style;
     group.setAttribute('aria-label', controls.group);
     const buttons = [

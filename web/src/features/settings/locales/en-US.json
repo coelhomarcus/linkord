@@ -577,17 +577,11 @@
     },
     "startMinimized": {
       "label": "Start minimized",
-      "description": {
-        "mac": "When it starts with the computer, Linkord waits in the menu bar until you open it.",
-        "other": "When it starts with the computer, Linkord waits in the system tray until you open it."
-      }
+      "description": "When it starts with the computer, Linkord waits in the system tray until you open it."
     },
     "closeToTray": {
       "label": "Keep running when the window closes",
-      "description": {
-        "mac": "Linkord stays in the menu bar and you keep getting messages and calls. Turned off, closing the window quits the app.",
-        "other": "Linkord stays in the system tray and you keep getting messages and calls. Turned off, closing the window quits the app."
-      }
+      "description": "Linkord stays in the system tray and you keep getting messages and calls. Turned off, closing the window quits the app."
     },
     "updates": {
       "version": "Version {{version}}",
