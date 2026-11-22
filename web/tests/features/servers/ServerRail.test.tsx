@@ -102,7 +102,7 @@ describe('ServerRail — live call seal', () => {
     setViewport(1440);
     renderRail(vi.fn(), [withChannels], withParticipants(inCall('c-voice')));
     const button = screen.getByRole('button', { name: 'Squad, Chamada de voz em andamento' });
-    expect(within(button).getByTestId('live-call-seal')).toHaveClass('-top-1', '-right-1');
+    expect(within(button).getByTestId('live-call-seal')).toHaveClass('-top-0.5', '-right-0.5');
   });
 
   it('shows while you are the one in its call', () => {
@@ -134,8 +134,8 @@ describe('ServerRail — unread messages', () => {
     renderRail(vi.fn(), [withChannels], { ...withParticipants(inCall('c-voice')), unreadByConversation: new Map([['c-text', 3]]) });
     const button = screen.getByRole('button', { name: 'Squad, 3 mensagens não lidas, Chamada de voz em andamento' });
     const count = within(button).getByText('3');
-    expect(count).toHaveClass('bg-red', '-bottom-1', '-right-1');
-    expect(within(button).getByTestId('live-call-seal')).toHaveClass('-top-1');
+    expect(count).toHaveClass('bg-red', '-bottom-0.5', '-right-0.5');
+    expect(within(button).getByTestId('live-call-seal')).toHaveClass('-top-0.5');
   });
 
   it('caps the count at 99+', () => {

@@ -24,6 +24,8 @@ contextBridge.exposeInMainWorld('linkordDesktop', Object.freeze({
   platform: process.platform,
   version: flag('linkord-desktop-version') ?? '',
   focusWindow: () => ipcRenderer.invoke('linkord:window:focus'),
+  // The unread count on the taskbar button; 0 clears it
+  setBadgeCount: (count: number) => ipcRenderer.invoke('linkord:badge:set', Number(count)),
   // The system's own notifications (src/main/notificationBridge.ts); a click names the one clicked
   notifications: Object.freeze({
     show: (request: unknown) => ipcRenderer.invoke('linkord:notification:show', request),

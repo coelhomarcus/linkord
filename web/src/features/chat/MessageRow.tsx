@@ -405,7 +405,7 @@ export const MessageRow = memo(function MessageRow({ message, showHeader, afterD
                 </div>
               ) : (
               <>
-                <div className={cn('message-press-text text-body leading-message text-text-secondary', pending && pending.state !== 'failed' && 'opacity-60')}>
+                <div className={cn('message-press-text text-body leading-message text-text-message', pending && pending.state !== 'failed' && 'opacity-60')}>
                   <ChatMessageText
                     text={message.text}
                     mentionLookup={mentionLookup}

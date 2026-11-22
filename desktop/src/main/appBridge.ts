@@ -1,16 +1,20 @@
 import { BrowserWindow, ipcMain, type IpcMainInvokeEvent } from 'electron';
 import { isAppPage } from './appPage.js';
+import { parseBadgeCount } from './badge.js';
+import type { Strings } from './strings.js';
+import { setTaskbarBadge } from './taskbarBadge.js';
 import { windowState } from './titleBar.js';
 
 // The same names are spelled out in src/preload/index.cts, which cannot import this file
 const FOCUS_WINDOW = 'linkord:window:focus';
+const SET_BADGE = 'linkord:badge:set';
 const MINIMIZE = 'linkord:window:minimize';
 const TOGGLE_MAXIMIZE = 'linkord:window:toggle-maximize';
 const CLOSE = 'linkord:window:close';
 const GET_STATE = 'linkord:window:get-state';
 const STATE_CHANGED = 'linkord:window:state';
 
-export function installAppBridge(appOrigin: string): void {
+export function installAppBridge(appOrigin: string, strings: Strings): void {
   // A notification clicked while the window is hidden (in the tray) or
   // minimised: window.focus() from the page cannot bring it back
   ipcMain.handle(FOCUS_WINDOW, (event) => {
@@ -34,6 +38,13 @@ export function installAppBridge(appOrigin: string): void {
   ipcMain.handle(GET_STATE, (event) => {
     const window = appWindow(event);
     return window ? windowState(window) : null;
+  });
+
+  // The unread count on the taskbar button (taskbarBadge.ts)
+  ipcMain.handle(SET_BADGE, (event, value: unknown) => {
+    const window = appWindow(event);
+    const count = parseBadgeCount(value);
+    return window && count !== null ? setTaskbarBadge(window, count, strings) : false;
   });
 }
 

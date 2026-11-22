@@ -47,7 +47,10 @@ function Pill({ active, unread }: { active: boolean; unread: boolean }) {
 }
 
 // The tile's corners, each with one job: the live-call seal top-right, the
-// unread count bottom-right, so the two never sit on each other.
+// unread count bottom-right, so the two never sit on each other. Each reaches
+// 6px past the tile (2px offset, 4px ring), and the rail spaces its tiles 12px
+// apart, so a seal never meets the count of the tile above: at 8px apart with
+// a 4px offset it sat on top of it.
 const CORNER = 'pointer-events-none absolute ring-4 ring-surface-rail';
 
 function RailItem({ label, active, unread, badge, badgeLabel, badgeClassName, liveCall, onClick, children, dragging = false, sortable, serverId, conversationId }: {
@@ -86,12 +89,12 @@ function RailItem({ label, active, unread, badge, badgeLabel, badgeClassName, li
         <Pill active={active} unread={unread} />
         {children}
         {liveCall && (
-          <span aria-hidden data-testid="live-call-seal" className={cn(CORNER, '-right-1 -top-1 grid size-4.5 place-items-center rounded-full bg-green-solid text-white')}>
+          <span aria-hidden data-testid="live-call-seal" className={cn(CORNER, '-right-0.5 -top-0.5 grid size-4.5 place-items-center rounded-full bg-green-solid text-white')}>
             <SpeakerHighIcon size={10} weight="fill" />
           </span>
         )}
         {!!badge && (
-          <CountBadge decorative className={cn(CORNER, '-bottom-1 -right-1', badgeClassName)}>
+          <CountBadge decorative className={cn(CORNER, '-bottom-0.5 -right-0.5', badgeClassName)}>
             {badge > 99 ? '99+' : badge}
           </CountBadge>
         )}
@@ -163,7 +166,7 @@ export function ServerRail({ className }: { className?: string }) {
   const openConversationId = conversationIdFromPath(pathname) ?? callConversationIdFromPath(pathname);
 
   return (
-    <nav aria-label={t('rail.label')} className={cn('flex w-[72px] flex-none flex-col items-center gap-2 overflow-y-auto bg-surface-rail pb-[max(0.75rem,var(--dock-clearance,0px))] [scrollbar-width:none] max-md:pt-3', className)}>
+    <nav aria-label={t('rail.label')} className={cn('flex w-[72px] flex-none flex-col items-center gap-3 overflow-y-auto bg-surface-rail pb-[max(0.75rem,var(--dock-clearance,0px))] [scrollbar-width:none] max-md:pt-3', className)}>
       {drawer && (
         <Tooltip>
           <TooltipTrigger onClick={toggleSidebar} aria-label={t('rail.showList')} aria-expanded={openMobile}
