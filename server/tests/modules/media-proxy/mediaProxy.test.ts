@@ -5,6 +5,8 @@ import type { AddressInfo, LookupFunction } from 'node:net';
 import { after, before, describe, it } from 'node:test';
 import Fastify from 'fastify';
 import sharp from 'sharp';
+import { createSteamBannerFetcher } from '../../../src/integrations/steam/steamBanner.js';
+import { steamHeaderUrl } from '../../../src/integrations/steam/steamAssets.js';
 import {
   createMediaProxy, fetchImage, fetchVideo, MAX_IMAGE_BYTES, MAX_VIDEO_BYTES, MediaProxyError, parseRange, rasterizeSvg, registerMediaProxyRoutes, sniffImageType, sniffVideoType,
   USER_RULE, type ProxiedImage, type Upstream,
@@ -346,6 +348,68 @@ describe('media proxy routes', () => {
   it('serves a signed preview picture, following its redirects', async () => {
     assert.equal((await get(proxiedImageUrl('preview', 'https://example.com/og.png')!)).statusCode, 200);
     assert.deepEqual(requested.at(-1), { url: 'https://example.com/og.png', redirects: 3 });
+  });
+
+  it('serves and caches the official or community banner at the Steam URL already in a widget', async (t) => {
+    const appId = 3764200;
+    const legacy = steamHeaderUrl(appId);
+    const official = `https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/${appId}/${'a'.repeat(40)}/header.jpg?t=10`;
+    const missing = 'https://cdn2.steamgriddb.com/grid/missing.png';
+    const community = 'https://cdn2.steamgriddb.com/grid/valid.png';
+
+    for (const source of [legacy, official, community]) {
+      await t.test(source, async () => {
+        const calls: string[] = [];
+        const fetchBanner = createSteamBannerFetcher(async (url) => {
+          calls.push(url);
+          if (url !== source) throw new MediaProxyError('image_unavailable');
+          return png;
+        }, {
+          configured: true,
+          async steamBanners(id) { calls.push(`grids:${id}`); return [missing, community]; },
+        }, async (url) => {
+          assert.equal(url, `https://store.steampowered.com/api/appdetails?appids=${appId}&filters=basic`);
+          calls.push('store');
+          return { [appId]: { success: true, data: { header_image: official } } };
+        });
+        const steam = Fastify();
+        registerMediaProxyRoutes(steam, {
+          authenticate: async () => 'u-steam-banner',
+          enabled: true,
+          proxy: createMediaProxy({ fetch: ({ url }) => fetchBanner(url) }),
+        });
+        try {
+          const signed = proxiedImageUrl('steam', legacy)!;
+          for (const response of await Promise.all([get(signed, {}, steam), get(signed, {}, steam)])) {
+            assert.equal(response.statusCode, 200);
+            assert.deepEqual(response.rawPayload, png.body);
+          }
+          assert.equal((await get(signed, {}, steam)).statusCode, 200);
+          assert.deepEqual(calls, {
+            [legacy]: [legacy],
+            [official]: [legacy, 'store', official],
+            [community]: [legacy, 'store', official, `grids:${appId}`, missing, community],
+          }[source]);
+        } finally {
+          await steam.close();
+        }
+      });
+    }
+  });
+
+  it('does not use a foreign store image or require a SteamGridDB key to serve the widget', async () => {
+    const legacy = steamHeaderUrl(3764200);
+    const calls: string[] = [];
+    const fetchBanner = createSteamBannerFetcher(async (url) => {
+      calls.push(url);
+      throw new MediaProxyError('image_unavailable');
+    }, {
+      configured: false,
+      async steamBanners() { calls.push('grids'); return []; },
+    }, async () => ({ 3764200: { success: true, data: { header_image: legacy.replace('shared.fastly.steamstatic.com', 'other.example') } } }));
+
+    await assert.rejects(fetchBanner(legacy), failsWith('image_unavailable'));
+    assert.deepEqual(calls, [legacy]);
   });
 
   it('refuses an unsigned, tampered or foreign address without fetching anything', async () => {

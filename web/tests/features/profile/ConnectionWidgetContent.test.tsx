@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { ConnectionWidgetContent } from '@/features/profile/ConnectionWidgetContent';
 describe('connected account widgets', () => {
@@ -9,6 +9,21 @@ describe('connected account widgets', () => {
     ] }} />);
     expect(screen.getByRole('link', { name: 'Dota 2' })).toHaveAttribute('href', 'https://store.steampowered.com/app/570/');
     expect(screen.getByText('1,5 h')).toBeInTheDocument();
+  });
+
+  it('keeps the Steam banner tile and link usable when the image fails', () => {
+    const item = { id: '3764200', title: 'Resident Evil Requiem', minutes: 90,
+      imageUrl: '/api/media-proxy/steam/original', url: 'https://store.steampowered.com/app/3764200/' };
+    const { rerender } = render(<ConnectionWidgetContent data={{ kind: 'steam-games', items: [item] }} />);
+    const tile = screen.getByRole('link', { name: item.title });
+    expect(tile).toHaveClass('aspect-[460/215]');
+    fireEvent.error(tile.querySelector('img')!);
+    expect(tile.querySelector('img')).toBeNull();
+    expect(tile).toHaveTextContent(item.title);
+    expect(tile).toHaveAttribute('href', item.url);
+
+    rerender(<ConnectionWidgetContent data={{ kind: 'steam-games', items: [{ ...item, imageUrl: '/api/media-proxy/steam/updated' }] }} />);
+    expect(tile.querySelector('img')).toHaveAttribute('src', '/api/media-proxy/steam/updated');
   });
 
   it('shows an offline Twitch channel with its banner and can play a live stream in the widget', async () => {

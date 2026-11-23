@@ -59,6 +59,23 @@ describe('SteamGridDB adapter', () => {
     assert.deepEqual(await client.gameIcons(7), [{ url: 'https://cdn2.steamgriddb.com/icon/c.png', thumb: null, style: 'official' }]);
   });
 
+  it('finds banner grids by Steam app id in the Steam header proportions', async () => {
+    const small = { width: 460, height: 215, url: 'https://cdn2.steamgriddb.com/grid/small.png' };
+    const large = { width: 920, height: 430, url: 'https://cdn2.steamgriddb.com/grid/large.png' };
+    const api = fake(() => ({ success: true, data: [
+      { ...small, width: 600, height: 900 },
+      { ...small, nsfw: true }, { ...small, humor: true }, { ...small, epilepsy: true },
+      { ...small, url: 'https://cdn2.steamgriddb.com:444/grid/foreign.png' },
+      { ...small, url: 'https://evil.example/grid/banner.png' }, small, small, large,
+    ] }));
+    const client = createSteamGridDbClient({ apiKey: 'k', request: api.request });
+    assert.deepEqual(await client.steamBanners(3764200), [small.url, large.url]);
+    const url = new URL(api.calls[0]!.url);
+    assert.equal(`${url.origin}${url.pathname}`, 'https://www.steamgriddb.com/api/v2/grids/steam/3764200');
+    assert.deepEqual(Object.fromEntries(url.searchParams), { types: 'static', nsfw: 'false', humor: 'false', epilepsy: 'false', dimensions: '460x215,920x430' });
+    assert.deepEqual(api.calls[0]!.init?.headers, { Authorization: 'Bearer k', Accept: 'application/json' });
+  });
+
   it('searches a name, encoded in the path, keeping games with an id and a name', async () => {
     const api = fake(() => ({ success: true, data: [{ id: 5, name: 'Fortnite', release_date: 1500940800 }, { id: -1, name: 'x' }, { id: 6 }] }));
     const client = createSteamGridDbClient({ apiKey: 'k', request: api.request });
@@ -70,6 +87,7 @@ describe('SteamGridDB adapter', () => {
     const missing = createSteamGridDbClient({ apiKey: 'k', request: fake(() => new ConnectionFetchError('not_found')).request });
     assert.equal(await missing.steamGame(1), null);
     assert.deepEqual(await missing.gameIcons(1), []);
+    assert.deepEqual(await missing.steamBanners(1), []);
     const limited = createSteamGridDbClient({ apiKey: 'k', request: fake(() => new ConnectionFetchError('rate_limited', 1000)).request });
     await assert.rejects(limited.steamGame(1), (error) => error instanceof ConnectionFetchError && error.code === 'rate_limited');
     const broken = createSteamGridDbClient({ apiKey: 'k', request: fake(() => ({ success: false, errors: ['nope'] })).request });

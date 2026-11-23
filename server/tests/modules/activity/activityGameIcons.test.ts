@@ -42,6 +42,7 @@ function setup(client: Partial<SteamGridDbClient>, options: {
     async gameById(id) { calls.push(`game:${id}`); return client.gameById ? client.gameById(id) : null; },
     async searchGames(term) { calls.push(`search:${term}`); return client.searchGames ? client.searchGames(term) : []; },
     async gameIcons(id) { calls.push(`icons:${id}`); return client.gameIcons ? client.gameIcons(id) : []; },
+    async steamBanners() { return []; },
   };
   const downloaded: string[] = [];
   const named = new Map<Buffer, string>();

@@ -1,6 +1,6 @@
 import { ConnectionFetchError, fetchConnectionText, fetchSafeConnectionJson, list, record, textValue, type RequestJson, type RequestText } from '../connectionHttp.js';
 import type { ConnectionSnapshot, SteamGame, SteamProfileItems } from '../../modules/connections/types.js';
-import { STEAM_ASSET_HOST, steamItemUrl } from './steamAssets.js';
+import { STEAM_ASSET_HOST, steamHeaderUrl, steamItemUrl } from './steamAssets.js';
 import { readSteamPublicProfile } from './steamPublicProfile.js';
 
 export const STEAM_IMAGE_HOSTS = [STEAM_ASSET_HOST, 'avatars.steamstatic.com', 'avatars.akamai.steamstatic.com',
@@ -58,7 +58,7 @@ function gameTimes(value: Record<string, unknown>, publicIds: Set<number>) {
     if (!name) continue; // a removed or unlisted title can still be in the library count
     matches.set(row.appid, { recentMinutes, game: {
       id: String(row.appid), title: name, minutes, url: `https://store.steampowered.com/app/${row.appid}/`,
-      imageUrl: `https://${STEAM_ASSET_HOST}/store_item_assets/steam/apps/${row.appid}/header.jpg`,
+      imageUrl: steamHeaderUrl(row.appid),
     } });
   }
   return matches;
