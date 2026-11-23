@@ -210,12 +210,26 @@ describe('ProfileModal — since when and what you have in common', () => {
     const github = screen.getByRole('link', { name: 'Abrir @coelhomarcus em GitHub' });
     const steam = await screen.findByRole('link', { name: 'Abrir @steam-player em Steam' });
     expect(spotify).toHaveAttribute('href', 'https://open.spotify.com/user/x');
-    expect(spotify).toHaveTextContent('Spotify');
+    expect(spotify).toHaveTextContent('Spotifyopen.spotify.com');
     expect(github).toHaveAttribute('href', 'https://github.com/coelhomarcus');
     expect(github).toHaveTextContent('@coelhomarcus');
     expect(steam).toHaveAttribute('href', steamUrl);
     expect(steam).toHaveTextContent('@steam-player');
-    expect(spotify.closest('ul')).toHaveClass('flex-col');
+    expect(github).toHaveTextContent('@coelhomarcusGitHub');
+  });
+
+  it('reads the account from the profile URL of more sites, and keeps a plain link as its host', async () => {
+    mocked.fetchProfileDetails.mockResolvedValue(details);
+    renderProfile({ allUsers: new Map([[user.id, { ...user, profileLinks: [
+      'https://www.youtube.com/@canal', 'https://x.com/fulana', 'https://bsky.app/profile/fulana.bsky.social',
+      'https://www.youtube.com/watch?v=abc', 'https://fulana.dev/',
+    ] }]]) });
+    expect(await screen.findByRole('link', { name: 'Abrir @canal em YouTube' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Abrir @fulana em X / Twitter' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Abrir @fulana.bsky.social em Bluesky' })).toBeInTheDocument();
+    // a video is not an account: the card names the site
+    expect(screen.getByRole('link', { name: 'Abrir YouTube' })).toHaveTextContent('YouTube');
+    expect(screen.getByRole('link', { name: 'Abrir fulana.dev' })).toHaveTextContent(/^fulana\.dev$/);
   });
 
   it('has no Conexões section for a profile without links', async () => {

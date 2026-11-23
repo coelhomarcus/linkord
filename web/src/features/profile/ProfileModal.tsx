@@ -146,9 +146,9 @@ export function ProfileModal({ userId, initialTab, onClose, onOpenProfile }: Pro
                     )}
                     hideLinks
                     footer={(
-                      <div className="mt-5 flex flex-col gap-4">
+                      <div className="mt-5 flex flex-col gap-5">
                         <UserActivityCard userId={user.id} />
-                        <dl className="flex flex-col gap-3">
+                        <dl className="grid grid-cols-2 gap-3 empty:hidden">
                           {details.details && (
                             <div>
                               <dt className="text-caption font-medium text-text-muted">{t('modal.memberSince')}</dt>
