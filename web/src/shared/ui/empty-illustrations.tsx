@@ -39,16 +39,11 @@ const ACCENT_SOFT = 'var(--es-accent-soft)';
 
 const stroke = { stroke: LINE, strokeWidth: 1.5, strokeLinejoin: 'round' } as const;
 
-/** The round backdrop and the scattered sparkles every scene shares, so the set reads as one family
- * around the mascot. */
+/** The round backdrop every scene shares, so the set reads as one family around the mascot. */
 function Scene({ children, className }: { children: ReactNode; className?: string }) {
   return (
     <svg viewBox="0 0 160 120" aria-hidden="true" focusable="false" className={className} style={TOKENS}>
       <circle cx="80" cy="62" r="50" fill={BACK} />
-      <path d="M27 30v8M23 34h8" stroke={ACCENT_SOFT} strokeWidth="2" strokeLinecap="round" />
-      <circle cx="136" cy="34" r="3" fill={DETAIL} />
-      <circle cx="128" cy="100" r="2.5" fill={ACCENT_SOFT} />
-      <circle cx="30" cy="92" r="2" fill={DETAIL} />
       {children}
     </svg>
   );
