@@ -7,10 +7,10 @@ import { cn } from '@/shared/lib/utils';
 // The page blocks of the settings-style areas (settings, administration): a column of sections with a
 // title each, and rows of "what it is" on the left beside its value or control on the right.
 
-/** The page column, at most Discord's 740px. Padding follows the settings
- * area (container queries), not the window. */
+/** The page column, centered, with Discord's 774px of content. Padding follows
+ * the settings area (container queries), not the window. */
 export function SettingsContent({ className, ...props }: ComponentProps<'div'>) {
-  return <div className={cn('w-full min-w-0 max-w-[740px] px-4 pb-16 pt-6 @[520px]:px-8 @[520px]:pt-8', className)} {...props} />;
+  return <div className={cn('mx-auto w-full min-w-0 max-w-[806px] px-4 pb-16 pt-6 @[520px]:max-w-[838px] @[520px]:px-8 @[520px]:pt-8', className)} {...props} />;
 }
 
 /** The category's name, kept for screen readers and as the focus target when

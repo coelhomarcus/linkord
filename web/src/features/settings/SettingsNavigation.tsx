@@ -98,7 +98,7 @@ export function SettingsSidebar({ active, isAdmin, onOpenProfile }: { active: Se
   const { t } = useTranslation('settings');
   const { query, setQuery, results } = useSettingsSearch(isAdmin);
   return (
-    <nav aria-label={t('nav.ariaLabel')} className="flex w-[218px] flex-none flex-col px-3 py-6">
+    <nav aria-label={t('nav.ariaLabel')} className="flex w-[279px] flex-none flex-col px-[18px] py-6">
       <ProfileShortcut onOpenProfile={onOpenProfile} />
       <SettingsSearchField query={query} onChange={setQuery} onClear={() => setQuery('')} />
       {query ? (

@@ -124,6 +124,8 @@ export function SettingsPage({ onOpenProfile }: SettingsPageProps) {
         </div>
         {/* a stable gutter: a short page and a scrolling one keep the column in the same place */}
         <main ref={scrollerRef} aria-label={t(category.labelKey)} className="@container flex min-h-0 min-w-0 flex-1 overflow-y-auto [scrollbar-gutter:stable]">
+          {/* as wide as the close column, so the page sits in the middle of the panel */}
+          {closeModal && <div aria-hidden className="w-[72px] flex-none" />}
           {page}
           {closeModal && <EscCloseButton onClose={closeModal} className="pt-8" />}
         </main>
