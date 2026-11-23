@@ -1,11 +1,14 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { screen, within } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { renderWithRoom } from '@tests/fixtures/roomContextFixture';
+import { useState } from 'react';
+import { createFakeRoomContextValue, renderWithRoom } from '@tests/fixtures/roomContextFixture';
 import { ActivitySettings } from '@/features/activity/ActivitySettings';
 import * as activityApi from '@/features/activity/activityApi';
 import type { DesktopActivityApi, DesktopRunningActivities } from '@/shared/desktop';
 import { initialRoomState } from '@/state/roomReducer';
+import { RoomStoreProvider } from '@/state/RoomStoreProvider';
+import type { ActivitySettings as Settings } from '@/shared/types/protocol';
 
 vi.mock('@/features/activity/activityApi', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@/features/activity/activityApi')>()),
@@ -101,15 +104,39 @@ describe('ActivitySettings', () => {
     expect(updateActivitySettings).toHaveBeenCalledWith({ sharing: false });
   });
 
-  it('hides a game this computer found, and shows one hidden again', async () => {
+  it('lists shown and hidden games in their own tabs, moving one across as it is hidden or shown', async () => {
     stubDesktop();
-    const updateActivitySettings = vi.fn(async () => {});
-    renderWithRoom(<ActivitySettings />, { activitySettings: { sharing: true, hidden: ['spotify'] }, updateActivitySettings });
+    function Harness() {
+      const [settings, setSettings] = useState<Settings>({ sharing: true, hidden: ['spotify'] });
+      const updateActivitySettings = async (patch: Partial<Settings>) => { setSettings((current) => ({ ...current, ...patch })); };
+      return <RoomStoreProvider value={createFakeRoomContextValue({ activitySettings: settings, updateActivitySettings })}><ActivitySettings /></RoomStoreProvider>;
+    }
+    render(<Harness />);
     const user = userEvent.setup();
-    await user.click(await screen.findByRole('button', { name: 'Ocultar Minecraft' }));
-    expect(updateActivitySettings).toHaveBeenLastCalledWith({ hidden: ['spotify', 'minecraft'] });
+    const tabs = within(screen.getByRole('tablist', { name: 'Jogos e apps' }));
+    const hideMinecraft = await screen.findByRole('button', { name: 'Ocultar Minecraft' });
+    expect(tabs.getByRole('tab', { name: 'Ativos' })).toHaveAttribute('aria-selected', 'true');
+    expect(tabs.getByRole('tab', { name: 'Ativos' })).toHaveTextContent('1');
+    expect(tabs.getByRole('tab', { name: 'Ocultos' })).toHaveTextContent('1');
+    expect(screen.queryByRole('button', { name: 'Mostrar Spotify' })).not.toBeInTheDocument();
+
+    await user.click(hideMinecraft);
+    expect(await screen.findByText(/Todos os jogos e apps detectados estão ocultos/)).toBeInTheDocument();
+    expect(tabs.getByRole('tab', { name: 'Ocultos' })).toHaveTextContent('2');
+
+    await user.click(tabs.getByRole('tab', { name: 'Ocultos' }));
     await user.click(screen.getByRole('button', { name: 'Mostrar Spotify' }));
-    expect(updateActivitySettings).toHaveBeenLastCalledWith({ hidden: [] });
+    expect(screen.queryByRole('button', { name: 'Mostrar Spotify' })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Mostrar Minecraft' })).toBeInTheDocument();
+    await user.click(tabs.getByRole('tab', { name: 'Ativos' }));
+    expect(screen.getByRole('button', { name: 'Ocultar Spotify' })).toBeInTheDocument();
+  });
+
+  it('says what each tab holds when it is empty', async () => {
+    renderWithRoom(<ActivitySettings />, { activitySettings: { sharing: true, hidden: [] } });
+    expect(screen.getByRole('tabpanel')).toHaveTextContent(/A detecção acontece no app desktop/);
+    await userEvent.setup().click(screen.getByRole('tab', { name: 'Ocultos' }));
+    expect(screen.getByRole('tabpanel')).toHaveTextContent('Nada oculto. Um jogo ou app que você ocultar fica aqui.');
   });
 
   it('shows each game and app with its icon, and the kind glyph for one without', async () => {
@@ -129,13 +156,14 @@ describe('ActivitySettings', () => {
     const spotifyRow = detected.parentElement!;
     await vi.waitFor(() => expect(spotifyRow.querySelector('img')).toHaveAttribute('src', `/api/activity/icons/${'a'.repeat(64)}.webp`));
     expect(spotifyRow).toHaveTextContent('App');
-    // never seen on this computer, but hidden: named and drawn from the account's history
-    const obsRow = screen.getByRole('button', { name: 'Mostrar OBS Studio' }).parentElement!;
-    expect(obsRow.querySelector('img')).toHaveAttribute('src', obsIcon);
     const minecraftRow = screen.getByRole('button', { name: 'Ocultar Minecraft' }).parentElement!;
     expect(minecraftRow.querySelector('img')).toBeNull();
     expect(minecraftRow).toHaveTextContent('Jogo');
-    expect(container.querySelectorAll('img')).toHaveLength(2);
+    // never seen on this computer, but hidden: named and drawn from the account's history
+    await userEvent.setup().click(screen.getByRole('tab', { name: 'Ocultos' }));
+    const obsRow = screen.getByRole('button', { name: 'Mostrar OBS Studio' }).parentElement!;
+    expect(obsRow.querySelector('img')).toHaveAttribute('src', obsIcon);
+    expect(container.querySelectorAll('img')).toHaveLength(1);
   });
 
   it('says why hiding a game did not save, in the games section', async () => {

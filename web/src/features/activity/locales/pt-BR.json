@@ -55,14 +55,18 @@
       "notRunning": "{{name}} (fechado)"
     },
     "gamesDescription": "Um jogo ou app oculto nunca aparece para os outros, mesmo com o compartilhamento ligado.",
-    "detected": "Detectados neste computador",
+    "tabs": {
+      "label": "Jogos e apps",
+      "active": "Ativos",
+      "hidden": "Ocultos"
+    },
     "detectedEmpty": "Nenhum jogo ou app detectado ainda. Abra um com o Linkord aberto e ele aparece aqui.",
+    "activeEmpty": "Todos os jogos e apps detectados estão ocultos. Mostre um de novo na aba Ocultos.",
     "kindLabel": {
       "playing": "Jogo",
       "using": "App"
     },
-    "hidden": "Ocultos",
-    "hiddenEmpty": "Nada oculto.",
+    "hiddenEmpty": "Nada oculto. Um jogo ou app que você ocultar fica aqui.",
     "hide": "Ocultar",
     "show": "Mostrar",
     "hideLabel": "Ocultar {{name}}",
