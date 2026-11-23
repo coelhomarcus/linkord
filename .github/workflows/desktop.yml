@@ -71,7 +71,8 @@ jobs:
           version="$(node -p "require('./desktop/package.json').version")"
           gh release create "v$version" installers/* --draft --target "$GITHUB_SHA" \
             --title "Linkord desktop $version" \
-            --notes "Desktop app $version for $LINKORD_URL. Review, then publish: installed apps only see published releases."
+            --notes "Linkord desktop $version for Windows.
+
+          Download \`Linkord-$version-win-x64.exe\`. Installed versions update on their own."
         env:
           GH_TOKEN: ${{ github.token }}
-          LINKORD_URL: ${{ inputs.url }}
