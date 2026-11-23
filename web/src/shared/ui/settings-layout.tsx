@@ -43,7 +43,7 @@ export function SettingsSection({ id, title, description, children, className, c
       tabIndex={id ? -1 : undefined}
       className={cn('flex scroll-mt-10 flex-col border-t border-border-divider py-10 outline-none first:border-t-0 first:pt-0', className)}
     >
-      <h3 id={headingId} className="text-heading font-semibold text-text-strong">{title}</h3>
+      <h3 id={headingId} className="text-display font-semibold text-text-strong">{title}</h3>
       {description && <p className="mt-2 text-label text-text-muted">{description}</p>}
       {children && <div className={cn('mt-6 flex flex-col gap-7', contentClassName)}>{children}</div>}
     </section>
