@@ -95,7 +95,6 @@
     "clearCount": "Clear filters ({{count}})",
     "cancel": "Cancel",
     "apply": "Apply filters",
-    "search": "Search",
     "noOptions": "No matches"
   },
   "results": {

@@ -61,8 +61,6 @@
   },
   "invite": {
     "title": "Invite friends to {{name}}",
-    "send_one": "Send invite",
-    "send_other": "Send invites ({{count}})",
     "orLink": "Or, send a server invite link to a friend",
     "generating": "Generating…",
     "copy": "Copy",

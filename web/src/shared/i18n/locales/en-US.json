@@ -41,8 +41,7 @@
     }
   },
   "upload": {
-    "missingConversation": "Conversation not provided.",
-    "networkFailed": "Network error while uploading the file."
+    "missingConversation": "Conversation not provided."
   },
   "accessibility": {
     "navigationClose": "Close navigation",

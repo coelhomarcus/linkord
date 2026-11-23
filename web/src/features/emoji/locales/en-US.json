@@ -29,7 +29,6 @@
   },
   "upload": {
     "crop": "Crop emoji",
-    "uploading": "Uploading…",
     "uploadFailed": "Couldn't upload the emoji.",
     "fileTooLarge": "File too large (maximum {{max}})."
   },

@@ -41,8 +41,7 @@
     }
   },
   "upload": {
-    "missingConversation": "Conversa não informada.",
-    "networkFailed": "Falha de rede ao enviar o arquivo."
+    "missingConversation": "Conversa não informada."
   },
   "accessibility": {
     "navigationClose": "Fechar navegação",

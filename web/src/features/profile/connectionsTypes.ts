@@ -36,7 +36,7 @@ export type WidgetData =
       stream: { title: string; game: string | null; viewers: number; imageUrl: string | null } | null; status: 'live' | 'offline' | 'unknown' }
   | { kind: 'twitch-vods'; items: Array<MediaItem & { createdAt: string; seconds: number }> };
 /** What the Steam profile has equipped from the Points Shop, as proxied addresses. */
-export interface SteamProfileItems {
+interface SteamProfileItems {
   background: { imageUrl: string | null; webmUrl: string | null; mp4Url: string | null } | null;
   avatarFrameUrl: string | null;
   animatedAvatarUrl: string | null;

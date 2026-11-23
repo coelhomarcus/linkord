@@ -12,6 +12,9 @@
       ]
     },
     "web": {
+      "ignoreDependencies": [
+        "@svgr/plugin-jsx"
+      ],
       "entry": [
         "tests/**/*.test.ts",
         "tests/**/*.test.tsx"

@@ -20,7 +20,6 @@
     "fullscreenExit": "Exit full screen",
     "callSettings": "Call settings",
     "leaveCall": "Leave call",
-    "returnToCall": "Return to call",
     "inCall": "In a call",
     "inCallFor": "In a call · {{time}}",
     "statusReconnecting": "Reconnecting…",

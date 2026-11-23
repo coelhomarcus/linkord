@@ -279,7 +279,7 @@ type MediaProxy = ReturnType<typeof createMediaProxy>;
  * when the first reader asks for it. */
 export const mediaProxy: MediaProxy = createMediaProxy();
 /** The videos' cache, apart so a few loops never push the pictures out. */
-export const videoProxy: MediaProxy = createMediaProxy({ fetch: (upstream) => fetchVideo(upstream, upstream.lookup), maxBytes: VIDEO_CACHE_MAX_BYTES });
+const videoProxy: MediaProxy = createMediaProxy({ fetch: (upstream) => fetchVideo(upstream, upstream.lookup), maxBytes: VIDEO_CACHE_MAX_BYTES });
 
 const MESSAGES: Record<MediaProxyError['code'], string> = {
   rate_limited: 'Muitas imagens novas em pouco tempo. Tente novamente em instantes.',

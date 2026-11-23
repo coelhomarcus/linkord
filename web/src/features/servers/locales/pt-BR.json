@@ -61,8 +61,6 @@
   },
   "invite": {
     "title": "Convidar amigos para {{name}}",
-    "send_one": "Enviar convite",
-    "send_other": "Enviar convites ({{count}})",
     "orLink": "Ou, envie um convite do servidor a um amigo",
     "generating": "Gerando…",
     "copy": "Copiar",

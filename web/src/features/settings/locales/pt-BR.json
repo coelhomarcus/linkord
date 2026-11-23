@@ -7,7 +7,6 @@
     "clearSearch": "Limpar busca",
     "noResults": "Nenhum ajuste corresponde a “{{query}}”.",
     "editProfile": "Editar perfil",
-    "sectionsOf": "Seções de {{category}}",
     "noResultsTitle": "Nada encontrado"
   },
   "catalog": {

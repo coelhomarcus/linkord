@@ -6,7 +6,6 @@
   "remove": "Remove",
   "jump": "Jump to message",
   "loading": "Loading saved messages…",
-  "loadMore": "Load more",
   "missing": "You lost access to this saved message.",
   "removeFailed": "Couldn't remove it. Try again.",
   "empty": {
