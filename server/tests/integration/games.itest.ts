@@ -52,7 +52,7 @@ describe('games widgets (real Postgres)', () => {
     const owner = await makeUser('gamesoffer'); const friend = await makeUser('gamesfriend');
     await befriend(owner.id, friend.id);
     const mine = await readWall(owner.id, true);
-    assert.deepEqual(mine.available?.map((widget) => [widget.connection, widget.type, widget.data]), [
+    assert.deepEqual(mine.available?.filter((widget) => widget.data?.kind === 'games').map((widget) => [widget.connection, widget.type, widget.data]), [
       [null, 'igdb-favorite-game', { kind: 'games', items: [] }], [null, 'igdb-liked-games', { kind: 'games', items: [] }],
       [null, 'igdb-playing-games', { kind: 'games', items: [] }], [null, 'igdb-wishlist-games', { kind: 'games', items: [] }],
     ]);

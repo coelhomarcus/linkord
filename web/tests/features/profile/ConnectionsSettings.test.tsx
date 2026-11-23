@@ -58,6 +58,21 @@ describe('connection settings', () => {
     await user.click(screen.getByRole('button', { name: 'GitHub' }));
     expect(within(screen.getByRole('dialog')).getByLabelText('Nome de usuário')).toHaveAttribute('maxlength', '39');
   });
+  it('offers configured providers and explains when Steam game details are private', async () => {
+    const user = userEvent.setup();
+    mocked.fetchConnections.mockResolvedValue({ connections: [], providers: ['url', 'steam'] });
+    mocked.createConnection.mockRejectedValue(new ApiError(403, 'steam_profile_private', 'private'));
+    renderSettings();
+    const steam = await screen.findByRole('button', { name: 'Steam' });
+    expect(screen.queryByRole('button', { name: 'Twitch' })).not.toBeInTheDocument();
+    await user.click(steam);
+    const input = screen.getByLabelText('Nome personalizado, SteamID ou URL do perfil');
+    await user.type(input, 'https://steamcommunity.com/id/example/{Enter}');
+    expect(mocked.createConnection).toHaveBeenCalledWith('steam', 'https://steamcommunity.com/id/example/');
+    expect(await screen.findByRole('alert')).toHaveTextContent('Deixe o perfil Steam e os detalhes de jogos públicos e tente novamente.');
+    expect(input).toBeEnabled();
+  });
+
   it('enforces the count limit while preserving existing connections', async () => {
     mocked.fetchConnections.mockResolvedValue({ connections: Array.from({ length: 8 }, (_, index) => ({ ...connection, id: String(index), provider: 'url', value: `https://example.com/${index}`, url: `https://example.com/${index}`, status: 'ready' })) });
     renderSettings();

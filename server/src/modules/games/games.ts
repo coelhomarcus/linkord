@@ -1,3 +1,4 @@
+import { twitchAppToken } from '../../integrations/twitch/appToken.js';
 import type { FastifyInstance, FastifyRequest } from 'fastify';
 import { config } from '../../config/env.js';
 import { parseCookies } from '../../http/cookies.js';
@@ -10,7 +11,7 @@ import { postponeIgdb, reserveIgdbSlot } from './igdbLimiter.js';
 
 const log = logger.child({ component: 'games' });
 const search = createGameSearch({
-  client: createIgdbClient({ clientId: config.IGDB_CLIENT_ID, clientSecret: config.IGDB_CLIENT_SECRET }),
+  client: createIgdbClient({ clientId: config.IGDB_CLIENT_ID, clientSecret: config.IGDB_CLIENT_SECRET, appToken: twitchAppToken }),
   reserve: () => reserveIgdbSlot(),
   postpone: postponeIgdb,
 });

@@ -31,9 +31,7 @@ You need the **Manage Webhooks** permission in the channel (the server owner and
 2. Open the **Integrations** tab and click **New Webhook**.
 3. Give it a name (for example *Deploys*, *Monitoring*).
 
-The name can be changed later in the same tab (edit the field and leave it). Old messages start showing the new name.
-
-> Each channel can have up to 10 webhooks (the limit is configurable per instance with `MAX_WEBHOOKS_PER_CHANNEL`).
+The name can be changed later in the same tab; old messages show the new name too. A channel can have up to 10 webhooks (`MAX_WEBHOOKS_PER_CHANNEL` on the instance).
 
 ## 2. Store the webhook URL
 
@@ -43,11 +41,9 @@ Right after creating it, Linkord shows the **webhook URL**:
 https://your-linkord/api/webhooks/<id>/<token>
 ```
 
-**Copy it now and keep it somewhere safe** (your CI's secret store, an environment variable, and so on). Linkord stores only a hash of the token, so the URL **is not shown again**.
+**Copy it now and keep it in a secret store** (your CI's secrets, an environment variable). It is the whole credential: anyone who has it can post as the webhook. Linkord stores only a hash of the token, so the URL **is not shown again**.
 
-Lost the URL? Open the channel → **Edit Channel** → **Integrations** → **Generate new URL** on the webhook. The old URL stops working immediately, so update every system that used it.
-
-> The URL is the whole credential: anyone who has it can post as the webhook. Treat it like a password.
+Lost or leaked? **Edit Channel** → **Integrations** → **Generate new URL** on the webhook. The old URL stops working immediately, so update every system that used it.
 
 ## 3. Send the first message
 
@@ -330,20 +326,11 @@ Store the URL under **Settings → Secrets and variables → Actions** as `LINKO
 
 ## 11. Security
 
-- **The URL is a secret.** Keep it in environment variables or a secret store, never in code or in a repository.
-- **Prefer the `Authorization: Bearer` header** when you can: the token stays out of URLs, which tend to show up in proxy and access logs. Linkord never writes the token to its own logs.
-- **Leaked? Generate a new URL** (channel → **Edit Channel** → **Integrations** → **Generate new URL**). The previous one dies immediately.
-- **Linkord stores only the token's hash.** Not even the instance's administration can see your URL.
-- **The administration can revoke the webhook or suspend the server** (for abuse or a leak). In both cases sends start receiving `401`. After a revocation, whoever manages the channel gets messages flowing again by generating a new URL. After a suspension, the same URL works again once the administration reactivates the server.
-- **Links in cards** can only be `http(s)`. There is no way to run a script or load an external image through a card.
+- **Keep the URL out of code and repositories**, and prefer the `Authorization: Bearer` header when you can: URLs tend to show up in proxy and access logs. Linkord never logs the token, and stores only its hash, so not even the instance's administration can see your URL.
+- **The administration can revoke the webhook or suspend the server** (for abuse or a leak), and sends then get `401`. After a revocation, generating a new URL gets messages flowing again; after a suspension, the same URL works once the server is reactivated.
+- **Cards cannot run scripts or load images:** their links can only be `http(s)`.
 
 ## 12. Common problems
-
-**I get `401 invalid_webhook` on a URL that used to work.**
-The URL was replaced (someone clicked "Generate new URL"), the administration revoked the webhook, or the server is suspended. Ask whoever manages the channel's webhooks for a new URL.
-
-**I get `415`.**
-The `Content-Type: application/json` header is missing.
 
 **I get `400 invalid_json`.**
 The body is not a valid JSON object. In a shell, watch the quoting: validate the JSON with `echo "$BODY" | jq .` before sending.

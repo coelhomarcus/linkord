@@ -10,6 +10,7 @@ import {
   serverMemberRoles, serverMembers, serverRoles, servers, userBlocks, users,
 } from '../../db/schema.js';
 import { filePathFor } from '../attachments/attachmentStorage.js';
+import { exportActivitySessions } from '../activity/activitySessions.js';
 import { exportActivityHistory } from '../activity/activityHistory.js';
 import { getPreferences } from '../users/preferences.js';
 
@@ -38,11 +39,12 @@ async function readRecords(userId: string) {
   const [user] = await db.select().from(users).where(eq(users.id, userId)).limit(1);
   if (!user) return null;
 
-  const [connections, wallWidgets, games, activity] = await Promise.all([
+  const [connections, wallWidgets, games, activity, activitySessions] = await Promise.all([
     db.select().from(profileConnections).where(eq(profileConnections.userId, userId)).orderBy(asc(profileConnections.position)),
     db.select().from(profileWallWidgets).where(eq(profileWallWidgets.userId, userId)).orderBy(asc(profileWallWidgets.position)),
     db.select().from(profileGames).where(eq(profileGames.userId, userId)).orderBy(asc(profileGames.list), asc(profileGames.position)),
     exportActivityHistory(userId),
+    exportActivitySessions(userId),
   ]);
 
   const other = aliasedTable(users, 'other');
@@ -70,7 +72,7 @@ async function readRecords(userId: string) {
     .orderBy(asc(notificationSettings.updatedAt));
   const preferences = await getPreferences(userId);
 
-  return { user, connections, wallWidgets, games, activity, friendRows, blockRows, serverRows, roleRows, notificationRows, preferences };
+  return { user, connections, wallWidgets, games, activity, activitySessions, friendRows, blockRows, serverRows, roleRows, notificationRows, preferences };
 }
 
 /** Where each conversation the account wrote in is, named for a person: a server channel or a DM partner. */
@@ -144,7 +146,7 @@ async function sizeOnDisk(id: string): Promise<number | null> {
 
 const README = `This is a copy of the data of your Linkord account, made when you asked for it.
 
-account.json      your profile, account details and settings
+account.json      your profile, account details, settings and activity sessions
 connections.json  the accounts and widgets on your profile, and the games you picked
 friends.json      your friends and pending friend requests
 blocks.json       the people you blocked
@@ -160,7 +162,7 @@ Dates are in UTC (ISO 8601). Messages other people sent are not included.
 export async function writeExportArchive(userId: string, destination: string, now = new Date()): Promise<number | null> {
   const records = await readRecords(userId);
   if (!records) return null;
-  const { user, connections, wallWidgets, games, activity, friendRows, blockRows, serverRows, roleRows, notificationRows, preferences } = records;
+  const { user, connections, wallWidgets, games, activity, activitySessions, friendRows, blockRows, serverRows, roleRows, notificationRows, preferences } = records;
 
   const files: StoredFile[] = [];
 
@@ -216,6 +218,7 @@ export async function writeExportArchive(userId: string, destination: string, no
       twoStepLogin: user.twoFactorEmail, newSignInAlerts: user.loginAlertEmail,
       activity: {
         sharing: user.activitySharing, hidden: user.hiddenActivities,
+        sessions: activitySessions,
         recent: activity.map((a) => ({ key: a.key, kind: a.kind, name: a.name, lastPlayedAt: a.lastPlayedAt })),
       },
       // per server and per channel or DM; a null level inherits, a muted row without an end lasts until turned off
@@ -228,7 +231,7 @@ export async function writeExportArchive(userId: string, destination: string, no
   }), 'account.json', options);
   zip.addBuffer(json({
     connections: connections.map((c) => ({ provider: c.provider, value: c.value, url: c.url, showOnProfile: c.showOnProfile })),
-    wallWidgets: wallWidgets.map((w) => ({ type: w.type, connection: connections.find((c) => c.id === w.connectionId)?.provider ?? null })),
+    wallWidgets: wallWidgets.map((w) => ({ type: w.type, ...(w.period && { period: w.period }), connection: connections.find((c) => c.id === w.connectionId)?.provider ?? null })),
     games: games.map((g) => ({ list: g.list, name: g.name, igdbId: g.igdbId, releaseYear: g.releaseYear })),
   }), 'connections.json', options);
   zip.addBuffer(json(friendRows.map(({ f, other }) => ({

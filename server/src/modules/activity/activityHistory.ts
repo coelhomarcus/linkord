@@ -50,17 +50,18 @@ export const databaseActivityHistoryStore: ActivityHistoryStore = {
 /** What the profile shows: nothing while the account does not share its activity, and never a game or
  * app it hides now, even one played before it was hidden. `null` when the account does not exist. */
 export async function readActivityHistory(userId: string, limit = ACTIVITY_HISTORY_MAX): Promise<{ sharing: boolean; items: ActivityHistoryItem[] } | null> {
-  const [settings] = await db.select({ sharing: users.activitySharing, hidden: users.hiddenActivities }).from(users).where(eq(users.id, userId)).limit(1);
+  const [settings] = await db.select({ sharing: users.activitySharing }).from(users).where(eq(users.id, userId)).limit(1);
   if (!settings) return null;
   if (!settings.sharing) return { sharing: false, items: [] };
-  const hidden = new Set(Array.isArray(settings.hidden) ? settings.hidden : []);
-  const rows = await db.select().from(activityHistory)
-    .where(eq(activityHistory.userId, userId))
+  const rows = await db.select({ item: activityHistory }).from(activityHistory)
+    .innerJoin(users, eq(users.id, activityHistory.userId))
+    .where(and(eq(activityHistory.userId, userId), eq(users.activitySharing, true), sql`NOT (${users.hiddenActivities} ? ${activityHistory.key})`))
     .orderBy(desc(activityHistory.lastPlayedAt))
     .limit(ACTIVITY_HISTORY_MAX);
   // a game shows its own icon, not whichever one the account's client reported (sharedGameIcons.ts)
   const items = await withSharedIcons(rows
-    .filter((row) => !hidden.has(row.key) && isActivityKey(row.key) && (row.kind === 'playing' || row.kind === 'using'))
+    .map(({ item }) => item)
+    .filter((row) => isActivityKey(row.key) && (row.kind === 'playing' || row.kind === 'using'))
     .slice(0, limit)
     .map((row) => ({ key: row.key, kind: row.kind as Activity['kind'], name: row.name, icon: row.icon, lastPlayedAt: row.lastPlayedAt.toISOString() })));
   return { sharing: true, items };

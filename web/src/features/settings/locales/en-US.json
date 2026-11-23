@@ -12,8 +12,11 @@
   },
   "catalog": {
     "groups": {
-      "you": "User settings",
-      "app": "App settings",
+      "account": "Account",
+      "social": "Profile & social",
+      "display": "Appearance & language",
+      "communication": "Voice, video & chat",
+      "app": "App",
       "admin": "Administration"
     },
     "categories": {
@@ -288,7 +291,7 @@
     "emptyText": "Anyone you block shows up here, and you can unblock them any time.",
     "export": {
       "label": "Download my data",
-      "description": "A copy of your profile, settings, friends, blocks, servers and every message you sent, with its files. We email you when it is ready.",
+      "description": "A copy of your profile, settings, activity sessions, friends, blocks, servers and every message you sent, with its files. We email you when it is ready.",
       "request": "Request a copy",
       "building": "Preparing…",
       "buildingHint": "We are preparing your copy. You can leave this page: the link also arrives by email.",

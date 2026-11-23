@@ -1,11 +1,14 @@
-import { BookOpenIcon, UserIcon, UsersIcon } from '@/shared/ui/icons';
+import { BookOpenIcon, CaretDownIcon, UserIcon, UsersIcon } from '@/shared/ui/icons';
 import type { ComponentType } from 'react';
 import { useTranslation } from 'react-i18next';
 import { readableAccent } from './accentColor';
 import { widgetBrand } from './connectionBrands';
 import { ContributionCalendar } from './ContributionCalendar';
 import { WidgetHeader } from './WidgetHeader';
-import type { WallWidget } from './connectionsTypes';
+import { useLanguage } from '@/shared/i18n/useLanguage';
+import { ActivityWallWidget } from './ActivityWallWidget';
+import { ConnectionWidgetContent } from './ConnectionWidgetContent';
+import type { ActivityPeriod, WallWidget } from './connectionsTypes';
 import { gameListOf } from '@/features/games/types';
 import { ANIME_ASPECT, CoverLink, type Cover } from './CoverLink';
 import { GameCovers, type GameCoversEditor } from './GameCovers';
@@ -31,18 +34,43 @@ function CoverGrid({ items }: { items: Cover[] }) {
 
 /** `accent` is the profile owner's highlight colour, which the widgets draw with (made readable first).
  * `gameEditor` is set while the owner edits the Wall, and turns a games widget into a grid to fill. */
-export function WallWidgetCard({ widget, accent, gameEditor }: { widget: WallWidget; accent: string; gameEditor?: GameCoversEditor }) {
-  const { t, i18n } = useTranslation('profile');
+export function WallWidgetCard({ widget, accent, gameEditor, onPeriodChange }: {
+  widget: WallWidget;
+  accent: string;
+  gameEditor?: GameCoversEditor;
+  onPeriodChange?: (period: ActivityPeriod) => void;
+}) {
+  const { t } = useTranslation('profile');
+  const language = useLanguage();
   const { connection, data } = widget;
   const brand = widgetBrand(widget);
-  const number = (value: number) => value.toLocaleString(i18n.language);
+  const number = (value: number) => value.toLocaleString(language);
   const showFooter = Boolean(connection?.syncError && data);
+  const name = t(`wall.widgets.${widget.type}`);
+  const periods = ([7, 30] as const).map((value) => ({ value, label: t('wall.activity.period', { count: value }) }));
   return (
     <article className="flex w-full min-w-0 flex-col gap-4 rounded-xl border border-border-strong bg-bg-secondary p-4">
-      <WidgetHeader title={t(`wall.widgets.${widget.type}`)} account={connection && brand
+      <WidgetHeader title={name} account={connection && brand
         ? { brand, username: connection.value, href: connection.url, accessibleName: t('wall.profileLink', { service: brand.name, user: connection.value }) }
         : undefined} />
-      {!data && <WidgetMessage>{t(connection?.syncError ? 'wall.unavailable' : 'wall.pending')}</WidgetMessage>}
+      {widget.period && (onPeriodChange
+        ? <div className="relative w-fit">
+          <select
+            aria-label={t('wall.activity.periodLabel', { name })}
+            className="h-10 appearance-none rounded-lg border border-border-field bg-bg-textarea py-1 pl-3 pr-8 text-label font-medium text-text-primary focus-ring"
+            value={widget.period}
+            onChange={(event) => onPeriodChange(event.target.value === '7' ? 7 : 30)}
+          >
+            {periods.map(({ value, label }) => <option key={value} value={value}>{label}</option>)}
+          </select>
+          <CaretDownIcon aria-hidden size={16} className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-text-muted" />
+        </div>
+        : <p className="text-caption text-text-muted">{t('wall.activity.period', { count: widget.period })}</p>)}
+      {!data && <WidgetMessage>{t(widget.hidden ? 'wall.activity.private' : connection?.syncError ? 'wall.unavailable' : 'wall.pending')}</WidgetMessage>}
+      {(data?.kind === 'activity-top' || data?.kind === 'activity-recent' || data?.kind === 'activity-calendar' || data?.kind === 'activity-summary') &&
+        <ActivityWallWidget data={data} accent={accent} />}
+      {(data?.kind === 'steam-games' || data?.kind === 'steam-profile' || data?.kind === 'twitch-live' || data?.kind === 'twitch-vods') &&
+        <ConnectionWidgetContent data={data} />}
       {data?.kind === 'list' && (data.items.length === 0
         ? <WidgetMessage>{t('wall.noItems')}</WidgetMessage>
         : <CoverGrid items={data.items.map((item) => ({ id: item.id, title: item.title, url: item.url, imageUrl: item.imageUrl }))} />)}

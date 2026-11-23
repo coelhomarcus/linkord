@@ -6,11 +6,10 @@ How to run Linkord in production, what the container expects from the host, and 
 
 One Docker image, built by the [`Dockerfile`](../Dockerfile), holds everything: the web app (`web/dist`), the API, the realtime server (Socket.IO on the `/ws` path) and the backup scripts with the PostgreSQL client tools. A single Node process serves all of it on port **3000**, so the reverse proxy needs one route to one port, websockets included.
 
-- **Health checks:** two public endpoints, both answering only `{ ok: … }` so they reveal nothing about load or deploy times (the connection count and the server's start time are on the admin System page).
-  - `GET /healthz` is **liveness**: `200 { ok: true }` while the process serves HTTP. The image uses it as its `HEALTHCHECK`, and so do Dokploy and the end-to-end stack.
-  - `GET /readyz` is **readiness**: `200 { ok: true }` when PostgreSQL answers `select 1` within 1 s and the upload folders are writable, `503 { ok: false }` otherwise. The body never says what failed; the log does, as a `not ready` warning under the `health` component (and `ready again` once it recovers). The result is cached for 5 s, so probing it often adds at most one query per 5 s to the pool.
-  - Point monitoring and alerts at `/readyz`. The container's `HEALTHCHECK` stays on `/healthz` on purpose: with [one instance](#one-instance-only) there is nowhere else to route traffic, so taking the container out on a database outage only turns a 500 into the proxy's 502, and an orchestrator restarting it would also drop every call without fixing the database. Readiness becomes the routing probe only if more instances are ever run.
-- **Behind a proxy:** the image sets `TRUST_PROXY=1`, so client addresses (also the ones stored with each login session and shown to the account in Settings → Security) and `X-Forwarded-Proto` come from the proxy. The client address is the `X-Forwarded-For` entry `TRUSTED_PROXY_HOPS` places from the right (default `1`, one proxy such as Traefik), never the leftmost one, which the caller writes. If a CDN or a second proxy sits ahead of the one that reaches the container, set it to the number of proxies in the chain; set too low, callers can pick their own address and escape the per-IP limits (login, recovery, invite codes), too high, everyone shares the first proxy's address. With `COOKIE_SECURE=auto` (the default) the session cookie is `Secure` whenever the proxy says the request was HTTPS.
+- **Health checks:** both public, both answer only `{ ok: … }`.
+  - `GET /healthz` (liveness): `200` while the process serves HTTP. The image's `HEALTHCHECK`, Dokploy and the end-to-end stack use it.
+  - `GET /readyz` (readiness): `200` when PostgreSQL answers within 1 s and the upload folders are writable, `503` otherwise, cached for 5 s. The log says what failed (`not ready` under the `health` component). Point monitoring at it. The container's health check stays on `/healthz` on purpose: with [one instance](#one-instance-only), restarting the container on a database outage would drop every call and fix nothing.
+- **Behind a proxy:** the image sets `TRUST_PROXY=1`. The client address is the `X-Forwarded-For` entry `TRUSTED_PROXY_HOPS` places from the right (default `1`, one proxy such as Traefik). With a CDN or a second proxy in front, set it to the number of proxies: too low and callers pick their own address and escape the per-IP limits, too high and everyone shares one address. With `COOKIE_SECURE=auto` (the default) the session cookie is `Secure` whenever the proxy says the request was HTTPS.
 - **Migrations** run at startup (`MIGRATE_ON_BOOT=1`, the default) before the server accepts connections; if one fails, the process exits with the reason in the log. Set `MIGRATE_ON_BOOT=0` to run them yourself with `node server/dist/db/migrate.js`.
 - **Not root:** the process runs as `node` (uid 1000). It cannot rewrite its own code and can only write to `/app/uploads` and `/app/backups`, which is why those two folders need the right owner on the host ([Folders and permissions](#folders-and-permissions)).
 
@@ -31,7 +30,7 @@ The variables a production instance needs:
 | `PUSH_VAPID_PUBLIC_KEY`, `PUSH_VAPID_PRIVATE_KEY`, `PUSH_VAPID_SUBJECT` | All three or none. Generate them once (`npx web-push generate-vapid-keys`) and keep them: new keys break every existing subscription. |
 | `RESEND_API_KEY`, `RESEND_FROM_EMAIL` | Optional. Without them, password recovery, email changes and two-step login are unavailable, and older accounts that still have no email cannot get past the screen asking them to link one. Once people turn two-step login on, removing them locks those accounts out ([Resend](INTEGRATIONS.md#resend)). |
 
-Optional services (KLIPY, MyAnimeList, IGDB, SteamGridDB) and every limit are in `.env.example`. Covers, GitHub avatars, link preview pictures and YouTube thumbnails are downloaded by the server and served from its own domain, which costs outbound bandwidth and up to 64 MB of memory for the cache; `MEDIA_PROXY=0` sends browsers to those services instead ([media proxy](INTEGRATIONS.md#media-proxy)). After the first start, make yourself an administrator: `node server/dist/scripts/adminRole.js grant <username>` inside the container (`npm run admin:grant -- <username>` from a checkout).
+Optional services and limits are in `.env.example`. Steam Wall connections use `STEAM_WEB_API_KEY`, and Twitch connections share the IGDB app credentials. Covers, connection avatars, link preview pictures and thumbnails are downloaded by the server and served from its own domain, which costs outbound bandwidth and up to 64 MB of memory for the cache; `MEDIA_PROXY=0` sends browsers to those services instead ([media proxy](INTEGRATIONS.md#media-proxy)). After the first start, make yourself an administrator: `node server/dist/scripts/adminRole.js grant <username>` inside the container (`npm run admin:grant -- <username>` from a checkout).
 
 ## The complete stack on one server
 
@@ -64,12 +63,12 @@ docker compose --env-file .env.full up -d --build
 
 Why this shape:
 
-- **The app's port stays on loopback.** The image sets `TRUST_PROXY=1`, so it takes the client address from `X-Forwarded-For`. Reachable directly, anyone could write that header and escape the per-IP limits. Caddy replaces whatever `X-Forwarded-For` a client sends with the address it saw, which is the one hop `TRUSTED_PROXY_HOPS=1` expects.
-- **HTTPS is not optional off `localhost`:** browsers only give a page the microphone and camera in a secure context, and Web Push and the `Secure` cookie need it too.
-- **LiveKit media goes straight to the server**, not through Caddy: browsers send to `LIVEKIT_NODE_IP` on `7881/tcp` and on the single UDP port `7882` (the UDP mux in [`docker/livekit.yaml`](../docker/livekit.yaml), so the firewall needs one rule rather than a range). Behind NAT, `LIVEKIT_NODE_IP` is the public address and those two ports are forwarded to the server.
-- **No TURN.** Browsers behind a firewall that allows neither UDP nor TCP to `7881` cannot join calls (chat still works). LiveKit's embedded TURN server (`turn:` in `livekit.yaml`, with its own domain and certificate, usually on `443/udp` and `5349/tcp`) solves that and is left out to keep the file small; LiveKit Cloud includes it.
+- **The app's port stays on loopback**, because the image trusts `X-Forwarded-For`; Caddy replaces whatever a client sends with the address it saw.
+- **HTTPS is required off `localhost`:** browsers give the microphone and camera only to a secure context, and Web Push and the `Secure` cookie need it.
+- **LiveKit media goes straight to the server**, not through Caddy, on `7881/tcp` and the single UDP port `7882` ([`docker/livekit.yaml`](../docker/livekit.yaml)). Behind NAT, `LIVEKIT_NODE_IP` is the public address and those ports are forwarded.
+- **No TURN:** browsers behind a firewall that blocks both UDP and TCP to `7881` cannot join calls (chat still works). LiveKit's embedded TURN server (`turn:` in `livekit.yaml`) would fix it; LiveKit Cloud includes one.
 
-`TRUST_PROXY` and the other limits in [What gets deployed](#what-gets-deployed) apply unchanged. Backups: the `backup` profile (`COMPOSE_PROFILES=full,https,backup`), or `exec app node server/dist/scripts/backup.js`, write to the `linkord_backups` volume; copy them off the machine as [Backups](#backups) says (`docker compose --env-file .env.full cp app:/app/backups ./backups`), and keep `.env.full` with them, since the LiveKit and database secrets are only there.
+Backups: add `backup` to `COMPOSE_PROFILES` (see [Backups](#backups)), and keep `.env.full` with them, since the database and LiveKit secrets are only there.
 
 ## The image on its own
 
@@ -122,9 +121,9 @@ The app writes to two places and nothing else:
 | `/app/uploads` | Every stored file: attachments, thumbnails, profile images, soundboard sounds, server emojis and stickers, and the icons shown with someone's activity, games' and apps' alike (`activity-icons/`). `tmp/` inside it holds the chunks of uploads still in progress, one folder per upload. `exports/` holds the ZIPs of "Download my data" (`EXPORT_DIR`, see below). |
 | `/app/backups` | One dated folder per backup (`BACKUP_DIR`). |
 
-**Data exports.** A person can ask for a copy of their data in Settings → Data & privacy. A background job builds a ZIP of their profile, settings, friends, blocks, servers, the messages they sent and those messages' files, writes it to `EXPORT_DIR` (default `/app/uploads/exports`, created on first use) and emails a link; the file can be downloaded by that account for 7 days, then an hourly sweep deletes it. Each ZIP is about the size of the person's attachments, so budget disk for the largest accounts asking at once (one request per account per day). Leaving `EXPORT_DIR` at its default keeps the files on the uploads volume, so a redeploy does not lose a ready export; a path outside a mounted volume works too, but a deploy then drops the ready files and their links answer 404 until the person asks again. Backups leave `exports/` out: the copies expire within days and can be rebuilt on request.
+**Data exports** (Settings → Data & privacy) are ZIPs of a person's profile, settings, activity, friends, servers, sent messages and their files, written to `EXPORT_DIR` (default `/app/uploads/exports`), downloadable by that account for 7 days and then deleted. Each is about the size of the person's attachments, at most one request per account per day. Keep `EXPORT_DIR` on a mounted volume, or a deploy drops ready files and their links answer 404. Backups leave exports out.
 
-Both must belong to uid 1000 **all the way down**. Docker creates a missing bind-mounted folder owned by root, and an install from before the image switched to `node` has root-owned files and folders inside. Always use `chown -R`: changing only the top folder leaves `tmp/` owned by root, and then profile pictures still save (they are written straight into `/app/uploads`) while every attachment and voice message fails.
+Both must belong to uid 1000 **all the way down**. Docker creates a missing bind-mounted folder owned by root, and installs from before the image ran as `node` have root-owned files inside. Always use `chown -R`: with only the top folder fixed, profile pictures still save but every attachment and voice message fails (`tmp/` stays root's).
 
 To see where the folders live on the host and fix them:
 
@@ -153,17 +152,24 @@ What keeps this working, and the rules for changing it, is in [`AGENTS.md`](../A
 
 ## Security headers
 
-The server sets its own security headers on every response, so the proxy does not need to add any (and should not add another `Content-Security-Policy`, which browsers would enforce on top of this one):
+The server sets its own security headers, so the proxy needs to add none (and must not add a second `Content-Security-Policy`, which browsers would enforce on top):
 
-- `Content-Security-Policy`, built at startup from `APP_URL`, `LIVEKIT_URL`, `KLIPY_API_KEY`, `MEDIA_PROXY` and the frontend build. Pictures load only from this origin and KLIPY unless `MEDIA_PROXY=0`. A wrong `LIVEKIT_URL` blocks calls in the browser even if the server can reach LiveKit. Stylesheets are limited to this origin plus the hashes of the app's own `<style>` blocks (`style-src-elem` has no `'unsafe-inline'`). Style attributes stay allowed, because the interface sets them while it renders. A `style-src-elem` violation means a stylesheet was injected. How the hashes are collected: [DEVELOPMENT.md](DEVELOPMENT.md#content-security-policy).
-- `X-Frame-Options: DENY` and `frame-ancestors 'none'`: no other site can show Linkord in a frame.
+- `Content-Security-Policy`, built at startup from `APP_URL`, `LIVEKIT_URL`, `KLIPY_API_KEY`, `MEDIA_PROXY` and the frontend build. A wrong `LIVEKIT_URL` blocks calls in the browser even when the server reaches LiveKit. How it is built and how to allow a new host: [DEVELOPMENT.md](DEVELOPMENT.md#content-security-policy).
+- `X-Frame-Options: DENY` and `frame-ancestors 'none'`: no other site can frame Linkord.
 - `Strict-Transport-Security` (one year, without `includeSubDomains`) on HTTPS requests.
 
-Violations are logged as `content security policy violation`, with the directive and what was blocked. A proxy or CDN that injects its own scripts into pages shows up there: Cloudflare's Web Analytics adds `static.cloudflareinsights.com/beacon.min.js`, which the policy blocks. Turn that injection off in Cloudflare, or allow its hosts in the policy if you want the analytics. `CSP_REPORT_ONLY=1` stops blocking while still reporting, for trying out a change. How the policy is built and how to add a domain: [DEVELOPMENT.md](DEVELOPMENT.md#content-security-policy).
+Browsers report violations to `POST /api/csp-reports`, and the server logs them as `content security policy violation`. A proxy or CDN that injects scripts shows up there: Cloudflare's Web Analytics beacon (`static.cloudflareinsights.com`) is blocked, so turn that injection off. `CSP_REPORT_ONLY=1` reports without blocking.
 
 ## Backups
 
-The database and the uploads have to be backed up together, and the image does it: `node server/dist/scripts/backup.js` writes a dated folder with a `pg_dump`, an archive of `/app/uploads` (without `tmp/` and `exports/`) and a manifest to `/app/backups`, and keeps the newest `BACKUP_KEEP` (7 by default). It does not stop the app.
+The database and the uploads must be backed up together, and the image does it without stopping the app: `node server/dist/scripts/backup.js` (`npm run backup` from a checkout) writes one folder to `BACKUP_DIR` (`/app/backups` in the image):
+
+```
+linkord-backup-20261108T015300Z/
+  database.dump     pg_dump, custom format
+  uploads.tar.gz    the uploads, without tmp/ and exports/
+  manifest.json     row counts, migrations, file counts, SHA-256 of both files
+```
 
 ```bash
 # the complete stack on one server
@@ -172,7 +178,36 @@ docker compose --env-file .env.full exec app node server/dist/scripts/backup.js
 docker exec $(docker ps -qf name=<app-name>) node server/dist/scripts/backup.js
 ```
 
-To schedule it, use the compose `backup` profile on the complete stack or the host's cron with the command above. A backup on the same disk does not survive that disk: copy `/app/backups`'s host folder off the machine after each run, and keep `.env` (`.env.full` for the complete stack) somewhere safe, because it is not in the backup. Restoring on a new server, the checks it runs and the rehearsal: [DEVELOPMENT.md](DEVELOPMENT.md#backup-and-restore).
+| Setting | Default | What it does |
+| --- | --- | --- |
+| `BACKUP_DIR` | `./backups` | Where backups are written and read. Not inside `UPLOAD_DIR`. |
+| `BACKUP_KEEP` | `7` | How many backups rotation keeps (at least 1). |
+| `BACKUP_INTERVAL_SECONDS` | `86400` | Only for the compose `backup` service. |
+| `PG_DUMP_BIN`, `PG_RESTORE_BIN` | `pg_dump`, `pg_restore` | The PostgreSQL client tools, at least as new as the server. |
+
+- **Safe to interrupt:** a backup is written as `<name>.partial` and renamed when complete. Rotation runs only after a successful backup and only deletes folders it made.
+- **Consistent:** the dump and the file list come from one database snapshot, and files are archived after it, so every row in the dump has its file. A file deleted while the archive runs is reported as a warning (that message shows a broken attachment). Uploads still in progress are left out.
+- **Scheduling:** on the complete stack, add `backup` to `COMPOSE_PROFILES` for a service that backs up at start and every `BACKUP_INTERVAL_SECONDS`. Otherwise use the host's cron, for example `0 3 * * * cd /srv/linkord && flock -n .backup.lock docker compose --env-file .env.full exec -T app node server/dist/scripts/backup.js >> backup.log 2>&1`.
+- **Off the machine:** a backup on the same disk does not survive that disk. Copy the folder elsewhere after each run (`rclone copy`, `aws s3 sync`, `rsync`; from a compose volume, `docker compose --env-file .env.full cp app:/app/backups ./backups`) and set a lifecycle rule there, since rotation only prunes the local folder.
+- **Not in the backup:** the `.env` (database credentials, `LIVEKIT_*` and the Web Push VAPID keys, without which every push subscription breaks) and LiveKit. Keep the `.env` in a secrets store. A backup holds password hashes, sessions and every message: treat it like the database, and encrypt it when it leaves the machine.
+
+### Restoring
+
+1. Install the app with its `.env`, pointing `DATABASE_URL` at a new, empty database and `UPLOAD_DIR` at an empty or missing folder (in Docker, owned by `1000:1000`).
+2. Copy the backup folder into `BACKUP_DIR`.
+3. With the app stopped, run the restore. The first run only says what it would do; `--confirm` must name the database in `DATABASE_URL`:
+
+```bash
+npm run restore -- latest --confirm linkord
+# the complete stack (after `docker compose --env-file .env.full stop app`):
+docker compose --env-file .env.full run --rm --no-deps app node server/dist/scripts/restore.js latest --confirm linkord
+```
+
+4. Start the app. A newer app applies its newer migrations as on any upgrade; an older app cannot read a newer database.
+
+`latest` can be a folder name or a path. The restore refuses, before changing anything, a backup whose checksums do not match its manifest, a missing or wrong `--confirm`, a database that already has tables, and an uploads folder that has files. `pg_restore` runs in one transaction, and files are extracted only after it succeeds. It then compares row counts, migrations and files with the manifest: a mismatch exits 3, warnings exit 0 (3 with `--strict`), other failures 1, a missing confirmation 2.
+
+Rehearsing a restore locally: [DEVELOPMENT.md](DEVELOPMENT.md#backup-scripts-locally).
 
 ## One instance only
 
@@ -201,14 +236,12 @@ npm install --prefix desktop
 LINKORD_URL=https://chat.example.com npm run package:desktop
 ```
 
-The installer lands in `desktop/release/` as `Linkord-<version>-win-x64.exe`. It installs for the current user, with no administrator prompt, and registers `linkord://` links for that user (`HKCU\Software\Classes\linkord`, written by `desktop/resources/installer.nsh`, since electron-builder's NSIS target does not write `protocols`); uninstalling removes the key, an update keeps it. The app writes the same key again at every start. What the links open is in [DEVELOPMENT.md](DEVELOPMENT.md#desktop-app).
+The installer lands in `desktop/release/` as `Linkord-<version>-win-x64.exe` (the version is `desktop/package.json`'s). It installs for the current user, with no administrator prompt, and registers `linkord://` links (`HKCU\Software\Classes\linkord`, from `desktop/resources/installer.nsh`); uninstalling removes them. What the links open is in [DEVELOPMENT.md](DEVELOPMENT.md#desktop-app).
 
 - `LINKORD_URL` must be `https` (plain `http` only for `localhost`); the build refuses to run without it. A different server needs its own build. Someone who has the app can still point it elsewhere with `LINKORD_URL` or `--url=<address>` at launch; a start from a `linkord://` link ignores `--url`.
 - The build always targets Windows (`--win`). Anything after `--` goes to electron-builder, for example `npm run package:desktop -- --dir` for an unpacked folder. On macOS or Linux electron-builder may need Wine to build it; the workflow below builds it on a Windows runner.
-- The first build downloads Electron and the packaging tools.
-- The version in the file name is `desktop/package.json`'s.
 
-**From GitHub Actions**: in the repository's Actions tab, open **Desktop installer**, choose **Run workflow**, pick the branch and type the server's address in `url` (the same rules as `LINKORD_URL`; a bad one fails the job before packaging). The workflow (`.github/workflows/desktop.yml`) builds on a Windows runner and uploads the installer as the artifact `linkord-desktop-windows`. Download it from the run's summary page; GitHub keeps it for the repository's artifact retention period (90 days by default). It needs no secrets, since nothing is signed. Builds from the workflow look for updates in the repository's releases (next section); a build made on your machine does too only with `LINKORD_UPDATE_REPO=<owner>/<repo>` set, and otherwise never checks.
+**From GitHub Actions:** run **Desktop installer** (`.github/workflows/desktop.yml`) from the Actions tab with the server's address in `url`. It builds on a Windows runner and uploads the artifact `linkord-desktop-windows`; no secrets are needed, since nothing is signed. Workflow builds look for updates in the repository's releases; a local build does only with `LINKORD_UPDATE_REPO=<owner>/<repo>` set.
 
 ### Unsigned installer
 
@@ -227,19 +260,23 @@ The build flips Electron's fuses in `Linkord.exe` (`electronFuses` in `desktop/e
 | `onlyLoadAppFromAsar` | on | the app loads only from `app.asar`, never from a loose `app` folder |
 | `enableCookieEncryption` | on | the session cookie is encrypted on disk with the Windows user's key (DPAPI) |
 
-- Cookie encryption does not sign anyone out: a cookie stored unencrypted by an earlier version is still read, and is encrypted the next time it is written. It is one way, though: a later build with the fuse off cannot read the encrypted cookies, and everyone would have to sign in again.
-- No fuse covers Chromium's remote debugging (`--remote-debugging-port`, `--remote-debugging-pipe`), which would hand over the page and its session cookie, so an installed build exits at once when started with either (`desktop/src/main/debugSwitches.ts`). A development run (`npm run dev:desktop`) still accepts them.
+- Cookie encryption is one way: a later build with the fuse off could not read the cookies, and everyone would have to sign in again.
+- No fuse covers Chromium's remote debugging, so an installed build exits at once when started with `--remote-debugging-port` or `--remote-debugging-pipe` (`desktop/src/main/debugSwitches.ts`).
 - To check a build: `npx electron-fuses read --app desktop/release/win-unpacked/Linkord.exe` (from `desktop/`, after `npm run package:desktop -- --dir`).
 
 ### Updates and data
 
-Most changes do not need a new version. The interface comes from the server, so a server deploy updates it. A desktop build older than the server keeps working, because the web app checks each feature the desktop app offers before using it. A new installer is needed only for changes in `desktop/`.
+The interface comes from the server, so a server deploy updates it; a new installer is needed only for changes in `desktop/`. An older desktop build keeps working, because the web app checks each feature the desktop app offers before using it.
 
-Every start opens only a small window of its own (`desktop/src/main/updaterWindow.ts`, `desktop/assets/updater.html`); the app's window opens once its page has loaded. In an installed app that window first checks for a newer version. An update found then is downloaded and installed before the app's window is even created: the small window shows the progress and cannot be closed. Once downloaded, the app quits and the installer shows its own small progress banner while it replaces the files, then starts Linkord again. A check that finds nothing or fails goes on to the connection, and so does an install that has not quit the app within 30 seconds. One that takes more than 8 seconds goes on to the connection too but keeps going: an update it finds before the app's window opens is still installed first, and one found after that downloads in the background. The same window then shows the connection to the server ([DEVELOPMENT.md](DEVELOPMENT.md#desktop-app) has the screens) while the page loads hidden. Until the app's window opens, the tray icon or a second launch only brings the small window forward, and closing it quits Linkord. A start with the system that stays in the tray skips the window and checks in the background. After that it checks every 6 hours in the background, and on demand from **Check for updates…** in the tray or the menu, which opens the same window and ends with **Restart now** or **Later**. It reads the latest published release of the repository it was built for (`LINKORD_UPDATE_REPO`, which the workflow sets to its own repository), and only a version number greater than its own counts. An update downloaded in the background shows as a green arrow in the title bar (`DesktopUpdateButton` in `web/src/features/desktopApp/`) and as **Restart to update** in the tray; it is installed on that click or when Linkord quits. The installer shows its progress banner and starts Linkord again.
+How an installed app updates:
+
+- **At start**, a small window (`desktop/src/main/updaterWindow.ts`) checks for a newer version before the app's window opens. An update found then is downloaded and installed first, with progress shown; the app restarts into the new version. A check that fails, finds nothing or takes more than 8 seconds goes on to connecting (a slow check keeps running and installs in the background). A start with the system that stays in the tray checks in the background.
+- **Afterwards** it checks every 6 hours, and on **Check for updates…** in the tray or the menu. A downloaded update shows as a green arrow in the title bar and **Restart to update** in the tray, and installs on that click or when Linkord quits.
+- **What counts:** the latest published release of the repository it was built for (`LINKORD_UPDATE_REPO`, set by the workflow to its own repository), only with a higher version number.
 
 No key or secret is involved. The update is checked against the SHA-512 in the release's `latest.yml`, served over HTTPS by GitHub; the release is created with the workflow's own `GITHUB_TOKEN`. Anyone who can publish releases on the repository can therefore ship an update to every installed app, so keep that permission as tight as the deploy itself.
 
-Installs from the macOS and Linux builds that used to ship (0.3.1 and earlier) keep running and keep checking the same releases. When a newer version is published they show a notification and a **Download version …** item that opens the release page, where there is no installer for their system any more; they stay on the version they have.
+Old macOS and Linux installs (0.3.1 and earlier) keep running, and a newer release only shows them a link to the release page, which has no installer for their system.
 
 To release a version:
 
@@ -247,7 +284,9 @@ To release a version:
 2. Run **Desktop installer** with the server's address and **release** ticked. After the build, a job creates a draft release `v<version>` with the installer and `latest.yml`. It fails if that version already has a release.
 3. Check the draft on the repository's Releases page and publish it. Installed apps see nothing until then.
 
-Deploy the server before releasing a desktop version that relies on the page: the window's title bar and buttons are drawn by the web app, so a desktop build that hides the system's title bar, on a server whose web app predates the drawn one, has neither. Set `DESKTOP_RELEASES_REPO=<owner>/<repo>` on the server too: the web app then announces the desktop app once to everyone using it in a browser on a Windows computer, with a button straight to the installer from the latest published release (see [INTEGRATIONS.md](INTEGRATIONS.md#github-releases)). Use the same `url` for every release: the address is baked into the installer, so an update built for another address moves everyone to that server. The repository's releases are the desktop app's: the updater takes the newest published one, whatever it contains.
+- **Deploy the server first** when a desktop version relies on the page (the title bar is drawn by the web app, for one).
+- **Use the same `url` for every release:** the address is baked into the installer, so an update built for another address moves everyone to that server. The updater takes the newest published release, whatever it contains, so keep the repository's releases for the desktop app.
+- Set `DESKTOP_RELEASES_REPO=<owner>/<repo>` on the server so the web app offers the installer to people using a browser on Windows ([INTEGRATIONS.md](INTEGRATIONS.md#github-releases)).
 
 The app keeps its session and window state in `%APPDATA%\Linkord`.
 

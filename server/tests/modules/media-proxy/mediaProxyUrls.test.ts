@@ -45,6 +45,11 @@ describe('signed addresses', () => {
   it('keep each fixed-host kind on its host', () => {
     assert.ok(proxiedImageUrl('mal', 'https://cdn.myanimelist.net/images/anime/1/2.jpg'));
     assert.ok(proxiedImageUrl('github', 'https://avatars.githubusercontent.com/u/1?v=4'));
+    assert.ok(proxiedImageUrl('steam', 'https://avatars.fastly.steamstatic.com/a.jpg'));
+    assert.ok(proxiedImageUrl('steam', 'https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/570/header.jpg'));
+    assert.ok(proxiedImageUrl('twitch', 'https://static-cdn.jtvnw.net/previews/live.jpg'));
+    assert.equal(proxiedImageUrl('steam', 'https://steamcommunity.com/device.png'), null);
+    assert.equal(proxiedImageUrl('twitch', 'https://static-cdn.jtvnw.net.example.com/img.png'), null);
     // dropped, never handed to the browser as is
     assert.equal(proxiedImageUrl('mal', 'https://attacker.example/track.png'), null);
     assert.equal(proxiedImageUrl('github', 'http://avatars.githubusercontent.com/u/1'), null);

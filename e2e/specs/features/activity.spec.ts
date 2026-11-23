@@ -1,30 +1,6 @@
 import { test, expect } from '../../fixtures/test';
-import type { BrowserContext } from '@playwright/test';
+import { fakeDesktop, setDesktopActivity } from '../../fixtures/activity';
 import { befriend } from '../../fixtures/api';
-
-/** Stands in for the desktop app's bridge (`window.linkordDesktop`, desktop/src/preload): the page sees a
- * game running, and the test switches it with `window.__setActivity`. No Electron, the same reporting
- * path as the real app (useActivityReporter). */
-async function fakeDesktop(context: BrowserContext): Promise<void> {
-  await context.addInitScript(() => {
-    type Found = { key: string; kind: 'playing' | 'using'; name: string; startedAt: number } | null;
-    let current: Found = null;
-    const listeners = new Set<(activity: Found) => void>();
-    const w = window as unknown as { linkordDesktop: unknown; __setActivity: (activity: Found) => void };
-    w.__setActivity = (activity) => { current = activity; for (const listener of listeners) listener(activity); };
-    w.linkordDesktop = {
-      platform: 'win32',
-      version: '0.0.0-e2e',
-      activity: {
-        watch: async () => {},
-        current: async () => current,
-        recent: async () => [],
-        icon: async () => null,
-        onChange: (callback: (activity: Found) => void) => { listeners.add(callback); return () => listeners.delete(callback); },
-      },
-    };
-  });
-}
 
 test.describe('activity', () => {
   test("a friend's profile shows what they play now, with its timer, and what they played before", async ({ users }) => {
@@ -34,10 +10,8 @@ test.describe('activity', () => {
     await fakeDesktop(bob.context);
     const b = await bob.app();
 
-    const play = (key: string, name: string, minutesAgo: number) => b.page.evaluate(
-      ([k, n, m]) => (window as unknown as { __setActivity: (a: unknown) => void }).__setActivity({ key: k, kind: 'playing', name: n, startedAt: Date.now() - m * 60_000 }),
-      [key, name, minutesAgo] as const,
-    );
+    const play = (key: string, name: string, minutesAgo: number) =>
+      setDesktopActivity(b.page, { key, name, kind: 'playing', startedAt: Date.now() - minutesAgo * 60_000 });
     await play('minecraft', 'Minecraft', 30);
     // what others saw is in the history once it shows: then the next game takes its place
     await expect.poll(async () => (await (await alice.api.get(`/api/users/${bob.id}/activity`)).json() as { items: unknown[] }).items.length).toBe(1);
@@ -56,4 +30,43 @@ test.describe('activity', () => {
     const recent = profile.getByRole('region', { name: 'Atividade recente' });
     await expect(recent.getByRole('listitem')).toHaveText([/Minecraft.*Agora há pouco/]);
   });
+});
+
+test('publishes ranked activity and the calendar from the desktop history', async ({ users }) => {
+  const alice = await users.create('alice');
+  const bob = await users.create('bob');
+  await befriend(alice, bob);
+  await fakeDesktop(alice.context);
+  const a = await alice.app();
+  await a.page.goto('/app/profile');
+  await a.page.getByRole('button', { name: 'Meu perfil' }).filter({ hasText: 'Meu perfil' }).click();
+  await a.page.getByRole('tab', { name: 'Mural' }).click();
+  const add = a.page.getByRole('button', { name: 'Adicionar widget' });
+  const catalog = a.page.getByRole('dialog', { name: 'Adicionar widget de perfil' });
+  for (const name of ['Mais jogados', 'Calendário de atividade']) {
+    await add.click();
+    await catalog.getByRole('navigation').getByRole('button', { name: 'Atividade', exact: true }).click();
+    await catalog.getByRole('button', { name }).click();
+  }
+  await expect(a.page.getByText('Nenhuma atividade ainda')).toHaveCount(2);
+  await a.page.getByRole('combobox', { name: 'Período de Mais jogados' }).selectOption({ label: 'Últimos 7 dias' });
+  const save = a.page.getByRole('region', { name: 'Salvar alterações do Mural' });
+  await save.getByRole('button', { name: 'Salvar' }).click();
+  await expect(save).toBeHidden();
+
+  await setDesktopActivity(a.page, { key: 'spotify', name: 'Spotify', kind: 'using', startedAt: Date.now() - 3600_000 });
+  await expect.poll(async () => {
+    const result = await alice.api.get(`/api/users/${alice.id}/activity`);
+    return (await result.json()).items.map((item: { key: string }) => item.key);
+  }).toContain('spotify');
+  await setDesktopActivity(a.page, null);
+
+  const b = await bob.app();
+  await b.page.goto('/app/friends');
+  await b.page.getByRole('button', { name: `Ver perfil de ${alice.username}`, exact: true }).click();
+  await b.page.getByRole('tab', { name: 'Mural' }).click();
+  const top = b.page.getByRole('article').filter({ has: b.page.getByRole('heading', { name: 'Mais jogados' }) });
+  await expect(top).toContainText('Spotify');
+  await expect(top).toContainText('Últimos 7 dias');
+  await expect(b.page.getByRole('group', { name: 'Calendário de atividade' }).getByRole('img', { name: /Menos de 1 min/ })).toBeAttached();
 });

@@ -1,6 +1,6 @@
 import type { ConnectionProvider, ConnectionSnapshot, WidgetType } from '../modules/connections/types.js';
 import type { GameList } from '../modules/games/types.js';
-import { pgTable, text, varchar, timestamp, integer, bigint, jsonb, serial, boolean, uniqueIndex, index, primaryKey, check, customType, foreignKey, type AnyPgColumn } from 'drizzle-orm/pg-core';
+import { pgTable, uuid, text, varchar, timestamp, integer, bigint, jsonb, serial, boolean, uniqueIndex, index, primaryKey, check, customType, foreignKey, type AnyPgColumn } from 'drizzle-orm/pg-core';
 import { sql, type SQL } from 'drizzle-orm';
 import { messageSearchVector } from './textSearch.js';
 
@@ -965,23 +965,25 @@ export const profileConnections = pgTable('profile_connections', {
   index('profile_connections_due_idx').on(t.nextSyncAt),
   uniqueIndex('profile_connections_service_unique').on(t.userId, t.provider).where(sql`${t.provider} <> 'url'`),
   uniqueIndex('profile_connections_url_unique').on(t.userId, sql`lower(${t.url})`),
-  check('profile_connections_provider_check', sql`${t.provider} IN ('url','myanimelist','github')`),
+  check('profile_connections_provider_check', sql`${t.provider} IN ('url','myanimelist','github','steam','twitch')`),
 ]);
 export type ProfileConnection = typeof profileConnections.$inferSelect;
 
 export const profileWallWidgets = pgTable('profile_wall_widgets', {
   id: text('id').primaryKey(),
   userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
-  /** null for the games widgets: they have no external account, their data is `profile_games` */
+  /** null for the games and activity widgets, which have no external account */
   connectionId: text('connection_id').references(() => profileConnections.id, { onDelete: 'cascade' }),
   type: varchar('type', { length: 32 }).$type<WidgetType>().notNull(),
+  period: integer('period'),
   position: integer('position').notNull(),
 }, (t) => [
   uniqueIndex('profile_wall_widgets_connection_type_unique').on(t.connectionId, t.type),
   uniqueIndex('profile_wall_widgets_games_unique').on(t.userId, t.type).where(sql`${t.connectionId} IS NULL`),
   index('profile_wall_widgets_user_idx').on(t.userId, t.position),
-  check('profile_wall_widgets_type_check', sql`${t.type} IN ('mal-recent-anime','github-profile','github-calendar','igdb-favorite-game','igdb-liked-games','igdb-playing-games','igdb-wishlist-games')`),
-  check('profile_wall_widgets_owner_check', sql`(${t.connectionId} IS NULL) = (${t.type} LIKE 'igdb-%')`),
+  check('profile_wall_widgets_type_check', sql`${t.type} IN ('mal-recent-anime','github-profile','github-calendar','igdb-favorite-game','igdb-liked-games','igdb-playing-games','igdb-wishlist-games','activity-top','activity-calendar','activity-recent','activity-summary','steam-recent','steam-top','steam-profile','twitch-live','twitch-vods')`),
+  check('profile_wall_widgets_period_check', sql`${t.period} IS NULL OR (${t.type} IN ('activity-top','activity-summary') AND ${t.period} IN (7,30))`),
+  check('profile_wall_widgets_owner_check', sql`(${t.connectionId} IS NULL) = (${t.type} LIKE 'igdb-%' OR ${t.type} LIKE 'activity-%')`),
 ]);
 
 /** The games a user picked, one row per game and list. Name and cover are copied when picked. */
@@ -1048,6 +1050,22 @@ export const activityHistory = pgTable('activity_history', {
 }, (t) => [
   primaryKey({ columns: [t.userId, t.key] }),
   index('activity_history_user_played_idx').on(t.userId, t.lastPlayedAt),
+]);
+
+export const activitySessions = pgTable('activity_sessions', {
+  id: uuid('id').primaryKey(),
+  userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  key: varchar('key', { length: 80 }).notNull(),
+  kind: varchar('kind', { length: 16 }).$type<'playing' | 'using'>().notNull(),
+  name: varchar('name', { length: 64 }).notNull(),
+  icon: text('icon'),
+  startedAt: timestamp('started_at', { withTimezone: true }).notNull(),
+  lastSeenAt: timestamp('last_seen_at', { withTimezone: true }).notNull(),
+  endedAt: timestamp('ended_at', { withTimezone: true }),
+}, (t) => [
+  index('activity_sessions_user_seen_idx').on(t.userId, t.lastSeenAt),
+  index('activity_sessions_seen_idx').on(t.lastSeenAt),
+  check('activity_sessions_times_check', sql`${t.lastSeenAt} >= ${t.startedAt} AND (${t.endedAt} IS NULL OR ${t.endedAt} = ${t.lastSeenAt})`),
 ]);
 
 export const connectionSyncLimits = pgTable('connection_sync_limits', {

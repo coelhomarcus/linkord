@@ -1,13 +1,11 @@
 import type { GameSnapshot } from '../../modules/games/types.js';
 import { ConnectionFetchError, numberValue, record, textValue } from '../connectionHttp.js';
 
-const TOKEN_URL = 'https://id.twitch.tv/oauth2/token';
+import { createAppToken } from '../twitch/appToken.js';
 const GAMES_URL = 'https://api.igdb.com/v4/games';
 const IMAGE_BASE = 'https://images.igdb.com/igdb/image/upload';
 const REQUEST_TIMEOUT_MS = 8000;
 const MAX_BODY_BYTES = 1024 * 1024;
-// a token is replaced a little before it expires so a request never starts with a dying one
-const TOKEN_MARGIN_MS = 60_000;
 // a result list only has to be recognized, and every result costs a cover to load
 const SEARCH_LIMIT = 10;
 
@@ -94,57 +92,20 @@ export interface IgdbClient {
 
 /** IGDB signs requests with a Twitch app token. It is kept until it nears its expiry
  * and replaced when a request comes back 401, e.g. because Twitch revoked it. */
-export function createIgdbClient(options: { clientId: string; clientSecret: string; request?: IgdbRequest; now?: () => number }): IgdbClient {
-  const { clientId, clientSecret, request = fetchIgdbJson, now = Date.now } = options;
-  const configured = Boolean(clientId && clientSecret);
-  let token: { value: string; expiresAt: number } | null = null;
-  let renewal: Promise<string> | null = null;
+export function createIgdbClient(options: {
+  clientId: string; clientSecret: string; request?: IgdbRequest; now?: () => number; appToken?: ReturnType<typeof createAppToken>;
+}): IgdbClient {
+  const { request = fetchIgdbJson } = options;
+  const appToken = options.appToken ?? createAppToken({ ...options, request: (url, init) => request(url, init ?? {}) });
 
-  async function renew(): Promise<string> {
-    const query = new URLSearchParams({ client_id: clientId, client_secret: clientSecret, grant_type: 'client_credentials' });
-    let response: Record<string, unknown>;
-    try {
-      response = record(await request(`${TOKEN_URL}?${query}`, { method: 'POST' }));
-    } catch (error) {
-      // bad credentials answer 400/403, and a 401 here must not look like an expired token to the retry below
-      if (error instanceof ConnectionFetchError && error.code === 'unauthorized') throw new ConnectionFetchError('unavailable');
-      throw error;
-    }
-    const value = textValue(response.access_token);
-    const seconds = numberValue(response.expires_in);
-    if (!value || seconds === null) throw new ConnectionFetchError('invalid_response');
-    token = { value, expiresAt: now() + seconds * 1000 - TOKEN_MARGIN_MS };
-    return value;
-  }
-  function accessToken(): Promise<string> {
-    if (token && token.expiresAt > now()) return Promise.resolve(token.value);
-    // simultaneous searches wait for one token request instead of asking Twitch for one each
-    renewal ??= renew().finally(() => { renewal = null; });
-    return renewal;
-  }
-
-  /** One Apicalypse query on GAMES_URL, signed, retried once with a new token after a 401. */
   async function queryGames(body: string): Promise<unknown[]> {
-    if (!configured) throw new ConnectionFetchError('unavailable');
-    for (let attempt = 0; ; attempt++) {
-      const used = await accessToken();
-      try {
-        const games = await request(GAMES_URL, {
-          method: 'POST',
-          headers: { 'Client-ID': clientId, Authorization: `Bearer ${used}`, Accept: 'application/json' },
-          body,
-        });
-        if (!Array.isArray(games)) throw new ConnectionFetchError('invalid_response');
-        return games;
-      } catch (error) {
-        if (!(error instanceof ConnectionFetchError) || error.code !== 'unauthorized' || attempt > 0) throw error;
-        if (token?.value === used) token = null;
-      }
-    }
+    const games = await appToken.authorize((headers) => request(GAMES_URL, { method: 'POST', headers, body }));
+    if (!Array.isArray(games)) throw new ConnectionFetchError('invalid_response');
+    return games;
   }
 
   return {
-    configured,
+    configured: appToken.configured,
     async searchGames(query) {
       const games = await queryGames(`search ${quote(query)}; fields name,slug,first_release_date,cover.image_id; where version_parent = null; limit ${SEARCH_LIMIT};`);
       return games.slice(0, SEARCH_LIMIT).map(parseGame);

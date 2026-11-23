@@ -12,7 +12,7 @@ import { connectionBrand } from './connectionBrands';
 import { BrandIcon } from './profileLinks';
 import { describeConnectionError } from './connectionErrors';
 import { createConnection, deleteConnection, editConnection, fetchConnections, setConnectionVisibility } from './profileApi';
-import type { ConnectionProvider, ConnectionsResponse, ProfileConnection } from './connectionsTypes';
+import { connectionInputLength, type ConnectionProvider, type ConnectionsResponse, type ProfileConnection } from './connectionsTypes';
 import { Skeleton, SkeletonGroup } from '@/shared/ui/primitives/skeleton';
 import { SettingsSection, SettingsSections, SettingsSubheading } from '@/shared/ui/settings-layout';
 
@@ -86,7 +86,7 @@ export function ConnectionsSettings() {
       <section aria-labelledby="connections-add-title" className="flex flex-col gap-4">
         <SettingsSubheading><span id="connections-add-title">{t('integration.addTitle')}</span></SettingsSubheading>
         <div className="flex flex-wrap gap-2">
-          {PROVIDERS.map((provider) => {
+          {(data?.providers ?? PROVIDERS).map((provider) => {
             const unavailable = !data || busy || full || (provider !== 'url' && data.connections.some((row) => row.provider === provider));
             return (
               <Tooltip key={provider}>
@@ -152,11 +152,11 @@ export function ConnectionsSettings() {
       {error && !dialog && <p role="alert" className="text-label text-red-text">{error}</p>}
       <Dialog open={!!dialog} onOpenChange={(open) => { if (!open && !busy) setDialog(null); }}>
         {dialog && <DialogContent className="sm:max-w-md" showCloseButton={!busy}>
-          <DialogHeader><DialogTitle>{t(dialog.connection ? 'integration.editTitle' : 'integration.connectTitle', { name: providerName(dialog.provider) })}</DialogTitle><DialogDescription>{t(dialog.provider === 'url' ? 'integration.urlHint' : 'integration.usernameHint')}</DialogDescription></DialogHeader>
+          <DialogHeader><DialogTitle>{t(dialog.connection ? 'integration.editTitle' : 'integration.connectTitle', { name: providerName(dialog.provider) })}</DialogTitle><DialogDescription>{t(dialog.provider === 'url' ? 'integration.urlHint' : dialog.provider === 'steam' ? 'integration.steamHint' : 'integration.usernameHint')}</DialogDescription></DialogHeader>
           <form onSubmit={(event) => { event.preventDefault(); event.stopPropagation(); void save(); }} className="flex flex-col gap-4">
             <label className="flex flex-col gap-2 text-label">
-              {t(dialog.provider === 'url' ? 'integration.url' : 'integration.username')}
-              <input autoFocus required disabled={busy} type={dialog.provider === 'url' ? 'url' : 'text'} value={value} onChange={(event) => setValue(event.target.value)} maxLength={dialog.provider === 'url' ? 300 : dialog.provider === 'github' ? 39 : 16} autoComplete="off" spellCheck={false} className="rounded-md border border-border-strong bg-bg-tertiary px-3 py-2 text-body outline-none focus:border-primary" />
+              {t(dialog.provider === 'url' ? 'integration.url' : dialog.provider === 'steam' ? 'integration.steamInput' : 'integration.username')}
+              <input autoFocus required disabled={busy} type={dialog.provider === 'url' ? 'url' : 'text'} value={value} onChange={(event) => setValue(event.target.value)} maxLength={connectionInputLength[dialog.provider]} autoComplete="off" spellCheck={false} className="rounded-md border border-border-strong bg-bg-tertiary px-3 py-2 text-body outline-none focus:border-primary" />
             </label>
             {error && <p role="alert" className="text-label text-red-text">{error}</p>}
             <div className="flex justify-end gap-2"><Button type="button" variant="ghost" disabled={busy} onClick={() => setDialog(null)}>{t('wall.cancel')}</Button><Button type="submit" disabled={busy || !value.trim()}>{t(busy ? 'wall.saving' : 'wall.save')}</Button></div>

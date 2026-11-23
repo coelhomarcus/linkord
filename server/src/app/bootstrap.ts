@@ -1,3 +1,5 @@
+import { ACTIVITY_CHECKPOINT_MS, ACTIVITY_DAY_MS, closeInterruptedActivitySessions, pruneActivitySessions } from '../modules/activity/activitySessions.js';
+import { activitySessionsWritten, checkpointActivitySessions } from '../modules/presence/presenceStatus.js';
 import { syncConnections } from '../modules/connections/syncWorker.js';
 import { config } from '../config/env.js';
 import { broadcast, restoreCallParticipants, setCallPresenceStore } from '../modules/presence/participants.js';
@@ -91,6 +93,11 @@ export async function bootstrap(): Promise<void> {
   }
 
   await restoreCalls();
+  await closeInterruptedActivitySessions().catch((err) => log.error('failed to close interrupted activity sessions', err));
+  const pruneActivity = () => pruneActivitySessions().catch((err) => log.error('failed to prune activity sessions', err));
+  void pruneActivity();
+  const activityPruneTimer = setInterval(pruneActivity, ACTIVITY_DAY_MS).unref();
+  const activityCheckpointTimer = setInterval(checkpointActivitySessions, ACTIVITY_CHECKPOINT_MS).unref();
   // LiveKit rooms follow the server's call membership from here on: anyone else is removed
   const callRoomSyncTimer = startCallRoomSync();
 
@@ -192,6 +199,8 @@ export async function bootstrap(): Promise<void> {
   lifecycle.ready({
     stop() {
       clearInterval(connectionSyncTimer);
+      clearInterval(activityPruneTimer);
+      clearInterval(activityCheckpointTimer);
       if (callRoomSyncTimer) clearInterval(callRoomSyncTimer);
       broadcast({ t: 'server-restart' });
       // Not removeParticipant: leaving the call for everyone is exactly what a
@@ -203,6 +212,6 @@ export async function bootstrap(): Promise<void> {
       // included) treats as a network drop and reconnects from.
       io.close();
     },
-    closeHttp: () => fastify.close(),
+    closeHttp: async () => { await fastify.close(); await activitySessionsWritten(); },
   });
 }

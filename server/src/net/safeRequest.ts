@@ -51,6 +51,7 @@ export function requestSafe<T>(
   handle: ResponseHandler<T>,
   lookup: Lookup = safeLookup as Lookup,
   timeoutMs: number = REQUEST_TIMEOUT_MS,
+  options: { headers?: Record<string, string>; method?: string; signal?: AbortSignal } = {},
 ): Promise<T> {
   return new Promise((resolve, reject) => {
     let parsed: URL;
@@ -68,25 +69,26 @@ export function requestSafe<T>(
 
     const client = parsed.protocol === 'https:' ? https : http;
     const req = client.request(parsed, {
-      method: 'GET',
+      method: options.method ?? 'GET',
+      signal: options.signal,
       lookup,
       // no pooled sockets: every request goes through `lookup`
       agent: false,
-      headers: { 'User-Agent': 'Mozilla/5.0 (compatible; LinkordBot/1.0; +link preview)', Accept: accept },
+      headers: { 'User-Agent': 'Mozilla/5.0 (compatible; LinkordBot/1.0; +link preview)', Accept: accept, ...options.headers },
       timeout: timeoutMs,
     }, (res: IncomingMessage) => {
       const status = res.statusCode || 0;
 
       if (status >= 300 && status < 400 && res.headers.location) {
         res.resume();
-        if (redirectsLeft <= 0) return reject(new Error('redirecionamentos demais'));
+        if (redirectsLeft <= 0 || options.headers || options.method) return reject(new Error('redirecionamentos demais'));
         let nextUrl: string;
         try { nextUrl = new URL(res.headers.location, parsed).toString(); } catch { return reject(new Error('redirecionamento inválido')); }
         return resolve(requestSafe(nextUrl, redirectsLeft - 1, accept, handle, lookup, timeoutMs));
       }
       if (status < 200 || status >= 300) {
         res.resume();
-        return reject(Object.assign(new Error(`status ${status}`), { httpStatus: status }));
+        return reject(Object.assign(new Error(`status ${status}`), { httpStatus: status, retryAfter: res.headers['retry-after'], rateLimitReset: res.headers['ratelimit-reset'] }));
       }
 
       handle(res, parsed.toString(), resolve, reject);

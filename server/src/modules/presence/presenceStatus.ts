@@ -11,6 +11,7 @@ import {
   sanitizeActivityReport, sanitizeActivitySettings, setActivitySettings, HIDDEN_ACTIVITIES_MAX, type Activity, type ActivitySettings,
 } from './activity.js';
 import { runSerialized } from './profileQueue.js';
+import { createActivitySessionTracker, databaseActivitySessionStore, type ActivitySessionStore } from '../activity/activitySessions.js';
 import { databaseActivityHistoryStore, type ActivityHistoryStore } from '../activity/activityHistory.js';
 import { databaseSharedIconSource, withSharedIcons, type SharedIconSource } from '../activity/sharedGameIcons.js';
 import {
@@ -103,6 +104,13 @@ export function activitySettingsPayload(userId: string): ActivitySettings {
   return getActivitySettings(userId);
 }
 
+let activitySessions = createActivitySessionTracker(databaseActivitySessionStore);
+export function setActivitySessionStore(next: ActivitySessionStore): void {
+  activitySessions = createActivitySessionTracker(next);
+}
+export const checkpointActivitySessions = () => activitySessions.checkpoint();
+export const activitySessionsWritten = () => activitySessions.written();
+
 let historyStore: ActivityHistoryStore = databaseActivityHistoryStore;
 export function setActivityHistoryStore(next: ActivityHistoryStore): void {
   historyStore = next;
@@ -166,6 +174,7 @@ export function syncPresence(userId: string): void {
   const now = visiblePresenceOf(userId);
   toPeers.set(userId, now);
   recordActivityChange(userId, before?.activity, now?.activity);
+  activitySessions.observe(userId, now?.activity);
   if (now && !samePresence(before, now) && (before || now.status !== 'online' || now.customStatus || now.activity)) {
     // `activity` only when there is one or there was one, so a client hears it end
     const activity = now.activity || before?.activity ? { activity: now.activity ?? null } : {};
@@ -380,6 +389,7 @@ function onConnectionsChanged(userId: string): void {
   // the account's last connection is gone: what it was seen playing ends here
   const lastSeenActivity = toPeers.get(userId)?.activity;
   if (lastSeenActivity) recordActivity(userId, lastSeenActivity);
+  activitySessions.observe(userId, undefined);
   // its next connection reads the status back from the database
   const timer = expiryTimers.get(userId);
   if (timer) clearTimeout(timer);

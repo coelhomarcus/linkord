@@ -12,8 +12,11 @@
   },
   "catalog": {
     "groups": {
-      "you": "Configurações de usuário",
-      "app": "Configurações do app",
+      "account": "Conta",
+      "social": "Perfil e social",
+      "display": "Aparência e idioma",
+      "communication": "Voz, vídeo e chat",
+      "app": "Aplicativo",
       "admin": "Administração"
     },
     "categories": {
@@ -288,7 +291,7 @@
     "emptyText": "Quem você bloquear aparece aqui, e dá para desbloquear quando quiser.",
     "export": {
       "label": "Baixar meus dados",
-      "description": "Uma cópia do seu perfil, configurações, amizades, bloqueios, servidores e de todas as mensagens que você enviou, com os arquivos. Avisamos por e-mail quando ficar pronta.",
+      "description": "Uma cópia do seu perfil, configurações, sessões de atividade, amigos, bloqueios, servidores e todas as mensagens que você enviou, com seus arquivos. Enviamos um e-mail quando estiver pronta.",
       "request": "Pedir cópia",
       "building": "Preparando…",
       "buildingHint": "Estamos preparando sua cópia. Você pode sair desta página: o link também chega por e-mail.",
