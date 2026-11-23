@@ -13,14 +13,6 @@ export const EASE_OUT_CSS = `cubic-bezier(${EASE_OUT.join(', ')})`;
  * Motion takes seconds: divide by 1000. Drawers and sheets (EASE_DRAWER) travel further and keep their own. */
 export const DURATION = { exit: 100, enter: 150, settle: 200 } as const;
 
-/** Shared-layout glides — pills, indicators and panels morphing between positions. */
-export const SPRING_LAYOUT = {
-  type: "spring",
-  stiffness: 360,
-  damping: 32,
-  mass: 0.6,
-} as const;
-
 /** A sidebar opening or closing beside the content. Critically damped: the
  * panel settles against a hard edge (zero width), so any overshoot would pause
  * against it and then snap back during the final frame. */

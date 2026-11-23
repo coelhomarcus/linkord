@@ -14,7 +14,7 @@ const HANDSHAKE_TIMEOUT_MS = 10_000;
 const PROBE_TIMEOUT_MS = 1_000;
 /** a game may update its presence every second; others see at most one change per this long
  * (Discord allows a game 5 updates per 20 s) */
-export const CONTENT_THROTTLE_MS = 5_000;
+const CONTENT_THROTTLE_MS = 5_000;
 
 /** Whether some program holds this pipe. A pipe that is there but busy, or refuses for another
  * reason, counts as held: only "nothing there" leaves it free. */

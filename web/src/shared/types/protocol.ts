@@ -83,13 +83,13 @@ export interface Activity {
   rich?: RichActivity;
 }
 
-export interface RichImage {
+interface RichImage {
   /** an image path on the server */
   url: string;
   text?: string;
 }
 
-export interface RichActivity {
+interface RichActivity {
   details?: string;
   state?: string;
   largeImage?: RichImage;

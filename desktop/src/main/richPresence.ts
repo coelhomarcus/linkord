@@ -13,7 +13,7 @@ export const MAX_FRAME_BYTES = 64 * 1024;
 const HEADER_BYTES = 8;
 
 /** The programs that are Discord itself, which keeps the pipe whenever it runs. */
-export const DISCORD_PROCESSES: readonly string[] = ['discord.exe', 'discordptb.exe', 'discordcanary.exe', 'discorddevelopment.exe'];
+const DISCORD_PROCESSES: readonly string[] = ['discord.exe', 'discordptb.exe', 'discordcanary.exe', 'discorddevelopment.exe'];
 
 export function isDiscordProcess(path: string): boolean {
   return DISCORD_PROCESSES.includes(processName(path));
@@ -95,7 +95,7 @@ export function invalidHandshakeMessage() {
   return { code: 4000, message: 'Invalid client ID' };
 }
 
-export interface RichPresenceImage {
+interface RichPresenceImage {
   /** an asset name of the game's Discord application, an `https:` URL, or `mp:external/...` */
   key: string;
   text?: string;
@@ -114,7 +114,7 @@ export interface RichPresence {
 }
 
 /** A game's current presence, as one connection reported it. */
-export interface ReportedActivity {
+interface ReportedActivity {
   /** the game's process, when it said */
   pid: number | null;
   kind: 'playing' | 'using';

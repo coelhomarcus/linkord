@@ -6,7 +6,7 @@ import { ConnectionFetchError, fetchConnectionJson, list, record, textValue, typ
 // and stored icons). Both endpoints answer without a credential; only the application id is sent.
 
 const API_BASE = 'https://discord.com/api/v10';
-export const DISCORD_CDN_HOST = 'cdn.discordapp.com';
+const DISCORD_CDN_HOST = 'cdn.discordapp.com';
 export const DISCORD_MEDIA_HOST = 'media.discordapp.net';
 const APP_ID = /^\d{17,20}$/;
 const ICON_HASH = /^(a_)?[0-9a-f]{32}$/;
@@ -20,7 +20,7 @@ const TTL_MS = 24 * 60 * 60 * 1000;
 const FAILURE_TTL_MS = 5 * 60 * 1000;
 const CACHE_MAX_ENTRIES = 2000;
 
-export interface DiscordApp {
+interface DiscordApp {
   name: string;
   /** the application's icon on Discord's CDN, or null */
   icon: string | null;
@@ -44,7 +44,7 @@ function cleanName(value: unknown): string | null {
   return name || null;
 }
 
-export function parseApp(appId: string, value: unknown): DiscordApp | null {
+function parseApp(appId: string, value: unknown): DiscordApp | null {
   const body = record(value);
   const name = cleanName(body.name);
   if (!name) return null;
@@ -52,7 +52,7 @@ export function parseApp(appId: string, value: unknown): DiscordApp | null {
   return { name, icon: hash ? `https://${DISCORD_CDN_HOST}/app-icons/${appId}/${hash}.png?size=256` : null };
 }
 
-export function parseAssets(appId: string, value: unknown): Map<string, string> {
+function parseAssets(appId: string, value: unknown): Map<string, string> {
   const assets = new Map<string, string>();
   for (const item of list(value).slice(0, ASSETS_MAX)) {
     if (!item || typeof item !== 'object') continue;

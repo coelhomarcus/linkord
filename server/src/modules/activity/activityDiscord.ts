@@ -9,7 +9,7 @@ import * as floodControl from '../../realtime/floodControl.js';
 // and stored as an activity icon, so `activity-set` can carry them as `{ local }` like any other icon
 // and nobody's browser ever asks Discord or a game's server for anything.
 
-export const MAX_DISCORD_IMAGES = 2;
+const MAX_DISCORD_IMAGES = 2;
 const IMAGE_KEY_MAX = 1024;
 const ASSET_KEY = /^[a-z0-9_.-]{1,128}$/;
 // a picture already stored is not fetched again for a day; one that failed is retried after a while

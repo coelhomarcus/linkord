@@ -11,7 +11,7 @@
 
 type ActivityKind = 'playing' | 'using';
 
-export interface RichImage {
+interface RichImage {
   /** an icon stored on this server, like `icon` */
   url: string;
   /** what the game shows on hover */
@@ -19,7 +19,7 @@ export interface RichImage {
 }
 
 /** What a game says through Discord Rich Presence ("Em partida", "Mapa: Dust II", 2 de 5). */
-export interface RichActivity {
+interface RichActivity {
   details?: string;
   state?: string;
   largeImage?: RichImage;
