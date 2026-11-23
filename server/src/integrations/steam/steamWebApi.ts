@@ -1,6 +1,6 @@
 import { ConnectionFetchError, fetchConnectionText, fetchSafeConnectionJson, list, record, textValue, type RequestJson, type RequestText } from '../connectionHttp.js';
-import type { ConnectionSnapshot, SteamGame } from '../../modules/connections/types.js';
-import { STEAM_ASSET_HOST } from './steamAssets.js';
+import type { ConnectionSnapshot, SteamGame, SteamProfileItems } from '../../modules/connections/types.js';
+import { STEAM_ASSET_HOST, steamItemUrl } from './steamAssets.js';
 import { readSteamPublicProfile } from './steamPublicProfile.js';
 
 export const STEAM_IMAGE_HOSTS = [STEAM_ASSET_HOST, 'avatars.steamstatic.com', 'avatars.akamai.steamstatic.com',
@@ -64,6 +64,28 @@ function gameTimes(value: Record<string, unknown>, publicIds: Set<number>) {
   return matches;
 }
 
+const IMAGES = ['jpg', 'png', 'gif'];
+
+/** The equipped items, each read on its own: one Steam no longer describes the way it did is left out,
+ * never the whole profile. An item not equipped is an empty object. */
+export function readProfileItems(response: unknown): SteamProfileItems {
+  const item = (key: string) => {
+    const value = response && typeof response === 'object' ? (response as Record<string, unknown>)[key] : undefined;
+    return value && typeof value === 'object' && !Array.isArray(value) ? value as Record<string, unknown> : {};
+  };
+  const background = item('mini_profile_background');
+  const imageUrl = steamItemUrl(background.image_large, IMAGES);
+  const webmUrl = steamItemUrl(background.movie_webm, ['webm']);
+  const mp4Url = steamItemUrl(background.movie_mp4, ['mp4']);
+  const frame = item('avatar_frame');
+  const avatar = item('animated_avatar');
+  return {
+    background: imageUrl || webmUrl || mp4Url ? { imageUrl, webmUrl, mp4Url } : null,
+    avatarFrameUrl: steamItemUrl(frame.image_large, IMAGES) ?? steamItemUrl(frame.image_small, IMAGES),
+    animatedAvatarUrl: steamItemUrl(avatar.image_large, IMAGES) ?? steamItemUrl(avatar.image_small, IMAGES),
+  };
+}
+
 export async function fetchSteam(value: string, key: string, request: RequestJson = fetchSafeConnectionJson, requestText: RequestText = fetchConnectionText):
   Promise<{ snapshot: ConnectionSnapshot; url: string }> {
   if (!key) throw new ConnectionFetchError('unavailable');
@@ -92,11 +114,12 @@ export async function fetchSteam(value: string, key: string, request: RequestJso
   const vanity = profileAddress?.id === null ? profileAddress : null;
   const profileUrl = vanity?.url ?? url;
   const { owned, currentGame, recentIds } = readSteamPublicProfile(await requestText(`${profileUrl}/?l=english`), steamId, profileUrl);
-  const [ownedGames, level] = await Promise.all([
+  const [ownedGames, level, equipped] = await Promise.all([
     recentIds.size ? get('IPlayerService/GetOwnedGames/v1', { input_json: JSON.stringify({
       steamid: steamId, include_appinfo: true, include_played_free_games: true, include_family_licenses: true, appids_filter: [...recentIds],
     }) }) : null,
     get('IPlayerService/GetSteamLevel/v1', { steamid: steamId }),
+    get('IPlayerService/GetProfileItemsEquipped/v1', { steamid: steamId }),
   ]);
   const { player_level: playerLevel } = record(level.response);
   if (!integer(playerLevel)) throw new ConnectionFetchError('invalid_response');
@@ -110,7 +133,8 @@ export async function fetchSteam(value: string, key: string, request: RequestJso
   return {
     url,
     snapshot: { steamVisibilityVerified: true, ...(vanity && { steamProfileHandle: vanity.value }), widgets: {
-      'steam-profile': { kind: 'steam-profile', name, avatarUrl: avatarUrl(profile.avatarfull), level: playerLevel, owned, currentGame },
+      'steam-profile': { kind: 'steam-profile', name, avatarUrl: avatarUrl(profile.avatarfull), level: playerLevel, owned, currentGame,
+        items: readProfileItems(equipped.response) },
       'steam-top': { kind: 'steam-games', items: top },
       'steam-recent': { kind: 'steam-games', items: recent },
     } },

@@ -28,6 +28,21 @@ describe('widget pictures', () => {
     assert.ok(list.kind === 'list' && list.items[0]!.imageUrl === null);
   });
 
+  it('sends a Steam mini profile\'s pictures and loop through the proxy, and an old snapshot as it was', () => {
+    const cdn = 'https://shared.fastly.steamstatic.com/community_assets/images/items/1';
+    const base = { kind: 'steam-profile' as const, name: 'Example', avatarUrl: null, level: 1, owned: 1, currentGame: null };
+    const sent = withProxiedImages({ ...base, items: {
+      background: { imageUrl: `${cdn}/bg.jpg`, webmUrl: `${cdn}/bg.webm`, mp4Url: null },
+      avatarFrameUrl: `${cdn}/frame.png`, animatedAvatarUrl: null,
+    } });
+    assert.ok(sent.kind === 'steam-profile' && sent.items?.background);
+    assert.match(sent.items.background.imageUrl!, /^\/api\/media-proxy\/steam\//);
+    assert.match(sent.items.background.webmUrl!, /^\/api\/media-proxy\/steam-video\//);
+    assert.equal(sent.items.background.mp4Url, null);
+    assert.match(sent.items.avatarFrameUrl!, /^\/api\/media-proxy\/steam\//);
+    assert.deepEqual(withProxiedImages(base), base);
+  });
+
   it('leaves the calendar alone', () => {
     const calendar = { kind: 'github-calendar' as const, total: 0, days: [] };
     assert.equal(withProxiedImages(calendar), calendar);

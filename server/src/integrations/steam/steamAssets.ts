@@ -18,3 +18,12 @@ export function steamClientIconUrl(appId: number, hash: string): string | null {
 export function steamCommunityIconUrl(appId: number, hash: string): string | null {
   return assetUrl(appId, hash, 'jpg');
 }
+
+/** A Points Shop item equipped on a profile (background, frame, animated avatar), from the path
+ * `IPlayerService/GetProfileItemsEquipped` gives (`items/<app id>/<file>`), or null for any other path
+ * or a file type the caller did not ask for. */
+export function steamItemUrl(path: unknown, extensions: readonly string[]): string | null {
+  if (typeof path !== 'string') return null;
+  const match = /^items\/\d{1,10}\/[A-Za-z0-9_-]{1,128}\.([a-z0-9]{2,4})$/.exec(path);
+  return match && extensions.includes(match[1]!) ? `https://${STEAM_ASSET_HOST}/community_assets/images/${path}` : null;
+}

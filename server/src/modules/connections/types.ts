@@ -24,7 +24,9 @@ export type WidgetData =
   | { kind: 'activity-recent'; items: ActivityHistoryItem[] }
   | { kind: 'activity-summary'; total: number; longestStreak: number; favorite: string | null }
   | { kind: 'steam-games'; items: SteamGame[] }
-  | { kind: 'steam-profile'; name: string; avatarUrl: string | null; level: number; owned: number; currentGame: string | null }
+  | { kind: 'steam-profile'; name: string; avatarUrl: string | null; level: number; owned: number; currentGame: string | null;
+      /** absent in a snapshot synced before the mini profile was drawn */
+      items?: SteamProfileItems }
   | { kind: 'twitch-live'; login: string; name: string; avatarUrl: string | null; lastStreamAt: string | null;
       stream: TwitchStream | null; status: 'live' | 'offline' | 'unknown' }
   | { kind: 'twitch-vods'; items: TwitchVideo[] };
@@ -46,5 +48,12 @@ export function hasActivityPeriod(type: WidgetType): boolean {
 }
 
 export interface SteamGame extends MediaItem { minutes: number }
+/** What the profile has equipped from the Points Shop, drawn as Steam's mini profile. */
+export interface SteamProfileItems {
+  /** the mini profile background: a still picture and the loop Steam plays over it */
+  background: { imageUrl: string | null; webmUrl: string | null; mp4Url: string | null } | null;
+  avatarFrameUrl: string | null;
+  animatedAvatarUrl: string | null;
+}
 export interface TwitchStream { title: string; game: string | null; viewers: number; imageUrl: string | null }
 export interface TwitchVideo extends MediaItem { createdAt: string; seconds: number }

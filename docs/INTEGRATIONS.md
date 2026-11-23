@@ -128,11 +128,12 @@ Game search for the four games widgets (favorite game, games I like, games in ro
 
 ## Steam
 
-The Wall shows the public Steam profile and its recent games. The recent widget shows playtime for the last two weeks. The most-played widget ranks those games by lifetime playtime. The connection accepts a vanity name, a SteamID64 or a profile URL, and stores the canonical profile URL.
+The Wall shows the public Steam profile, drawn like Steam's own mini profile, and its recent games. The recent widget shows playtime for the last two weeks. The most-played widget ranks those games by lifetime playtime. The connection accepts a vanity name, a SteamID64 or a profile URL, and stores the canonical profile URL.
 
-- **API** `ISteamUser` (`ResolveVanityURL`, `GetPlayerSummaries`) and `IPlayerService` (`GetOwnedGames`, `GetSteamLevel`) on `api.steampowered.com`. A signed-out request to the profile on `steamcommunity.com` supplies the game count, in-game status and eligible app IDs. The playtime request includes only the recent games for which that page shows playtime. Steam requires sign-in to view the full library page.
+- **API** `ISteamUser` (`ResolveVanityURL`, `GetPlayerSummaries`) and `IPlayerService` (`GetOwnedGames`, `GetSteamLevel`, `GetProfileItemsEquipped`) on `api.steampowered.com`. A signed-out request to the profile on `steamcommunity.com` supplies the game count, in-game status and eligible app IDs. The playtime request includes only the recent games for which that page shows playtime. Steam requires sign-in to view the full library page.
 - **Sync** Connecting checks the profile and its **Game details** are public. The [worker](#how-connection-syncing-works) checks again every 24 hours. If a refresh fails, the Wall hides the saved Steam widgets until the next successful refresh.
-- **Pictures:** covers and avatars through the media proxy, from an allowlist of Steam CDN hosts.
+- **Mini profile:** the Points Shop items the profile has equipped (`GetProfileItemsEquipped`): the mini profile background (a still picture and its WebM/MP4 loop), the avatar frame and the animated avatar, all files under `community_assets/images/items/` on `shared.fastly.steamstatic.com`. An item Steam describes in an unexpected way is left out, never the profile. Snapshots from before this feature show the plain avatar until their next refresh. Under reduced motion the loop gives way to its still picture and the animated avatar and frame to their first frame. Steam draws levels past 100 as other shapes; we keep the ring with its colours per ten.
+- **Pictures:** covers, avatars, frames and the background's still through the media proxy, from an allowlist of Steam CDN hosts; the background loop through its video side.
 - **Configuration:** a [Steam Web API key](https://steamcommunity.com/dev/apikey) in `STEAM_WEB_API_KEY`. It stays on the server.
 - **When missing:** the Steam connection option is hidden.
 
@@ -210,17 +211,18 @@ YouTube and Twitch links, and previews with a `player` on the allowlist (Vimeo, 
 
 ## Media proxy
 
-Serves the third-party pictures above from our own domain, `GET /api/media-proxy/...` (signed-in users only), so they show on networks that block those services and the services never see who is looking (`server/src/modules/media-proxy/`).
+Serves the third-party pictures above, and the loop behind a Steam mini profile, from our own domain, `GET /api/media-proxy/...` (signed-in users only), so they show on networks that block those services and the services never see who is looking (`server/src/modules/media-proxy/`).
 
-- **Never an open proxy.** A picture is either an id on a fixed host (`igdb/<size>/<image_id>` → `images.igdb.com`, `youtube/<video id>` → `i.ytimg.com`) or a URL the server already holds, signed with HMAC-SHA256 (`<mal|github|steam|twitch|preview>/<signature>?u=…`). Each kind reaches only its own hosts; `preview` reaches any public host a link preview found. Anything else is a 404 without a request. Stored data keeps the original URLs, rewritten as they are sent.
+- **Never an open proxy.** A picture is either an id on a fixed host (`igdb/<size>/<image_id>` → `images.igdb.com`, `youtube/<video id>` → `i.ytimg.com`) or a URL the server already holds, signed with HMAC-SHA256 (`<mal|github|steam|twitch|preview|steam-video>/<signature>?u=…`). Each kind reaches only its own hosts; `preview` reaches any public host a link preview found. Anything else is a 404 without a request. Stored data keeps the original URLs, rewritten as they are sent.
 - **Signing key:** made on first boot and kept in `instance_secrets`, so addresses survive a deploy. Nothing to configure.
 - **Safeguards:** `safeRequest`, no redirects on fixed hosts (3 for previews), 8 seconds, 5 MB. The upstream must say `image/*` and the bytes must be JPEG, PNG, GIF, WebP, AVIF or ICO. An SVG is never passed on: it is drawn into a PNG of at most 512 px.
 - **Variants:** `width` and `height` (16, 32, 64, 128, 256, 400, 640, 800, 1280 or 1920, mirrored in `web/src/shared/lib/mediaProxy.ts`), `format=webp`, `quality=high|low` and `animated=false` (first frame only). Made from the cached original, refused past 40 megapixels (`413 image_too_large`).
+- **Videos:** only the `steam-video` kind, from `shared.fastly.steamstatic.com`: up to 16 MB in 20 seconds, the upstream must say `video/*` and the bytes must be WebM or MP4. Read whole into a cache of its own (64 MB) and served by byte range (`Accept-Ranges`, `206`, `416 range_not_satisfiable`), as video players ask. No variants.
 - **Cache:** in memory, up to 64 MB for originals and variants, each up to 7 days; a failure is remembered 30 minutes. Browsers get `Cache-Control: private, max-age=604800`, an `ETag`, `nosniff` and `Cross-Origin-Resource-Policy: same-origin`.
 - **Rate limits:** cache misses and new variants only: 120 per minute per account, 1200 per minute for the server.
-- **Errors:** `404 not_found`, `400 invalid_variant`, `401 unauthenticated`, `415 not_an_image`, `413 image_too_large`, `502 image_unavailable`, `429 rate_limited`.
+- **Errors:** `404 not_found`, `400 invalid_variant`, `401 unauthenticated`, `415 not_an_image`, `413 image_too_large`, `502 image_unavailable`, `429 rate_limited`; for videos `415 not_a_video`, `413 video_too_large`, `502 video_unavailable` and `416 range_not_satisfiable`.
 - **Configuration:** `MEDIA_PROXY=0` stops fetching: the same addresses redirect to the original host, which then sees the viewer's IP, and the policy's `img-src` allows any `https:` host again.
-- **Not covered:** KLIPY GIFs (its terms), and direct video and audio links, which load from their own host after a click.
+- **Not covered:** KLIPY GIFs (its terms), and direct video and audio links in chat, which load from their own host after a click.
 
 ## Adding a new integration
 

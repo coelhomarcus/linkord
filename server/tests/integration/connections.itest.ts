@@ -144,7 +144,7 @@ describe('profile Wall publication (real Postgres)', () => {
     await sync({ now, steamKey: 'test-key', request, requestText: async () => `<script>g_rgProfileData = {"steamid":"${steamId}"};</script>
       <div class="profile_rightcol"><a href="${steamUrl}/games/?tab=all"><span class="profile_count_link_total">4</span></a></div>` });
     assert.deepEqual((await readWall(owner.id)).widgets[0]?.data,
-      { ...steamSnapshot.widgets['steam-profile'], currentGame: null });
+      { ...steamSnapshot.widgets['steam-profile'], currentGame: null, items: { background: null, avatarFrameUrl: null, animatedAvatarUrl: null } });
 
     await sync({ now: new Date(now.getTime() + SYNC_INTERVAL_MS), steamKey: 'test-key', request,
       requestText: async () => { throw new ConnectionFetchError('unavailable'); } });

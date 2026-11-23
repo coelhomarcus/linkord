@@ -1,12 +1,13 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import type { RequestJson, RequestText } from '../../../src/integrations/connectionHttp.js';
-import { fetchSteam, parseSteamProfile } from '../../../src/integrations/steam/steamWebApi.js';
+import { fetchSteam, parseSteamProfile, readProfileItems } from '../../../src/integrations/steam/steamWebApi.js';
 
 const id = '76561197960287930';
 const canonicalUrl = `https://steamcommunity.com/profiles/${id}`;
 const game = (appid: number, name: string, playtime_forever: number, playtime_2weeks = 0) => ({ appid, name, playtime_forever, playtime_2weeks });
 const player = { steamid: id, communityvisibilitystate: 3, personaname: 'Example', avatarfull: 'https://avatars.fastly.steamstatic.com/example.jpg' };
+const noItems = { background: null, avatarFrameUrl: null, animatedAvatarUrl: null };
 const visibleGame = (id: number, hours = '2 hrs on record') => `<div class="recent_game">
   <div class="game_info_details">${hours}</div><div class="game_name"><a href="https://steamcommunity.com/app/${id}">Game</a></div>
 </div>`;
@@ -26,6 +27,7 @@ function api(overrides: Record<string, unknown> = {}, publicIds = [10, 20]): Req
     GetPlayerSummaries: { players: [player] },
     GetOwnedGames: { game_count: 2, games: [game(10, 'First', 30), game(20, 'Second', 121, 61)] },
     GetSteamLevel: { player_level: 47 },
+    GetProfileItemsEquipped: { profile_background: {}, mini_profile_background: {}, avatar_frame: {}, animated_avatar: {}, profile_modifier: {} },
     ...overrides,
   } as Record<string, unknown>;
   return async (url) => {
@@ -62,7 +64,7 @@ test('resolves a vanity name and builds public widgets with separate recent and 
   assert.equal(result.url, canonicalUrl);
   assert.equal(result.snapshot.steamProfileHandle, 'example');
   const widgets = result.snapshot.widgets;
-  assert.deepEqual(widgets['steam-profile'], { kind: 'steam-profile', name: 'Example', avatarUrl: player.avatarfull, currentGame: null, owned: 3, level: 47 });
+  assert.deepEqual(widgets['steam-profile'], { kind: 'steam-profile', name: 'Example', avatarUrl: player.avatarfull, currentGame: null, owned: 3, level: 47, items: noItems });
   const top = widgets['steam-top'];
   assert.equal(top?.kind, 'steam-games');
   assert.deepEqual(top.items.map(({ title, minutes }) => [title, minutes]), [['Second', 121], ['First', 30]]);
@@ -77,7 +79,7 @@ test('omits private games and their playtime even when the Web API returns them'
     GetOwnedGames: { game_count: 4, games: [game(30, 'Private game', 800, 400), game(40, 'Private playtime', 500, 300), game(20, 'Public game', 121, 61)] },
   }, [20]), publicProfile({ count: '1,022', recent: visibleGame(20) + visibleGame(40, 'Last played today') }));
   const widgets = result.snapshot.widgets;
-  assert.deepEqual(widgets['steam-profile'], { kind: 'steam-profile', name: 'Example', avatarUrl: player.avatarfull, currentGame: null, owned: 1022, level: 47 });
+  assert.deepEqual(widgets['steam-profile'], { kind: 'steam-profile', name: 'Example', avatarUrl: player.avatarfull, currentGame: null, owned: 1022, level: 47, items: noItems });
   for (const [type, minutes] of [['steam-top', 121], ['steam-recent', 61]] as const) {
     const widget = widgets[type];
     assert.equal(widget?.kind, 'steam-games');
@@ -92,6 +94,32 @@ test('uses the public in-game status and skips the game API when there are no pu
   assert.equal(profile?.kind, 'steam-profile');
   assert.equal(profile.currentGame, 'Public & playing');
   assert.deepEqual(result.snapshot.widgets['steam-recent'], { kind: 'steam-games', items: [] });
+});
+
+test('reads the equipped mini profile background, avatar frame and animated avatar', async () => {
+  const result = await fetchSteam(id, 'test-key', api({ GetProfileItemsEquipped: {
+    profile_background: { image_large: 'items/753/big.jpg', movie_webm: 'items/753/big.webm' },
+    mini_profile_background: { communityitemid: '1', image_large: 'items/2861690/0f1e2d.jpg', movie_webm: 'items/2861690/0f1e2d.webm', movie_mp4: 'items/2861690/0f1e2d.mp4' },
+    avatar_frame: { image_small: 'items/2855140/frame.png', image_large: 'items/2855140/frame_large.png' },
+    animated_avatar: { image_small: 'items/2855140/avatar.gif' },
+  } }), publicProfile());
+  const profile = result.snapshot.widgets['steam-profile'];
+  assert.equal(profile?.kind, 'steam-profile');
+  const cdn = 'https://shared.fastly.steamstatic.com/community_assets/images/items';
+  assert.deepEqual(profile.items, {
+    background: { imageUrl: `${cdn}/2861690/0f1e2d.jpg`, webmUrl: `${cdn}/2861690/0f1e2d.webm`, mp4Url: `${cdn}/2861690/0f1e2d.mp4` },
+    avatarFrameUrl: `${cdn}/2855140/frame_large.png`,
+    animatedAvatarUrl: `${cdn}/2855140/avatar.gif`,
+  });
+});
+
+test('leaves out an equipped item it cannot read, never the profile', () => {
+  assert.deepEqual(readProfileItems(undefined), noItems);
+  assert.deepEqual(readProfileItems({ mini_profile_background: [], avatar_frame: 'frame.png', animated_avatar: null }), noItems);
+  for (const path of ['https://example.com/items/1/a.webm', 'items/1/../a.webm', 'items/x/a.webm', '/items/1/a.webm', 'items/1/a.exe']) {
+    assert.deepEqual(readProfileItems({ mini_profile_background: { movie_webm: path, movie_mp4: path, image_large: path } }).background, null, path);
+  }
+  assert.deepEqual(readProfileItems({ mini_profile_background: { movie_mp4: 'items/1/a.webm' } }).background, null, 'a file of the wrong type');
 });
 
 test('distinguishes private profiles and game details from unknown accounts and malformed data', async () => {

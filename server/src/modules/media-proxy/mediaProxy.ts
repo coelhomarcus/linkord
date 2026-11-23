@@ -7,7 +7,7 @@ import { sendError } from '../../http/respond.js';
 import { requestSafe } from '../../net/safeRequest.js';
 import { allow, retryAfterMs } from '../../realtime/floodControl.js';
 import { resolveSession } from '../auth/session.js';
-import { igdbCoverUpstream, MEDIA_PROXY_PATH, verifiedTarget, youtubeThumbnailUpstream } from './mediaProxyUrls.js';
+import { igdbCoverUpstream, MEDIA_PROXY_PATH, verifiedTarget, VIDEO_KINDS, youtubeThumbnailUpstream } from './mediaProxyUrls.js';
 import { etagOf, InvalidVariantError, parseVariant, PixelLimitError, renderVariant, variantKey, type Picture, type Variant } from './mediaVariants.js';
 
 // GET /api/media-proxy/... — third-party pictures served from our own domain,
@@ -16,7 +16,9 @@ import { etagOf, InvalidVariantError, parseVariant, PixelLimitError, renderVaria
 // fetching: through net/safeRequest.ts (SSRF), capped in time and size,
 // checked to really be a picture, cached, and rate limited on cache misses.
 // A request may ask for a smaller or WebP variant (mediaVariants.ts), made
-// from the cached original and cached beside it.
+// from the cached original and cached beside it. Video kinds (a Steam mini
+// profile's background loop) go through a second cache of their own, read
+// whole like a picture and served by byte range, as video players ask.
 
 export const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
 const FETCH_TIMEOUT_MS = 8000;
@@ -44,6 +46,11 @@ const ACCEPT = 'image/avif,image/webp,image/png,image/jpeg,image/gif,image/x-ico
 const MAX_SVG_BYTES = 1024 * 1024;
 const SVG_RENDER_PX = 512;
 const SVG_RENDER_TIMEOUT_S = 3;
+// a mini profile background is a short loop of a few megabytes
+export const MAX_VIDEO_BYTES = 16 * 1024 * 1024;
+const VIDEO_FETCH_TIMEOUT_MS = 20_000;
+const VIDEO_CACHE_MAX_BYTES = 64 * 1024 * 1024;
+const VIDEO_ACCEPT = 'video/webm,video/mp4;q=0.9';
 
 type Lookup = Parameters<typeof requestSafe>[4];
 
@@ -54,7 +61,7 @@ export interface Upstream {
   /** a seam for tests, which can only reach loopback; not part of the cache key */
   lookup?: Lookup;
 }
-type FailureCode = 'image_unavailable' | 'not_an_image' | 'image_too_large';
+type FailureCode = 'image_unavailable' | 'not_an_image' | 'image_too_large' | 'video_unavailable' | 'not_a_video' | 'video_too_large';
 
 export class MediaProxyError extends Error {
   readonly status: 413 | 415 | 429 | 502;
@@ -63,7 +70,7 @@ export class MediaProxyError extends Error {
   constructor(code: MediaProxyError['code'], retryAfterMs = 0) {
     super(code);
     this.code = code;
-    this.status = code === 'rate_limited' ? 429 : code === 'image_too_large' ? 413 : code === 'not_an_image' ? 415 : 502;
+    this.status = code === 'rate_limited' ? 429 : code.endsWith('_too_large') ? 413 : code.startsWith('not_a') ? 415 : 502;
     this.retryAfterMs = retryAfterMs;
   }
 }
@@ -78,6 +85,14 @@ export function sniffImageType(bytes: Buffer): string | null {
   if (bytes.length >= 12 && ascii(0, 4) === 'RIFF' && ascii(8, 12) === 'WEBP') return 'image/webp';
   if (bytes.length >= 12 && ascii(4, 8) === 'ftyp' && ['avif', 'avis'].includes(ascii(8, 12))) return 'image/avif';
   if (bytes.length >= 6 && bytes[0] === 0 && bytes[1] === 0 && bytes[2] === 1 && bytes[3] === 0 && bytes.readUInt16LE(4) > 0) return 'image/x-icon';
+  return null;
+}
+
+/** The type a video's bytes really are: WebM (any EBML stream) or MP4, else null. */
+export function sniffVideoType(bytes: Buffer): 'video/webm' | 'video/mp4' | null {
+  if (bytes.length >= 4 && bytes.readUInt32BE(0) === 0x1a45dfa3) return 'video/webm';
+  const brand = bytes.subarray(8, 12).toString('latin1');
+  if (bytes.length >= 12 && bytes.subarray(4, 8).toString('latin1') === 'ftyp' && brand !== 'avif' && brand !== 'avis') return 'video/mp4';
   return null;
 }
 
@@ -126,16 +141,47 @@ export function fetchImage(upstream: Upstream, lookup?: Lookup): Promise<Proxied
   });
 }
 
+/** One video from upstream, read whole (up to the cap) and checked like a picture. */
+export function fetchVideo(upstream: Upstream, lookup?: Lookup): Promise<ProxiedImage> {
+  return requestSafe<ProxiedImage>(upstream.url, upstream.redirects, VIDEO_ACCEPT, (res: IncomingMessage, _finalUrl, resolve, reject) => {
+    const fail = (code: FailureCode) => { res.destroy(); reject(new MediaProxyError(code)); };
+    if (!/^video\//i.test(String(res.headers['content-type'] || ''))) return fail('not_a_video');
+    if (Number(res.headers['content-length']) > MAX_VIDEO_BYTES) return fail('video_too_large');
+    const chunks: Buffer[] = [];
+    let length = 0;
+    let done = false;
+    const finish = (action: () => void) => { if (done) return; done = true; clearTimeout(deadline); action(); };
+    const deadline = setTimeout(() => finish(() => fail('video_unavailable')), VIDEO_FETCH_TIMEOUT_MS);
+    res.on('data', (chunk: Buffer) => {
+      if (done) return;
+      length += chunk.length;
+      if (length > MAX_VIDEO_BYTES) return finish(() => fail('video_too_large'));
+      chunks.push(chunk);
+    });
+    res.on('end', () => finish(() => {
+      const body = Buffer.concat(chunks, length);
+      const contentType = sniffVideoType(body);
+      if (contentType) resolve(imageOf(body, contentType));
+      else reject(new MediaProxyError('not_a_video'));
+    }));
+    res.on('error', () => finish(() => reject(new MediaProxyError('video_unavailable'))));
+  }, lookup, VIDEO_FETCH_TIMEOUT_MS).catch((error: unknown) => {
+    throw error instanceof MediaProxyError ? error : new MediaProxyError('video_unavailable');
+  });
+}
+
 export interface MediaProxyDeps {
   fetch?: (upstream: Upstream) => Promise<ProxiedImage>;
   now?: () => number;
+  /** the cache's byte budget */
+  maxBytes?: number;
 }
 
 /** The cache in front of `fetch`: pictures by upstream URL (a variant by URL
  * and variant), least recently used dropped first once over the byte budget;
  * failures remembered briefly; a picture already being fetched or rendered
  * shared by everyone asking for it. */
-export function createMediaProxy({ fetch = (upstream) => fetchImage(upstream, upstream.lookup), now = Date.now }: MediaProxyDeps = {}) {
+export function createMediaProxy({ fetch = (upstream) => fetchImage(upstream, upstream.lookup), now = Date.now, maxBytes = CACHE_MAX_BYTES }: MediaProxyDeps = {}) {
   // keyed by upstream URL, or URL + '\n' + variant key
   const cache = new Map<string, { image: ProxiedImage; expiresAt: number }>();
   const failures = new Map<string, { code: FailureCode; expiresAt: number }>();
@@ -154,7 +200,7 @@ export function createMediaProxy({ fetch = (upstream) => fetchImage(upstream, up
     cachedBytes += image.body.length;
     // Map keeps insertion order, and a hit re-inserts: the first is the stalest
     for (const oldest of cache.keys()) {
-      if (cachedBytes <= CACHE_MAX_BYTES) break;
+      if (cachedBytes <= maxBytes) break;
       drop(oldest);
     }
   };
@@ -232,16 +278,37 @@ type MediaProxy = ReturnType<typeof createMediaProxy>;
  * preview fills it while it unfurls, so a card's picture is already there
  * when the first reader asks for it. */
 export const mediaProxy: MediaProxy = createMediaProxy();
+/** The videos' cache, apart so a few loops never push the pictures out. */
+export const videoProxy: MediaProxy = createMediaProxy({ fetch: (upstream) => fetchVideo(upstream, upstream.lookup), maxBytes: VIDEO_CACHE_MAX_BYTES });
 
 const MESSAGES: Record<MediaProxyError['code'], string> = {
   rate_limited: 'Muitas imagens novas em pouco tempo. Tente novamente em instantes.',
   image_unavailable: 'Não foi possível carregar a imagem.',
   not_an_image: 'O endereço não é uma imagem.',
   image_too_large: 'A imagem é grande demais.',
+  video_unavailable: 'Não foi possível carregar o vídeo.',
+  not_a_video: 'O endereço não é um vídeo.',
+  video_too_large: 'O vídeo é grande demais.',
 };
+
+/** The one byte range a request asks for: null for the whole body (no Range,
+ * or one we may ignore, like several ranges), 'unsatisfiable' past the end. */
+export function parseRange(header: unknown, size: number): { start: number; end: number } | null | 'unsatisfiable' {
+  if (typeof header !== 'string') return null;
+  const match = /^bytes=(\d*)-(\d*)$/.exec(header.trim());
+  if (!match || (!match[1] && !match[2])) return null;
+  if (!match[1]) {
+    const suffix = Number(match[2]);
+    return suffix > 0 && size > 0 ? { start: Math.max(0, size - suffix), end: size - 1 } : 'unsatisfiable';
+  }
+  const start = Number(match[1]);
+  const end = match[2] ? Math.min(Number(match[2]), size - 1) : size - 1;
+  return start < size && start <= end ? { start, end } : 'unsatisfiable';
+}
 
 export interface MediaProxyRouteDeps {
   proxy?: MediaProxy;
+  videos?: MediaProxy;
   authenticate?: (request: FastifyRequest) => Promise<string | null>;
   enabled?: boolean;
 }
@@ -250,9 +317,9 @@ const sessionUserId = async (request: FastifyRequest) =>
   (await resolveSession(parseCookies(request.headers.cookie || '')[config.SESSION_COOKIE]))?.userId ?? null;
 
 export function registerMediaProxyRoutes(app: FastifyInstance, deps: MediaProxyRouteDeps = {}): void {
-  const { proxy = mediaProxy, authenticate = sessionUserId, enabled = config.MEDIA_PROXY_ENABLED } = deps;
+  const { proxy = mediaProxy, videos = videoProxy, authenticate = sessionUserId, enabled = config.MEDIA_PROXY_ENABLED } = deps;
 
-  async function serve(request: FastifyRequest, reply: FastifyReply, upstream: Upstream | null): Promise<void> {
+  async function serve(request: FastifyRequest, reply: FastifyReply, upstream: Upstream | null, video = false): Promise<void> {
     const userId = await authenticate(request);
     if (!userId) return sendError(reply, 401, 'unauthenticated', 'Não autenticado.');
     if (!upstream) return sendError(reply, 404, 'not_found', 'Imagem não encontrada.');
@@ -263,6 +330,7 @@ export function registerMediaProxyRoutes(app: FastifyInstance, deps: MediaProxyR
       if (!(error instanceof InvalidVariantError)) throw error;
       return sendError(reply, 400, 'invalid_variant', 'Variação de imagem inválida.');
     }
+    if (video && variant) return sendError(reply, 400, 'invalid_variant', 'Vídeos não têm variações.');
     if (!enabled) {
       // switched off: the browser goes to the service itself, as before the proxy
       reply.header('Cache-Control', `private, max-age=${REDIRECT_MAX_AGE_S}`);
@@ -270,7 +338,7 @@ export function registerMediaProxyRoutes(app: FastifyInstance, deps: MediaProxyR
     }
     let image: ProxiedImage;
     try {
-      image = await proxy.get(userId, upstream, variant);
+      image = await (video ? videos : proxy).get(userId, upstream, variant);
     } catch (error) {
       if (!(error instanceof MediaProxyError)) throw error;
       if (error.status === 429) reply.header('Retry-After', String(Math.max(1, Math.ceil(error.retryAfterMs / 1000))));
@@ -283,6 +351,21 @@ export function registerMediaProxyRoutes(app: FastifyInstance, deps: MediaProxyR
       .header('Cross-Origin-Resource-Policy', 'same-origin');
     const tags = String(request.headers['if-none-match'] || '').split(',').map((tag) => tag.trim().replace(/^W\//, ''));
     if (tags.includes(image.etag)) return reply.code(304).send();
+    if (video) {
+      reply.header('Accept-Ranges', 'bytes');
+      // a range asked for "if still this version" of another version gets the whole new one
+      const ifRange = request.headers['if-range'];
+      const range = ifRange && ifRange !== image.etag ? null : parseRange(request.headers.range, image.body.length);
+      if (range === 'unsatisfiable') {
+        reply.header('Content-Range', `bytes */${image.body.length}`);
+        return sendError(reply, 416, 'range_not_satisfiable', 'Intervalo inválido.');
+      }
+      if (range) {
+        const part = image.body.subarray(range.start, range.end + 1);
+        return reply.code(206).header('Content-Type', image.contentType).header('Content-Length', part.length)
+          .header('Content-Range', `bytes ${range.start}-${range.end}/${image.body.length}`).send(part);
+      }
+    }
     return reply.code(200).header('Content-Type', image.contentType).header('Content-Length', image.body.length).send(image.body);
   }
 
@@ -297,6 +380,6 @@ export function registerMediaProxyRoutes(app: FastifyInstance, deps: MediaProxyR
   app.get<{ Params: { kind: string; signature: string }; Querystring: { u?: unknown } }>(`${MEDIA_PROXY_PATH}/:kind/:signature`, (request, reply) => {
     const { kind, signature } = request.params;
     const url = verifiedTarget(kind, signature, request.query.u);
-    return serve(request, reply, url ? { url: url.href, redirects: kind === 'preview' ? PREVIEW_REDIRECTS : 0 } : null);
+    return serve(request, reply, url ? { url: url.href, redirects: kind === 'preview' ? PREVIEW_REDIRECTS : 0 } : null, VIDEO_KINDS.includes(kind));
   });
 }
