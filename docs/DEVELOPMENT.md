@@ -357,6 +357,8 @@ When you add state that lives in the process, add a row.
 
 Connections (Settings → Connections) are a URL or an account on MyAnimeList, GitHub, Steam or Twitch. They are self-declared, not verified. The profile shows the account handle when available, or Steam's public display name for a SteamID without a handle. A connection with "Show on profile" off stays in its owner's settings but leaves the profile and the Wall; its widgets come back when it is shown again.
 
+On the owner's Wall, hovering over a widget reveals its reorder and remove controls. Each game cover responds to hover independently.
+
 To develop the widgets locally:
 
 - GitHub needs no setup.

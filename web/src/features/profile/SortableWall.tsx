@@ -18,7 +18,7 @@ export interface SortableWidget { id: string; name: string; content: ReactNode }
 const verticalOnly: Modifier = ({ transform }) => ({ ...transform, x: 0 });
 
 // shown while the widget is hovered or a control has keyboard focus; always where there is no hover
-const REVEAL = 'pointer-events-none opacity-0 transition-opacity group-hover:pointer-events-auto group-hover:opacity-100 group-focus-within:pointer-events-auto group-focus-within:opacity-100 [@media(hover:none)]:pointer-events-auto [@media(hover:none)]:opacity-100';
+const REVEAL = 'pointer-events-none opacity-0 transition-opacity group-hover/widget:pointer-events-auto group-hover/widget:opacity-100 group-focus-within/widget:pointer-events-auto group-focus-within/widget:opacity-100 [@media(hover:none)]:pointer-events-auto [@media(hover:none)]:opacity-100';
 // touch-target: drawn at 28px, tapped at 44px; the column's gap keeps the two hit areas apart
 const FLOATING = 'touch-target relative flex size-7 items-center justify-center rounded-full border border-border-strong bg-bg-floating shadow-popover transition-colors focus-ring disabled:pointer-events-none disabled:opacity-50';
 
@@ -91,7 +91,7 @@ function Row({ widget, disabled, index, count, touch, takeDrop, onMove, onRemove
   });
   const style: CSSProperties = { transform: CSS.Translate.toString(transform), transition };
   return (
-    <div ref={setNodeRef} style={style} data-wall-widget className={cn('group relative w-full min-w-0', isDragging && 'z-10')}>
+    <div ref={setNodeRef} style={style} data-wall-widget className={cn('group/widget relative w-full min-w-0', isDragging && 'z-10')}>
       {/* the controls float over the card's top-left corner and take no room of their own */}
       <div className={cn('absolute top-3 -left-3 z-10 flex flex-col items-center gap-1.5 pointer-coarse:gap-4', isDragging ? 'opacity-100' : REVEAL)}>
         <button

@@ -139,6 +139,46 @@ test.describe('profile', () => {
     expect(wall.widgets[0]!.data.items[0]!.imageUrl).toBe('/api/media-proxy/igdb/cover_big/co1abc');
   });
 
+  test('Steam covers respond to hover individually while editing the Wall', async ({ users }) => {
+    const owner = await users.create('owner');
+    const { page } = await owner.app();
+    const imageUrl = '/e2e-fixture/steam-cover.gif';
+    const items = [['570', 'Dota 2'], ['440', 'Team Fortress 2']].map(([id, title]) => ({
+      id, title, imageUrl, minutes: 90, url: `https://store.steampowered.com/app/${id}/`,
+    }));
+    const widgets = ['steam-recent', 'steam-top'].map((type) => ({ connection: null, type, data: { kind: 'steam-games', items } }));
+    await page.route(`**${imageUrl}`, (route) => route.fulfill({ contentType: 'image/gif', body: threeFrameGif().buffer }));
+    // Supply the Steam snapshots through the Wall response so the test can run without a Steam account or key.
+    await page.route(/\/api\/me\/wall\?catalog=2$/, async (route) => {
+      const response = await route.fetch();
+      await route.fulfill({ response, json: { ...await response.json(), widgets, available: widgets } });
+    });
+
+    await page.goto('/app/profile');
+    await page.getByRole('button', { name: 'Meu perfil' }).filter({ hasText: 'Meu perfil' }).click();
+    await page.getByRole('tab', { name: 'Mural' }).click();
+
+    for (const name of ['Jogados recentemente (Steam)', 'Mais jogados entre os recentes (Steam)']) {
+      const heading = page.getByRole('heading', { name, exact: true });
+      const widget = page.getByRole('article').filter({ has: heading });
+      const dota = widget.getByRole('link', { name: 'Dota 2' });
+      const teamFortress = widget.getByRole('link', { name: 'Team Fortress 2' });
+
+      await heading.hover();
+      await expect(page.getByRole('button', { name: `Remover ${name}` })).toHaveCSS('pointer-events', 'auto');
+      await expect(dota.locator('img')).toHaveCSS('scale', 'none');
+      await expect(teamFortress.locator('img')).toHaveCSS('scale', 'none');
+
+      await dota.hover();
+      await expect(dota.locator('img')).toHaveCSS('scale', '1.05');
+      await expect(teamFortress.locator('img')).toHaveCSS('scale', 'none');
+
+      await teamFortress.hover();
+      await expect(teamFortress.locator('img')).toHaveCSS('scale', '1.05');
+      await expect(dota.locator('img')).toHaveCSS('scale', 'none');
+    }
+  });
+
   test('widgets are reordered by dragging the handle beside them, and removed with the button under it', async ({ users }) => {
     const alice = await users.create('alice');
     const saved = await alice.api.put('/api/me/wall', { data: { widgets: [
