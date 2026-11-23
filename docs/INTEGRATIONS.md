@@ -112,13 +112,13 @@ Both providers share one background worker ([`server/src/modules/connections/syn
 
 ## GitHub Releases
 
-Where the web app sends people for the desktop app: the announcement shown once per browser on a Windows computer, the only system the app ships for (`DesktopAppAnnouncement` in `web/src/features/desktopApp/`), and the download button of the Settings page **Baixar o app** (`DownloadsSettings` in `web/src/features/settings/`), which sits beside the web app (PWA) install. These are the same releases the installed apps update from ([DEPLOY.md](DEPLOY.md#updates-and-data)).
+Where the web app sends people for the desktop app: the column beside the login form (`DesktopAppPanel` in `web/src/features/auth/`, left out inside the desktop app itself), the announcement shown once per browser on a Windows computer, the only system the app ships for (`DesktopAppAnnouncement` in `web/src/features/desktopApp/`), and the download button of the Settings page **Baixar o app** (`DownloadsSettings` in `web/src/features/settings/`), which sits beside the web app (PWA) install. These are the same releases the installed apps update from ([DEPLOY.md](DEPLOY.md#updates-and-data)).
 
 - **Code:** [`server/src/modules/desktop/`](../server/src/modules/desktop).
-- **Request:** `GET /api/desktop/downloads` (signed-in users only) answers the latest release's version, page and Windows installer link, read from `GET https://api.github.com/repos/<DESKTOP_RELEASES_REPO>/releases/latest` without a token. Drafts and prereleases are skipped, and only a link into that repository's `releases/download/` is kept, picked by the installer's file name (`desktop/electron-builder.config.cjs`). A release without a Windows installer counts as none.
+- **Request:** `GET /api/desktop/downloads` (no session needed, since the login screen asks too) answers the latest release's version, page and Windows installer link, read from `GET https://api.github.com/repos/<DESKTOP_RELEASES_REPO>/releases/latest` without a token. Drafts and prereleases are skipped, and only a link into that repository's `releases/download/` is kept, picked by the installer's file name (`desktop/electron-builder.config.cjs`). A release without a Windows installer counts as none.
 - **Rate limit:** GitHub allows 60 unauthenticated requests per hour per server address. The answer is kept 15 minutes (a failure 1 minute, keeping the last good answer), and simultaneous requests share one.
 - **Configuration:** `DESKTOP_RELEASES_REPO=<owner>/<repo>`, the repository the desktop workflow publishes to (the same value it bakes in as `LINKORD_UPDATE_REPO`).
-- **When missing:** empty or malformed, the route answers `404`: the web app never announces the desktop app, and **Baixar o app** says the installer is not available, with a button to read it again. A GitHub outage does the same until the next good answer.
+- **When missing:** empty or malformed, the route answers `404`: the web app never announces the desktop app, the login form has no column beside it, and **Baixar o app** says the installer is not available, with a button to read it again. A GitHub outage does the same until the next good answer.
 - **Data sent:** nothing about anyone; the browser then downloads straight from GitHub, which sees its address.
 
 ## IGDB
