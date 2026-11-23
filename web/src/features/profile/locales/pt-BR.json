@@ -75,7 +75,6 @@
     "loading": "Carregando conexões…",
     "empty": "Você ainda não adicionou conexões.",
     "pending": "Aguardando a primeira sincronização…",
-    "ready": "Sincronizado",
     "editConnection": "Editar conexão {{name}}",
     "removeConnection": "Remover conexão {{name}}",
     "showOnProfile": "Exibir no perfil",
@@ -128,7 +127,6 @@
     "pending": "Os dados aparecerão após a primeira sincronização.",
     "noItems": "Nenhum item público disponível.",
     "stale": "A última sincronização falhou. Exibindo os últimos dados disponíveis.",
-    "updated": "Atualizado em {{date}}",
     "profileLink": "{{service}}, @{{user}}",
     "widgets": {
       "mal-recent-anime": "Atividade recente de animes",

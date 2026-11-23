@@ -3,6 +3,7 @@ import { TwitchPlayer } from '@/features/media/embedPlayers';
 import { useLanguage } from '@/shared/i18n/useLanguage';
 import { widgetDuration } from './widgetDuration';
 import { CoverLink } from './CoverLink';
+import { SteamMiniProfile } from './SteamMiniProfile';
 import type { WidgetData } from './connectionsTypes';
 
 type ServiceData = Extract<WidgetData, { kind: 'steam-games' | 'steam-profile' | 'twitch-live' | 'twitch-vods' }>;
@@ -23,7 +24,7 @@ export function ConnectionWidgetContent({ data }: { data: ServiceData }) {
   const { t } = useTranslation('profile');
   const language = useLanguage();
   const date = (value: string) => new Date(value).toLocaleDateString(language);
-  if ('items' in data && !data.items.length) return <p className="text-label text-text-muted">{t('wall.noItems')}</p>;
+  if ((data.kind === 'steam-games' || data.kind === 'twitch-vods') && !data.items.length) return <p className="text-label text-text-muted">{t('wall.noItems')}</p>;
   if (data.kind === 'steam-games') return (
     <ul className="grid grid-cols-2 gap-3 sm:grid-cols-4">
       {data.items.map((item) => (
@@ -35,17 +36,7 @@ export function ConnectionWidgetContent({ data }: { data: ServiceData }) {
       ))}
     </ul>
   );
-  if (data.kind === 'steam-profile') return (
-    <>
-      <AccountName name={data.name} avatarUrl={data.avatarUrl}>
-        {data.currentGame && <p className="truncate text-label text-text-muted">{t('wall.steam.playing', { game: data.currentGame })}</p>}
-      </AccountName>
-      <dl className="grid grid-cols-2 gap-2 text-center">
-        <div className="rounded-lg bg-bg-tertiary p-2"><dt className="text-caption text-text-muted">{t('wall.steam.level')}</dt><dd className="font-semibold">{data.level.toLocaleString(language)}</dd></div>
-        <div className="rounded-lg bg-bg-tertiary p-2"><dt className="text-caption text-text-muted">{t('wall.steam.owned')}</dt><dd className="font-semibold">{data.owned.toLocaleString(language)}</dd></div>
-      </dl>
-    </>
-  );
+  if (data.kind === 'steam-profile') return <SteamMiniProfile data={data} />;
   if (data.kind === 'twitch-vods') return (
     <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3">
       {data.items.map((item) => (

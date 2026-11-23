@@ -79,7 +79,8 @@ describe('ProfileEditor', () => {
     expect(screen.getAllByRole('tab').map((tab) => tab.textContent)).toEqual(['Mural', 'Atividade']);
     expect(screen.getByRole('heading', { name: 'Seus Widgets' })).toBeInTheDocument();
     expect(await screen.findByText('Membro desde')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Adicionar conexão' })).toBeInTheDocument();
+    // with no links yet, the section is there to offer the first one
+    expect(within(screen.getByRole('region', { name: 'Conexões' })).getByRole('button', { name: 'Adicionar conexão' })).toBeInTheDocument();
     expect(screen.queryByText('Lista de desejos')).not.toBeInTheDocument();
     expect(screen.queryByText('Conexões', { selector: 'section' })).not.toBeInTheDocument();
   });

@@ -146,10 +146,22 @@
   "activeNow": {
     "title": "Ativo agora",
     "emptyTitle": "Está tranquilo por enquanto…",
-    "emptyText": "Quando um amigo entrar em uma chamada de voz, ela aparece aqui.",
+    "emptyText": "Quando um amigo entrar em uma chamada de voz ou abrir um jogo, aparece aqui.",
     "names_one": "{{name}} e mais {{count}}",
     "names_other": "{{name}} e mais {{count}}",
-    "inChannel": "{{channel}} · {{server}}",
-    "inDirectCall": "Em uma chamada com você"
+    "inDirectCall": "Em uma chamada com você",
+    "directCall": "Chamada privada",
+    "voiceIn": "Chamada de voz em {{place}}",
+    "join": "Entrar",
+    "openCall": "Ver chamada",
+    "since": "{{name}} – {{time}}",
+    "duration": {
+      "now": "agora",
+      "minutes": "{{count}}m",
+      "hours": "{{count}}h",
+      "days": "{{count}}d"
+    },
+    "elapsed": "{{time}} decorridos",
+    "left": "{{time}} restantes"
   }
 }

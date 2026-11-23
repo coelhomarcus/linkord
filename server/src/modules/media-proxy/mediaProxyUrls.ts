@@ -1,3 +1,4 @@
+import { STEAM_ASSET_HOST } from '../../integrations/steam/steamAssets.js';
 import { STEAM_IMAGE_HOSTS } from '../../integrations/steam/steamWebApi.js';
 import { TWITCH_IMAGE_HOSTS } from '../../integrations/twitch/twitch.js';
 import crypto from 'node:crypto';
@@ -20,8 +21,12 @@ const SIGNED_KINDS = {
   steam: STEAM_IMAGE_HOSTS,
   twitch: TWITCH_IMAGE_HOSTS,
   preview: null,
+  // the loop of a Steam mini profile background, the one video the proxy serves
+  'steam-video': [STEAM_ASSET_HOST],
 } as const satisfies Record<string, readonly string[] | null>;
 export type SignedKind = keyof typeof SIGNED_KINDS;
+/** Kinds whose addresses are videos, served by the video side of the proxy. */
+export const VIDEO_KINDS: readonly string[] = ['steam-video'] satisfies SignedKind[];
 
 const COVER_SIZES: readonly CoverSize[] = ['cover_small', 'cover_big'];
 const YOUTUBE_ID = /^[A-Za-z0-9_-]{11}$/;
@@ -53,7 +58,7 @@ export function allowedTarget(kind: SignedKind, raw: string): URL | null {
   return url.protocol === 'https:' && (host as readonly string[]).includes(url.hostname) && !url.port ? url : null;
 }
 
-/** The proxied address of a picture the server is about to send, or null
+/** The proxied address of a picture (or, for a video kind, a video) the server is about to send, or null
  * when the URL is not one this kind may fetch (it is dropped rather than
  * handed to the browser as is). */
 export function proxiedImageUrl(kind: SignedKind, url: string | null | undefined): string | null {

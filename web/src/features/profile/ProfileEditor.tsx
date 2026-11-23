@@ -1,4 +1,3 @@
-import { PlusIcon } from '@/shared/ui/icons';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { ChangeEvent, FormEvent } from 'react';
 import type { Area } from 'react-easy-crop';
@@ -289,7 +288,7 @@ export function ProfileEditor({ status, customStatus, details, onClose, register
             hideLinks
             fieldsDisabled={saving}
             footer={(
-              <div className="mt-5 flex flex-col gap-4">
+              <div className="mt-5 flex flex-col gap-5">
                 {conflict && dirty && (
                   <div className="flex flex-col items-start gap-2 rounded-lg border border-border-strong bg-bg-tertiary px-3 py-2.5 text-label text-text-secondary">
                     <span>{t('editor.conflict')}</span>
@@ -301,7 +300,7 @@ export function ProfileEditor({ status, customStatus, details, onClose, register
                 {avatarError && <p role="alert" className="text-label text-red-text">{avatarError}</p>}
                 {bannerError && <p role="alert" className="text-label text-red-text">{bannerError}</p>}
                 {customStatusError && <p role="alert" className="text-label text-red-text">{customStatusError}</p>}
-                <dl className="flex flex-col gap-3">
+                <dl className="grid grid-cols-2 gap-3 empty:hidden">
                   {details.details && (
                     <div>
                       <dt className="text-caption font-medium text-text-muted">{t('modal.memberSince')}</dt>
@@ -309,18 +308,11 @@ export function ProfileEditor({ status, customStatus, details, onClose, register
                     </div>
                   )}
                 </dl>
-                <div className="flex flex-col gap-1.5">
-                  <h3 className="text-caption font-medium text-text-muted">{t('connections')}</h3>
-                  <ProfileConnections links={state.me.profileLinks} steamConnection={details.details?.steamConnection} hideHeading />
-                  <button
-                    type="button"
-                    onClick={() => leave(() => { navigate(ROUTES.settingsTab('connections')); onClose(); })}
-                    className="touch-target relative inline-flex w-fit items-center gap-1.5 rounded-md py-1 text-label text-text-secondary transition-colors hover:text-text-primary focus-ring"
-                  >
-                    <PlusIcon size={14} aria-hidden />
-                    {t('integration.addLink')}
-                  </button>
-                </div>
+                <ProfileConnections
+                  links={state.me.profileLinks}
+                  steamConnection={details.details?.steamConnection}
+                  onAdd={() => leave(() => { navigate(ROUTES.settingsTab('connections')); onClose(); })}
+                />
               </div>
             )}
           />

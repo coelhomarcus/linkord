@@ -19,30 +19,31 @@ describe('sharedIconKey', () => {
     assert.equal(sharedIconKey({ key: 'counter-strike-2', kind: 'playing', name: '  Counter-Strike   2 ' }), 'name:counter-strike 2');
   });
 
-  test('is null for an app, which has no game icon', () => {
-    assert.equal(sharedIconKey({ key: 'spotify', kind: 'using', name: 'Spotify' }), null);
+  test('is an app\'s own key, never the key of a game with its name', () => {
+    assert.equal(sharedIconKey({ key: 'obs-studio', kind: 'using', name: 'OBS Studio' }), 'app:obs studio');
   });
 });
 
 describe('withSharedIcons', () => {
-  test('replaces what each account reported with the game\'s own icon', async () => {
+  test('replaces what each account reported with the game\'s or app\'s own icon', async () => {
     const asked: string[][] = [];
     const items = [
       { key: 'minecraft', kind: 'playing', name: 'Minecraft', icon: icon('a') },
       { key: 'other-pc', kind: 'playing', name: 'Minecraft', icon: null },
       { key: 'spotify', kind: 'using', name: 'Spotify', icon: icon('b') },
       { key: 'terraria', kind: 'playing', name: 'Terraria', icon: icon('e') },
+      { key: 'obs-studio', kind: 'using', name: 'OBS Studio', icon: null },
     ];
-    const shown = await withSharedIcons(items, source({ 'name:minecraft': 'c'.repeat(64) }, asked));
-    assert.deepEqual(shown.map((item) => item.icon), [icon('c'), icon('c'), icon('b'), icon('e')]);
-    assert.deepEqual(asked, [['name:minecraft', 'name:terraria']]);
+    const shown = await withSharedIcons(items, source({ 'name:minecraft': 'c'.repeat(64), 'app:obs studio': 'f'.repeat(64) }, asked));
+    assert.deepEqual(shown.map((item) => item.icon), [icon('c'), icon('c'), icon('b'), icon('e'), icon('f')]);
+    assert.deepEqual(asked, [['name:minecraft', 'app:spotify', 'name:terraria', 'app:obs studio']]);
     // what needs no change is the same object
     assert.equal(shown[2], items[2]);
   });
 
-  test('asks nothing when there is no game', async () => {
+  test('asks nothing when there is nothing to ask for', async () => {
     const asked: string[][] = [];
-    await withSharedIcons([{ key: 'spotify', kind: 'using', name: 'Spotify', icon: null }], source({}, asked));
+    await withSharedIcons([], source({}, asked));
     assert.deepEqual(asked, []);
   });
 

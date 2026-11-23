@@ -61,20 +61,25 @@ export function pickByName<T extends { name: string }>(games: T[], name: string)
 }
 
 export interface ActivityGameQuery {
-  /** `steam:<app id>` or `name:<normalized name>`: the same game asked by anyone */
+  /** `steam:<app id>` or `name:<normalized name>` for a game, `app:<normalized name>` for an app: the
+   * same one asked by anyone, and an app never shares a game's answer when their names meet */
   key: string;
+  kind: 'playing' | 'using';
   steamAppId: number | null;
   /** the detected name, tidied, or '' */
   name: string;
 }
 
-/** What `GET /api/activity/game` asks for; throws a 400 for a request with neither an id nor a name. */
-export function parseActivityGameQuery(query: { steamAppId?: unknown; name?: unknown }): ActivityGameQuery {
-  const steamAppId = typeof query.steamAppId === 'string' && /^\d{1,10}$/.test(query.steamAppId) ? Number(query.steamAppId) : null;
+/** What `GET /api/activity/game` asks for; throws a 400 for a request with neither an id nor a name.
+ * An app (`kind: 'using'`) is asked by its name only. */
+export function parseActivityGameQuery(query: { steamAppId?: unknown; name?: unknown; kind?: unknown }): ActivityGameQuery {
+  const kind = query.kind === 'using' ? 'using' : 'playing';
+  const steamAppId = kind === 'playing' && typeof query.steamAppId === 'string' && /^\d{1,10}$/.test(query.steamAppId) ? Number(query.steamAppId) : null;
   const name = typeof query.name === 'string' ? query.name.replace(/\s+/g, ' ').trim().slice(0, 64) : '';
   const normalized = normalizeQuery(name);
   if (!steamAppId && !normalized) throw new ActivityGameError(400, 'invalid_request');
-  return { key: steamAppId ? `steam:${steamAppId}` : `name:${normalized}`, steamAppId, name };
+  const key = kind === 'using' ? `app:${normalized}` : steamAppId ? `steam:${steamAppId}` : `name:${normalized}`;
+  return { key, kind, steamAppId, name };
 }
 
 export function createActivityGameLookup(deps: {

@@ -1,10 +1,19 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { renderWithRoom } from '@tests/fixtures/roomContextFixture';
 import { ActivitySettings } from '@/features/activity/ActivitySettings';
+import * as activityApi from '@/features/activity/activityApi';
 import type { DesktopActivityApi, DesktopRunningActivities } from '@/shared/desktop';
+import { initialRoomState } from '@/state/roomReducer';
 
+vi.mock('@/features/activity/activityApi', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/features/activity/activityApi')>()),
+  fetchOwnActivityHistory: vi.fn(),
+}));
+const fetchOwnHistory = vi.mocked(activityApi.fetchOwnActivityHistory);
+
+beforeEach(() => { fetchOwnHistory.mockReset().mockResolvedValue({ items: [] }); });
 afterEach(() => { delete window.linkordDesktop; });
 
 function stubDesktop() {
@@ -101,6 +110,32 @@ describe('ActivitySettings', () => {
     expect(updateActivitySettings).toHaveBeenLastCalledWith({ hidden: ['spotify', 'minecraft'] });
     await user.click(screen.getByRole('button', { name: 'Mostrar Spotify' }));
     expect(updateActivitySettings).toHaveBeenLastCalledWith({ hidden: [] });
+  });
+
+  it('shows each game and app with its icon, and the kind glyph for one without', async () => {
+    stubDesktop();
+    const obsIcon = `/api/activity/icons/${'b'.repeat(64)}.webp`;
+    fetchOwnHistory.mockResolvedValue({
+      items: [
+        { key: 'spotify', kind: 'using', name: 'Spotify', icon: `/api/activity/icons/${'a'.repeat(64)}.webp`, lastPlayedAt: '2026-11-20T10:00:00Z' },
+        { key: 'obs-studio', kind: 'using', name: 'OBS Studio', icon: obsIcon, lastPlayedAt: '2026-11-19T10:00:00Z' },
+      ],
+    });
+    const { container } = renderWithRoom(<ActivitySettings />, {
+      state: { ...initialRoomState, me: { ...initialRoomState.me, userId: 'me' } },
+      activitySettings: { sharing: true, hidden: ['obs-studio'] },
+    });
+    const detected = await screen.findByRole('button', { name: 'Ocultar Spotify' });
+    const spotifyRow = detected.parentElement!;
+    await vi.waitFor(() => expect(spotifyRow.querySelector('img')).toHaveAttribute('src', `/api/activity/icons/${'a'.repeat(64)}.webp`));
+    expect(spotifyRow).toHaveTextContent('App');
+    // never seen on this computer, but hidden: named and drawn from the account's history
+    const obsRow = screen.getByRole('button', { name: 'Mostrar OBS Studio' }).parentElement!;
+    expect(obsRow.querySelector('img')).toHaveAttribute('src', obsIcon);
+    const minecraftRow = screen.getByRole('button', { name: 'Ocultar Minecraft' }).parentElement!;
+    expect(minecraftRow.querySelector('img')).toBeNull();
+    expect(minecraftRow).toHaveTextContent('Jogo');
+    expect(container.querySelectorAll('img')).toHaveLength(2);
   });
 
   it('says why hiding a game did not save, in the games section', async () => {

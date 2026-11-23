@@ -87,10 +87,11 @@ function richReport(rich: DesktopRichPresence, images: Record<string, string | n
   return Object.keys(report).length > 0 ? report : undefined;
 }
 
-/** The name and icon a detected activity shows with: a game's IGDB name and icon when the server finds
- * them, then the icon of its Discord application, the program's own icon otherwise. For a game the
- * program's icon also goes to the server as the reference it picks the game's icon by
- * (server/src/modules/activity/activityGameIcons.ts). A game known only by Discord takes its name from there. */
+/** The name and icon a detected activity shows with: the icon the server finds for the game or app
+ * (SteamGridDB, Steam) and a game's IGDB name, then the icon of its Discord application, the
+ * program's own icon otherwise. The program's icon also goes to the server as the reference it picks
+ * the icon by (server/src/modules/activity/activityGameIcons.ts). A game known only by Discord takes
+ * its name from there. */
 async function describe(activity: DesktopActivity, readIcon: () => Promise<string | null>): Promise<Pick<ActivityReport, 'name' | 'icon'>> {
   let name = activity.name;
   let icon: ActivityReport['icon'] = null;
@@ -98,11 +99,11 @@ async function describe(activity: DesktopActivity, readIcon: () => Promise<strin
   const programIcon = () => (program ??= storedProgramIcon(readIcon));
   const discord = activity.discordAppId ? await discordLookup(activity.discordAppId, richImages(activity.rich)) : null;
   name = name || discord?.name || '';
-  if (activity.kind === 'playing' && (name || activity.steamAppId)) {
-    const game = await lookupActivityGame({ steamAppId: activity.steamAppId, name, ref: await programIcon() }).catch(() => null);
-    if (game) {
-      name = name || game.name;
-      if (game.icon) icon = { local: game.icon };
+  if (name || (activity.kind === 'playing' && activity.steamAppId)) {
+    const found = await lookupActivityGame({ kind: activity.kind, steamAppId: activity.steamAppId, name, ref: await programIcon() }).catch(() => null);
+    if (found) {
+      name = name || found.name;
+      if (found.icon) icon = { local: found.icon };
     }
   }
   if (!icon && discord?.icon) icon = { local: discord.icon };

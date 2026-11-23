@@ -57,6 +57,10 @@
     "gamesDescription": "Um jogo ou app oculto nunca aparece para os outros, mesmo com o compartilhamento ligado.",
     "detected": "Detectados neste computador",
     "detectedEmpty": "Nenhum jogo ou app detectado ainda. Abra um com o Linkord aberto e ele aparece aqui.",
+    "kindLabel": {
+      "playing": "Jogo",
+      "using": "App"
+    },
     "hidden": "Ocultos",
     "hiddenEmpty": "Nada oculto.",
     "hide": "Ocultar",

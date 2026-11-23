@@ -29,10 +29,18 @@ export type WidgetData =
   | { kind: 'activity-recent'; items: ActivityHistoryItem[] }
   | { kind: 'activity-summary'; total: number; longestStreak: number; favorite: string | null }
   | { kind: 'steam-games'; items: Array<MediaItem & { minutes: number }> }
-  | { kind: 'steam-profile'; name: string; avatarUrl: string | null; level: number; owned: number; currentGame: string | null }
+  | { kind: 'steam-profile'; name: string; avatarUrl: string | null; level: number; owned: number; currentGame: string | null;
+      /** absent from a server or a snapshot older than the mini profile */
+      items?: SteamProfileItems }
   | { kind: 'twitch-live'; login: string; name: string; avatarUrl: string | null; lastStreamAt: string | null;
       stream: { title: string; game: string | null; viewers: number; imageUrl: string | null } | null; status: 'live' | 'offline' | 'unknown' }
   | { kind: 'twitch-vods'; items: Array<MediaItem & { createdAt: string; seconds: number }> };
+/** What the Steam profile has equipped from the Points Shop, as proxied addresses. */
+export interface SteamProfileItems {
+  background: { imageUrl: string | null; webmUrl: string | null; mp4Url: string | null } | null;
+  avatarFrameUrl: string | null;
+  animatedAvatarUrl: string | null;
+}
 /** Games and activity widgets have no connected account. */
 export interface WallSelection { connectionId: string | null; type: WidgetType; period?: ActivityPeriod }
 

@@ -87,3 +87,13 @@ describe('pickByName', () => {
     assert.equal(pickByName([], 'Hades'), null);
   });
 });
+
+describe('parseActivityGameQuery', () => {
+  test('keys a game by its Steam id or name, and an app by its name apart from games', () => {
+    assert.equal(parseActivityGameQuery({ steamAppId: '570', name: 'Dota 2' }).key, 'steam:570');
+    assert.equal(parseActivityGameQuery({ name: 'Unity' }).key, 'name:unity');
+    const app = parseActivityGameQuery({ steamAppId: '570', name: ' OBS  Studio ', kind: 'using' });
+    assert.deepEqual(app, { key: 'app:obs studio', kind: 'using', steamAppId: null, name: 'OBS Studio' });
+    assert.throws(() => parseActivityGameQuery({ name: ' ', kind: 'using' }), ActivityGameError);
+  });
+});

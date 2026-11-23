@@ -16,7 +16,7 @@ Every external service Linkord talks to: what it is for, who makes the call (our
 | [IGDB](#igdb) | Game search for the Wall; names of games someone is playing | Server (on demand) | `IGDB_CLIENT_ID`, `IGDB_CLIENT_SECRET` | No |
 | [Steam](#steam) | Public profile, recent games and playtime on the Wall | Server (on connect and in the background) | `STEAM_WEB_API_KEY` | No |
 | [Twitch](#twitch) | Live streams and recent VODs on the Wall | Server; browser for the player | `IGDB_CLIENT_ID`, `IGDB_CLIENT_SECRET` | No |
-| [SteamGridDB](#steamgriddb) (and Steam's CDN) | The square icon of a game someone is playing | Server (on demand; icons stored and served by us) | `STEAMGRIDDB_API_KEY` | No |
+| [SteamGridDB](#steamgriddb) (and Steam's CDN) | The square icon of a game or app someone is playing or using | Server (on demand; icons stored and served by us) | `STEAMGRIDDB_API_KEY` | No |
 | [Discord application API](#discord-application-api) | Name and pictures of a game reporting through Discord Rich Presence | Server (on demand, cached) | None | No |
 | [Link previews](#link-previews) | Cards for links pasted in chat | Server | None | Built in |
 | [oEmbed providers](#oembed) | Previews for YouTube, Vimeo, SoundCloud, Spotify, X, TikTok, Reddit | Server | None | Built in |
@@ -128,11 +128,12 @@ Game search for the four games widgets (favorite game, games I like, games in ro
 
 ## Steam
 
-The Wall shows the public Steam profile and its recent games. The recent widget shows playtime for the last two weeks. The most-played widget ranks those games by lifetime playtime. The connection accepts a vanity name, a SteamID64 or a profile URL, and stores the canonical profile URL.
+The Wall shows the public Steam profile, drawn like Steam's own mini profile, and its recent games. The recent widget shows playtime for the last two weeks. The most-played widget ranks those games by lifetime playtime. The connection accepts a vanity name, a SteamID64 or a profile URL, and stores the canonical profile URL.
 
-- **API** `ISteamUser` (`ResolveVanityURL`, `GetPlayerSummaries`) and `IPlayerService` (`GetOwnedGames`, `GetSteamLevel`) on `api.steampowered.com`. A signed-out request to the profile on `steamcommunity.com` supplies the game count, in-game status and eligible app IDs. The playtime request includes only the recent games for which that page shows playtime. Steam requires sign-in to view the full library page.
+- **API** `ISteamUser` (`ResolveVanityURL`, `GetPlayerSummaries`) and `IPlayerService` (`GetOwnedGames`, `GetSteamLevel`, `GetProfileItemsEquipped`) on `api.steampowered.com`. A signed-out request to the profile on `steamcommunity.com` supplies the game count, in-game status and eligible app IDs. The playtime request includes only the recent games for which that page shows playtime. Steam requires sign-in to view the full library page.
 - **Sync** Connecting checks the profile and its **Game details** are public. The [worker](#how-connection-syncing-works) checks again every 24 hours. If a refresh fails, the Wall hides the saved Steam widgets until the next successful refresh.
-- **Pictures:** covers and avatars through the media proxy, from an allowlist of Steam CDN hosts.
+- **Mini profile:** the Points Shop items the profile has equipped (`GetProfileItemsEquipped`): the mini profile background (a still picture and its WebM/MP4 loop), the avatar frame and the animated avatar, all files under `community_assets/images/items/` on `shared.fastly.steamstatic.com`. An item Steam describes in an unexpected way is left out, never the profile. Snapshots from before this feature show the plain avatar until their next refresh. Under reduced motion the loop gives way to its still picture and the animated avatar and frame to their first frame. Steam draws levels past 100 as other shapes; we keep the ring with its colours per ten.
+- **Pictures:** covers, avatars, frames and the background's still through the media proxy, from an allowlist of Steam CDN hosts; the background loop through its video side.
 - **Configuration:** a [Steam Web API key](https://steamcommunity.com/dev/apikey) in `STEAM_WEB_API_KEY`. It stays on the server.
 - **When missing:** the Steam connection option is hidden.
 
@@ -148,14 +149,14 @@ The channel with its game, title and viewer count when live (or the last stream'
 
 ## SteamGridDB
 
-Community artwork for the square icon shown with a game someone is playing: IGDB has only box art, and Steam's own icons are 32 px and cover only Steam games (`server/src/integrations/steamgriddb/steamgriddb.ts`, `server/src/modules/activity/activityGameIcons.ts`).
+Community artwork for the square icon shown with a game someone is playing or an app they are using: IGDB has only box art, Steam's own icons are 32 px and cover only what is on Steam, and the icon the desktop app reads from a program is 32 px and out of reach when the program runs as administrator (OBS Studio often does) (`server/src/integrations/steamgriddb/steamgriddb.ts`, `server/src/modules/activity/activityGameIcons.ts`).
 
-- **When:** `GET /api/activity/game` looks the icon up next to the IGDB name. The page first uploads the icon the desktop app read from the program and sends it as `ref`, a reference for picking among the community's icons.
-- **Choosing:** the game is found by Steam app id, else by exact name (the newest release among equal names). A Steam game uses Steam's own icon when it is 64 px or larger; otherwise the community icon closest to the reference (Steam's small icon, or the program's own for a game outside Steam) wins, falling back to the one marked official, then the first. Only safe-for-work, non-humor, non-epilepsy icons are requested.
-- **Stored:** re-encoded to a 96 px WebP in `UPLOAD_DIR/activity-icons/` and served by us; the choice is kept in `activity_game_icons` (30 days when found, a day when not). Which icon a game shows is always the server's, whatever a client reports. 20 misses per user per minute, past which the answer comes without an icon.
+- **When:** `GET /api/activity/game` looks the icon up next to the IGDB name; with `kind=using` (an app) it looks up only the icon and answers the name as sent. The page first uploads the icon the desktop app read from the program and sends it as `ref`, a reference for picking among the community's icons.
+- **Choosing:** the game is found by Steam app id, else by exact name (the newest release among equal names). An app is found as SteamGridDB files software, `<name> (Program)`, else by its exact name, and is kept under a key of its own (`app:<name>`) so it never takes a same-named game's icon. A Steam game uses Steam's own icon when it is 64 px or larger; otherwise the community icon closest to the reference (Steam's small icon, or the program's own for a game outside Steam) wins, falling back to the one marked official, then the first. Only safe-for-work, non-humor, non-epilepsy icons are requested.
+- **Stored:** re-encoded to a 96 px WebP in `UPLOAD_DIR/activity-icons/` and served by us; the choice is kept in `activity_game_icons` (30 days when found, a day when not). Which icon a game or app shows is always the server's when it found one, whatever a client reports; the program's own icon stands only for one it did not. 20 misses per user per minute, past which the answer comes without an icon.
 - **Configuration:** a key from <https://www.steamgriddb.com/profile/preferences/api> in `STEAMGRIDDB_API_KEY`, sent as a bearer token and never to the browser.
-- **When missing or failing:** a game shows the program's own icon, or a controller glyph.
-- **Data sent:** a game's Steam app id or name and the key to SteamGridDB; to Steam's CDN only the icon's address. Downloads go only to `cdn2.steamgriddb.com` and `shared.fastly.steamstatic.com`.
+- **When missing or failing:** a game or app shows the program's own icon, or a controller or window glyph.
+- **Data sent:** a game's Steam app id or name, or an app's name, and the key to SteamGridDB; to Steam's CDN only the icon's address. Downloads go only to `cdn2.steamgriddb.com` and `shared.fastly.steamstatic.com`.
 
 ## Discord application API
 
@@ -210,17 +211,18 @@ YouTube and Twitch links, and previews with a `player` on the allowlist (Vimeo, 
 
 ## Media proxy
 
-Serves the third-party pictures above from our own domain, `GET /api/media-proxy/...` (signed-in users only), so they show on networks that block those services and the services never see who is looking (`server/src/modules/media-proxy/`).
+Serves the third-party pictures above, and the loop behind a Steam mini profile, from our own domain, `GET /api/media-proxy/...` (signed-in users only), so they show on networks that block those services and the services never see who is looking (`server/src/modules/media-proxy/`).
 
-- **Never an open proxy.** A picture is either an id on a fixed host (`igdb/<size>/<image_id>` → `images.igdb.com`, `youtube/<video id>` → `i.ytimg.com`) or a URL the server already holds, signed with HMAC-SHA256 (`<mal|github|steam|twitch|preview>/<signature>?u=…`). Each kind reaches only its own hosts; `preview` reaches any public host a link preview found. Anything else is a 404 without a request. Stored data keeps the original URLs, rewritten as they are sent.
+- **Never an open proxy.** A picture is either an id on a fixed host (`igdb/<size>/<image_id>` → `images.igdb.com`, `youtube/<video id>` → `i.ytimg.com`) or a URL the server already holds, signed with HMAC-SHA256 (`<mal|github|steam|twitch|preview|steam-video>/<signature>?u=…`). Each kind reaches only its own hosts; `preview` reaches any public host a link preview found. Anything else is a 404 without a request. Stored data keeps the original URLs, rewritten as they are sent.
 - **Signing key:** made on first boot and kept in `instance_secrets`, so addresses survive a deploy. Nothing to configure.
 - **Safeguards:** `safeRequest`, no redirects on fixed hosts (3 for previews), 8 seconds, 5 MB. The upstream must say `image/*` and the bytes must be JPEG, PNG, GIF, WebP, AVIF or ICO. An SVG is never passed on: it is drawn into a PNG of at most 512 px.
 - **Variants:** `width` and `height` (16, 32, 64, 128, 256, 400, 640, 800, 1280 or 1920, mirrored in `web/src/shared/lib/mediaProxy.ts`), `format=webp`, `quality=high|low` and `animated=false` (first frame only). Made from the cached original, refused past 40 megapixels (`413 image_too_large`).
+- **Videos:** only the `steam-video` kind, from `shared.fastly.steamstatic.com`: up to 16 MB in 20 seconds, the upstream must say `video/*` and the bytes must be WebM or MP4. Read whole into a cache of its own (64 MB) and served by byte range (`Accept-Ranges`, `206`, `416 range_not_satisfiable`), as video players ask. No variants.
 - **Cache:** in memory, up to 64 MB for originals and variants, each up to 7 days; a failure is remembered 30 minutes. Browsers get `Cache-Control: private, max-age=604800`, an `ETag`, `nosniff` and `Cross-Origin-Resource-Policy: same-origin`.
 - **Rate limits:** cache misses and new variants only: 120 per minute per account, 1200 per minute for the server.
-- **Errors:** `404 not_found`, `400 invalid_variant`, `401 unauthenticated`, `415 not_an_image`, `413 image_too_large`, `502 image_unavailable`, `429 rate_limited`.
+- **Errors:** `404 not_found`, `400 invalid_variant`, `401 unauthenticated`, `415 not_an_image`, `413 image_too_large`, `502 image_unavailable`, `429 rate_limited`; for videos `415 not_a_video`, `413 video_too_large`, `502 video_unavailable` and `416 range_not_satisfiable`.
 - **Configuration:** `MEDIA_PROXY=0` stops fetching: the same addresses redirect to the original host, which then sees the viewer's IP, and the policy's `img-src` allows any `https:` host again.
-- **Not covered:** KLIPY GIFs (its terms), and direct video and audio links, which load from their own host after a click.
+- **Not covered:** KLIPY GIFs (its terms), and direct video and audio links in chat, which load from their own host after a click.
 
 ## Adding a new integration
 

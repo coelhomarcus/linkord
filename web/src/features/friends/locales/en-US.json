@@ -146,10 +146,22 @@
   "activeNow": {
     "title": "Active Now",
     "emptyTitle": "It's quiet for now…",
-    "emptyText": "When a friend joins a voice call, it shows up here.",
+    "emptyText": "When a friend joins a voice call or starts a game, it shows up here.",
     "names_one": "{{name}} and {{count}} other",
     "names_other": "{{name}} and {{count}} others",
-    "inChannel": "{{channel}} · {{server}}",
-    "inDirectCall": "In a call with you"
+    "inDirectCall": "In a call with you",
+    "directCall": "Private call",
+    "voiceIn": "Voice call in {{place}}",
+    "join": "Join",
+    "openCall": "View call",
+    "since": "{{name}} – {{time}}",
+    "duration": {
+      "now": "now",
+      "minutes": "{{count}}m",
+      "hours": "{{count}}h",
+      "days": "{{count}}d"
+    },
+    "elapsed": "{{time}} elapsed",
+    "left": "{{time}} left"
   }
 }

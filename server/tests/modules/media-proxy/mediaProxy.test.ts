@@ -6,7 +6,8 @@ import { after, before, describe, it } from 'node:test';
 import Fastify from 'fastify';
 import sharp from 'sharp';
 import {
-  createMediaProxy, fetchImage, MAX_IMAGE_BYTES, MediaProxyError, rasterizeSvg, registerMediaProxyRoutes, sniffImageType, USER_RULE, type ProxiedImage, type Upstream,
+  createMediaProxy, fetchImage, fetchVideo, MAX_IMAGE_BYTES, MAX_VIDEO_BYTES, MediaProxyError, parseRange, rasterizeSvg, registerMediaProxyRoutes, sniffImageType, sniffVideoType,
+  USER_RULE, type ProxiedImage, type Upstream,
 } from '../../../src/modules/media-proxy/mediaProxy.js';
 import { proxiedImageUrl, setMediaProxyKey } from '../../../src/modules/media-proxy/mediaProxyUrls.js';
 import { etagOf, parseVariant } from '../../../src/modules/media-proxy/mediaVariants.js';
@@ -38,6 +39,36 @@ describe('sniffImageType', () => {
     assert.equal(sniffImageType(Buffer.from('<svg xmlns="http://www.w3.org/2000/svg"><script>alert(1)</script></svg>')), null);
     assert.equal(sniffImageType(Buffer.from('<!doctype html><html></html>')), null);
     assert.equal(sniffImageType(Buffer.alloc(0)), null);
+  });
+});
+
+// the first bytes of each container, enough for the sniffing
+const WEBM = Buffer.concat([Buffer.from([0x1a, 0x45, 0xdf, 0xa3]), Buffer.from('webm loop bytes')]);
+const MP4 = Buffer.concat([Buffer.from([0, 0, 0, 0x18]), Buffer.from('ftypisom mp4 loop bytes')]);
+
+describe('sniffVideoType', () => {
+  it('recognizes WebM and MP4 by their bytes, and nothing else', async () => {
+    assert.equal(sniffVideoType(WEBM), 'video/webm');
+    assert.equal(sniffVideoType(MP4), 'video/mp4');
+    assert.equal(sniffVideoType(Buffer.concat([Buffer.from([0, 0, 0, 0x18]), Buffer.from('ftypavif')])), null, 'an AVIF picture');
+    assert.equal(sniffVideoType(await sharp({ create: { width: 2, height: 2, channels: 3, background: '#f80' } }).png().toBuffer()), null);
+    assert.equal(sniffVideoType(Buffer.from('<!doctype html>')), null);
+    assert.equal(sniffVideoType(Buffer.alloc(0)), null);
+  });
+});
+
+describe('parseRange', () => {
+  it('reads one byte range, clamped to the body', () => {
+    assert.deepEqual(parseRange('bytes=0-1', 10), { start: 0, end: 1 });
+    assert.deepEqual(parseRange('bytes=4-', 10), { start: 4, end: 9 });
+    assert.deepEqual(parseRange('bytes=4-99', 10), { start: 4, end: 9 });
+    assert.deepEqual(parseRange('bytes=-3', 10), { start: 7, end: 9 });
+    assert.deepEqual(parseRange('bytes=-30', 10), { start: 0, end: 9 });
+  });
+
+  it('serves the whole body for no range or one it may ignore, and refuses one past the end', () => {
+    for (const header of [undefined, '', 'bytes=-', 'items=0-1', 'bytes=0-1,4-5']) assert.equal(parseRange(header, 10), null, String(header));
+    for (const header of ['bytes=10-', 'bytes=5-4', 'bytes=-0']) assert.equal(parseRange(header, 10), 'unsatisfiable', header);
   });
 });
 
@@ -122,6 +153,43 @@ describe('fetchImage', () => {
     await assert.rejects(fetchImage({ url: `http://127.0.0.1:${port}/cover.png`, redirects: 0 }), failsWith('image_unavailable'));
     await assert.rejects(fetchImage({ url: `http://localhost:${port}/cover.png`, redirects: 0 }), failsWith('image_unavailable'));
     await assert.rejects(fetchImage({ url: 'http://169.254.169.254/latest/meta-data', redirects: 0 }), failsWith('image_unavailable'));
+  });
+});
+
+describe('fetchVideo', () => {
+  let server: http.Server;
+  let base: string;
+
+  before(async () => {
+    server = http.createServer((req, res) => {
+      if (req.url === '/loop.webm') { res.writeHead(200, { 'content-type': 'video/webm' }); res.end(WEBM); return; }
+      if (req.url === '/loop.mp4') { res.writeHead(200, { 'content-type': 'video/mp4' }); res.end(MP4); return; }
+      if (req.url === '/lying.webm') { res.writeHead(200, { 'content-type': 'video/webm' }); res.end('<html></html>'); return; }
+      if (req.url === '/picture') { res.writeHead(200, { 'content-type': 'image/png' }); res.end(WEBM); return; }
+      if (req.url === '/declared-huge') { res.writeHead(200, { 'content-type': 'video/webm', 'content-length': String(MAX_VIDEO_BYTES + 1) }); res.end(); return; }
+      res.writeHead(404); res.end();
+    });
+    await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
+    base = `http://localhost:${(server.address() as AddressInfo).port}`;
+  });
+  after(() => { server.closeAllConnections(); server.close(); });
+
+  it('reads a WebM or MP4 video, typed from its bytes', async () => {
+    const webm = await fetchVideo({ url: `${base}/loop.webm`, redirects: 0 }, allowLoopback);
+    assert.deepEqual([webm.body, webm.contentType], [WEBM, 'video/webm']);
+    assert.equal((await fetchVideo({ url: `${base}/loop.mp4`, redirects: 0 }, allowLoopback)).contentType, 'video/mp4');
+  });
+
+  it('refuses what is not a video, by header and by content, and one too large', async () => {
+    await assert.rejects(fetchVideo({ url: `${base}/picture`, redirects: 0 }, allowLoopback), failsWith('not_a_video'));
+    await assert.rejects(fetchVideo({ url: `${base}/lying.webm`, redirects: 0 }, allowLoopback), failsWith('not_a_video'));
+    await assert.rejects(fetchVideo({ url: `${base}/declared-huge`, redirects: 0 }, allowLoopback), failsWith('video_too_large'));
+    await assert.rejects(fetchVideo({ url: `${base}/missing.webm`, redirects: 0 }, allowLoopback), failsWith('video_unavailable'));
+  });
+
+  it('never reaches a private address (SSRF)', async () => {
+    const port = (server.address() as AddressInfo).port;
+    await assert.rejects(fetchVideo({ url: `http://127.0.0.1:${port}/loop.webm`, redirects: 0 }), failsWith('video_unavailable'));
   });
 });
 
@@ -326,6 +394,53 @@ describe('media proxy routes', () => {
       assert.equal(res.json().error.code, 'invalid_variant');
     }
     assert.equal(requested.length, before);
+  });
+
+  describe('videos', () => {
+    const loop: ProxiedImage = { body: WEBM, contentType: 'video/webm', etag: '"loop"' };
+    const videoUpstreams: Upstream[] = [];
+    let video: ReturnType<typeof Fastify>;
+    const url = () => proxiedImageUrl('steam-video', 'https://shared.fastly.steamstatic.com/community_assets/images/items/1/loop.webm')!;
+    const fetchVideoRoute = (headers: Record<string, string> = {}) => video.inject({ method: 'GET', url: url(), headers: { 'x-user': 'u-video', ...headers } });
+
+    before(async () => {
+      video = Fastify();
+      registerMediaProxyRoutes(video, {
+        authenticate: async (request) => (typeof request.headers['x-user'] === 'string' ? request.headers['x-user'] : null), enabled: true,
+        proxy: createMediaProxy({ fetch: async () => { throw new Error('a video is not a picture'); } }),
+        videos: createMediaProxy({ fetch: async (upstream) => { videoUpstreams.push(upstream); return loop; } }),
+      });
+      await video.ready();
+    });
+    after(() => video.close());
+
+    it('serves a signed Steam video whole, saying it takes ranges', async () => {
+      const res = await fetchVideoRoute();
+      assert.equal(res.statusCode, 200);
+      assert.equal(res.headers['content-type'], 'video/webm');
+      assert.equal(res.headers['accept-ranges'], 'bytes');
+      assert.equal(res.headers['x-content-type-options'], 'nosniff');
+      assert.deepEqual(res.rawPayload, WEBM);
+      assert.deepEqual(videoUpstreams.at(-1), { url: 'https://shared.fastly.steamstatic.com/community_assets/images/items/1/loop.webm', redirects: 0 });
+    });
+
+    it('serves the byte range a player asks for, and refuses one past the end', async () => {
+      const part = await fetchVideoRoute({ range: 'bytes=0-1' });
+      assert.equal(part.statusCode, 206);
+      assert.equal(part.headers['content-range'], `bytes 0-1/${WEBM.length}`);
+      assert.deepEqual(part.rawPayload, WEBM.subarray(0, 2));
+      const past = await fetchVideoRoute({ range: `bytes=${WEBM.length}-` });
+      assert.equal(past.statusCode, 416);
+      assert.equal(past.headers['content-range'], `bytes */${WEBM.length}`);
+      const stale = await fetchVideoRoute({ range: 'bytes=0-1', 'if-range': '"older"' });
+      assert.equal(stale.statusCode, 200, 'a range of another version gets the whole video');
+    });
+
+    it('has no variants, and reaches only Steam\'s asset host', async () => {
+      assert.equal((await video.inject({ method: 'GET', url: `${url()}&width=256`, headers: { 'x-user': 'u-video' } })).statusCode, 400);
+      assert.equal(proxiedImageUrl('steam-video', 'https://avatars.fastly.steamstatic.com/a.webm'), null);
+      assert.equal((await video.inject({ method: 'GET', url: url().replace('/steam-video/', '/steam/'), headers: { 'x-user': 'u-video' } })).statusCode, 404);
+    });
   });
 
   it('switched off, redirects to the service instead of fetching', async () => {

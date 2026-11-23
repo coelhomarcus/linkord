@@ -80,7 +80,7 @@ export function FriendsPage({ onOpenProfile }: { onOpenProfile: (userId: string)
         {view === 'pending' && <PendingRequestsView query={query} onQueryChange={setQuery} onOpenProfile={onOpenProfile} />}
         {view === 'add' && <AddFriendView />}
       </main>
-      {wide && <ActiveNowPanel />}
+      {wide && <ActiveNowPanel onOpenProfile={onOpenProfile} />}
       </div>
     </div>
   );

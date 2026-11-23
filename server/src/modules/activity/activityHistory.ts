@@ -67,6 +67,12 @@ export async function readActivityHistory(userId: string, limit = ACTIVITY_HISTO
   return { sharing: true, items };
 }
 
+/** Everything kept for the account with the icons others see, for its own activity settings, which
+ * list hidden games and apps too. */
+export async function readOwnActivityHistory(userId: string): Promise<ActivityHistoryItem[]> {
+  return withSharedIcons(await exportActivityHistory(userId));
+}
+
 /** Everything kept for the account, for its data export. */
 export async function exportActivityHistory(userId: string): Promise<ActivityHistoryItem[]> {
   const rows = await db.select().from(activityHistory).where(eq(activityHistory.userId, userId)).orderBy(desc(activityHistory.lastPlayedAt));

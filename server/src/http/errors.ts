@@ -57,6 +57,10 @@ export const ERROR_REGISTRY = {
   not_an_image: { statuses: [415], channel: 'http' },
   image_too_large: { statuses: [413], channel: 'http' },
   invalid_variant: { statuses: [400], channel: 'http' },
+  video_unavailable: { statuses: [502], channel: 'http' },
+  not_a_video: { statuses: [415], channel: 'http' },
+  video_too_large: { statuses: [413], channel: 'http' },
+  range_not_satisfiable: { statuses: [416], channel: 'http' },
 
   // auth and accounts
   invalid_credentials: { statuses: [401], channel: 'http' },

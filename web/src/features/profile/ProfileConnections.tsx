@@ -1,47 +1,100 @@
+import { useId } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { ArrowSquareOutIcon, PlusIcon } from '@/shared/ui/icons';
 import { BrandIcon, linkInfo, type LinkInfo } from './profileLinks';
 
+// The account a profile URL points at, per site: only paths that are a
+// person's page, so a link to a post or a video keeps the site's name instead.
 const accountPaths: Partial<Record<LinkInfo['kind'], RegExp>> = {
   github: /^\/([a-z\d][a-z\d-]{0,38})\/?$/i,
-  myanimelist: /^\/profile\/([a-z\d_-]+)\/?$/i,
-  steam: /^\/id\/([a-z\d_-]+)\/?$/i,
+  myanimelist: /^\/profile\/([\w-]+)\/?$/i,
+  steam: /^\/id\/([\w-]+)\/?$/i,
   twitch: /^\/([a-z\d_]+)\/?$/i,
+  twitter: /^\/([a-z\d_]{1,15})\/?$/i,
+  instagram: /^\/([\w.]+)\/?$/i,
+  youtube: /^\/(?:@|c\/|user\/)([\w.-]+)\/?$/i,
+  tiktok: /^\/@([\w.]+)\/?$/i,
+  threads: /^\/@([\w.]+)\/?$/i,
+  bluesky: /^\/profile\/([\w.-]+)\/?$/i,
+  reddit: /^\/(?:u|user)\/([\w-]+)\/?$/i,
+  kick: /^\/([\w-]+)\/?$/i,
+  linkedin: /^\/in\/([\w-]+)\/?$/i,
+  soundcloud: /^\/([\w-]+)\/?$/i,
+  pinterest: /^\/([\w-]+)\/?$/i,
+  behance: /^\/([\w-]+)\/?$/i,
+  dribbble: /^\/([\w-]+)\/?$/i,
+  telegram: /^\/([\w]+)\/?$/i,
 };
 
-/** The links a profile lists, one row each with the site's icon and account name.
- * Nothing at all when there are none. `hideHeading` is for a parent that
- * already titles the list (the profile editor, which also offers to add one). */
-export function ProfileConnections({ links, steamConnection, hideHeading = false }: {
+/** What a connection card says: the account (or the site) and, under it, where it lives. */
+function describe(link: LinkInfo, steamConnection?: { url: string; label: string }) {
+  const url = new URL(link.url);
+  const handle = accountPaths[link.kind]?.exec(url.pathname)?.[1];
+  const account = steamConnection?.url === link.url ? steamConnection.label : handle ? `@${handle}` : null;
+  if (account) return { account, title: account, detail: link.label };
+  const host = url.hostname.replace(/^www\./, '');
+  // a plain link already is its host; a site page with no account says which host
+  return { account: null, title: link.label, detail: host === link.label ? null : host };
+}
+
+const CARD = 'flex min-h-14 min-w-0 items-center gap-3 rounded-lg border px-3 py-2 transition-colors duration-100 focus-ring';
+
+/** The links a profile lists, one card each with the site's icon, the account
+ * and the site. Nothing at all when there are none, unless `onAdd` makes the
+ * owner's list, which ends with a card to add one. */
+export function ProfileConnections({ links, steamConnection, onAdd }: {
   links: string[];
   steamConnection?: { url: string; label: string };
-  hideHeading?: boolean;
+  onAdd?: () => void;
 }) {
   const { t } = useTranslation('profile');
+  const headingId = useId();
   const items = links.map(linkInfo).filter((item): item is LinkInfo => !!item);
-  if (items.length === 0) return null;
+  if (items.length === 0 && !onAdd) return null;
   return (
-    <section aria-label={hideHeading ? t('connections') : undefined} aria-labelledby={hideHeading ? undefined : 'profile-connections'}>
-      {hideHeading ? null : <h3 id="profile-connections" className="text-caption font-medium text-text-muted">{t('connections')}</h3>}
-      <ul className={hideHeading ? 'flex flex-col gap-0.5' : 'mt-1.5 flex flex-col gap-0.5'}>
+    <section aria-labelledby={headingId}>
+      <h3 id={headingId} className="text-caption font-medium text-text-muted">{t('connections')}</h3>
+      <ul className="mt-2 grid grid-cols-[repeat(auto-fill,minmax(10.5rem,1fr))] gap-2">
         {items.map((link) => {
-          const handle = accountPaths[link.kind]?.exec(new URL(link.url).pathname)?.[1];
-          const account = steamConnection?.url === link.url ? steamConnection.label : handle && `@${handle}`;
+          const { account, title, detail } = describe(link, steamConnection);
           return (
-            <li key={link.url}>
+            <li key={link.url} className="min-w-0">
               <a
                 href={link.url}
                 target="_blank"
                 rel="noreferrer"
                 aria-label={account ? t('card.openAccountLink', { name: account, service: link.label }) : t('card.openLink', { name: link.label })}
-                className="flex min-w-0 items-center gap-2 rounded-md py-1 text-caption text-text-secondary transition-colors hover:text-text-primary focus-ring"
+                className={`group ${CARD} border-border-subtle bg-bg-secondary hover:border-border-strong hover:bg-bg-hover`}
               >
-                <span aria-hidden className="flex shrink-0"><BrandIcon kind={link.kind} size={14} /></span>
-                <span className="min-w-0 truncate">{account || link.label}</span>
+                <span aria-hidden className="flex size-8 shrink-0 items-center justify-center rounded-md bg-bg-tertiary text-text-primary">
+                  <BrandIcon kind={link.kind} size={16} />
+                </span>
+                <span className="flex min-w-0 flex-1 flex-col">
+                  <span className="truncate text-label font-medium text-text-primary">{title}</span>
+                  {detail && <span className="truncate text-caption text-text-muted">{detail}</span>}
+                </span>
+                <ArrowSquareOutIcon
+                  aria-hidden
+                  size={14}
+                  className="shrink-0 text-text-muted opacity-0 transition-opacity duration-100 group-hover:opacity-100 group-focus-visible:opacity-100 [@media(hover:none)]:opacity-100"
+                />
               </a>
             </li>
           );
         })}
+        {onAdd && (
+          <li className="min-w-0">
+            <button
+              type="button"
+              onClick={onAdd}
+              className={`${CARD} w-full border-dashed border-border-strong text-text-muted hover:border-text-secondary hover:text-text-primary`}
+            >
+              <PlusIcon aria-hidden size={16} className="shrink-0" />
+              <span className="truncate text-label font-medium">{t('integration.addLink')}</span>
+            </button>
+          </li>
+        )}
       </ul>
     </section>
   );

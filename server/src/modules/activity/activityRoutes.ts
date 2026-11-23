@@ -14,7 +14,7 @@ import { postponeIgdb, reserveIgdbSlot } from '../games/igdbLimiter.js';
 import { requireSession } from '../servers/serverHttp.js';
 import { canViewProfile } from '../users/profileAccess.js';
 import { findById } from '../users/users.js';
-import { readActivityHistory } from './activityHistory.js';
+import { readActivityHistory, readOwnActivityHistory } from './activityHistory.js';
 import { createDiscordActivityHandler, createDiscordActivityLookup } from './activityDiscord.js';
 import { createActivityGameIconLookup } from './activityGameIcons.js';
 import { ActivityGameError, createActivityGameLookup, parseActivityGameQuery } from './activityGames.js';
@@ -46,12 +46,17 @@ const handleDiscord = createDiscordActivityHandler({
 });
 const ICON_RULE = { windowMs: 60_000, max: 10 };
 
-async function handleGame(request: FastifyRequest<{ Querystring: { steam?: string; name?: string; ref?: string } }>, reply: FastifyReply): Promise<void> {
+/** `GET /api/activity/game` — a detected game's IGDB name and its icon, or with `kind=using` an app's
+ * icon (its name answered as asked: IGDB knows games only). */
+async function handleGame(request: FastifyRequest<{ Querystring: { steam?: string; name?: string; ref?: string; kind?: string } }>, reply: FastifyReply): Promise<void> {
   const sess = await requireSession(request, reply);
   if (!sess) return;
   try {
-    const query = parseActivityGameQuery({ steamAppId: request.query.steam, name: request.query.name });
-    const [game, icon] = await Promise.all([lookup(sess.userId, query), lookupIcon(sess.userId, query, isActivityIconId(request.query.ref) ? request.query.ref : null)]);
+    const query = parseActivityGameQuery({ steamAppId: request.query.steam, name: request.query.name, kind: request.query.kind });
+    const [game, icon] = await Promise.all([
+      query.kind === 'using' ? { name: query.name, image: null } : lookup(sess.userId, query),
+      lookupIcon(sess.userId, query, isActivityIconId(request.query.ref) ? request.query.ref : null),
+    ]);
     sendJson(reply, 200, { ...game, icon });
   } catch (error) {
     if (!(error instanceof ActivityGameError)) throw error;
@@ -110,10 +115,19 @@ async function handleHistory(request: FastifyRequest<{ Params: { userId: string 
   sendJson(reply, 200, history);
 }
 
+/** `GET /api/activity/history` — the account's own history for its activity settings: every game and
+ * app kept, hidden ones too and while it does not share, each with its icon. */
+async function handleOwnHistory(request: FastifyRequest, reply: FastifyReply): Promise<void> {
+  const sess = await requireSession(request, reply);
+  if (!sess) return;
+  sendJson(reply, 200, { items: await readOwnActivityHistory(sess.userId) });
+}
+
 export function registerActivityRoutes(fastify: FastifyInstance): void {
   fastify.get('/api/activity/game', handleGame);
   fastify.post('/api/activity/discord', { bodyLimit: 8 * 1024 }, handleDiscord);
   fastify.get('/api/activity/icons/:file', handleIcon);
+  fastify.get('/api/activity/history', handleOwnHistory);
   fastify.get('/api/users/:userId/activity', handleHistory);
   // raw Buffer body, scoped so the wildcard parser doesn't reach the JSON routes
   fastify.register(async (scoped) => {
