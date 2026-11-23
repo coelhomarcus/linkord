@@ -93,7 +93,10 @@
       "missing": "Esta conexão já foi removida.",
       "rateLimited": "Aguarde um pouco antes de tentar novamente.",
       "failed": "Não foi possível salvar a conexão. Tente novamente.",
-      "load": "Não foi possível carregar as conexões."
+      "load": "Não foi possível carregar as conexões.",
+      "steamPrivate": "Deixe o perfil Steam e os detalhes de jogos públicos e tente novamente.",
+      "unknownProfile": "Perfil não encontrado. Confira o nome ou a URL do perfil e tente novamente.",
+      "providerUnavailable": "O serviço está indisponível no momento. Tente novamente mais tarde."
     },
     "syncErrors": {
       "not_found": "Usuário não encontrado no serviço.",
@@ -101,7 +104,9 @@
       "rate_limited": "Limite do serviço atingido. Uma nova tentativa será feita automaticamente.",
       "invalid_response": "O serviço retornou dados indisponíveis ou incompletos.",
       "unavailable": "Não foi possível sincronizar. Tentaremos novamente automaticamente."
-    }
+    },
+    "steamInput": "Nome personalizado, SteamID ou URL do perfil",
+    "steamHint": "Seu perfil Steam e os detalhes de jogos precisam estar públicos. Esta conexão não verifica a titularidade da conta."
   },
   "wall": {
     "title": "Mural",
@@ -131,7 +136,16 @@
       "igdb-favorite-game": "Jogo favorito",
       "igdb-liked-games": "Jogos que eu gosto",
       "igdb-playing-games": "Jogos em rotação",
-      "igdb-wishlist-games": "Quero jogar"
+      "igdb-wishlist-games": "Quero jogar",
+      "activity-top": "Mais jogados",
+      "activity-calendar": "Calendário de atividade",
+      "activity-recent": "Jogando recentemente",
+      "activity-summary": "Resumo de atividade",
+      "steam-recent": "Jogados recentemente (Steam)",
+      "steam-top": "Mais jogados (Steam)",
+      "steam-profile": "Perfil Steam",
+      "twitch-live": "Twitch",
+      "twitch-vods": "Últimos VODs"
     },
     "widgetDescriptions": {
       "mal-recent-anime": "Os últimos animes que você assistiu",
@@ -140,7 +154,16 @@
       "igdb-favorite-game": "O jogo da sua vida, com a capa em destaque",
       "igdb-liked-games": "Jogos que você curte, em uma grade de capas",
       "igdb-playing-games": "O que você está jogando agora",
-      "igdb-wishlist-games": "Sua lista de desejos"
+      "igdb-wishlist-games": "Sua lista de desejos",
+      "activity-top": "Jogos e aplicativos por tempo de uso nos últimos 7 ou 30 dias",
+      "activity-calendar": "Tempo diário em jogos e aplicativos ao longo do último ano",
+      "activity-recent": "Os últimos jogos e aplicativos vistos no Linkord",
+      "activity-summary": "Tempo total, maior sequência de dias e jogo favorito",
+      "steam-recent": "Jogos usados na Steam nas últimas duas semanas, com tempo de jogo",
+      "steam-top": "Jogos da Steam por tempo total de jogo",
+      "steam-profile": "Avatar, nível e tamanho da biblioteca Steam",
+      "twitch-live": "Transmissão ao vivo, jogo e espectadores",
+      "twitch-vods": "As últimas transmissões arquivadas na Twitch"
     },
     "github": {
       "repositories": "Repositórios",
@@ -172,7 +195,10 @@
     "groups": {
       "igdb": "Jogos",
       "myanimelist": "Anime",
-      "github": "GitHub"
+      "github": "GitHub",
+      "activity": "Atividade",
+      "steam": "Steam",
+      "twitch": "Twitch"
     },
     "cancel": "Cancelar",
     "connectTitle": "Conecte sua conta do {{service}}",
@@ -194,7 +220,35 @@
     },
     "emptyOwnerTitle": "Seu Mural está vazio",
     "emptyVisitorTitle": "Nada no Mural ainda",
-    "connectAccounts": "Conectar contas"
+    "connectAccounts": "Conectar contas",
+    "activity": {
+      "empty": "Nenhuma atividade ainda",
+      "desktopOnly": "Só o aplicativo do Linkord para computador registra tempo de jogo e uso de aplicativos.",
+      "private": "Oculto no seu perfil enquanto o compartilhamento de atividade estiver desativado.",
+      "calendar": "Calendário de atividade",
+      "day": "{{date}}: {{duration}} de atividade",
+      "period": "Últimos {{count}} dias",
+      "periodLabel": "Período de {{name}}",
+      "underMinute": "Menos de 1 min",
+      "total": "Tempo total",
+      "streak": "Maior sequência",
+      "days_one": "{{count}} dia",
+      "days_other": "{{count}} dias",
+      "favorite": "Jogo favorito"
+    },
+    "steam": {
+      "level": "Nível Steam",
+      "owned": "Jogos na biblioteca",
+      "playing": "Jogava {{game}} na última sincronização"
+    },
+    "twitch": {
+      "live": "Ao vivo",
+      "offline": "Offline",
+      "unknown": "Status da transmissão indisponível",
+      "lastStream": "Última transmissão arquivada: {{date}}",
+      "viewers_one": "{{count}} espectador",
+      "viewers_other": "{{count}} espectadores"
+    }
   },
   "editor": {
     "fileTooLarge": "Arquivo muito grande (máximo {{max}}).",

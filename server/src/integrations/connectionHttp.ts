@@ -1,3 +1,5 @@
+import { requestSafe } from '../net/safeRequest.js';
+
 export class ConnectionFetchError extends Error {
   readonly code: string;
   readonly retryAfterMs: number;
@@ -58,3 +60,36 @@ export async function fetchConnectionJson(url: string, init: RequestInit = {}, f
   try { return JSON.parse(text) as unknown; }
   catch { throw new ConnectionFetchError('invalid_response'); }
 }
+
+/** JSON from a fixed HTTPS API that uses credentials. No redirects, capped body and total deadline. */
+export const fetchSafeConnectionJson: RequestJson = async (url, init) => {
+  try {
+    return await requestSafe<unknown>(url, 0, 'application/json', (res, _url, resolve, reject) => {
+      const chunks: Buffer[] = [];
+      let size = 0;
+      res.on('data', (chunk: Buffer) => {
+        size += chunk.length;
+        if (size > 8 * 1024 * 1024) res.destroy(new ConnectionFetchError('invalid_response'));
+        else chunks.push(chunk);
+      });
+      res.on('error', reject);
+      res.on('end', () => {
+        try { resolve(JSON.parse(Buffer.concat(chunks).toString('utf8'))); }
+        catch { reject(new ConnectionFetchError('invalid_response')); }
+      });
+    }, undefined, 8000, {
+      headers: Object.fromEntries(new Headers(init?.headers)),
+      method: init?.method,
+      signal: AbortSignal.timeout(8000),
+    });
+  } catch (error) {
+    if (error instanceof ConnectionFetchError) throw error;
+    const failure = error as { httpStatus?: number; retryAfter?: string; rateLimitReset?: string };
+    if (failure.httpStatus === 401) throw new ConnectionFetchError('unauthorized');
+    if (failure.httpStatus === 429) {
+      const delay = failure.retryAfter ? Number(failure.retryAfter) * 1000 : Number(failure.rateLimitReset) * 1000 - Date.now();
+      throw new ConnectionFetchError('rate_limited', Number.isFinite(delay) ? Math.max(0, delay) : 0);
+    }
+    throw new ConnectionFetchError('unavailable');
+  }
+};

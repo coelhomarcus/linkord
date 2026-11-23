@@ -42,7 +42,7 @@ export function YouTubePlayer({ embed, thumbnail, placeholder }: { embed: Detect
 
 /** A Twitch channel, VOD or clip: a button until played, then Twitch's iframe,
  * under the same one-player rule as YouTube. */
-export function TwitchPlayer({ embed }: { embed: DetectedEmbed }) {
+export function TwitchPlayer({ embed, thumbnail }: { embed: DetectedEmbed; thumbnail?: string | null }) {
   const { t } = useTranslation('media');
   const { active, play } = useActiveEmbed(useId());
 
@@ -56,12 +56,13 @@ export function TwitchPlayer({ embed }: { embed: DetectedEmbed }) {
       <button
         type="button"
         onClick={play}
-        className="flex aspect-video w-full items-center justify-center gap-2.5 bg-black/40 text-left transition-colors hover:bg-black/55 focus-ring"
+        className="relative isolate flex aspect-video w-full items-center justify-center gap-2.5 bg-black/40 px-2 text-left transition-colors hover:bg-black/55 focus-ring"
       >
+        {thumbnail && <img src={thumbnail} alt="" loading="lazy" className="absolute inset-0 -z-10 size-full object-cover brightness-50" />}
         <span className="flex h-12 w-12 flex-none items-center justify-center rounded-full bg-[#9146FF] text-white">
           <PlayIcon size={18} fill="currentColor" />
         </span>
-        <span className="text-label text-text-secondary">{label}: {t('embed.loadPlayer')}</span>
+        <span className={cn('text-label', thumbnail ? 'text-white' : 'text-text-secondary')}>{label}: {t('embed.loadPlayer')}</span>
       </button>
     );
   }

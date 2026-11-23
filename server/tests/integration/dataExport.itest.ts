@@ -11,6 +11,7 @@ import { config } from '../../src/config/env.js';
 import {
   adminAuditLogs, attachments, conversationMembers, conversations, dataExports, friendships, messages, serverMemberRoles, serverRoles, userBlocks, users,
 } from '../../src/db/schema.js';
+import { databaseActivitySessionStore } from '../../src/modules/activity/activitySessions.js';
 import { createApp } from '../../src/http/app.js';
 import { createSession } from '../../src/modules/auth/session.js';
 import { deleteUserAccount } from '../../src/modules/admin/adminUsers.js';
@@ -163,6 +164,13 @@ describe('the export', () => {
     await db.insert(messages).values({ conversationId: owned.textChannelId, authorId: me.id, text: 'mensagem no canal' });
     await db.insert(messages).values({ conversationId: dm, authorId: friend.id, text: 'mensagem da outra pessoa' });
 
+    const startedAt = new Date('2026-11-01T14:00:00Z');
+    const endedAt = new Date('2026-11-01T15:00:00Z');
+    await databaseActivitySessionStore.write([{
+      id: crypto.randomUUID(), userId: me.id, key: 'minecraft', kind: 'playing', name: 'Minecraft',
+      icon: null, startedAt, lastSeenAt: endedAt, endedAt,
+    }]);
+
     assert.equal((await requestExport(me.cookie)).status, 202);
     await whenExportsIdle();
 
@@ -195,6 +203,8 @@ describe('the export', () => {
     assert.equal(account.profile.avatarFile, 'profile/avatar.jpeg');
     assert.deepEqual(entries.get('profile/avatar.jpeg'), avatarBytes);
     assert.equal(account.settings.language, 'pt-BR');
+    assert.deepEqual(account.settings.activity.sessions.map((session: { key: string; startedAt: string; endedAt: string }) =>
+      [session.key, session.startedAt, session.endedAt]), [['minecraft', startedAt.toISOString(), endedAt.toISOString()]]);
     const everything = [...entries.values()].map((b) => b.toString('latin1')).join('\n');
     assert.ok(!everything.includes('passwordHash') && !everything.includes('password_hash'), 'no password hash anywhere');
 

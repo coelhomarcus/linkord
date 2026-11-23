@@ -93,7 +93,10 @@
       "missing": "This connection has already been removed.",
       "rateLimited": "Wait a moment before trying again.",
       "failed": "Could not save the connection. Try again.",
-      "load": "Could not load connections."
+      "load": "Could not load connections.",
+      "steamPrivate": "Make your Steam profile and Game details public, then try again.",
+      "unknownProfile": "That profile was not found. Check the name or profile URL and try again.",
+      "providerUnavailable": "This service is unavailable right now. Try again later."
     },
     "syncErrors": {
       "not_found": "User not found on this service.",
@@ -101,7 +104,9 @@
       "rate_limited": "Service rate limit reached. We will retry automatically.",
       "invalid_response": "The service returned unavailable or incomplete data.",
       "unavailable": "Could not sync. We will retry automatically."
-    }
+    },
+    "steamInput": "Steam vanity name, ID or profile URL",
+    "steamHint": "Your Steam profile and Game details must be public. This connection does not verify account ownership."
   },
   "wall": {
     "title": "Wall",
@@ -131,7 +136,16 @@
       "igdb-favorite-game": "Favorite game",
       "igdb-liked-games": "Games I like",
       "igdb-playing-games": "Games in rotation",
-      "igdb-wishlist-games": "Want to play"
+      "igdb-wishlist-games": "Want to play",
+      "activity-top": "Most played",
+      "activity-calendar": "Activity calendar",
+      "activity-recent": "Recently played",
+      "activity-summary": "Activity summary",
+      "steam-recent": "Recently played (Steam)",
+      "steam-top": "Most played (Steam)",
+      "steam-profile": "Steam profile",
+      "twitch-live": "Twitch",
+      "twitch-vods": "Latest VODs"
     },
     "widgetDescriptions": {
       "mal-recent-anime": "The latest anime you watched",
@@ -140,7 +154,16 @@
       "igdb-favorite-game": "The game of your life, with its cover on show",
       "igdb-liked-games": "Games you enjoy, in a grid of covers",
       "igdb-playing-games": "What you are playing right now",
-      "igdb-wishlist-games": "Your wishlist"
+      "igdb-wishlist-games": "Your wishlist",
+      "activity-top": "Games and apps ranked by time over the last 7 or 30 days",
+      "activity-calendar": "Daily game and app time over the past year",
+      "activity-recent": "The latest games and apps seen on Linkord",
+      "activity-summary": "Total time, longest streak and favorite game",
+      "steam-recent": "Steam games played in the last two weeks, with playtime",
+      "steam-top": "Steam games ranked by total playtime",
+      "steam-profile": "Steam avatar, level and game library size",
+      "twitch-live": "Live stream, game and viewer count",
+      "twitch-vods": "The latest archived Twitch streams"
     },
     "github": {
       "repositories": "Repositories",
@@ -172,7 +195,10 @@
     "groups": {
       "igdb": "Games",
       "myanimelist": "Anime",
-      "github": "GitHub"
+      "github": "GitHub",
+      "activity": "Activity",
+      "steam": "Steam",
+      "twitch": "Twitch"
     },
     "cancel": "Cancel",
     "connectTitle": "Connect your {{service}} account",
@@ -194,7 +220,35 @@
     },
     "emptyOwnerTitle": "Your Wall is empty",
     "emptyVisitorTitle": "Nothing on the Wall yet",
-    "connectAccounts": "Connect accounts"
+    "connectAccounts": "Connect accounts",
+    "activity": {
+      "empty": "No activity yet",
+      "desktopOnly": "Only the Linkord desktop app records playtime and app activity.",
+      "private": "Hidden from your profile while activity sharing is off.",
+      "calendar": "Activity calendar",
+      "day": "{{date}}: {{duration}} of activity",
+      "period": "Last {{count}} days",
+      "periodLabel": "Period for {{name}}",
+      "underMinute": "Under 1 min",
+      "total": "Total time",
+      "streak": "Longest streak",
+      "days_one": "{{count}} day",
+      "days_other": "{{count}} days",
+      "favorite": "Favorite game"
+    },
+    "steam": {
+      "level": "Steam level",
+      "owned": "Games owned",
+      "playing": "Playing {{game}} at the last sync"
+    },
+    "twitch": {
+      "live": "Live",
+      "offline": "Offline",
+      "unknown": "Live status unavailable",
+      "lastStream": "Last archived stream: {{date}}",
+      "viewers_one": "{{count}} viewer",
+      "viewers_other": "{{count}} viewers"
+    }
   },
   "editor": {
     "fileTooLarge": "File too large (maximum {{max}}).",

@@ -602,3 +602,39 @@ describe('the Wall on a touch screen', () => {
     await waitFor(() => expect(mocked.saveWall).toHaveBeenCalledWith([{ connectionId: 'gh', type: 'github-profile' }]));
   });
 });
+
+describe('activity widgets', () => {
+  it('adds the most played widget, switches its period, and saves the selection', async () => {
+    const user = userEvent.setup();
+    const data: NonNullable<WallWidget['data']> = { kind: 'activity-top', items: [
+      { key: 'minecraft', kind: 'playing', name: 'Minecraft', icon: null, milliseconds: 7_200_000 },
+    ] };
+    const top: WallWidget = { connection: null, type: 'activity-top', period: 30, data, periods: {
+      30: data, 7: { kind: 'activity-top', items: [] },
+    } };
+    mocked.fetchWall.mockResolvedValue({ widgets: [], available: [top] });
+    mocked.saveWall.mockResolvedValue({ widgets: [{ ...top, period: 7, data: top.periods![7] }], available: [top] });
+    renderWall();
+
+    await user.click(await addWidgetButton());
+    const dialog = await screen.findByRole('dialog', { name: 'Adicionar widget de perfil' });
+    await user.click(within(dialog).getByRole('button', { name: 'Atividade' }));
+    await user.click(within(dialog).getByRole('button', { name: 'Mais jogados' }));
+    expect(screen.getByText('Minecraft')).toBeInTheDocument();
+    expect(screen.getByText('2 h')).toBeInTheDocument();
+
+    await user.selectOptions(screen.getByRole('combobox', { name: 'Período de Mais jogados' }), screen.getByRole('option', { name: 'Últimos 7 dias' }));
+    expect(screen.getByText('Nenhuma atividade ainda')).toBeInTheDocument();
+    expect(screen.getByText(/Só o aplicativo do Linkord para computador/)).toBeInTheDocument();
+    await user.click(within(saveBar()!).getByRole('button', { name: 'Salvar' }));
+    await waitFor(() => expect(mocked.saveWall).toHaveBeenCalledWith([{ connectionId: null, type: 'activity-top', period: 7 }]));
+  });
+
+  it('renders day and duration labels on the activity calendar', () => {
+    render(<WallWidgetCard accent="#3366ff" widget={{ type: 'activity-calendar', connection: null, data: {
+      kind: 'activity-calendar', total: 3_600_000, days: [{ date: '2026-11-23', count: 3_600_000, level: 3 }],
+    } }} />);
+    const calendar = screen.getByRole('group', { name: 'Calendário de atividade' });
+    expect(within(calendar).getByRole('img', { name: '23/11/2026: 1 h de atividade' })).toBeInTheDocument();
+  });
+});

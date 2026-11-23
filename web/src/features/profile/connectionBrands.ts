@@ -11,13 +11,14 @@ export interface ServiceBrand {
 export const SERVICE_BRANDS = {
   github: { kind: 'github', name: 'GitHub' },
   myanimelist: { kind: 'myanimelist', name: 'MyAnimeList' },
+  steam: { kind: 'steam', name: 'Steam' },
+  twitch: { kind: 'twitch', name: 'Twitch' },
   igdb: { kind: 'igdb', name: 'IGDB' },
 } as const satisfies Record<string, ServiceBrand>;
 
 /** The brand behind a synced connection. A plain link has no service mark. */
 export function connectionBrand(provider: ConnectionProvider): ServiceBrand | null {
-  if (provider === 'github' || provider === 'myanimelist') return SERVICE_BRANDS[provider];
-  return null;
+  return provider === 'url' ? null : SERVICE_BRANDS[provider];
 }
 
 /** The service a widget comes from: its connection's, or IGDB for the games widgets. */

@@ -7,14 +7,14 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { cn } from '@/shared/lib/utils';
 import { SERVICE_BRANDS } from './connectionBrands';
 import { describeConnectionError } from './connectionErrors';
-import { WIDGET_TYPES, type WallWidget, type WidgetType } from './connectionsTypes';
+import { connectionInputLength, isActivityWidget, WIDGET_TYPES, type ConnectionProvider, type WallWidget, type WidgetType } from './connectionsTypes';
 
-type Service = 'igdb' | 'myanimelist' | 'github';
-// the games widgets have no connection: they are IGDB's group
-const serviceOf = (widget: WallWidget): Service => (widget.connection?.provider as Service | undefined) ?? 'igdb';
-// every service is listed, connected or not: the window is where widgets of any kind are found
-const SERVICES: Service[] = ['igdb', 'myanimelist', 'github'];
-type AccountService = Exclude<Service, 'igdb'>;
+type AccountService = Exclude<ConnectionProvider, 'url'>;
+type Service = AccountService | 'igdb' | 'activity';
+const serviceOf = (widget: WallWidget): Service => {
+  const provider = widget.connection?.provider;
+  return provider && provider !== 'url' ? provider : isActivityWidget(widget.type) ? 'activity' : 'igdb';
+};
 
 const TILE = 'rounded-sm border border-border bg-bg-tertiary';
 const cells = (count: number) => Array.from({ length: count }, (_, i) => i);
@@ -35,7 +35,18 @@ function WidgetPreview({ type }: { type: WidgetType }) {
     return <div className="grid grid-cols-4 gap-1">{cells(8).map((i) => <div key={i} className={cn(TILE, 'aspect-[264/352]', i > 3 && type === 'igdb-wishlist-games' && 'border-dashed bg-transparent')} />)}</div>;
   }
   if (type === 'mal-recent-anime') return <div className="grid grid-cols-4 gap-1">{cells(8).map((i) => <div key={i} className={cn(TILE, 'aspect-[2/3]')} />)}</div>;
-  if (type === 'github-profile') {
+  if (type === 'activity-top' || type === 'activity-recent') {
+    return <div className="grid gap-1">{cells(3).map((i) => <div key={i} className="flex items-center gap-2">
+      <div className={cn(TILE, 'size-4')} /><div className="h-1.5 flex-1 rounded-full bg-border-strong" /><div className="h-1.5 w-5 rounded-full bg-fill-hover" />
+    </div>)}</div>;
+  }
+  if (type === 'steam-recent' || type === 'steam-top' || type === 'twitch-vods') {
+    return <div className="grid grid-cols-3 gap-1">{cells(6).map((i) => <div key={i} className={cn(TILE, 'aspect-video')} />)}</div>;
+  }
+  if (type === 'activity-summary') {
+    return <div className="grid grid-cols-3 gap-1">{cells(3).map((i) => <div key={i} className={cn(TILE, 'h-8')} />)}</div>;
+  }
+  if (type === 'github-profile' || type === 'steam-profile' || type === 'twitch-live') {
     return (
       <div className="flex flex-col gap-2">
         <div className="flex items-center gap-2"><div className="size-8 flex-none rounded-full bg-border-strong" /><div className="flex flex-col gap-1"><div className="h-2 w-14 rounded-full bg-border-strong" /><div className="h-2 w-9 rounded-full bg-fill-hover" /></div></div>
@@ -97,9 +108,10 @@ function ConnectAccount({ service, onConnect }: { service: AccountService; onCon
         <p className="text-body font-semibold text-text-primary">{t('wall.connectTitle', { service: name })}</p>
         <p className="mt-0.5 text-caption text-text-muted">{t('wall.connectHint', { service: name })}</p>
       </div>
-      <label htmlFor={inputId} className="text-label text-text-secondary">{t('integration.username')}</label>
+      <label htmlFor={inputId} className="text-label text-text-secondary">{t(service === 'steam' ? 'integration.steamInput' : 'integration.username')}</label>
+      {service === 'steam' && <p className="text-caption text-text-muted">{t('integration.steamHint')}</p>}
       <div className="flex gap-2">
-        <Input id={inputId} value={username} disabled={busy} autoComplete="off" spellCheck={false} maxLength={service === 'github' ? 39 : 16} onChange={(event) => setUsername(event.target.value)} />
+        <Input id={inputId} value={username} disabled={busy} autoComplete="off" spellCheck={false} maxLength={connectionInputLength[service]} onChange={(event) => setUsername(event.target.value)} />
         <Button type="submit" disabled={busy || !username.trim()}>{t(busy ? 'wall.connecting' : 'wall.connect')}</Button>
       </div>
       {error && <p role="alert" className="text-label text-red-text">{error}</p>}
@@ -107,8 +119,9 @@ function ConnectAccount({ service, onConnect }: { service: AccountService; onCon
   );
 }
 
-function Body({ available, added, onPick, onManage, onConnect }: {
+function Body({ available, providers, added, onPick, onManage, onConnect }: {
   available: WallWidget[];
+  providers?: ConnectionProvider[];
   added: (widget: WallWidget) => boolean;
   onPick: (widget: WallWidget) => void;
   onManage: () => void;
@@ -116,28 +129,34 @@ function Body({ available, added, onPick, onManage, onConnect }: {
 }) {
   const { t } = useTranslation('profile');
   const [current, setCurrent] = useState<Service>('igdb');
-  const offered = available.filter((widget) => serviceOf(widget) === current);
+  const services: Service[] = ['igdb'];
+  if (available.some((widget) => isActivityWidget(widget.type))) services.push('activity');
+  services.push('myanimelist', 'github');
+  if (providers?.includes('steam')) services.push('steam');
+  if (providers?.includes('twitch')) services.push('twitch');
+  const group = services.includes(current) ? current : 'igdb';
+  const offered = available.filter((widget) => serviceOf(widget) === group);
   return (
     <div className="grid min-h-0 grid-rows-[auto_minmax(0,1fr)] md:grid-cols-[13rem_minmax(0,1fr)] md:grid-rows-1">
       <nav aria-label={t('wall.categories')} className="flex gap-1 overflow-x-auto border-b border-border p-3 md:flex-col md:overflow-y-auto md:border-r md:border-b-0">
-        {SERVICES.map((service) => (
+        {services.map((service) => (
           <button
             key={service}
             type="button"
-            aria-current={service === current ? 'true' : undefined}
+            aria-current={service === group ? 'true' : undefined}
             onClick={() => setCurrent(service)}
-            className={cn('touch-target relative flex flex-none items-center rounded-md px-3 py-2 text-left text-label font-medium transition-colors hover:bg-fill-hover focus-ring', service === current ? 'bg-fill-hover text-text-primary' : 'text-text-secondary')}
+            className={cn('touch-target relative flex flex-none items-center rounded-md px-3 py-2 text-left text-label font-medium transition-colors hover:bg-fill-hover focus-ring', service === group ? 'bg-fill-hover text-text-primary' : 'text-text-secondary')}
           >
             {t(`wall.groups.${service}`)}
           </button>
         ))}
         <Button type="button" variant="ghost" size="sm" className="touch-target relative mt-auto flex-none justify-start" onClick={onManage}>{t('wall.manageConnections')}</Button>
       </nav>
-      <div role="region" aria-label={t(`wall.groups.${current}`)} className="flex min-h-0 flex-col gap-3 overflow-y-auto p-4">
-        {current !== 'igdb' && offered.length === 0
+      <div role="region" aria-label={t(`wall.groups.${group}`)} className="flex min-h-0 flex-col gap-3 overflow-y-auto p-4">
+        {group !== 'igdb' && group !== 'activity' && offered.length === 0
           ? <>
-            <ConnectAccount key={current} service={current} onConnect={onConnect} />
-            {WIDGET_TYPES[current].map((type) => <Option key={type} type={type} state="locked" />)}
+            <ConnectAccount key={group} service={group} onConnect={onConnect} />
+            {WIDGET_TYPES[group].map((type) => <Option key={type} type={type} state="locked" />)}
           </>
           : offered.map((widget) => (
             <Option key={`${widget.connection?.id ?? 'games'}:${widget.type}`} type={widget.type} state={added(widget) ? 'added' : 'available'} onPick={() => onPick(widget)} />
@@ -149,9 +168,10 @@ function Body({ available, added, onPick, onManage, onConnect }: {
 
 /** The catalog of widgets, in a window over the profile. Choosing one adds it to the Wall and closes the window.
  * Those already on the Wall stay listed, marked as added; a service with no account offers to connect one. */
-export function AddWidgetDialog({ open, available, added, onPick, onManage, onConnect, onOpenChange }: {
+export function AddWidgetDialog({ open, available, providers, added, onPick, onManage, onConnect, onOpenChange }: {
   open: boolean;
   available: WallWidget[];
+  providers?: ConnectionProvider[];
   added: (widget: WallWidget) => boolean;
   onPick: (widget: WallWidget) => void;
   onManage: () => void;
@@ -167,7 +187,7 @@ export function AddWidgetDialog({ open, available, added, onPick, onManage, onCo
           <DialogTitle className="text-title font-semibold text-text-primary">{t('wall.addWidgetTitle')}</DialogTitle>
           <DialogDescription className="sr-only">{t('wall.addWidgetHint')}</DialogDescription>
         </DialogHeader>
-        <Body available={available} added={added} onPick={onPick} onManage={onManage} onConnect={onConnect} />
+        <Body available={available} providers={providers} added={added} onPick={onPick} onManage={onManage} onConnect={onConnect} />
       </DialogContent>
     </Dialog>
   );

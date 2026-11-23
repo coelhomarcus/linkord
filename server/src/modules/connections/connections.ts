@@ -1,10 +1,17 @@
 import crypto from 'node:crypto';
-import { and, asc, eq, inArray, isNull, or } from 'drizzle-orm';
+import { and, asc, eq, inArray } from 'drizzle-orm';
 import { db } from '../../db/client.js';
 import { profileConnections, profileWallWidgets, users, type ProfileConnection } from '../../db/schema.js';
 import type { ErrorCode } from '../../http/errors.js';
-import { MAX_CONNECTIONS, parseConnection } from './policy.js';
-import { WIDGET_TYPES, type ConnectionWidgetType, type WallSelection, type WidgetData, type WidgetType } from './types.js';
+import { ConnectionFetchError } from '../../integrations/connectionHttp.js';
+import { fetchSteam } from '../../integrations/steam/steamWebApi.js';
+import { twitch } from '../../integrations/twitch/twitch.js';
+import { readActivityWidgets } from '../activity/activityWidgets.js';
+import { configuredProviders, isExternalGameProvider, MAX_CONNECTIONS, parseConnection, SYNC_INTERVAL_MS } from './policy.js';
+import {
+  ACTIVITY_WIDGET_TYPES, hasActivityPeriod, isActivityWidget, WIDGET_TYPES,
+  type ActivityPeriod, type ActivityWidgetType, type ConnectionSnapshot, type ConnectionWidgetType, type WallSelection, type WidgetData, type WidgetType,
+} from './types.js';
 import { parseGameLists, readGameLists, replaceGameLists } from '../games/gameLists.js';
 import { GAME_LISTS, GAME_WIDGET_TYPES, gameListOf } from '../games/types.js';
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
@@ -33,7 +40,7 @@ function connectionDto(row: ProfileConnection) {
 export async function listConnections(userId: string) {
   return db.select().from(profileConnections).where(eq(profileConnections.userId, userId)).orderBy(asc(profileConnections.position), asc(profileConnections.id));
 }
-export async function mutateConnection(userId: string, action: 'create' | 'edit' | 'delete', body: Record<string, unknown>, id?: string) {
+export async function mutateConnection(userId: string, action: 'create' | 'edit' | 'delete', body: Record<string, unknown>, id?: string, verified?: { snapshot: ConnectionSnapshot; url: string }) {
   return db.transaction(async (tx) => {
     // The account lock serializes the count limit, projection, and wall edits across instances.
     const [owner] = await tx.select({ id: users.id }).from(users).where(eq(users.id, userId)).for('update');
@@ -53,7 +60,12 @@ export async function mutateConnection(userId: string, action: 'create' | 'edit'
         await tx.update(profileConnections).set({ showOnProfile: body.showOnProfile as boolean }).where(eq(profileConnections.id, current.id));
         return project(tx, userId);
       }
-      const input = parseConnection(provider, body.value);
+      const parsed = parseConnection(provider, body.value);
+      const input = parsed && { ...parsed, url: verified?.url ?? parsed.url };
+      const syncedAt = verified ? new Date() : null;
+      const sync = { snapshot: verified?.snapshot ?? null, syncedAt, syncError: null,
+        nextSyncAt: syncedAt ? new Date(syncedAt.getTime() + SYNC_INTERVAL_MS) : new Date(),
+        attempts: 0, leaseToken: null, leaseUntil: null };
       if (!input) throw new ConnectionMutationError(400, 'invalid_connection');
       if (action === 'create' && rows.length >= MAX_CONNECTIONS) throw new ConnectionMutationError(409, 'quota_exceeded');
       if (rows.some((row) => row.id !== id && (row.url.toLowerCase() === input.url.toLowerCase() || (input.provider !== 'url' && row.provider === input.provider)))) {
@@ -61,14 +73,13 @@ export async function mutateConnection(userId: string, action: 'create' | 'edit'
       }
       if (current) {
         const visibility = typeof body.showOnProfile === 'boolean' ? { showOnProfile: body.showOnProfile } : {};
-        if (current.value !== input.value) {
-          await tx.update(profileConnections).set({ ...input, ...visibility, snapshot: null, syncedAt: null, syncError: null,
-            nextSyncAt: new Date(), attempts: 0, leaseToken: null, leaseUntil: null }).where(eq(profileConnections.id, current.id));
+        if (current.value !== input.value || current.url !== input.url || verified) {
+          await tx.update(profileConnections).set({ ...input, ...visibility, ...sync }).where(eq(profileConnections.id, current.id));
         } else if ('showOnProfile' in visibility) {
           await tx.update(profileConnections).set(visibility).where(eq(profileConnections.id, current.id));
         }
       } else {
-        await tx.insert(profileConnections).values({ id: crypto.randomUUID(), userId, ...input,
+        await tx.insert(profileConnections).values({ id: crypto.randomUUID(), userId, ...input, ...sync,
           showOnProfile: typeof body.showOnProfile === 'boolean' ? body.showOnProfile : true,
           position: Math.max(-1, ...rows.map((row) => row.position)) + 1 });
       }
@@ -91,26 +102,30 @@ async function project(tx: Tx, userId: string) {
 function publicLinks(rows: Pick<ProfileConnection, 'url' | 'showOnProfile'>[]): string[] {
   return rows.filter((row) => row.showOnProfile).map((row) => row.url);
 }
-// every widget a person can have, with room to spare: one per game list plus three per connection service
-const MAX_WALL_WIDGETS = 10;
-export async function saveWall(userId: string, input: unknown, gameInput?: unknown): Promise<void> {
+// One per widget type: four games, four activity and eight connection widgets.
+const MAX_WALL_WIDGETS = 16;
+const widgetKey = (connectionId: string | null, type: string) => `${connectionId ?? ''}:${type}`;
+
+function supportedWidget(type: string, extended: boolean) {
+  return extended || (!isActivityWidget(type) && !type.startsWith('steam-') && !type.startsWith('twitch-'));
+}
+
+export async function saveWall(userId: string, input: unknown, gameInput?: unknown, extended = true): Promise<void> {
   if (!Array.isArray(input) || input.length > MAX_WALL_WIDGETS) throw new ConnectionMutationError(400, 'invalid_wall');
   const lists = parseGameLists(gameInput);
   if (!lists) throw new ConnectionMutationError(400, 'invalid_wall');
   await db.transaction(async (tx) => {
     await tx.select({ id: users.id }).from(users).where(eq(users.id, userId)).for('update');
-    // a hidden connection's widgets are neither offered nor touched here, so
-    // showing it again brings them back where they were
-    const connections = (await tx.select().from(profileConnections).where(eq(profileConnections.userId, userId))).filter((row) => row.showOnProfile);
+    const connections = (await tx.select().from(profileConnections).where(eq(profileConnections.userId, userId)))
+      .filter((row) => row.showOnProfile && (extended || !isExternalGameProvider(row.provider)));
     const selected: WallSelection[] = [];
     const seen = new Set<string>();
     for (const value of input) {
       if (!value || typeof value !== 'object' || Array.isArray(value)) throw new ConnectionMutationError(400, 'invalid_wall');
-      const { connectionId, type } = value as Record<string, unknown>;
-      if (typeof type !== 'string') throw new ConnectionMutationError(400, 'invalid_wall');
+      const { connectionId, type, period } = value as Record<string, unknown>;
+      if (typeof type !== 'string' || !supportedWidget(type, extended)) throw new ConnectionMutationError(400, 'invalid_wall');
       let selection: WallSelection;
-      if (gameListOf(type)) {
-        // the games widgets have no connection
+      if (gameListOf(type) || isActivityWidget(type)) {
         if (connectionId !== null && connectionId !== undefined) throw new ConnectionMutationError(400, 'invalid_wall');
         selection = { connectionId: null, type: type as WidgetType };
       } else {
@@ -118,40 +133,90 @@ export async function saveWall(userId: string, input: unknown, gameInput?: unkno
         if (!row || !(WIDGET_TYPES[row.provider] as readonly string[]).includes(type)) throw new ConnectionMutationError(400, 'invalid_wall');
         selection = { connectionId: row.id, type: type as ConnectionWidgetType };
       }
-      const key = `${selection.connectionId ?? 'games'}:${type}`;
+      if (hasActivityPeriod(selection.type)) {
+        if (period !== undefined && period !== 7 && period !== 30) throw new ConnectionMutationError(400, 'invalid_wall');
+        selection.period = period ?? 30;
+      } else if (period !== undefined) throw new ConnectionMutationError(400, 'invalid_wall');
+
+      const key = widgetKey(selection.connectionId, type);
       if (seen.has(key)) throw new ConnectionMutationError(400, 'invalid_wall');
-      seen.add(key); selected.push(selection);
+      seen.add(key);
+      selected.push(selection);
     }
-    const visible = connections.map((row) => row.id);
-    await tx.delete(profileWallWidgets).where(and(eq(profileWallWidgets.userId, userId),
-      visible.length ? or(isNull(profileWallWidgets.connectionId), inArray(profileWallWidgets.connectionId, visible)) : isNull(profileWallWidgets.connectionId)));
-    if (selected.length) await tx.insert(profileWallWidgets).values(selected.map((value, position) => ({ id: crypto.randomUUID(), userId, ...value, position })));
-    // the picks are kept even for a list whose widget is off the Wall, so adding it back restores them
+    // Preserve invisible rows in their slots, including when a tab from before these widgets saves.
+    const rows = await tx.select().from(profileWallWidgets).where(eq(profileWallWidgets.userId, userId));
+    const editable = rows.filter((row) => supportedWidget(row.type, extended)
+      && (!row.connectionId || connections.some((connection) => connection.id === row.connectionId)));
+    const ids = editable.map((row) => row.id);
+    const preserved = new Set(rows.filter((row) => !ids.includes(row.id)).map((row) => row.position));
+    if (ids.length) await tx.delete(profileWallWidgets).where(inArray(profileWallWidgets.id, ids));
+    let position = 0;
+    if (selected.length) await tx.insert(profileWallWidgets).values(selected.map((value) => {
+      while (preserved.has(position)) position++;
+      return { id: crypto.randomUUID(), userId, ...value, position: position++ };
+    }));
     await replaceGameLists(tx, userId, lists);
   });
 }
-const proxiedWidget = (data: WidgetData | undefined) => (data ? withProxiedImages(data) : null);
-export async function readWall(userId: string, owner = false) {
+
+interface ConnectionView {
+  connection: ReturnType<typeof connectionDto> | null;
+  type: WidgetType;
+  data: WidgetData | null;
+  period?: ActivityPeriod;
+  periods?: Record<ActivityPeriod, WidgetData | null>;
+  hidden?: boolean;
+}
+
+export async function readWall(userId: string, owner = false, extended = true) {
   const selected = await db.select({ connection: profileConnections, widget: profileWallWidgets }).from(profileWallWidgets)
     .leftJoin(profileConnections, eq(profileWallWidgets.connectionId, profileConnections.id))
     .where(eq(profileWallWidgets.userId, userId)).orderBy(profileWallWidgets.position);
-  const games = await readGameLists(db, userId);
-  const view = (connection: ProfileConnection, type: ConnectionWidgetType) => ({
-    connection: connectionDto(connection), type, data: proxiedWidget(connection.snapshot?.widgets[type]),
+  const wanted = new Set<ActivityWidgetType>();
+  if (extended) {
+    if (owner) for (const type of ACTIVITY_WIDGET_TYPES) wanted.add(type);
+    else for (const { widget } of selected) if (isActivityWidget(widget.type)) wanted.add(widget.type);
+  }
+  const [games, activity] = await Promise.all([readGameLists(db, userId), wanted.size ? readActivityWidgets(userId, wanted) : null]);
+  const views = new Map<string, Promise<ConnectionView>>();
+  function view(connection: ProfileConnection, type: ConnectionWidgetType) {
+    const key = widgetKey(connection.id, type);
+    const cached = views.get(key);
+    if (cached) return cached;
+    const result = (async (): Promise<ConnectionView> => {
+      let data = connection.provider === 'steam' && connection.syncError === 'private' ? null : connection.snapshot?.widgets[type] ?? null;
+      if (data?.kind === 'twitch-live' && twitch.configured && selected.some(({ widget }) => widget.connectionId === connection.id && widget.type === type)) {
+        const stream = await twitch.live(data.login).catch(() => undefined);
+        if (stream !== undefined) data = { ...data, stream, status: stream ? 'live' : 'offline' };
+      }
+      return { connection: connectionDto(connection), type, data: data ? withProxiedImages(data) : null };
+    })();
+    views.set(key, result);
+    return result;
+  }
+  const gameView = (type: WidgetType): ConnectionView => ({ connection: null, type, data: { kind: 'games', items: games[gameListOf(type)!] } });
+  const activityView = (type: ActivityWidgetType, period: ActivityPeriod = 30): ConnectionView => ({
+    connection: null, type, data: activity?.widget(type, period) ?? null,
+    ...(!activity && { hidden: true }),
+    ...(hasActivityPeriod(type) && { period }),
+    ...(owner && hasActivityPeriod(type) && { periods: { 7: activity?.widget(type, 7) ?? null, 30: activity?.widget(type, 30) ?? null } }),
   });
-  const gameView = (type: WidgetType) => ({ connection: null, type, data: { kind: 'games' as const, items: games[gameListOf(type)!] } });
-  const widgets = selected.flatMap(({ connection, widget }): (ReturnType<typeof view> | ReturnType<typeof gameView>)[] => {
-    if (!connection) return [gameView(widget.type)];
-    return connection.showOnProfile ? [view(connection, widget.type as ConnectionWidgetType)] : [];
-  });
+  const widgets = (await Promise.all(selected.map(({ connection, widget }) => {
+    if (!supportedWidget(widget.type, extended)) return null;
+    if (connection) return connection.showOnProfile ? view(connection, widget.type as ConnectionWidgetType) : null;
+    if (isActivityWidget(widget.type)) return activity || owner ? activityView(widget.type, widget.period === 7 ? 7 : 30) : null;
+    return gameView(widget.type);
+  }))).filter((widget): widget is ConnectionView => widget !== null);
+
   if (!owner) return { widgets };
-  // the games widgets are always on offer: they need no account
+  const providers = configuredProviders(extended);
   const available = [
-    ...(await listConnections(userId)).filter((connection) => connection.showOnProfile)
-      .flatMap((connection) => WIDGET_TYPES[connection.provider].map((type) => view(connection, type))),
+    ...await Promise.all((await listConnections(userId)).filter((connection) => connection.showOnProfile && (extended || !isExternalGameProvider(connection.provider)))
+      .flatMap((connection) => WIDGET_TYPES[connection.provider].map((type) => view(connection, type)))),
     ...GAME_LISTS.map((list) => gameView(GAME_WIDGET_TYPES[list])),
+    ...[...wanted].map((type) => activityView(type)),
   ];
-  return { widgets, available };
+  return { widgets, available, providers };
 }
 
 const log = logger.child({ component: 'connections' });
@@ -160,23 +225,51 @@ async function session(request: FastifyRequest, reply: FastifyReply) {
   if (!result) sendError(reply, 401, 'unauthenticated', 'Não autenticado.');
   return result;
 }
+// Older tabs use the original catalog and can still edit it without replacing the new widgets.
+const extendedCatalog = (request: FastifyRequest) => (request.query as { catalog?: string }).catalog === '2';
+
+function connectionsResponse(rows: ReturnType<typeof connectionDto>[], extended: boolean) {
+  return { connections: extended ? rows : rows.filter((row) => !isExternalGameProvider(row.provider)), providers: configuredProviders(extended) };
+}
+
+async function verifyConnection(userId: string, body: Record<string, unknown>, id?: string) {
+  const current = id ? (await listConnections(userId)).find((row) => row.id === id) : null;
+  const provider = current?.provider ?? body.provider;
+  if (!isExternalGameProvider(provider) || body.value === undefined) return undefined;
+  const parsed = parseConnection(provider, body.value);
+  if (!parsed) throw new ConnectionMutationError(400, 'invalid_connection');
+  if (!configuredProviders(true).includes(provider)) throw new ConnectionMutationError(503, 'connection_provider_unavailable');
+  try {
+    return provider === 'steam' ? await fetchSteam(parsed.url, config.STEAM_WEB_API_KEY) : await twitch.profile(parsed.value);
+  } catch (error) {
+    if (error instanceof ConnectionFetchError) {
+      if (error.code === 'private' && provider === 'steam') throw new ConnectionMutationError(403, 'steam_profile_private');
+      if (error.code === 'not_found') throw new ConnectionMutationError(404, 'connection_profile_missing');
+      if (error.code === 'rate_limited') throw new ConnectionMutationError(429, 'rate_limited');
+    }
+    throw new ConnectionMutationError(503, 'connection_provider_unavailable');
+  }
+}
+
 export function registerConnectionRoutes(app: FastifyInstance): void {
   app.get('/api/me/connections', async (request, reply) => {
     const me = await session(request, reply); if (!me) return;
-    sendJson(reply, 200, { connections: (await listConnections(me.userId)).map(connectionDto) });
+    sendJson(reply, 200, connectionsResponse((await listConnections(me.userId)).map(connectionDto), extendedCatalog(request)));
   });
   const mutation = (action: 'create' | 'edit' | 'delete') => async (request: FastifyRequest<{ Params: { id?: string } }>, reply: FastifyReply) => {
     const me = await session(request, reply); if (!me) return;
     if (!allow(`connections:${me.userId}`, { windowMs: 60_000, max: 20 })) return sendError(reply, 429, 'rate_limited', 'Tente novamente em instantes.');
     const body = action === 'delete' ? {} : jsonBody(request.body);
     try {
-      const connections = await mutateConnection(me.userId, action, body, request.params.id);
+      const verified = action === 'delete' ? undefined : await verifyConnection(me.userId, body, request.params.id);
+      const connections = await mutateConnection(me.userId, action, body, request.params.id, verified);
       invalidateSessionsForUser(me.userId);
       publishProfileConnections(me.userId, publicLinks(connections));
-      sendJson(reply, action === 'create' ? 201 : 200, { connections });
+      sendJson(reply, action === 'create' ? 201 : 200, connectionsResponse(connections, extendedCatalog(request)));
       if (action !== 'delete') void syncConnections().catch((err) => log.error('failed to start connection sync', err));
     } catch (error) {
-      if (error instanceof ConnectionMutationError) return sendError(reply, error.status, error.code, 'Não foi possível alterar a conexão.');
+      if (error instanceof ConnectionMutationError) return sendError(reply, error.status, error.code, error.code === 'steam_profile_private'
+        ? 'O perfil Steam e os detalhes de jogos precisam estar públicos.' : 'Não foi possível alterar a conexão.');
       throw error;
     }
   };
@@ -184,15 +277,15 @@ export function registerConnectionRoutes(app: FastifyInstance): void {
   app.patch('/api/me/connections/:id', mutation('edit'));
   app.delete('/api/me/connections/:id', mutation('delete'));
   app.get('/api/me/wall', async (request, reply) => {
-    const me = await session(request, reply); if (me) sendJson(reply, 200, await readWall(me.userId, true));
+    const me = await session(request, reply); if (me) sendJson(reply, 200, await readWall(me.userId, true, extendedCatalog(request)));
   });
   app.put('/api/me/wall', async (request, reply) => {
     const me = await session(request, reply); if (!me) return;
     if (!allow(`wall:${me.userId}`, { windowMs: 60_000, max: 20 })) return sendError(reply, 429, 'rate_limited', 'Tente novamente em instantes.');
     try {
       const body = jsonBody(request.body);
-      await saveWall(me.userId, body.widgets, body.games);
-      sendJson(reply, 200, await readWall(me.userId, true));
+      await saveWall(me.userId, body.widgets, body.games, extendedCatalog(request));
+      sendJson(reply, 200, await readWall(me.userId, true, extendedCatalog(request)));
     } catch (error) {
       if (error instanceof ConnectionMutationError) return sendError(reply, error.status, error.code, 'Seleção de widgets inválida.');
       throw error;
@@ -202,6 +295,6 @@ export function registerConnectionRoutes(app: FastifyInstance): void {
     const me = await session(request, reply); if (!me) return;
     const target = await findById(request.params.userId);
     if (!target || !await canViewProfile(me.userId, me.role, target.id)) return sendError(reply, 404, 'user_not_found', 'Conta não encontrada.');
-    sendJson(reply, 200, await readWall(target.id));
+    sendJson(reply, 200, await readWall(target.id, false, extendedCatalog(request)));
   });
 }

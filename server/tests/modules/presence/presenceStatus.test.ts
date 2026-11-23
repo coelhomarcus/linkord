@@ -2,16 +2,18 @@ import { test, describe, afterEach, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import type { AppSocket, Participant } from '../../../src/types.js';
 import {
-  participants, join, removeParticipant, setCallConversationId, handlers as participantHandlers,
+  participants, join, handleClose, removeParticipant, setCallConversationId, handlers as participantHandlers,
   listVisibleOnlineUserIds, visiblePresenceOf, isUserVisiblyOnline,
 } from '../../../src/modules/presence/participants.js';
 import {
   handlers, loadAccountStatus, setAccountStatusStore, syncPresence, releaseAccountStatusIfUnused, databaseAccountStatusStore,
   loadActivitySettings, setActivitySettingsStore, databaseActivitySettingsStore,
   setActivityHistoryStore, activityHistoryWritten, setSharedIconSource,
+  setActivitySessionStore, activitySessionsWritten, checkpointActivitySessions,
   type AccountStatusStore, type ActivitySettingsStore,
 } from '../../../src/modules/presence/presenceStatus.js';
 import type { Activity, ActivitySettings } from '../../../src/modules/presence/activity.js';
+import { databaseActivitySessionStore, type ActivitySessionStore } from '../../../src/modules/activity/activitySessions.js';
 import { databaseActivityHistoryStore } from '../../../src/modules/activity/activityHistory.js';
 import { databaseSharedIconSource } from '../../../src/modules/activity/sharedGameIcons.js';
 import { getAccountStatus, hasAccountStatus, type AccountStatus } from '../../../src/modules/presence/userStatus.js';
@@ -74,11 +76,16 @@ let mem: ReturnType<typeof memoryStore>;
 /** What the activity history was told, in order. */
 let history: Array<{ userId: string; key: string; at: Date }>;
 let failHistory = false;
+type Session = Parameters<ActivitySessionStore['write']>[0][number];
+let sessions: Map<string, Session>;
 /** The games' shared icons, by game key, and a hold on the next lookup. */
 let sharedIcons: Map<string, string>;
 let holdSharedIcons: Promise<void> | null = null;
 
 beforeEach(() => {
+  const recorded = new Map<string, Session>();
+  sessions = recorded;
+  setActivitySessionStore({ async write(rows) { for (const row of rows) recorded.set(row.id, row); } });
   sharedIcons = new Map();
   holdSharedIcons = null;
   setSharedIconSource({
@@ -113,6 +120,7 @@ afterEach(() => {
   created = [];
   setAccountStatusStore(databaseAccountStatusStore);
   setActivityHistoryStore(databaseActivityHistoryStore);
+  setActivitySessionStore(databaseActivitySessionStore);
   setSharedIconSource(databaseSharedIconSource);
 });
 
@@ -467,6 +475,35 @@ describe('activity', () => {
     await report(a.socket, { ...minecraft, key: 'steam:570', name: 'Dota 2', icon: null });
     await activityHistoryWritten();
     assert.deepEqual(history, []);
+  });
+
+  test('one account has one visible session and sharing changes close it', async () => {
+    const alice = uid('alice');
+    const a = await connectWithSettings(alice);
+    const b = await connectWithSettings(alice);
+    await report(a.socket, minecraft);
+    await report(b.socket, { ...minecraft, name: 'Minecraft Java' });
+    checkpointActivitySessions();
+    await activitySessionsWritten();
+    assert.deepEqual([...sessions.values()].map(({ name, endedAt }) => ({ name, endedAt })), [{ name: 'Minecraft Java', endedAt: null }]);
+
+    await handlers['activity-settings-set']!(b.socket, { sharing: false });
+    await report(b.socket, { ...minecraft, key: 'steam:570' });
+    await activitySessionsWritten();
+    assert.equal(sessions.size, 1);
+    assert.ok([...sessions.values()][0]?.endedAt);
+  });
+
+  test('disconnect closes a session before the participant reconnect grace expires', async () => {
+    const alice = uid('alice');
+    const a = await connectWithSettings(alice);
+    await report(a.socket, minecraft);
+    handleClose(a.socket);
+    assert.ok(participants.has(a.p.id));
+    checkpointActivitySessions();
+    await activitySessionsWritten();
+    assert.equal(sessions.size, 1);
+    assert.ok([...sessions.values()][0]?.endedAt);
   });
 
   test('a failed history write leaves presence as it was', async () => {

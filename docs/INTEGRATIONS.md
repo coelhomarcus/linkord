@@ -14,6 +14,8 @@ Every external service Linkord talks to, what it is used for, who makes the call
 | [GitHub](#github) | Profile Wall widgets | Server (background worker; avatar through the [media proxy](#media-proxy)) | None | No |
 | [GitHub Releases](#github-releases) | The installer the web app links to when it announces the desktop app and on the Settings page **Baixar o app** | Server (on demand, cached) | `DESKTOP_RELEASES_REPO` | No |
 | [IGDB](#igdb) | Game search for the Wall's games widgets; the name of a game someone is playing | Server (on demand; covers through the [media proxy](#media-proxy)) | `IGDB_CLIENT_ID`, `IGDB_CLIENT_SECRET` | No |
+| [Steam](#steam) | Public profiles, recent Steam games and lifetime playtime on the Wall | Server (on connect and in the background; images through the [media proxy](#media-proxy)) | `STEAM_WEB_API_KEY` | No |
+| [Twitch](#twitch) | Live streams and recent VODs on the Wall | Server (on connect, in the background and on Wall reads; images through the [media proxy](#media-proxy)); browser (player) | `IGDB_CLIENT_ID`, `IGDB_CLIENT_SECRET` | No |
 | [SteamGridDB](#steamgriddb) (and Steam's CDN) | The square icon of a game someone is playing ("Jogando Fortnite"): Steam's own icon, or the community's | Server (on demand; the icon is stored and served by us) | `STEAMGRIDDB_API_KEY` | No |
 | [Discord application API](#discord-application-api) (and Discord's CDN) | The name and Rich Presence images of a game that reports its activity through Discord Rich Presence | Server (on demand, cached; the images are stored and served by us) | None | No |
 | [Arbitrary websites](#link-previews) | Link preview cards | Server (pages, and their images through the [media proxy](#media-proxy)) | None | Built in |
@@ -108,7 +110,7 @@ Both providers share one background worker ([`server/src/modules/connections/syn
 - Each connection is refreshed every 24 hours. MyAnimeList requests are spaced at least 1.1 seconds apart through a shared PostgreSQL limiter.
 - A failed sync keeps the last complete snapshot. `not_found`, `private` and `invalid_response` wait for the next daily cycle; `rate_limited` and `unavailable` retry with exponential backoff (honoring `Retry-After` and `X-RateLimit-Reset`).
 - HTTP helper ([`server/src/integrations/connectionHttp.ts`](../server/src/integrations/connectionHttp.ts)): 10-second timeout, redirects are an error, response bodies are capped at 2 MB, and status codes map to the errors above (404 → `not_found`, 403 → `private` or `rate_limited`, 429 → `rate_limited`).
-- Connections are managed under Settings → Connections; the owner chooses which widgets appear on the Wall. The games widgets are the exception: they need no connection (see [IGDB](#igdb)). See "Profile connections and Wall" in [DEVELOPMENT.md](DEVELOPMENT.md#profile-connections-and-wall).
+- Connections are managed under Settings → Connections; the owner chooses which widgets appear on the Wall. Games picked with [IGDB](#igdb) and widgets based on Linkord activity are available without a connection. See "Profile connections and Wall" in [DEVELOPMENT.md](DEVELOPMENT.md#profile-connections-and-wall).
 
 ## GitHub Releases
 
@@ -125,8 +127,8 @@ Where the web app sends people for the desktop app: the column beside the login 
 
 Game search behind the four games widgets of the Wall (favorite game, games I like, games in rotation, want to play). Unlike MyAnimeList and GitHub there is **no connected account and no background sync**: the owner picks games by hand, and the server calls IGDB only while someone is searching.
 
-- **Code:** [`server/src/integrations/igdb/igdb.ts`](../server/src/integrations/igdb/igdb.ts) (client and token), [`server/src/modules/games/`](../server/src/modules/games) (search, limits, saved lists). The picker is `web/src/features/games/`.
-- **Auth:** IGDB signs in as a Twitch app. `POST https://id.twitch.tv/oauth2/token` with `grant_type=client_credentials` returns a token, which the server keeps in memory until a minute before it expires and replaces once when a request comes back 401. Simultaneous searches share one token request.
+- **Code:** [`server/src/integrations/igdb/igdb.ts`](../server/src/integrations/igdb/igdb.ts) (game client), [`server/src/modules/games/`](../server/src/modules/games) (search, limits, saved lists). The picker is `web/src/features/games/`.
+- **Auth:** IGDB shares the [Twitch app token](#twitch) in `integrations/twitch/appToken.ts`. Concurrent requests from IGDB and Twitch wait for the same issuance or renewal.
 - **Search:** `GET /api/games/search?q=` (signed-in users only) runs `POST https://api.igdb.com/v4/games` with `search "…"; fields name,slug,first_release_date,cover.image_id; where version_parent = null; limit 10;` (editions are left out). The query is escaped for Apicalypse. The browser never talks to IGDB and never sees the credentials.
 - **Rate limit:** IGDB allows about 4 requests per second per Client ID and answers 429 beyond that. Protections, in order:
   1. The text is normalized (lowercase, collapsed spaces, 2 to 64 characters); a shorter or longer one is a 400 without any request.
@@ -143,6 +145,24 @@ Game search behind the four games widgets of the Wall (favorite game, games I li
 - **When missing:** if either is empty, searching answers `games_unavailable` and the picker says so; the widgets stay available and games already saved still show. The server boots normally.
 - **Data sent:** only the search text typed (normalized), or a detected game's Steam app id or name, goes to IGDB, together with the app's credentials; nothing identifies the user. Covers are fetched by the server too, so IGDB never sees a viewer's IP.
 - **Terms:** IGDB is free for non-commercial use under the Twitch Developer Service Agreement; commercial use needs a partnership with IGDB. Each game cover on the Wall links to its page on igdb.com and the game picker credits IGDB as the source of the covers and data; the IGDB docs read so far ask for nothing more.
+
+## Steam
+
+The Steam profile, most played games and games played in the last two weeks are Wall widgets. The connection is self-declared. It accepts a vanity name, a SteamID64 or a Steam Community profile URL, and stores the resolved account's canonical profile URL.
+
+- **Setup:** get a [Steam Web API key](https://steamcommunity.com/dev/apikey) and set `STEAM_WEB_API_KEY` on the server. The new connection option appears when the key is set. The Steam profile and the **Game details** setting must be public.
+- **API:** `integrations/steam/steamWebApi.ts` uses `api.steampowered.com`. [ISteamUser](https://partner.steamgames.com/doc/webapi/isteamuser) supplies `ResolveVanityURL/v1` and `GetPlayerSummaries/v2`. [IPlayerService](https://partner.steamgames.com/doc/webapi/IPlayerService) supplies `GetOwnedGames/v1` with `include_appinfo=1`, `GetRecentlyPlayedGames/v1` and `GetSteamLevel/v1`.
+- **Sync:** linking validates visibility and fetches the first snapshot. The worker refreshes it every 24 hours. A failed sync keeps the previous snapshot and retries with backoff. When Steam reports a private profile or private game details, the Wall hides the saved data until a successful sync. Recent minutes and lifetime minutes are displayed separately.
+- **Network:** the server uses `net/safeRequest.ts` for API calls and serves game covers and profile avatars through the signed media proxy, with an allowlist of Steam CDN hosts. The key stays on the server.
+
+## Twitch
+
+The Twitch widget shows the channel, the current game, title and viewer count when live, or the last archived stream date when available offline. Recent VODs list up to six archives with thumbnails, titles, dates and durations. Clicking the live player loads Twitch in the Wall. The connection is a self-declared login.
+
+- **Setup:** create an application in the [Twitch Developer Console](https://dev.twitch.tv/console) and set `IGDB_CLIENT_ID` and `IGDB_CLIENT_SECRET`. The Twitch connection option appears when both values are set. Each process shares one client-credentials token between IGDB and Helix. It renews one minute before expiry or once after a 401.
+- **API:** `integrations/twitch/twitch.ts` uses [Helix](https://dev.twitch.tv/docs/api/reference/) at `api.twitch.tv/helix`. `GET /users?login=…` verifies the login, `GET /videos?user_id=…&type=archive&first=6` reads recent archives, and `GET /streams?user_login=…` reads live status. An empty stream list means offline.
+- **Sync:** linking reads the profile and VODs immediately, and the worker refreshes the snapshot every 24 hours. Walls with a live widget share a per-login 60-second cache for live status. A failed live lookup shows the status as unavailable and retries after a short pause.
+- **Network:** the Helix API and app-token requests use `net/safeRequest.ts`. Profile pictures and thumbnails are limited to Twitch's CDN hosts and use the signed media proxy. The player connects directly to Twitch after the viewer opens it.
 
 ## SteamGridDB
 
@@ -233,7 +253,7 @@ Serves the third-party pictures above from our own domain, `GET /api/media-proxy
 - **Never an open proxy.** A picture is named either by an id on a fixed host, or by a URL the server already holds, signed with HMAC-SHA256:
   - `/api/media-proxy/igdb/<cover_small|cover_big>/<image_id>` → `images.igdb.com`
   - `/api/media-proxy/youtube/<video id>` → `i.ytimg.com/vi/<id>/hqdefault.jpg`
-  - `/api/media-proxy/<mal|github|preview>/<signature>?u=<base64url URL>`, built by the server when it sends a Wall, a link preview or a Media tab page. `mal` only reaches `https://cdn.myanimelist.net`, `github` only `https://avatars.githubusercontent.com`, and `preview` any public http(s) host (the pictures the link preview found). Anything else is a 404 without a request.
+  - `/api/media-proxy/<mal|github|steam|twitch|preview>/<signature>?u=<base64url URL>`, built by the server when it sends a Wall, a link preview or a Media tab page. `mal` only reaches `https://cdn.myanimelist.net`, `github` only `https://avatars.githubusercontent.com`, `steam` and `twitch` only their respective CDN allowlists, and `preview` any public http(s) host (the pictures the link preview found). Anything else is a 404 without a request.
   - Stored data keeps the original URLs; they are rewritten as they are sent, so stored messages and snapshots do not depend on the key or on the proxy being on.
 - **Signing key:** made on first boot and kept in the `instance_secrets` table, so an address a tab already holds still opens after a deploy. Nothing to configure.
 - **Safeguards:** every request goes through `net/safeRequest.ts` (IP checked at connection time). No redirects on the fixed hosts, at most 3 for previews. 8-second timeout for the whole download. 5 MB cap (a larger `Content-Length` is refused before reading). The upstream must say `image/*` **and** the bytes must be JPEG, PNG, GIF, WebP, AVIF or ICO; the response's type comes from the bytes. An SVG is never passed on, since it is a document that could run script on our origin: it is drawn into a PNG of at most 512 px with sharp (1 MB and 3-second limits), and librsvg, given bytes with no base path, loads nothing the SVG references.

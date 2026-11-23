@@ -1,3 +1,5 @@
+import { STEAM_IMAGE_HOSTS } from '../../integrations/steam/steamWebApi.js';
+import { TWITCH_IMAGE_HOSTS } from '../../integrations/twitch/twitch.js';
 import crypto from 'node:crypto';
 import { igdbCoverUrl, isCoverImageId, type CoverSize } from '../../integrations/igdb/igdb.js';
 
@@ -13,10 +15,12 @@ export const MEDIA_PROXY_PATH = '/api/media-proxy';
 /** Signed kinds, each with the host its URLs must be on (null: any public
  * host, for the pictures link previews found on arbitrary pages). */
 const SIGNED_KINDS = {
-  mal: 'cdn.myanimelist.net',
-  github: 'avatars.githubusercontent.com',
+  mal: ['cdn.myanimelist.net'],
+  github: ['avatars.githubusercontent.com'],
+  steam: STEAM_IMAGE_HOSTS,
+  twitch: TWITCH_IMAGE_HOSTS,
   preview: null,
-} as const satisfies Record<string, string | null>;
+} as const satisfies Record<string, readonly string[] | null>;
 export type SignedKind = keyof typeof SIGNED_KINDS;
 
 const COVER_SIZES: readonly CoverSize[] = ['cover_small', 'cover_big'];
@@ -46,7 +50,7 @@ export function allowedTarget(kind: SignedKind, raw: string): URL | null {
   if (url.username || url.password) return null;
   const host = SIGNED_KINDS[kind];
   if (host === null) return url.protocol === 'https:' || url.protocol === 'http:' ? url : null;
-  return url.protocol === 'https:' && url.hostname === host && !url.port ? url : null;
+  return url.protocol === 'https:' && (host as readonly string[]).includes(url.hostname) && !url.port ? url : null;
 }
 
 /** The proxied address of a picture the server is about to send, or null

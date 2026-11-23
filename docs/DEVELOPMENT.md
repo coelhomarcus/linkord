@@ -506,6 +506,7 @@ What lives in the memory (or on the local disk) of the process, and what a secon
 | Uploaded files and chunks | `./uploads` on the local disk | An instance cannot read what the other stored. The orphan sweep also compares one disk with one database | A shared volume or object storage |
 | Data export files | `EXPORT_DIR` (`modules/data-export/`) | The job claims queued exports with `skip locked`, but the ZIP lands on the disk of the instance that built it, and at boot each instance queues again every export marked as being built | A shared volume, and a lease on the `running` rows instead of the boot reset |
 | Presence status, automatic idle and custom status expiry | `modules/presence/userStatus.ts`, `presenceStatus.ts` | The chosen status is saved on the account, but the copy in memory, the per-connection idle flags and the expiry timer are per process: a change made on one instance is announced only to the sockets of that instance | Status changes broadcast to every instance, and the expiry owned by one of them |
+| Open activity sessions | `modules/activity/activitySessions.ts` | Each process tracks the visible activity it sees and startup closes interrupted rows using their checkpoints | Elect one activity recorder per account and give open rows an owner and lease |
 | Profile edit serialization | `modules/presence/profileQueue.ts` | Two tabs of one account on different instances can patch the profile out of order | A per-account database lock |
 | Embed backfill guard, retention and orphan sweep reports | `modules/messages/messageEmbeds.ts`, `modules/retention/`, `modules/attachments/orphanSweeper.ts` | A repeated backfill is wasted work; the admin page shows the report of whichever instance answered | Optional: an advisory lock, and reports stored in the database |
 
@@ -515,13 +516,14 @@ When you add state that lives in the process, add a row to the table above.
 
 ## Profile connections and Wall
 
-Connections (Settings → Connections) can be a URL, a MyAnimeList account or a GitHub account. They are self-declared: ownership is not verified. Each has a "Show on profile" switch (`show_on_profile`, on by default); turned off, the connection stays in the owner's settings but leaves the public links and the Wall, and its saved widgets come back when it is shown again. Only widgets the owner added and saved appear on their Wall.
+Connections (Settings → Connections) can be a URL or an account on MyAnimeList, GitHub, Steam or Twitch. They are self-declared: ownership is not verified. Each has a "Show on profile" switch (`show_on_profile`, on by default); turned off, the connection stays in the owner's settings but leaves the public links and the Wall, and its saved widgets come back when it is shown again. Only widgets the owner added and saved appear on their Wall.
 
 To develop the widgets locally:
 
 - GitHub needs no setup.
 - MyAnimeList needs `MAL_CLIENT_ID` (register an app at <https://myanimelist.net/apiconfig>); without it, MyAnimeList connections stay unavailable.
-- Syncing runs in the API process: a new connection is fetched within a minute, then every 24 hours. Viewing a profile only reads stored snapshots. Check the `connection-sync` logs when a widget stays empty.
+- Steam needs `STEAM_WEB_API_KEY`. Twitch uses the existing IGDB app credentials. See [Integrations](INTEGRATIONS.md) for both.
+- The API validates and fetches Steam and Twitch profiles on connect. MyAnimeList and GitHub first sync in the background. The worker refreshes snapshots every 24 hours. Twitch live widgets check their own short cache when a Wall is read. Check the `connection-sync` logs when a widget stays empty.
 
 ### Games widgets
 
@@ -532,6 +534,14 @@ The four games widgets (favorite game, games I like, games in rotation, want to 
 - `profile_wall_widgets.connection_id` is null for these widgets, so the table also carries `user_id`; the type decides which of the two a row has (a check constraint keeps them consistent).
 - `GET /api/games/search?q=` is the search proxy and shares `connection_sync_limits` (the `igdb` row) for its request pacing.
 - A tab still running a build from before the games widgets cannot draw one: opening the Wall of someone who added a games widget fails in that tab until it reloads.
+
+### Activity widgets
+
+The desktop app's visible reports drive these widgets without a connection. Presence records one active session per account, on the server's clock, and writes a checkpoint every 30 seconds. After an interrupted process, startup closes any open row at its last checkpoint. A new report starts a new session. Rows are pruned 400 days after their last observation, included in `account.json` under `settings.activity.sessions` on export while retained, and deleted with the account.
+
+The Wall uses rolling 7- or 30-day windows for rankings and summaries, UTC days on the 365-day calendar and the existing history for recent items. Current hidden keys are excluded from every calculation. Turning sharing off removes activity widgets from the published Wall and keeps their order and periods in the editor.
+
+API: add `?catalog=2` to the connections and Wall routes for the extended catalog. A saved activity widget has `connectionId: null`; rankings and summaries also accept `period: 7` or `period: 30`. Tabs using the original catalog keep editing their supported widgets without replacing the new ones.
 
 API: connections at `/api/me/connections` (`PATCH /api/me/connections/:id` with only `{ "showOnProfile": boolean }` changes the visibility), the Wall layout at `/api/me/wall`, and another user's Wall at `/api/users/:userId/wall`. `profileLinks` in profile payloads is a read-only list of the URLs shown on the profile.
 

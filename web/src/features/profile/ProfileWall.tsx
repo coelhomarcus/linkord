@@ -16,11 +16,11 @@ import { useResource } from '@/shared/lib/resourceCache';
 import { SortableWall } from './SortableWall';
 import { WallSkeleton } from './WallSkeleton';
 import { WallWidgetCard } from './WallWidgetCard';
-import type { WallSelection, WallWidget } from './connectionsTypes';
+import type { ActivityPeriod, WallSelection, WallWidget } from './connectionsTypes';
 
 const selectionKey = (value: WallSelection) => `${value.connectionId ?? 'games'}:${value.type}`;
 const widgetKey = (widget: WallWidget) => selectionKey({ connectionId: widget.connection?.id ?? null, type: widget.type });
-const selectionOf = (widget: WallWidget): WallSelection => ({ connectionId: widget.connection?.id ?? null, type: widget.type });
+const selectionOf = (widget: WallWidget): WallSelection => ({ connectionId: widget.connection?.id ?? null, type: widget.type, ...(widget.period && { period: widget.period }) });
 
 /** An unsaved change to the owner's Wall, as the profile editor sees it when the profile is about to close. */
 export interface WallDraft {
@@ -84,7 +84,9 @@ export function ProfileWall({ userId, owner, accent, onLeave, onDraftChange }: {
   };
   const widgets = owner ? selections.flatMap((selection) => {
     const widget = data?.available?.find((value) => widgetKey(value) === selectionKey(selection));
-    return widget ? [withDraftGames(widget)] : [];
+    if (!widget) return [];
+    if (selection.period && widget.periods) return [{ ...widget, period: selection.period, data: widget.periods[selection.period] }];
+    return [withDraftGames(widget)];
   }) : data?.widgets ?? [];
   const gamesOf = (list: GameList): GameItem[] => {
     const shown = widgets.find((widget) => gameListOf(widget.type) === list)?.data;
@@ -133,7 +135,10 @@ export function ProfileWall({ userId, owner, accent, onLeave, onDraftChange }: {
       onRemove: (position: number) => setGames(list, items.filter((_, i) => i !== position)),
       onMove: (position: number, direction: -1 | 1) => { const next = [...items]; [next[position], next[position + direction]] = [next[position + direction]!, next[position]!]; setGames(list, next); },
     } : undefined;
-    return { id: widgetKey(widget), name, content: <WallWidgetCard widget={widget} accent={accent} gameEditor={owner ? gameEditor : undefined} /> };
+    const changePeriod = (period: ActivityPeriod) => setDraft(selections.map((selection) =>
+      selectionKey(selection) === widgetKey(widget) ? { ...selection, period } : selection));
+    return { id: widgetKey(widget), name, content: <WallWidgetCard widget={widget} accent={accent} gameEditor={owner ? gameEditor : undefined}
+      onPeriodChange={owner && widget.periods && !saving ? changePeriod : undefined} /> };
   });
 
   const wallEmpty = !loading && !!data && widgets.length === 0;
@@ -185,6 +190,7 @@ export function ProfileWall({ userId, owner, accent, onLeave, onDraftChange }: {
       {owner && data && <AddWidgetDialog
         open={adding}
         available={data.available ?? []}
+        providers={data.providers}
         added={(widget) => selections.some((selection) => selectionKey(selection) === widgetKey(widget))}
         onPick={(widget) => { setDraft([...selections, selectionOf(widget)]); setAdding(false); }}
         onManage={() => { setAdding(false); onLeave(() => navigate(ROUTES.settingsTab('connections'))); }}

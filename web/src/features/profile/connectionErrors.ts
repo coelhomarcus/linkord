@@ -8,6 +8,9 @@ export function describeConnectionError(error: unknown): string {
       case 'invalid_connection': return i18n.t('profile:integration.errors.invalid');
       case 'connection_exists': return i18n.t('profile:integration.errors.duplicate');
       case 'quota_exceeded': return i18n.t('profile:integration.errors.limit');
+      case 'steam_profile_private': return i18n.t('profile:integration.errors.steamPrivate');
+      case 'connection_profile_missing': return i18n.t('profile:integration.errors.unknownProfile');
+      case 'connection_provider_unavailable': return i18n.t('profile:integration.errors.providerUnavailable');
       case 'connection_not_found': return i18n.t('profile:integration.errors.missing');
       case 'rate_limited': return i18n.t('profile:integration.errors.rateLimited');
     }

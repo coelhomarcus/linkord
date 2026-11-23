@@ -755,8 +755,10 @@ export function handleClose(socket: AppSocket): void {
   const p = participants.get(socket.participantId ?? '');
   if (!p || p.socket !== socket) return; // already replaced by a newer reconnect
   p.socket = null;
+  p.activity = null;
   const graceMs = p.callConversationId ? config.CALL_RECONNECT_GRACE_MS : config.RECONNECT_GRACE_MS;
   p.graceTimer = setTimeout(() => removeParticipant(p), graceMs);
+  onAccountConnectionsChanged?.(p.userId);
 }
 
 export const handlers: HandlerTable = {

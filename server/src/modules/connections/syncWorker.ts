@@ -1,9 +1,11 @@
 import crypto from 'node:crypto';
-import { and, eq, gt, isNull, lte, ne, notExists, or, sql } from 'drizzle-orm';
+import { and, eq, gt, inArray, isNull, lte, ne, notExists, or, sql } from 'drizzle-orm';
 import { config } from '../../config/env.js';
 import { db } from '../../db/client.js';
 import { connectionSyncLimits, profileConnections } from '../../db/schema.js';
-import { ConnectionFetchError, fetchConnectionJson, fetchConnectionText, type RequestJson, type RequestText } from '../../integrations/connectionHttp.js';
+import { ConnectionFetchError, fetchConnectionJson, fetchConnectionText, fetchSafeConnectionJson, type RequestJson, type RequestText } from '../../integrations/connectionHttp.js';
+import { fetchSteam } from '../../integrations/steam/steamWebApi.js';
+import { createTwitchClient, twitch } from '../../integrations/twitch/twitch.js';
 import { fetchGitHub } from '../../integrations/github/github.js';
 import { fetchMyAnimeList } from '../../integrations/myanimelist/myanimelist.js';
 import { logger } from '../../lib/logger.js';
@@ -20,10 +22,10 @@ async function reserveRequest(provider: string): Promise<void> {
     await pause(PROVIDER_REQUEST_INTERVAL_MS);
   }
 }
-async function claim(now: Date) {
+async function claim(now: Date, providers: Array<'myanimelist' | 'github' | 'steam' | 'twitch'>) {
   return db.transaction(async (tx) => {
     await tx.insert(connectionSyncLimits).values({ provider: 'github', nextRequestAt: new Date(0) }).onConflictDoNothing();
-    const [row] = await tx.select().from(profileConnections).where(and(ne(profileConnections.provider, 'url'),
+    const [row] = await tx.select().from(profileConnections).where(and(inArray(profileConnections.provider, providers),
       notExists(tx.select().from(connectionSyncLimits).where(and(eq(connectionSyncLimits.provider, profileConnections.provider),
         or(and(eq(connectionSyncLimits.provider, 'github'), gt(connectionSyncLimits.nextRequestAt, now)),
           and(ne(connectionSyncLimits.provider, 'github'), gt(connectionSyncLimits.nextRequestAt, new Date(now.getTime() + 5000))))))),
@@ -41,12 +43,17 @@ async function claim(now: Date) {
   });
 }
 let running = false;
-export async function syncConnections(options: { request?: RequestJson; requestText?: RequestText; now?: Date; malClientId?: string } = {}): Promise<void> {
+export async function syncConnections(options: { request?: RequestJson; requestText?: RequestText; now?: Date; malClientId?: string; steamKey?: string; twitchClient?: Pick<typeof twitch, 'profile' | 'configured'> } = {}): Promise<void> {
   if (running) return;
   running = true;
+  const steamKey = options.steamKey ?? config.STEAM_WEB_API_KEY;
+  const twitchClient = options.twitchClient ?? (options.request ? createTwitchClient({ request: options.request }) : twitch);
+  const providers: Array<'myanimelist' | 'github' | 'steam' | 'twitch'> = ['myanimelist', 'github'];
+  if (steamKey) providers.push('steam');
+  if (twitchClient.configured) providers.push('twitch');
   try {
     for (let count = 0; count < 20; count++) {
-      const row = await claim(options.now ?? new Date());
+      const row = await claim(options.now ?? new Date(), providers);
       if (!row) break;
       const guard = and(eq(profileConnections.id, row.id), eq(profileConnections.leaseToken, row.leaseToken));
       try {
@@ -63,9 +70,20 @@ export async function syncConnections(options: { request?: RequestJson; requestT
           await beforeRequest();
           return fetchConnectionText(url, init);
         });
-        const snapshot = row.provider === 'myanimelist'
-          ? await fetchMyAnimeList(row.value, request, options.malClientId ?? config.MAL_CLIENT_ID)
-          : await fetchGitHub(row.value, request, requestText);
+        let snapshot;
+        switch (row.provider) {
+          case 'myanimelist': snapshot = await fetchMyAnimeList(row.value, request, options.malClientId ?? config.MAL_CLIENT_ID); break;
+          case 'github': snapshot = await fetchGitHub(row.value, request, requestText); break;
+          case 'steam': snapshot = (await fetchSteam(row.url, steamKey, options.request ?? (async (url, init) => {
+            await beforeRequest();
+            return fetchSafeConnectionJson(url, init);
+          }))).snapshot; break;
+          case 'twitch':
+            await beforeRequest();
+            snapshot = (await twitchClient.profile(row.value)).snapshot;
+            break;
+          default: throw new ConnectionFetchError('invalid_response');
+        }
         const now = options.now ?? new Date();
         await db.update(profileConnections).set({ snapshot, syncedAt: now, syncError: null, attempts: 0,
           nextSyncAt: new Date(now.getTime() + SYNC_INTERVAL_MS), leaseToken: null, leaseUntil: null }).where(guard);
