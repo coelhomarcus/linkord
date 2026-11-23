@@ -54,9 +54,10 @@ export function ProfileConnections({ links, steamConnection, onAdd }: {
   const items = links.map(linkInfo).filter((item): item is LinkInfo => !!item);
   if (items.length === 0 && !onAdd) return null;
   return (
-    <section aria-labelledby={headingId}>
+    <section aria-labelledby={headingId} className="@container">
       <h3 id={headingId} className="text-caption font-medium text-text-muted">{t('connections')}</h3>
-      <ul className="mt-2 grid grid-cols-[repeat(auto-fill,minmax(10.5rem,1fr))] gap-2">
+      {/* one per row in the profile's narrow column, so a whole @name fits; two side by side only where each still has room */}
+      <ul className="mt-2 grid grid-cols-1 gap-2 @[28rem]:grid-cols-2">
         {items.map((link) => {
           const { account, title, detail } = describe(link, steamConnection);
           return (
