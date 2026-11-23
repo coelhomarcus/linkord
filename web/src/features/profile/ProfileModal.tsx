@@ -17,7 +17,7 @@ import type { ProfileTab } from './ProfileSidebar';
 import { formatProfileDate, useProfileDetails } from './useProfileDetails';
 import { useUserProfile } from './profileCache';
 import { Skeleton, SkeletonGroup } from '@/shared/ui/primitives/skeleton';
-import { BANNER_DISPLAY_ASPECT_RATIO } from './profileLinks';
+import { BANNER_ASPECT_RATIO } from './profileLinks';
 import { useCustomStatus, useUserStatus } from '@/features/status/statusDisplay';
 import { UserActivityCard } from '@/features/activity/ActivityLine';
 import { useLanguage } from '@/shared/i18n/useLanguage';
@@ -33,7 +33,7 @@ function ProfileSkeleton({ label }: { label: string }) {
   return (
     <SkeletonGroup label={label} className="min-h-0 md:grid md:grid-cols-[minmax(0,26rem)_minmax(0,1fr)]">
       <div className="md:border-r md:border-border">
-        <div style={{ aspectRatio: BANNER_DISPLAY_ASPECT_RATIO }}><Skeleton className="size-full rounded-none" /></div>
+        <div style={{ aspectRatio: BANNER_ASPECT_RATIO }}><Skeleton className="size-full rounded-none" /></div>
         <div className="px-6 pb-6">
           <div className="-mt-12 w-fit rounded-full bg-bg-modal p-1"><Skeleton shape="circle" className="size-[92px]" /></div>
           <Skeleton shape="text" className="mt-4 h-6 w-40" />

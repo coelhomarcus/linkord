@@ -5,7 +5,7 @@ import { Avatar } from '@/shared/Avatar';
 import { Button } from '@/shared/ui/primitives/button';
 import { Skeleton, SkeletonGroup } from '@/shared/ui/primitives/skeleton';
 import type { PublicUser } from '@/shared/types/protocol';
-import { BANNER_DISPLAY_ASPECT_RATIO, bannerStyle } from './profileLinks';
+import { BANNER_ASPECT_RATIO, bannerStyle } from './profileLinks';
 import type { ProfileTab } from './ProfileSidebar';
 import { formatProfileDate, useProfileDetails } from './useProfileDetails';
 import { ProfileMutuals } from './ProfileMutuals';
@@ -21,7 +21,7 @@ function DirectProfileSkeleton({ label }: { label: string }) {
   return (
     <SkeletonGroup label={label} className="flex min-h-0 flex-1 flex-col">
       <div className="min-h-0 flex-1">
-        <div style={{ aspectRatio: BANNER_DISPLAY_ASPECT_RATIO }}><Skeleton className="size-full rounded-none" /></div>
+        <div style={{ aspectRatio: BANNER_ASPECT_RATIO }}><Skeleton className="size-full rounded-none" /></div>
         <div className="relative px-4 pb-4">
           <span className="absolute -top-12 left-3 rounded-full border-[6px] border-bg-card bg-bg-card">
             <Skeleton shape="circle" className="size-20" />
@@ -65,7 +65,7 @@ export function DirectProfilePanel({ user, onOpenProfile }: { user: PublicUser; 
       {/* a failed read shows the panel without what it could not read, rather than a skeleton forever */}
       {status === 'loading' ? <DirectProfileSkeleton label={t('modal.loading')} /> : (<>
       <div className="min-h-0 flex-1 overflow-y-auto">
-      <div className="w-full flex-none" style={{ ...bannerStyle(user), aspectRatio: BANNER_DISPLAY_ASPECT_RATIO }} />
+      <div className="w-full flex-none" style={{ ...bannerStyle(user), aspectRatio: BANNER_ASPECT_RATIO }} />
       <div className="relative px-4 pb-4">
         <span className="absolute -top-12 left-3 rounded-full border-[6px] border-bg-card">
           <Avatar id={user.id} name={user.displayName} avatar={user.avatar} poster={user.avatarPoster} animateOnHover avatarColor={user.avatarColor} size={80} />
