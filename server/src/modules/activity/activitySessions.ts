@@ -6,7 +6,7 @@ import { logger } from '../../lib/logger.js';
 
 export const ACTIVITY_DAY_MS = 86_400_000;
 export const ACTIVITY_CHECKPOINT_MS = 30_000;
-export const ACTIVITY_RETENTION_DAYS = 400;
+const ACTIVITY_RETENTION_DAYS = 400;
 
 type Session = typeof activitySessions.$inferSelect;
 export interface ActivitySessionStore {
