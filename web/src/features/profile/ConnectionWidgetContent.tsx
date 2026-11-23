@@ -3,10 +3,9 @@ import { TwitchPlayer } from '@/features/media/embedPlayers';
 import { useLanguage } from '@/shared/i18n/useLanguage';
 import { widgetDuration } from './widgetDuration';
 import { CoverLink } from './CoverLink';
-import { SteamMiniProfile } from './SteamMiniProfile';
 import type { WidgetData } from './connectionsTypes';
 
-type ServiceData = Extract<WidgetData, { kind: 'steam-games' | 'steam-profile' | 'twitch-live' | 'twitch-vods' }>;
+type ServiceData = Extract<WidgetData, { kind: 'steam-games' | 'twitch-live' | 'twitch-vods' }>;
 
 function AccountName({ name, avatarUrl, children }: { name: string; avatarUrl: string | null; children?: React.ReactNode }) {
   return (
@@ -36,7 +35,6 @@ export function ConnectionWidgetContent({ data }: { data: ServiceData }) {
       ))}
     </ul>
   );
-  if (data.kind === 'steam-profile') return <SteamMiniProfile data={data} />;
   if (data.kind === 'twitch-vods') return (
     <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3">
       {data.items.map((item) => (

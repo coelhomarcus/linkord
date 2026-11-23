@@ -4,7 +4,8 @@ import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { Avatar } from '@/shared/Avatar';
-import { BANNER_DISPLAY_ASPECT_RATIO, BrandIcon, bannerStyle, linkInfo } from '@/features/profile/profileLinks';
+import { BANNER_ASPECT_RATIO, bannerStyle, linkInfo } from '@/features/profile/profileLinks';
+import { BrandLogo } from '@/features/profile/brandLogos';
 import type { LinkInfo } from '@/features/profile/profileLinks';
 import { MAX_DISPLAY_NAME_LEN } from '@/shared/lib/displayName';
 import { MAX_PROFILE_BIO_LEN } from '@/shared/types/protocol';
@@ -111,7 +112,7 @@ export function ProfileCard({
   return (
     <div className={cn('overflow-hidden bg-bg-modal', !bare && 'rounded-lg border border-border-strong', className)}>
       {onBannerUpload ? (
-        <div className="group relative w-full" style={{ ...bannerStyle(user), aspectRatio: BANNER_DISPLAY_ASPECT_RATIO }}>
+        <div className="group relative w-full" style={{ ...bannerStyle(user), aspectRatio: BANNER_ASPECT_RATIO }}>
           <DropdownMenu>
             <DropdownMenuTrigger
               disabled={bannerUploading}
@@ -150,10 +151,10 @@ export function ProfileCard({
           aria-hidden
           onClick={onOpenProfile}
           className="block w-full cursor-pointer"
-          style={{ ...bannerStyle(user), aspectRatio: BANNER_DISPLAY_ASPECT_RATIO }}
+          style={{ ...bannerStyle(user), aspectRatio: BANNER_ASPECT_RATIO }}
         />
       ) : (
-        <div className="w-full" style={{ ...bannerStyle(user), aspectRatio: BANNER_DISPLAY_ASPECT_RATIO }} />
+        <div className="w-full" style={{ ...bannerStyle(user), aspectRatio: BANNER_ASPECT_RATIO }} />
       )}
       <div className="px-6 pb-6">
         <div className="-mt-12 flex items-end gap-3">
@@ -281,7 +282,7 @@ export function ProfileCard({
                       />
                     }
                   >
-                    <BrandIcon kind={link.kind} />
+                    <BrandLogo kind={link.kind} />
                   </TooltipTrigger>
                   <TooltipContent side="bottom" className="flex items-center gap-1.5">
                     <span>{link.label}</span>

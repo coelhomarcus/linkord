@@ -4,6 +4,7 @@ import { useLanguage } from '@/shared/i18n/useLanguage';
 import { proxiedImageVariant } from '@/shared/lib/mediaProxy';
 import { cn } from '@/shared/lib/utils';
 import type { WidgetData } from './connectionsTypes';
+import { BrandIcon } from './profileLinks';
 import { steamLevelColor } from './steamLevel';
 
 const AVATAR_PX = 64;
@@ -12,11 +13,17 @@ const FRAME_SCALE = 1.22;
 
 type SteamProfile = Extract<WidgetData, { kind: 'steam-profile' }>;
 
-/** The Steam profile as Steam's own mini profile draws it: the equipped background loop behind,
- * the avatar in its frame, the name, the game and the level ring. Everything comes through our
+/** The Steam profile as Steam's own mini profile draws it, on the Wall without a card around it: the
+ * equipped background loop behind, the avatar in its frame, the name (a link to the profile when
+ * `profile` is given), the game and the level ring. Everything comes through our
  * media proxy, so Steam never sees who is looking. Under reduced motion the loop gives way to its
  * still picture and the animated avatar and frame to their first frame. */
-export function SteamMiniProfile({ data }: { data: SteamProfile }) {
+export function SteamMiniProfile({ data, title, profile }: {
+  data: SteamProfile;
+  /** the widget's name, for screen readers: the mini profile shows no title of its own */
+  title: string;
+  profile?: { href: string; accessibleName: string };
+}) {
   const { t } = useTranslation('profile');
   const language = useLanguage();
   const reduceMotion = useReducedMotion();
@@ -31,7 +38,8 @@ export function SteamMiniProfile({ data }: { data: SteamProfile }) {
   const color = steamLevelColor(data.level);
 
   return (
-    <div className={cn('relative isolate overflow-hidden rounded-lg', art ? 'bg-black text-white' : 'bg-bg-tertiary text-text-primary')}>
+    <article aria-label={title}
+      className={cn('relative isolate w-full min-w-0 overflow-hidden rounded-xl', art ? 'bg-black text-white' : 'border border-border-strong bg-bg-secondary text-text-primary')}>
       {background && (video
         ? <video aria-hidden tabIndex={-1} autoPlay muted loop playsInline disablePictureInPicture poster={background.imageUrl ?? undefined}
           className="absolute inset-0 -z-10 size-full object-cover">
@@ -41,7 +49,8 @@ export function SteamMiniProfile({ data }: { data: SteamProfile }) {
         : background.imageUrl && <img src={background.imageUrl} alt="" loading="lazy" className="absolute inset-0 -z-10 size-full object-cover" />)}
       {art && <div aria-hidden className="absolute inset-0 -z-10 bg-gradient-to-b from-black/10 via-black/30 to-black/75" />}
 
-      <div className="flex min-h-32 items-center gap-4 p-4">
+      <span aria-hidden className={cn('absolute right-3 top-3', art ? 'text-white/70' : 'text-text-muted')}><BrandIcon kind="steam" size={16} /></span>
+      <div className="flex min-h-32 items-center gap-4 p-4 pr-10">
         <div className="relative flex-none" style={{ width: AVATAR_PX, height: AVATAR_PX }}>
           {avatar
             ? <img src={avatar} alt="" loading="lazy" className="size-full rounded-sm object-cover" />
@@ -51,7 +60,11 @@ export function SteamMiniProfile({ data }: { data: SteamProfile }) {
             style={{ width: `${FRAME_SCALE * 100}%`, height: `${FRAME_SCALE * 100}%` }} />}
         </div>
         <div className={cn('min-w-0', art && '[text-shadow:0_1px_2px_rgb(0_0_0/0.8)]')}>
-          <p className="truncate text-title font-semibold" title={data.name}>{data.name}</p>
+          <p className="truncate text-title font-semibold" title={data.name}>
+            {profile
+              ? <a href={profile.href} target="_blank" rel="noreferrer" aria-label={profile.accessibleName} className="rounded-sm hover:underline focus-ring">{data.name}</a>
+              : data.name}
+          </p>
           {data.currentGame && <p className={cn('truncate text-label', art ? 'text-white/85' : 'text-text-muted')}>{t('wall.steam.playing', { game: data.currentGame })}</p>}
         </div>
       </div>
@@ -68,6 +81,6 @@ export function SteamMiniProfile({ data }: { data: SteamProfile }) {
           <dd className="font-semibold">{data.owned.toLocaleString(language)}</dd>
         </div>
       </dl>
-    </div>
+    </article>
   );
 }

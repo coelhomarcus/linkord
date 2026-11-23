@@ -55,14 +55,18 @@
       "notRunning": "{{name}} (closed)"
     },
     "gamesDescription": "A hidden game or app is never shown to others, even with sharing on.",
-    "detected": "Detected on this computer",
+    "tabs": {
+      "label": "Games and apps",
+      "active": "Active",
+      "hidden": "Hidden"
+    },
     "detectedEmpty": "No game or app detected yet. Open one while Linkord is running and it shows up here.",
+    "activeEmpty": "Every game and app detected is hidden. Show one again from the Hidden tab.",
     "kindLabel": {
       "playing": "Game",
       "using": "App"
     },
-    "hidden": "Hidden",
-    "hiddenEmpty": "Nothing hidden.",
+    "hiddenEmpty": "Nothing hidden. A game or app you hide goes here.",
     "hide": "Hide",
     "show": "Show",
     "hideLabel": "Hide {{name}}",

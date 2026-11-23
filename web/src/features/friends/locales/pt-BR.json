@@ -43,7 +43,6 @@
     "retry": "Tentar de novo",
     "emptyTitle": "Adicione amigos para começar uma conversa",
     "emptyText": "Peça o @nome de usuário de quem você quer conversar, ou compartilhe o seu.",
-    "sectionOnline": "Online",
     "sectionAll": "Todos os amigos",
     "results_one": "{{count}} resultado",
     "results_other": "{{count}} resultados",
@@ -52,7 +51,6 @@
     "noResults": "Nenhum resultado",
     "noneOnline": "Ninguém online agora",
     "noneFound": "Nenhum amigo encontrado",
-    "message": "Mensagem",
     "messageTo": "Enviar mensagem para {{name}}",
     "moreFor": "Mais ações para {{name}}",
     "viewProfile": "Ver perfil",
@@ -82,7 +80,6 @@
     "noneOutgoingText": "Adicione alguém pelo @nome de usuário para começar."
   },
   "invitations": {
-    "searchLabel": "Buscar nos convites",
     "title": "Convites de servidor",
     "loading": "Carregando convites…",
     "loadFailed": "Não foi possível carregar os convites.",

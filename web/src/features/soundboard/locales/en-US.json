@@ -37,7 +37,6 @@
     "emojiPlaceholder": "Click to select",
     "clearEmoji": "Remove emoji",
     "volume": "Sound volume",
-    "required": "required",
     "play": "Play preview",
     "stop": "Stop preview",
     "trimHint": "Drag the edges to pick up to {{seconds}} seconds.",

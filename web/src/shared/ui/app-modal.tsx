@@ -23,8 +23,8 @@ export function AppModal({ label, onClose, size = 'lg', children }: {
   label: string;
   onClose: () => void;
   /** lg: a whole area (administration, media); form: a navigation column
-   * beside one 760px page of fields (settings), where more width is only an
-   * empty strip on the right; md: one thing's details, which would drown in
+   * beside one centered page of fields (settings), 44px in from every edge like
+   * Discord's user settings; md: one thing's details, which would drown in
    * that much space; fullscreen: covers the whole app, like Discord's server
    * settings */
   size?: 'lg' | 'form' | 'md' | 'fullscreen';
@@ -41,7 +41,7 @@ export function AppModal({ label, onClose, size = 'lg', children }: {
         className={cn(
           'top-1/2 left-1/2 max-w-none gap-0 overflow-hidden border border-border bg-surface-panel p-0 text-text-primary [--surface-base:var(--color-surface-panel)] sm:max-w-none max-md:h-dvh max-md:max-h-dvh max-md:w-screen max-md:rounded-none max-md:border-0 max-md:ring-0 max-md:pt-[env(safe-area-inset-top)] max-md:pb-[env(safe-area-inset-bottom)]',
           size === 'md' && 'h-[min(40rem,calc(100dvh-3rem))] w-[min(56rem,calc(100vw-3rem))]',
-          size === 'form' && 'h-[min(54rem,calc(100dvh-3rem))] w-[min(64rem,calc(100vw-3rem))]',
+          size === 'form' && 'h-[calc(100dvh-88px)] w-[min(100rem,calc(100vw-88px))]',
           size === 'lg' && 'h-[min(54rem,calc(100dvh-3rem))] w-[min(76rem,calc(100vw-3rem))]',
           size === 'fullscreen' && 'inset-0 top-0 left-0 h-dvh max-h-dvh w-screen translate-x-0 translate-y-0 rounded-none border-0 bg-surface-app [--surface-base:var(--color-surface-app)] data-open:zoom-in-105 data-closed:zoom-out-105',
         )}

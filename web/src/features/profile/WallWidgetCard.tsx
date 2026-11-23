@@ -12,6 +12,7 @@ import type { ActivityPeriod, WallWidget } from './connectionsTypes';
 import { gameListOf } from '@/features/games/types';
 import { ANIME_ASPECT, CoverLink, type Cover } from './CoverLink';
 import { GameCovers, type GameCoversEditor } from './GameCovers';
+import { SteamMiniProfile } from './SteamMiniProfile';
 
 const STATS = [
   { key: 'repositories', icon: BookOpenIcon },
@@ -49,6 +50,9 @@ export function WallWidgetCard({ widget, accent, gameEditor, onPeriodChange }: {
   const name = t(`wall.widgets.${widget.type}`);
   const showAccountName = widget.type !== 'steam-recent' && widget.type !== 'steam-top';
   const periods = ([7, 30] as const).map((value) => ({ value, label: t('wall.activity.period', { count: value }) }));
+  // Steam's mini profile is the whole widget, with no card or title around it
+  if (data?.kind === 'steam-profile') return <SteamMiniProfile data={data} title={name} profile={connection && brand
+    ? { href: connection.url, accessibleName: t('wall.profileLink', { service: brand.name, user: connection.value }) } : undefined} />;
   return (
     <article className="flex w-full min-w-0 flex-col gap-4 rounded-xl border border-border-strong bg-bg-secondary p-4">
       <WidgetHeader title={name} account={connection && brand
@@ -70,7 +74,7 @@ export function WallWidgetCard({ widget, accent, gameEditor, onPeriodChange }: {
       {!data && <WidgetMessage>{t(widget.hidden ? 'wall.activity.private' : connection?.syncError ? 'wall.unavailable' : 'wall.pending')}</WidgetMessage>}
       {(data?.kind === 'activity-top' || data?.kind === 'activity-recent' || data?.kind === 'activity-summary') &&
         <ActivityWallWidget data={data} />}
-      {(data?.kind === 'steam-games' || data?.kind === 'steam-profile' || data?.kind === 'twitch-live' || data?.kind === 'twitch-vods') &&
+      {(data?.kind === 'steam-games' || data?.kind === 'twitch-live' || data?.kind === 'twitch-vods') &&
         <ConnectionWidgetContent data={data} />}
       {data?.kind === 'list' && (data.items.length === 0
         ? <WidgetMessage>{t('wall.noItems')}</WidgetMessage>

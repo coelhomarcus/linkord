@@ -256,7 +256,7 @@ function CallCard({ conversation, server, friends, members, joined, onJoin, onOp
               <Avatar key={member.userId} id={member.userId} name={member.displayName} avatar={member.avatar} poster={member.avatarPoster} avatarColor={member.avatarColor} size={24} className="ring-2 ring-surface-app" />
             ))}
             {members.length > 6 && (
-              <span className="grid h-6 min-w-6 place-items-center rounded-full bg-surface-300 px-1 text-[11px] font-semibold text-text-secondary ring-2 ring-surface-app">
+              <span className="grid h-6 min-w-6 place-items-center rounded-full bg-surface-300 px-1 text-micro font-semibold text-text-secondary ring-2 ring-surface-app">
                 +{members.length - 6}
               </span>
             )}

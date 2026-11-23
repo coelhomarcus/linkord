@@ -98,7 +98,7 @@ export function SettingsSidebar({ active, isAdmin, onOpenProfile }: { active: Se
   const { t } = useTranslation('settings');
   const { query, setQuery, results } = useSettingsSearch(isAdmin);
   return (
-    <nav aria-label={t('nav.ariaLabel')} className="flex w-[218px] flex-none flex-col px-3 py-6">
+    <nav aria-label={t('nav.ariaLabel')} className="flex w-[279px] flex-none flex-col px-[18px] py-6">
       <ProfileShortcut onOpenProfile={onOpenProfile} />
       <SettingsSearchField query={query} onChange={setQuery} onClear={() => setQuery('')} />
       {query ? (
@@ -118,13 +118,13 @@ export function SettingsSidebar({ active, isAdmin, onOpenProfile }: { active: Se
                     to={ROUTES.settingsTab(category.id)}
                     aria-current={current ? 'page' : undefined}
                     className={cn(
-                      'relative isolate mb-0.5 flex h-8 flex-none items-center gap-2 rounded-lg px-2.5 text-body font-medium focus-ring',
+                      'relative isolate mb-1 flex h-10 flex-none items-center gap-2.5 rounded-lg px-2.5 text-body font-medium focus-ring',
                       current ? 'text-text-strong' : 'text-text-secondary hover:bg-nav-hover hover:text-text-primary',
                     )}
                   >
                     {/* Discord/Fluxer: a plain light-gray fill for the active item, no accent color */}
                     {current && <ActiveFill className="rounded-lg" />}
-                    <Icon size={18} weight={iconWeight(current)} aria-hidden className="flex-none" />
+                    <Icon size={20} weight={iconWeight(current)} aria-hidden className="flex-none" />
                     <span className="truncate">{t(category.labelKey)}</span>
                   </AppLink>
                 );

@@ -26,9 +26,10 @@ import { UserActivityCard, UserActivityInline } from '@/features/activity/Activi
 import { useUserActivity } from '@/features/activity/activityDisplay';
 import { canAssignRole, canManageRole, outranks } from './roleHierarchy';
 
-// Discord's user popout, measured: 300px wide, a 105px banner, an 80px avatar
-// in a 6px ring centred on the banner's edge, 16px of padding on the sides
-const BANNER = 'h-[105px] w-full';
+// Discord's user popout, measured: 300px wide, an 80px avatar in a 6px ring
+// centred on the banner's edge, 16px of padding on the sides. The banner keeps
+// its 16:9, as everywhere else.
+const BANNER = 'aspect-video w-full';
 const AVATAR_FRAME = '-mt-[50px] -ml-1.5 w-fit flex-none rounded-full bg-bg-modal p-1.5';
 
 interface MemberQuickProfileProps {

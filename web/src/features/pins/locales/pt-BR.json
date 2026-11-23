@@ -7,7 +7,6 @@
   "pin": "Fixar mensagem",
   "unpinMessage": "Desafixar mensagem",
   "loading": "Carregando mensagens fixadas…",
-  "loadMore": "Carregar mais",
   "end": "Você chegou ao fim",
   "unpinFailed": "Não foi possível desafixar. Tente de novo.",
   "empty": {

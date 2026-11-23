@@ -7,7 +7,6 @@
   "pin": "Pin message",
   "unpinMessage": "Unpin message",
   "loading": "Loading pinned messages…",
-  "loadMore": "Load more",
   "end": "You've reached the end",
   "unpinFailed": "Couldn't unpin. Try again.",
   "empty": {

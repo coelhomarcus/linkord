@@ -39,7 +39,7 @@ export function KindGlyph({ kind, size }: { kind: ActivityKind; size: number }) 
 
 /** "🎮 1:19:35" in green, ticking every second while it shows. A game's own timestamps win over the
  * time it has run, as Discord shows them: its end counts down ("4:12 restantes"), its start up. */
-export function ActivityTimer({ activity, className }: { activity: Pick<Activity, 'kind' | 'startedAt' | 'rich'>; className?: string }) {
+function ActivityTimer({ activity, className }: { activity: Pick<Activity, 'kind' | 'startedAt' | 'rich'>; className?: string }) {
   const { t } = useTranslation('activity');
   const now = useServerNow(1000);
   const timestamps = activity.rich?.timestamps;

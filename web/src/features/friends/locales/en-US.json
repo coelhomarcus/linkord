@@ -43,7 +43,6 @@
     "retry": "Try again",
     "emptyTitle": "Add friends to start a conversation",
     "emptyText": "Ask for the @username of who you want to talk to, or share yours.",
-    "sectionOnline": "Online",
     "sectionAll": "All friends",
     "results_one": "{{count}} result",
     "results_other": "{{count}} results",
@@ -52,7 +51,6 @@
     "noResults": "No results",
     "noneOnline": "No one's online right now",
     "noneFound": "No friends found",
-    "message": "Message",
     "messageTo": "Send message to {{name}}",
     "moreFor": "More actions for {{name}}",
     "viewProfile": "View profile",
@@ -82,7 +80,6 @@
     "noneOutgoingText": "Add someone by their @username to get started."
   },
   "invitations": {
-    "searchLabel": "Search invitations",
     "title": "Server invitations",
     "loading": "Loading invitations…",
     "loadFailed": "Couldn't load the invitations.",

@@ -7,7 +7,7 @@ import { useRoomState } from '@/state/RoomContext';
 import { PageHeader } from '@/shared/PageHeader';
 import { Button } from '@/shared/ui/primitives/button';
 import { useAppModalClose } from '@/shared/ui/app-modal';
-import { EscCloseButton } from '@/shared/ui/esc-close-button';
+import { CloseButton } from '@/shared/ui/primitives/close-button';
 import { LEGACY_SETTINGS_SECTIONS, LEGACY_SETTINGS_TABS, ROUTES, isSettingsTab } from '@/shared/lib/routes';
 import type { SettingsTab } from '@/shared/lib/routes';
 import { ConnectionsSettings } from '@/features/profile/ConnectionsSettings';
@@ -106,7 +106,8 @@ export function SettingsPage({ onOpenProfile }: SettingsPageProps) {
   }
 
   const page = (
-    <SettingsContent>
+    // under the modal's bar the page starts as far down as Discord's
+    <SettingsContent className={mode === 'wide' && closeModal ? '@[520px]:pt-[74px]' : undefined}>
       <SettingsPageHeader title={t(category.labelKey)} headingRef={headingRef} />
       <CategoryPage tab={current} onOpenProfile={onOpenProfile} />
     </SettingsContent>
@@ -122,11 +123,19 @@ export function SettingsPage({ onOpenProfile }: SettingsPageProps) {
         <div className="scrollbar-none flex flex-none overflow-y-auto border-r border-border-divider">
           <SettingsSidebar active={current} isAdmin={isAdmin} onOpenProfile={onOpenProfile} />
         </div>
-        {/* a stable gutter: a short page and a scrolling one keep the column in the same place */}
-        <main ref={scrollerRef} aria-label={t(category.labelKey)} className="@container flex min-h-0 min-w-0 flex-1 overflow-y-auto [scrollbar-gutter:stable]">
-          {page}
-          {closeModal && <EscCloseButton onClose={closeModal} className="pt-8" />}
-        </main>
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+          {/* Discord's bar over the page: its name (already the page's hidden heading) and the close button */}
+          {closeModal && (
+            <div className="flex h-[55px] flex-none items-center justify-between gap-4 border-b border-border-divider pl-[18px] pr-[11px]">
+              <p aria-hidden className="truncate text-title font-semibold text-text-strong">{t(category.labelKey)}</p>
+              <CloseButton size="md" onClick={closeModal} />
+            </div>
+          )}
+          {/* a stable gutter: a short page and a scrolling one keep the column in the same place */}
+          <main ref={scrollerRef} aria-label={t(category.labelKey)} className="@container flex min-h-0 min-w-0 flex-1 overflow-y-auto [scrollbar-gutter:stable]">
+            {page}
+          </main>
+        </div>
       </div>
     );
   }

@@ -30,15 +30,6 @@
     "memberSince": "Member since",
     "friendsSince": "Friends since"
   },
-  "lastSeen": {
-    "label": "Last seen online",
-    "status": "Status",
-    "online": "Online",
-    "offline": "Offline",
-    "today": "today at {{time}}",
-    "yesterday": "yesterday at {{time}}",
-    "date": "{{date}} at {{time}}"
-  },
   "mutuals": {
     "title": "In common",
     "friendsTitle": "Mutual friends",

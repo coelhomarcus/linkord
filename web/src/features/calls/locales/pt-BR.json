@@ -20,7 +20,6 @@
     "fullscreenExit": "Sair da tela cheia",
     "callSettings": "Ajustes da chamada",
     "leaveCall": "Sair da chamada",
-    "returnToCall": "Voltar à chamada",
     "inCall": "Em chamada",
     "inCallFor": "Em chamada · {{time}}",
     "statusReconnecting": "Reconectando…",
