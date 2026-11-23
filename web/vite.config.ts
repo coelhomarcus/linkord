@@ -5,6 +5,7 @@ import { defineConfig } from 'vitest/config';
 import react, { reactCompilerPreset } from '@vitejs/plugin-react';
 import babel from '@rolldown/plugin-babel';
 import tailwindcss from '@tailwindcss/vite';
+import Icons from 'unplugin-icons/vite';
 import { reactEasyCropStyleSource } from './scripts/cspStyleSources.ts';
 
 // Twemoji's SVGs, the same emoji pictures on every system (Discord's own
@@ -73,7 +74,7 @@ function reactCompilerOptions() {
 }
 
 export default defineConfig({
-  plugins: [react(), babel({ presets: [reactCompilerPreset(reactCompilerOptions())] }), tailwindcss(), twemojiAssets(), cspStyleSources()],
+  plugins: [react(), babel({ presets: [reactCompilerPreset(reactCompilerOptions())] }), tailwindcss(), Icons({ compiler: 'jsx', jsx: 'react' }), twemojiAssets(), cspStyleSources()],
   define: {
     __TWEMOJI_PATH__: JSON.stringify(TWEMOJI_PATH),
     __EMOJI_DATA_VERSION__: JSON.stringify(`${EMOJIBASE_VERSION}-${TWEMOJI_VERSION}`),

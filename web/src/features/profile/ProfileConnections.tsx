@@ -2,7 +2,8 @@ import { useId } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { ArrowSquareOutIcon, PlusIcon } from '@/shared/ui/icons';
-import { BrandIcon, linkInfo, type LinkInfo } from './profileLinks';
+import { linkInfo, type LinkInfo } from './profileLinks';
+import { BrandLogo } from './brandLogos';
 
 // The account a profile URL points at, per site: only paths that are a
 // person's page, so a link to a post or a video keeps the site's name instead.
@@ -68,7 +69,7 @@ export function ProfileConnections({ links, steamConnection, onAdd }: {
                 className={`group ${CARD} border-border-subtle bg-bg-secondary hover:border-border-strong hover:bg-bg-hover`}
               >
                 <span aria-hidden className="flex size-8 shrink-0 items-center justify-center rounded-md bg-bg-tertiary text-text-primary">
-                  <BrandIcon kind={link.kind} size={16} />
+                  <BrandLogo kind={link.kind} size={16} />
                 </span>
                 <span className="flex min-w-0 flex-1 flex-col">
                   <span className="truncate text-label font-medium text-text-primary">{title}</span>

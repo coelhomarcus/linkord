@@ -4,7 +4,8 @@ import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { Avatar } from '@/shared/Avatar';
-import { BANNER_DISPLAY_ASPECT_RATIO, BrandIcon, bannerStyle, linkInfo } from '@/features/profile/profileLinks';
+import { BANNER_DISPLAY_ASPECT_RATIO, bannerStyle, linkInfo } from '@/features/profile/profileLinks';
+import { BrandLogo } from '@/features/profile/brandLogos';
 import type { LinkInfo } from '@/features/profile/profileLinks';
 import { MAX_DISPLAY_NAME_LEN } from '@/shared/lib/displayName';
 import { MAX_PROFILE_BIO_LEN } from '@/shared/types/protocol';
@@ -281,7 +282,7 @@ export function ProfileCard({
                       />
                     }
                   >
-                    <BrandIcon kind={link.kind} />
+                    <BrandLogo kind={link.kind} />
                   </TooltipTrigger>
                   <TooltipContent side="bottom" className="flex items-center gap-1.5">
                     <span>{link.label}</span>

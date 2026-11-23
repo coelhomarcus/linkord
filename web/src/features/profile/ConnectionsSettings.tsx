@@ -9,7 +9,8 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/shared/ui/primitives/
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/shared/ui/primitives/dialog';
 import { useRoom, useRoomState } from '@/state/RoomContext';
 import { connectionBrand } from './connectionBrands';
-import { BrandIcon } from './profileLinks';
+import { BrandLogo } from './brandLogos';
+import { linkInfo } from './profileLinks';
 import { describeConnectionError } from './connectionErrors';
 import { createConnection, deleteConnection, editConnection, fetchConnections, setConnectionVisibility } from './profileApi';
 import { connectionInputLength, type ConnectionProvider, type ConnectionsResponse, type ProfileConnection } from './connectionsTypes';
@@ -80,6 +81,12 @@ export function ConnectionsSettings() {
   }
   const full = !!data && data.connections.length >= 8;
   const brand = (provider: ConnectionProvider) => provider === 'url' ? 'generic' : provider;
+  // a plain link to a known site wears that site's logo and name, as on the profile
+  const site = (connection: ProfileConnection) => connection.provider === 'url' ? linkInfo(connection.url) : null;
+  function serviceName(connection: ProfileConnection) {
+    const info = site(connection);
+    return info && info.kind !== 'generic' ? info.label : providerName(connection.provider);
+  }
   return (
     <SettingsSections>
     <SettingsSection title={tSettings('catalog.categories.connections')} description={t('integration.description')} contentClassName="mt-8 gap-10">
@@ -101,7 +108,7 @@ export function ConnectionsSettings() {
                     />
                   }
                 >
-                  <BrandIcon kind={brand(provider)} size={26} />
+                  <BrandLogo kind={brand(provider)} size={26} />
                 </TooltipTrigger>
                 <TooltipContent side="bottom">{providerName(provider)}</TooltipContent>
               </Tooltip>
@@ -120,10 +127,10 @@ export function ConnectionsSettings() {
             {data.connections.map((connection) => (
               <li key={connection.id} className="flex flex-col gap-6 rounded-lg border border-border-strong bg-fill-subtle p-5">
                 <div className="flex items-center gap-5">
-                  <span className="flex size-8 flex-none items-center justify-center text-text-primary"><BrandIcon kind={brand(connection.provider)} size={28} /></span>
+                  <span className="flex size-8 flex-none items-center justify-center text-text-primary"><BrandLogo kind={site(connection)?.kind ?? brand(connection.provider)} size={28} /></span>
                   <div className="min-w-0 flex-1">
                     <a href={connection.url} target="_blank" rel="noreferrer" className="block truncate text-body leading-5 font-semibold text-text-primary hover:underline">{connection.value}</a>
-                    <p className="truncate text-caption leading-4 text-text-muted">{providerName(connection.provider)}</p>
+                    <p className="truncate text-caption leading-4 text-text-muted">{serviceName(connection)}</p>
                   </div>
                   <div className="flex flex-none items-center gap-1">
                     <Button type="button" variant="ghost" size="icon" className="size-8 text-text-muted hover:text-text-primary" aria-label={t('integration.editConnection', { name: connection.value })} disabled={busy} onClick={() => open(connection.provider, connection)}><PencilSimpleIcon size={18} /></Button>
