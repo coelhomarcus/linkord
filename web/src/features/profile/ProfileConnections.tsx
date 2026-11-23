@@ -28,12 +28,13 @@ const accountPaths: Partial<Record<LinkInfo['kind'], RegExp>> = {
   telegram: /^\/([\w]+)\/?$/i,
 };
 
-/** What a connection card says: the account (or the site) and, under it, where it lives. */
+/** What a connection card says: the account, whose site the logo already names, or else the site and,
+ * under it, the host the link is on. */
 function describe(link: LinkInfo, steamConnection?: { url: string; label: string }) {
   const url = new URL(link.url);
   const handle = accountPaths[link.kind]?.exec(url.pathname)?.[1];
   const account = steamConnection?.url === link.url ? steamConnection.label : handle ? `@${handle}` : null;
-  if (account) return { account, title: account, detail: link.label };
+  if (account) return { account, title: account, detail: null };
   const host = url.hostname.replace(/^www\./, '');
   // a plain link already is its host; a site page with no account says which host
   return { account: null, title: link.label, detail: host === link.label ? null : host };
@@ -41,8 +42,8 @@ function describe(link: LinkInfo, steamConnection?: { url: string; label: string
 
 const CARD = 'flex min-h-14 min-w-0 items-center gap-3 rounded-lg border px-3 py-2 transition-colors duration-100 focus-ring';
 
-/** The links a profile lists, one card each with the site's icon, the account
- * and the site. Nothing at all when there are none, unless `onAdd` makes the
+/** The links a profile lists, one card each with the site's logo and the account
+ * (or the site). Nothing at all when there are none, unless `onAdd` makes the
  * owner's list, which ends with a card to add one. */
 export function ProfileConnections({ links, steamConnection, onAdd }: {
   links: string[];
