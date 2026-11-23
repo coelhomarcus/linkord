@@ -10,6 +10,10 @@ import { steamLevelColor } from './steamLevel';
 const AVATAR_PX = 64;
 // Steam draws a frame about a fifth larger than the avatar it surrounds
 const FRAME_SCALE = 1.22;
+// Mini profile backgrounds are drawn at 640×570; Steam lays one across the full width, pinned to the
+// top, and its card (name and level) shows about the top 70% of it. Cropping from the centre of a
+// wider, shorter card cut the faces the art is composed around.
+const ART_CLASS = 'absolute inset-x-0 top-0 -z-10 aspect-[640/570] min-h-full w-full object-cover object-top';
 
 type SteamProfile = Extract<WidgetData, { kind: 'steam-profile' }>;
 
@@ -39,18 +43,18 @@ export function SteamMiniProfile({ data, title, profile }: {
 
   return (
     <article aria-label={title}
-      className={cn('relative isolate w-full min-w-0 overflow-hidden rounded-xl', art ? 'bg-black text-white' : 'border border-border-strong bg-bg-secondary text-text-primary')}>
+      className={cn('relative isolate flex w-full min-w-0 flex-col overflow-hidden rounded-xl', art ? 'aspect-[8/5] bg-black text-white' : 'border border-border-strong bg-bg-secondary text-text-primary')}>
       {background && (video
         ? <video aria-hidden tabIndex={-1} autoPlay muted loop playsInline disablePictureInPicture poster={background.imageUrl ?? undefined}
-          className="absolute inset-0 -z-10 size-full object-cover">
+          className={ART_CLASS}>
           {background.webmUrl && <source src={background.webmUrl} type="video/webm" />}
           {background.mp4Url && <source src={background.mp4Url} type="video/mp4" />}
         </video>
-        : background.imageUrl && <img src={background.imageUrl} alt="" loading="lazy" className="absolute inset-0 -z-10 size-full object-cover" />)}
+        : background.imageUrl && <img src={background.imageUrl} alt="" loading="lazy" className={ART_CLASS} />)}
       {art && <div aria-hidden className="absolute inset-0 -z-10 bg-gradient-to-b from-black/10 via-black/30 to-black/75" />}
 
       <span aria-hidden className={cn('absolute right-3 top-3', art ? 'text-white/70' : 'text-text-muted')}><BrandIcon kind="steam" size={16} /></span>
-      <div className="flex min-h-32 items-center gap-4 p-4 pr-10">
+      <div className="flex min-h-32 flex-1 items-center gap-4 p-4 pr-10">
         <div className="relative flex-none" style={{ width: AVATAR_PX, height: AVATAR_PX }}>
           {avatar
             ? <img src={avatar} alt="" loading="lazy" className="size-full rounded-sm object-cover" />
