@@ -16,6 +16,7 @@ import { createUser, updateEmail, updatePassword, updateUsername } from './accou
 import { invalidUsernameMessage, isReservedUsername, isValidUsername } from './usernameRules.js';
 import { renameParticipants } from '../presence/participants.js';
 import { checkRegistrationAllowed } from './registrationLimits.js';
+import { sanitizeDisplayName } from '../profile/sanitize.js';
 import type { User } from '../../db/schema.js';
 import { consumeLoginChallenge, findLoginChallenge, hasLiveAuthCode, issueAuthCode, verifyAuthCode, type AuthCodePurpose } from './codes.js';
 import { isEmailDeliveryConfigured, sendAuthCodeEmail, sendEmailChangedEmail } from './email.js';
@@ -124,6 +125,8 @@ async function handleRegister(request: FastifyRequest, reply: FastifyReply): Pro
   const password = String(body.password == null ? '' : body.password);
   const confirmPassword = String(body.confirmPassword == null ? '' : body.confirmPassword);
   const code = String(body.code == null ? '' : body.code);
+  // optional: an older client sends none, and an empty one shows the username
+  const displayName = sanitizeDisplayName(body.displayName);
 
   // fail closed: no code configured means registration is closed — never
   // "open by a forgotten config."
@@ -167,7 +170,7 @@ async function handleRegister(request: FastifyRequest, reply: FastifyReply): Pro
 
   let user;
   try {
-    user = await createUser({ username, email, passwordHash, role, locale: resolveLocale(body.locale) });
+    user = await createUser({ username, email, passwordHash, role, displayName, locale: resolveLocale(body.locale) });
   } catch (err: unknown) {
     if (err && (err as { code?: string }).code === 'account_identity_taken') return sendError(reply, 409, 'username_taken', 'Esse nome de usuário ou e-mail já está em uso.');
     throw err;
