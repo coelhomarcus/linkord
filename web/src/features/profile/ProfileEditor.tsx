@@ -311,7 +311,7 @@ export function ProfileEditor({ status, customStatus, details, onClose, register
                 </dl>
                 <div className="flex flex-col gap-1.5">
                   <h3 className="text-caption font-medium text-text-muted">{t('connections')}</h3>
-                  <ProfileConnections links={state.me.profileLinks} hideHeading />
+                  <ProfileConnections links={state.me.profileLinks} steamConnection={details.details?.steamConnection} hideHeading />
                   <button
                     type="button"
                     onClick={() => leave(() => { navigate(ROUTES.settingsTab('connections')); onClose(); })}

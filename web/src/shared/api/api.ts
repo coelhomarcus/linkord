@@ -324,6 +324,7 @@ interface SharedServer { id: string; name: string; icon: string; memberCount: nu
 /** What a profile shows besides the profile itself. The lists stop at a cap;
  * `total` is the full count. Empty, with no `friendsSince`, on your own profile. */
 export interface ProfileDetails {
+  steamConnection?: { url: string; label: string };
   memberSince: string;
   friendsSince: string | null;
   mutualFriends: { items: SocialUser[]; total: number };

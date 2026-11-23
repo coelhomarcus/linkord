@@ -981,7 +981,7 @@ export const profileWallWidgets = pgTable('profile_wall_widgets', {
   uniqueIndex('profile_wall_widgets_connection_type_unique').on(t.connectionId, t.type),
   uniqueIndex('profile_wall_widgets_games_unique').on(t.userId, t.type).where(sql`${t.connectionId} IS NULL`),
   index('profile_wall_widgets_user_idx').on(t.userId, t.position),
-  check('profile_wall_widgets_type_check', sql`${t.type} IN ('mal-recent-anime','github-profile','github-calendar','igdb-favorite-game','igdb-liked-games','igdb-playing-games','igdb-wishlist-games','activity-top','activity-calendar','activity-recent','activity-summary','steam-recent','steam-top','steam-profile','twitch-live','twitch-vods')`),
+  check('profile_wall_widgets_type_check', sql`${t.type} IN ('mal-recent-anime','github-profile','github-calendar','igdb-favorite-game','igdb-liked-games','igdb-playing-games','igdb-wishlist-games','activity-top','activity-recent','activity-summary','steam-recent','steam-top','steam-profile','twitch-live','twitch-vods')`),
   check('profile_wall_widgets_period_check', sql`${t.period} IS NULL OR (${t.type} IN ('activity-top','activity-summary') AND ${t.period} IN (7,30))`),
   check('profile_wall_widgets_owner_check', sql`(${t.connectionId} IS NULL) = (${t.type} LIKE 'igdb-%' OR ${t.type} LIKE 'activity-%')`),
 ]);

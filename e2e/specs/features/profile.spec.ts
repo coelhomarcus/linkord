@@ -84,7 +84,11 @@ test.describe('profile', () => {
     await a.page.getByRole('tab', { name: 'Mural' }).click();
     await a.page.getByRole('button', { name: 'Adicionar widget' }).click();
     // the catalog is a window over the profile; the games widgets are there with no connection
-    await a.page.getByRole('dialog', { name: 'Adicionar widget de perfil' }).getByRole('button', { name: 'Jogo favorito' }).click();
+    const catalog = a.page.getByRole('dialog', { name: 'Adicionar widget de perfil' });
+    const navigation = catalog.getByRole('navigation', { name: 'Tipos de widget' });
+    await expect(navigation.getByRole('group', { name: 'Do Linkord' }).getByRole('button', { name: 'Jogos' })).toBeVisible();
+    await expect(navigation.getByRole('group', { name: 'Integrações' }).getByRole('button', { name: 'GitHub' })).toBeVisible();
+    await catalog.getByRole('button', { name: 'Jogo favorito' }).click();
     // an empty place opens the search in a window; the e2e stack has no IGDB credentials, so it says so
     await a.page.getByRole('button', { name: 'Adicionar jogo a Jogo favorito' }).click();
     await a.page.getByRole('searchbox', { name: 'Buscar jogo' }).fill('zelda');
@@ -101,6 +105,23 @@ test.describe('profile', () => {
 
     const wall = await (await bob.api.get(`/api/users/${alice.id}/wall`)).json() as { widgets: { type: string; connection: unknown }[] };
     expect(wall.widgets.map((widget) => [widget.type, widget.connection])).toEqual([['igdb-favorite-game', null]]);
+  });
+
+  test('a friend sees the account handle in the profile connections', async ({ users }) => {
+    const viewer = await users.create('viewer');
+    const owner = await users.create('owner');
+    await befriend(viewer, owner);
+    const url = 'https://github.com/octocat';
+    const connected = await owner.api.post('/api/me/connections', { data: { provider: 'url', value: url } });
+    expect(connected.status()).toBe(201);
+
+    const app = await viewer.app();
+    await app.page.goto('/app/friends');
+    await app.page.getByRole('button', { name: `Ver perfil de ${owner.username}`, exact: true }).click();
+    const links = app.page.getByRole('dialog').getByRole('region', { name: 'Conexões' });
+    const link = links.getByRole('link', { name: 'Abrir @octocat em GitHub' });
+    await expect(link).toHaveText('@octocat');
+    await expect(link).toHaveAttribute('href', url);
   });
 
   test('games saved with the Wall reach a friend, in order', async ({ users }) => {
@@ -217,6 +238,13 @@ test.describe('profile on a phone', () => {
     await expect(dialog).toBeVisible();
     // once the opening animation is over
     await expect.poll(() => dialog.boundingBox()).toEqual({ x: 0, y: 0, width: 390, height: 844 });
+
+    await dialog.getByRole('button', { name: 'Adicionar widget' }).tap();
+    const catalog = page.getByRole('dialog', { name: 'Adicionar widget de perfil' });
+    await catalog.getByRole('group', { name: 'Integrações' }).getByRole('button', { name: 'GitHub' }).tap();
+    await expect(catalog.getByRole('region', { name: 'GitHub' })).toBeVisible();
+    await page.keyboard.press('Escape');
+    await expect(catalog).toBeHidden();
 
     // a cover is one button that opens its actions: no invisible control over it to remove the game by accident
     const cover = page.getByRole('button', { name: 'Opções de Game 1' });

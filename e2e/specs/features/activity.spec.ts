@@ -32,7 +32,7 @@ test.describe('activity', () => {
   });
 });
 
-test('publishes ranked activity and the calendar from the desktop history', async ({ users }) => {
+test('publishes ranked activity and the summary from the desktop history', async ({ users }) => {
   const alice = await users.create('alice');
   const bob = await users.create('bob');
   await befriend(alice, bob);
@@ -43,9 +43,10 @@ test('publishes ranked activity and the calendar from the desktop history', asyn
   await a.page.getByRole('tab', { name: 'Mural' }).click();
   const add = a.page.getByRole('button', { name: 'Adicionar widget' });
   const catalog = a.page.getByRole('dialog', { name: 'Adicionar widget de perfil' });
-  for (const name of ['Mais jogados', 'Calendário de atividade']) {
+  for (const name of ['Mais jogados', 'Resumo de atividade']) {
     await add.click();
-    await catalog.getByRole('navigation').getByRole('button', { name: 'Atividade', exact: true }).click();
+    await catalog.getByRole('group', { name: 'Do Linkord' }).getByRole('button', { name: 'Atividade', exact: true }).click();
+    await expect(catalog.getByRole('button', { name: 'Calendário de atividade' })).toHaveCount(0);
     await catalog.getByRole('button', { name }).click();
   }
   await expect(a.page.getByText('Nenhuma atividade ainda')).toHaveCount(2);
@@ -68,5 +69,7 @@ test('publishes ranked activity and the calendar from the desktop history', asyn
   const top = b.page.getByRole('article').filter({ has: b.page.getByRole('heading', { name: 'Mais jogados' }) });
   await expect(top).toContainText('Spotify');
   await expect(top).toContainText('Últimos 7 dias');
-  await expect(b.page.getByRole('group', { name: 'Calendário de atividade' }).getByRole('img', { name: /Menos de 1 min/ })).toBeAttached();
+  const summary = b.page.getByRole('article').filter({ has: b.page.getByRole('heading', { name: 'Resumo de atividade' }) });
+  await expect(summary).toContainText('Tempo total');
+  await expect(summary).toContainText('Maior sequência');
 });

@@ -15,11 +15,16 @@ export function setConnectionVisibility(id: string, showOnProfile: boolean) {
 export function deleteConnection(id: string) {
   return apiFetch<ConnectionsResponse>(`/api/me/connections/${encodeURIComponent(id)}?catalog=2`, { method: 'DELETE' });
 }
+function keepCurrentWidgets(wall: WallResponse): WallResponse {
+  // During a deploy an older instance may still return the removed calendar.
+  const current = ({ type }: { type: string }) => type !== 'activity-calendar';
+  return { ...wall, widgets: wall.widgets.filter(current), ...(wall.available && { available: wall.available.filter(current) }) };
+}
 export function fetchWall(userId: string, owner: boolean, signal?: AbortSignal) {
-  return apiFetch<WallResponse>(owner ? '/api/me/wall?catalog=2' : `/api/users/${encodeURIComponent(userId)}/wall?catalog=2`, { signal });
+  return apiFetch<WallResponse>(owner ? '/api/me/wall?catalog=2' : `/api/users/${encodeURIComponent(userId)}/wall?catalog=2`, { signal }).then(keepCurrentWidgets);
 }
 /** `games` holds only the lists that were edited: the others stay as they are on the server. */
 export function saveWall(widgets: WallSelection[], games?: Partial<GameLists>) {
   const lists = games && Object.fromEntries(Object.entries(games).map(([list, items]) => [list, items.map(gameSnapshot)]));
-  return apiFetch<WallResponse>('/api/me/wall?catalog=2', { method: 'PUT', body: JSON.stringify(lists ? { widgets, games: lists } : { widgets }) });
+  return apiFetch<WallResponse>('/api/me/wall?catalog=2', { method: 'PUT', body: JSON.stringify(lists ? { widgets, games: lists } : { widgets }) }).then(keepCurrentWidgets);
 }

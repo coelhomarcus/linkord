@@ -6,6 +6,7 @@ import { config } from '../../src/config/env.js';
 import { servers, users } from '../../src/db/schema.js';
 import { createApp } from '../../src/http/app.js';
 import { createSession } from '../../src/modules/auth/session.js';
+import { listConnections, mutateConnection } from '../../src/modules/connections/connections.js';
 import { listSharedServers } from '../../src/modules/servers/serversRepository.js';
 import { friendsSince, listMutualFriends } from '../../src/modules/friendships/friendshipsRepository.js';
 import { befriend, db, makeServerWithMembers, makeUser, pool } from './helpers.js';
@@ -78,6 +79,26 @@ describe('friends since (real Postgres)', () => {
 });
 
 describe('GET /api/users/:userId/profile-details (real Postgres)', () => {
+  it('labels a published Steam connection with its handle or public display name', async () => {
+    const owner = await makeUser('steam'); const friend = await makeUser('friend');
+    await befriend(owner.id, friend.id);
+    const value = '76561197960287930';
+    const url = `https://steamcommunity.com/profiles/${value}`;
+    const headers = await asUser(friend.id);
+    const get = () => app.inject({ method: 'GET', url: `/api/users/${owner.id}/profile-details`, headers });
+    const snapshot = { steamVisibilityVerified: true, widgets: {
+      'steam-profile': { kind: 'steam-profile', name: 'Steam Player', avatarUrl: null, level: 15, owned: 8, currentGame: null },
+    } } as const;
+
+    await mutateConnection(owner.id, 'create', { provider: 'steam', value }, undefined, { snapshot, url });
+    assert.deepEqual((await get()).json().steamConnection, { url, label: 'Steam Player' });
+    const [connection] = await listConnections(owner.id);
+    await mutateConnection(owner.id, 'edit', { value }, connection!.id, { snapshot: { ...snapshot, steamProfileHandle: 'steam-player' }, url });
+    assert.deepEqual((await get()).json().steamConnection, { url, label: '@steam-player' });
+
+    await mutateConnection(owner.id, 'edit', { showOnProfile: false }, connection!.id);
+    assert.equal((await get()).json().steamConnection, undefined);
+  });
   it('sends member-since, friends-since and what the two have in common', async () => {
     const me = await makeUser('me'); const other = await makeUser('ot'); const both = await makeUser('both');
     await befriend(me.id, other.id); await befriend(me.id, both.id); await befriend(other.id, both.id);

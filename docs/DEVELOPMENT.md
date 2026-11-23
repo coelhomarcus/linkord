@@ -245,7 +245,7 @@ On Node 22.18 or newer, set `NODE_OPTIONS=--no-experimental-strip-types` as CI d
 | `features/emoji` | Shortcodes, server emojis across servers and DMs, uploading one, the composer on desktop and phone. |
 | `features/stickers` | Uploading, sending across servers, replying to one, a deleted sticker. |
 | `features/profile` | Profile edits reaching a friend, animated photo and banner, the games widgets and Wall editing, the phone layout. |
-| `features/activity` | Ranked activity and the calendar published on the Wall from the desktop history. |
+| `features/activity` | Ranked activity and the summary published on the Wall from the desktop history. |
 | `features/reports-admin` | Reporting a message, the admin deleting it, suspending an account. |
 | `features/settings` | Language and theme following the account to another browser; text size staying on the device. |
 | `features/security` | No framing, a foreign script refused and reported, YouTube as a sandboxed iframe. |
@@ -355,7 +355,7 @@ When you add state that lives in the process, add a row.
 
 ## Profile connections and Wall
 
-Connections (Settings → Connections) are a URL or an account on MyAnimeList, GitHub, Steam or Twitch. They are self-declared, not verified. A connection with "Show on profile" off stays in its owner's settings but leaves the profile and the Wall; its widgets come back when it is shown again.
+Connections (Settings → Connections) are a URL or an account on MyAnimeList, GitHub, Steam or Twitch. They are self-declared, not verified. The profile shows the account handle when available, or Steam's public display name for a SteamID without a handle. A connection with "Show on profile" off stays in its owner's settings but leaves the profile and the Wall; its widgets come back when it is shown again.
 
 To develop the widgets locally:
 
@@ -377,7 +377,7 @@ A list left out of `games` is untouched; a list present replaces the stored one.
 
 ### Activity widgets
 
-Most played and the summary (7 or 30 days, `period: 7` or `30`), a year calendar (UTC days) and recently played come from the desktop app's reports, with no connection. Presence records one open session per account on the server's clock and checkpoints it every 30 seconds; after a crash, startup closes open rows at their last checkpoint. Games hidden in Settings → Activity are left out of every total, and turning sharing off removes these widgets from the published Wall while keeping them in the editor. Sessions are kept 400 days after they were last seen, included in the data export, and deleted with the account.
+Most played and the summary (7 or 30 days, `period: 7` or `30`) and recently played come from the desktop app's reports, with no connection. Presence records one open session per account on the server's clock and checkpoints it every 30 seconds. After a crash, startup closes open rows at their last checkpoint. Games hidden in Settings → Activity are left out of every total, and turning sharing off removes these widgets from the published Wall while keeping them in the editor. Sessions are kept 400 days after they were last seen, included in the data export, and deleted with the account.
 
 Providers' limits and failures are in [INTEGRATIONS.md](INTEGRATIONS.md#myanimelist).
 

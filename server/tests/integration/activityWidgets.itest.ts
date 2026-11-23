@@ -13,6 +13,9 @@ import {
 } from '../../src/modules/activity/activitySessions.js';
 import { aggregateActivity, readActivityWidgets } from '../../src/modules/activity/activityWidgets.js';
 import type { Activity } from '../../src/modules/presence/activity.js';
+import { createIsolatedDatabase } from '../../src/scripts/rehearsal/isolatedDb.js';
+import { makeMigrationsFolder } from '../../src/scripts/rehearsal/migrationFolders.js';
+import { migrateOn } from '../../src/scripts/rehearsal/migrateOn.js';
 import { befriend, db, makeUser, pool } from './helpers.js';
 
 let app: FastifyInstance;
@@ -24,6 +27,21 @@ const game = (key: string): Activity => ({ key, kind: 'playing', name: key, icon
 async function asUser(userId: string) {
   return { cookie: `${config.SESSION_COOKIE}=${(await createSession(userId)).rawToken}` };
 }
+
+test('the migration removes previously saved activity calendars without moving other widgets', async () => {
+  const isolated = await createIsolatedDatabase(process.env.TEST_DATABASE_BASE_URL ?? process.env.DATABASE_URL!, 'test', `activity_calendar_${Date.now().toString(36)}`);
+  const old = makeMigrationsFolder({ toIdx: 78 });
+  const latest = makeMigrationsFolder();
+  try {
+    await migrateOn(isolated.pool, old.folder);
+    await isolated.pool.query("INSERT INTO users (id, username, password_hash) VALUES ('owner', 'owner', 'unused')");
+    await isolated.pool.query(`INSERT INTO profile_wall_widgets (id, user_id, type, position) VALUES
+      ('top', 'owner', 'activity-top', 0), ('calendar', 'owner', 'activity-calendar', 1), ('summary', 'owner', 'activity-summary', 2)`);
+    await migrateOn(isolated.pool, latest.folder);
+    const { rows } = await isolated.pool.query('SELECT type, position FROM profile_wall_widgets ORDER BY position');
+    assert.deepEqual(rows, [{ type: 'activity-top', position: 0 }, { type: 'activity-summary', position: 2 }]);
+  } finally { old.cleanup(); latest.cleanup(); await isolated.drop(); }
+});
 
 test('a restart closes at the last observation and an old start reported again cannot count time twice', async () => {
   const user = await makeUser('session');
@@ -76,7 +94,6 @@ test('the Wall excludes hidden keys from all aggregates, and sharing off preserv
   const visitor = await asUser(friend.id);
   const selection = [
     { type: 'activity-top', connectionId: null, period: 7 },
-    { type: 'activity-calendar', connectionId: null },
     { type: 'activity-recent', connectionId: null },
     { type: 'activity-summary', connectionId: null, period: 30 },
   ];
@@ -85,16 +102,17 @@ test('the Wall excludes hidden keys from all aggregates, and sharing off preserv
   const save = (widgets: unknown, url = ownUrl) => app.inject({ method: 'PUT', url, headers, payload: { widgets } });
   const publicWall = async () => (await app.inject({ method: 'GET', url: publicUrl, headers: visitor })).json().widgets;
   assert.equal((await save([{ ...selection[0], period: 8 }])).statusCode, 400);
-  assert.equal((await save(selection)).statusCode, 200);
+  // A tab opened before the deploy can still submit its old selection.
+  const saved = await save([...selection, { type: 'activity-calendar', connectionId: null }]);
+  assert.equal(saved.statusCode, 200);
+  assert.ok(saved.json().available.every((widget: { type: string }) => widget.type !== 'activity-calendar'));
 
-  const [top, calendar, recent, summary] = await publicWall();
+  const [top, recent, summary] = await publicWall();
   assert.equal(top.period, 7);
   assert.deepEqual(top.data.items.map((item: { key: string; milliseconds: number }) => [item.key, item.milliseconds]), [['steam:570', hour]]);
-  assert.equal(calendar.data.days.length, 365);
-  assert.equal(calendar.data.total, 3 * hour);
   assert.deepEqual(recent.data.items.map((item: { key: string }) => item.key), ['steam:570']);
   assert.deepEqual(summary.data, { kind: 'activity-summary', total: 3 * hour, longestStreak: 1, favorite: 'steam:570' });
-  assert.equal(JSON.stringify([top, calendar, recent, summary]).includes('minecraft'), false);
+  assert.equal(JSON.stringify([top, recent, summary]).includes('minecraft'), false);
 
   await db.update(users).set({ activitySharing: false }).where(eq(users.id, owner.id));
   assert.deepEqual(await publicWall(), []);
@@ -114,13 +132,12 @@ test('the Wall excludes hidden keys from all aggregates, and sharing off preserv
   assert.deepEqual(await db.select().from(activitySessions).where(eq(activitySessions.userId, owner.id)), []);
 });
 
-test('duration is clipped to the period and split at UTC midnight', () => {
+test('duration is clipped to the period and a session across midnight counts toward both days of the streak', () => {
   const midnight = Date.parse('2026-11-23T00:00:00Z');
   const result = aggregateActivity([{
     key: 'minecraft', name: 'Minecraft', kind: 'playing', icon: null,
     startedAt: new Date(midnight - 4 * hour), lastSeenAt: new Date(midnight + 3 * hour),
   }], midnight - hour, midnight + 2 * hour);
-  assert.deepEqual([...result.days], [[midnight - ACTIVITY_DAY_MS, hour], [midnight, 2 * hour]]);
   assert.equal(result.total, 3 * hour);
   assert.equal(result.longestStreak, 2);
 });

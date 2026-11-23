@@ -31,6 +31,11 @@ const snapshot: ConnectionSnapshot = { widgets: {
 const githubSnapshot: ConnectionSnapshot = { widgets: {
   'github-profile': { kind: 'github-profile', login: 'unpublishedlogin', name: null, avatarUrl: null, repositories: 1, followers: 2, following: 3 },
 } };
+const steamId = '76561197960287930';
+const steamUrl = `https://steamcommunity.com/profiles/${steamId}`;
+const steamSnapshot: ConnectionSnapshot = { widgets: {
+  'steam-profile': { kind: 'steam-profile', name: 'Example', avatarUrl: null, level: 20, owned: 4, currentGame: 'Previously visible game' },
+} };
 const request: RequestJson = async () => ({ data: [{ node: { id: 1, title: 'Recent' } }] });
 // the worker reads the client ID from the environment, which these tests leave unset
 const sync = (options: Parameters<typeof syncConnections>[0] = {}) => syncConnections({ malClientId: 'test-client', ...options });
@@ -53,6 +58,26 @@ describe('profile connections (real Postgres)', () => {
       assert.deepEqual(result.rows.map((row) => row.position), [0, 1, 2]);
       assert.ok(result.rows.every((row) => row.provider === 'url'));
       assert.deepEqual((await isolated.pool.query('SELECT profile_links FROM users WHERE id=$1', [id])).rows[0].profile_links, links);
+    } finally { old.cleanup(); latest.cleanup(); await isolated.drop(); }
+  });
+  it('invalidates old Steam snapshots without removing their Wall selections', async () => {
+    const isolated = await createIsolatedDatabase(process.env.TEST_DATABASE_BASE_URL ?? process.env.DATABASE_URL!, 'test', `steam_widgets_${Date.now().toString(36)}`);
+    const old = makeMigrationsFolder({ toIdx: 77 });
+    const latest = makeMigrationsFolder();
+    try {
+      await migrateOn(isolated.pool, old.folder);
+      await isolated.pool.query("INSERT INTO users (id, username, password_hash) VALUES ('owner', 'owner', 'unused')");
+      await isolated.pool.query(`INSERT INTO profile_connections (id, user_id, provider, value, url, position, snapshot, synced_at, next_sync_at, lease_token, lease_until)
+        VALUES ('steam', 'owner', 'steam', $1, $2, 0, $3, now(), now() + interval '1 day', 'lease', now() + interval '5 minutes'),
+        ('github', 'owner', 'github', 'octocat', 'https://github.com/octocat', 1, $4, now(), now() + interval '1 day', null, null)`,
+        [steamId, steamUrl, steamSnapshot, githubSnapshot]);
+      await isolated.pool.query("INSERT INTO profile_wall_widgets (id, user_id, connection_id, type, position) VALUES ('widget', 'owner', 'steam', 'steam-profile', 0)");
+      await migrateOn(isolated.pool, latest.folder);
+      const { rows } = await isolated.pool.query('SELECT id, snapshot, synced_at, lease_token, next_sync_at <= now() AS due FROM profile_connections ORDER BY position');
+      assert.deepEqual(rows[0], { id: 'steam', snapshot: null, synced_at: null, lease_token: null, due: true });
+      assert.deepEqual(rows[1]?.snapshot, githubSnapshot);
+      const { rows: selections } = await isolated.pool.query('SELECT type FROM profile_wall_widgets');
+      assert.deepEqual(selections, [{ type: 'steam-profile' }]);
     } finally { old.cleanup(); latest.cleanup(); await isolated.drop(); }
   });
   it('supports URL CRUD, preserves the projection during profile saves, and hides foreign connections', async () => {
@@ -105,6 +130,27 @@ describe('profile connections (real Postgres)', () => {
 });
 
 describe('profile Wall publication (real Postgres)', () => {
+  it('shows a cached Steam widget only after a successful visibility check', async () => {
+    const owner = await makeUser('steamwall');
+    await mutateConnection(owner.id, 'create', { provider: 'steam', value: steamId }, undefined, { snapshot: steamSnapshot, url: steamUrl });
+    const [connection] = await listConnections(owner.id);
+    assert.ok(connection);
+    await saveWall(owner.id, [{ connectionId: connection.id, type: 'steam-profile' }]);
+    assert.equal((await readWall(owner.id)).widgets[0]?.data, null);
+    const now = new Date(connection.nextSyncAt.getTime() + 1);
+    const request: RequestJson = async (url) => ({ response: url.includes('GetSteamLevel') ? { player_level: 20 } : {
+      players: [{ steamid: steamId, communityvisibilitystate: 3, personaname: 'Example', gameextrainfo: 'Private game' }],
+    } });
+    await sync({ now, steamKey: 'test-key', request, requestText: async () => `<script>g_rgProfileData = {"steamid":"${steamId}"};</script>
+      <div class="profile_rightcol"><a href="${steamUrl}/games/?tab=all"><span class="profile_count_link_total">4</span></a></div>` });
+    assert.deepEqual((await readWall(owner.id)).widgets[0]?.data,
+      { ...steamSnapshot.widgets['steam-profile'], currentGame: null });
+
+    await sync({ now: new Date(now.getTime() + SYNC_INTERVAL_MS), steamKey: 'test-key', request,
+      requestText: async () => { throw new ConnectionFetchError('unavailable'); } });
+    assert.equal((await listConnections(owner.id))[0]?.syncError, 'unavailable');
+    assert.equal((await readWall(owner.id)).widgets[0]?.data, null);
+  });
   it('requires explicit publication and returns only selected widget data to allowed viewers', async () => {
     const owner = await makeUser('wall'); const friend = await makeUser('friend'); const stranger = await makeUser('stranger'); const admin = await makeUser('admin', 'admin');
     const connection = await mal(owner.id);

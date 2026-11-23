@@ -17,6 +17,7 @@
     "openProfile": "Open profile",
     "displayName": "Display name",
     "openLink": "Open {{name}}",
+    "openAccountLink": "Open {{name}} on {{service}}",
     "admin": "Admin"
   },
   "modal": {
@@ -138,11 +139,10 @@
       "igdb-playing-games": "Games in rotation",
       "igdb-wishlist-games": "Want to play",
       "activity-top": "Most played",
-      "activity-calendar": "Activity calendar",
       "activity-recent": "Recently played",
       "activity-summary": "Activity summary",
       "steam-recent": "Recently played (Steam)",
-      "steam-top": "Most played (Steam)",
+      "steam-top": "Most played among recent games (Steam)",
       "steam-profile": "Steam profile",
       "twitch-live": "Twitch",
       "twitch-vods": "Latest VODs"
@@ -156,12 +156,8 @@
       "igdb-playing-games": "What you are playing right now",
       "igdb-wishlist-games": "Your wishlist",
       "activity-top": "Games and apps ranked by time over the last 7 or 30 days",
-      "activity-calendar": "Daily game and app time over the past year",
       "activity-recent": "The latest games and apps seen on Linkord",
       "activity-summary": "Total time, longest streak and favorite game",
-      "steam-recent": "Steam games played in the last two weeks, with playtime",
-      "steam-top": "Steam games ranked by total playtime",
-      "steam-profile": "Steam avatar, level and game library size",
       "twitch-live": "Live stream, game and viewer count",
       "twitch-vods": "The latest archived Twitch streams"
     },
@@ -192,6 +188,10 @@
     "categories": "Widget types",
     "added": "Added",
     "barLabel": "Save changes to the Wall",
+    "sections": {
+      "linkord": "From Linkord",
+      "integrations": "Integrations"
+    },
     "groups": {
       "igdb": "Games",
       "myanimelist": "Anime",
@@ -225,8 +225,6 @@
       "empty": "No activity yet",
       "desktopOnly": "Only the Linkord desktop app records playtime and app activity.",
       "private": "Hidden from your profile while activity sharing is off.",
-      "calendar": "Activity calendar",
-      "day": "{{date}}: {{duration}} of activity",
       "period": "Last {{count}} days",
       "periodLabel": "Period for {{name}}",
       "underMinute": "Under 1 min",

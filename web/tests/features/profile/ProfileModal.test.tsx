@@ -201,16 +201,20 @@ describe('ProfileModal — since when and what you have in common', () => {
     expect(screen.queryByText('Status')).not.toBeInTheDocument();
   });
 
-  it('lists the connections under their label, one per line, opening the site', async () => {
-    mocked.fetchProfileDetails.mockResolvedValue(details);
-    renderProfile({ allUsers: new Map([[user.id, { ...user, profileLinks: ['https://open.spotify.com/user/x', 'https://github.com/marcus'] }]]) });
+  it('shows account names for connections and a service label for a plain link', async () => {
+    const steamUrl = 'https://steamcommunity.com/profiles/76561197960287930';
+    mocked.fetchProfileDetails.mockResolvedValue({ ...details, steamConnection: { url: steamUrl, label: '@steam-player' } });
+    renderProfile({ allUsers: new Map([[user.id, { ...user, profileLinks: ['https://open.spotify.com/user/x', 'https://github.com/coelhomarcus', steamUrl] }]]) });
     expect(await screen.findByRole('heading', { name: 'Conexões' })).toBeInTheDocument();
     const spotify = screen.getByRole('link', { name: 'Abrir Spotify' });
-    const github = screen.getByRole('link', { name: 'Abrir GitHub' });
+    const github = screen.getByRole('link', { name: 'Abrir @coelhomarcus em GitHub' });
+    const steam = await screen.findByRole('link', { name: 'Abrir @steam-player em Steam' });
     expect(spotify).toHaveAttribute('href', 'https://open.spotify.com/user/x');
     expect(spotify).toHaveTextContent('Spotify');
-    expect(github).toHaveAttribute('href', 'https://github.com/marcus');
-    expect(github).toHaveTextContent('GitHub');
+    expect(github).toHaveAttribute('href', 'https://github.com/coelhomarcus');
+    expect(github).toHaveTextContent('@coelhomarcus');
+    expect(steam).toHaveAttribute('href', steamUrl);
+    expect(steam).toHaveTextContent('@steam-player');
     expect(spotify.closest('ul')).toHaveClass('flex-col');
   });
 
