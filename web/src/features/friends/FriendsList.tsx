@@ -154,7 +154,7 @@ export function FriendsList({ view, query, onQueryChange, onOpenProfile }: {
                       <DropdownMenuTrigger
                         render={<button type="button" disabled={pending.isPending(user.id)} aria-label={t('list.moreFor', { name: user.displayName })} className={ROW_ACTION} />}
                       >
-                        <DotsThreeVerticalIcon size={20} weight="bold" />
+                        <DotsThreeVerticalIcon size={20} weight="fill" />
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end" className="w-max min-w-0">
                         <DropdownMenuItem onClick={() => onOpenProfile(user.id)}><UserIcon size={16} />{t('list.viewProfile')}</DropdownMenuItem>

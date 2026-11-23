@@ -13,10 +13,10 @@ import type { Locale } from '../users/locale.js';
 
 /** Throws with `.code = 'account_identity_taken'` if a race loses to either
  * identity unique index despite the earlier checks. */
-export async function createUser({ username, email, passwordHash, role, locale }: { username: string; email: string; passwordHash: string; role: Role; locale?: Locale }): Promise<User> {
+export async function createUser({ username, email, passwordHash, role, displayName = '', locale }: { username: string; email: string; passwordHash: string; role: Role; displayName?: string; locale?: Locale }): Promise<User> {
   const id = crypto.randomUUID();
   try {
-    const [row] = await db.insert(users).values({ id, username, email: normalizeEmail(email), passwordHash, role, ...(locale ? { locale } : {}) }).returning();
+    const [row] = await db.insert(users).values({ id, username, displayName, email: normalizeEmail(email), passwordHash, role, ...(locale ? { locale } : {}) }).returning();
     return row!;
   } catch (err: unknown) {
     // drizzle wraps the driver error in DrizzleQueryError — Postgres's code

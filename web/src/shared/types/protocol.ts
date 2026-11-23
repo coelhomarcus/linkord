@@ -29,7 +29,7 @@ export type ReactionEmoji = string;
 /** Wire protocol version this build speaks; the server refuses older ones
  * (client_outdated). Keep in sync with server/src/realtime/protocolVersion.ts
  * — version 29 adds `notice` (friend requests and server invitations shown by a tab without push). */
-export const PROTOCOL_VERSION = 29;
+export const PROTOCOL_VERSION = 30;
 
 export interface LiveNotice {
   kind: 'friend_request' | 'friend_accepted' | 'server_invitation';
@@ -79,6 +79,38 @@ export interface Activity {
   icon: string | null;
   /** ISO time it started */
   startedAt: string;
+  /** what the game says through Discord Rich Presence, when it says anything (protocol 30) */
+  rich?: RichActivity;
+}
+
+interface RichImage {
+  /** an image path on the server */
+  url: string;
+  text?: string;
+}
+
+interface RichActivity {
+  details?: string;
+  state?: string;
+  largeImage?: RichImage;
+  smallImage?: RichImage;
+  party?: { size: number; max: number };
+  /** ms, the server's clock (`welcome.serverTime`) */
+  timestamps?: { start?: number; end?: number };
+  /** https links only */
+  buttons?: { label: string; url: string }[];
+}
+
+/** `rich` as the desktop app reports it: images as stored icons, timestamps on this computer's clock. */
+export interface RichActivityReport {
+  details?: string;
+  state?: string;
+  largeImage?: { local: string; text?: string };
+  smallImage?: { local: string; text?: string };
+  party?: { size: number; max: number };
+  /** ms, this computer's clock, placed on the server's with `sentAt` like `startedAt` */
+  timestamps?: { start?: number; end?: number };
+  buttons?: { label: string; url: string }[];
 }
 
 /** Whether the account shows its activity, and which never show. */
@@ -99,6 +131,8 @@ export interface ActivityReport {
   /** ms, this computer's clock when the report was sent, so the server reads the start as a duration
    * and a clock that is off does not move it (protocol 27) */
   sentAt?: number;
+  /** a game's Discord Rich Presence (protocol 30) */
+  rich?: RichActivityReport;
 }
 
 /** Someone else's status while they appear online. */

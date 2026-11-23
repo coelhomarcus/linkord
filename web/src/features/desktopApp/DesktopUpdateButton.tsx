@@ -19,7 +19,7 @@ export function DesktopUpdateButton({ className }: { className?: string }) {
         onClick={apply}
         className={cn('app-no-drag grid size-7 flex-none place-items-center rounded-md text-green transition-colors hover:bg-bg-control-hover', className)}
       >
-        <DownloadSimpleIcon size={20} weight="bold" />
+        <DownloadSimpleIcon size={20} weight="fill" />
       </TooltipTrigger>
       <TooltipContent side="bottom">{t('updateReady')}</TooltipContent>
     </Tooltip>

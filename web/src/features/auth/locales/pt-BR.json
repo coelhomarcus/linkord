@@ -1,59 +1,72 @@
 {
-  "tagline": "Converse e faça chamadas com seus amigos",
   "deletionScheduled": "Sua conta será excluída em {{date}}. Para cancelar, é só entrar de novo antes dessa data.",
-  "tabs": {
-    "ariaLabel": "Entrar ou criar conta",
-    "login": "Entrar",
-    "register": "Criar conta"
-  },
   "fields": {
-    "username": "Usuário",
+    "username": "Nome de usuário",
+    "displayName": "Nome exibido",
     "email": "E-mail",
+    "identifier": "E-mail ou nome de usuário",
     "password": "Senha",
     "newPassword": "Nova senha",
     "inviteCode": "Código de convite"
   },
   "placeholders": {
-    "username": "3 a 20 caracteres",
-    "email": "voce@exemplo.com",
-    "password": "Pelo menos 8 caracteres"
+    "email": "voce@exemplo.com"
+  },
+  "hints": {
+    "displayName": "É assim que os outros veem você. Você pode usar caracteres especiais e emoji.",
+    "username": "Use de 3 a 20 caracteres: letras, números, underlines _, pontos ou hífens.",
+    "password": "Use pelo menos 8 caracteres.",
+    "inviteCode": "Peça o código a quem te convidou para o Linkord."
+  },
+  "errors": {
+    "required": "Este campo é obrigatório."
   },
   "password": {
     "show": "Mostrar senha",
     "hide": "Ocultar senha"
   },
   "login": {
+    "title": "Boas-vindas de volta!",
+    "subtitle": "Que bom te ver de novo!",
     "submit": "Entrar",
     "pending": "Entrando…",
-    "forgot": "Esqueci minha senha",
-    "failed": "Não foi possível entrar."
+    "forgot": "Esqueceu sua senha?",
+    "failed": "Não foi possível entrar.",
+    "needAccount": "Precisando de uma conta?",
+    "register": "Registre-se"
   },
   "register": {
+    "title": "Criar uma conta",
     "submit": "Criar conta",
     "pending": "Criando conta…",
-    "failed": "Não foi possível criar a conta."
+    "failed": "Não foi possível criar a conta.",
+    "haveAccount": "Já tem uma conta? Entre aqui"
+  },
+  "desktopApp": {
+    "title": "Baixe o app para Windows",
+    "description": "Tenha o Linkord numa janela própria, com notificações mesmo com a janela fechada.",
+    "download": "Baixar para Windows",
+    "version": "Versão {{version}}"
   },
   "recovery": {
-    "title": "Recuperar conta",
-    "intro": "Informe seu usuário ou e-mail para receber um código de recuperação.",
-    "by": "Recuperar pelo",
+    "title": "Esqueceu sua senha?",
+    "intro": "Informe o e-mail ou o nome de usuário da sua conta. Enviaremos um código para você criar uma senha nova.",
     "sendCode": "Enviar código",
     "sending": "Enviando…",
     "sendFailed": "Não foi possível enviar o código.",
     "backToLogin": "Voltar para entrar",
-    "enterCode": "Digite o código",
+    "enterCode": "Redefinir sua senha",
     "sentToEmail": "Enviamos um código para {{email}}. Ele expira em 30 minutos.",
     "sentToAccount": "Enviamos um código para o e-mail cadastrado nessa conta. Ele expira em 30 minutos.",
     "codeLabel": "Código de recuperação",
     "codeHint": "Digite os 6 dígitos enviados para seu e-mail.",
     "codeError": "Confira o código e tente novamente.",
-    "success": "Senha redefinida com sucesso.",
-    "reset": "Redefinir senha",
+    "reset": "Alterar senha",
     "saving": "Salvando…",
-    "resetDone": "Senha redefinida",
     "resetFailed": "Não foi possível redefinir a senha.",
-    "useOtherEmail": "Usar outro e-mail",
-    "useOtherUsername": "Usar outro usuário"
+    "useOther": "Usar outro e-mail ou usuário",
+    "doneTitle": "Senha alterada",
+    "doneBody": "Pronto! Agora é só entrar com a senha nova."
   },
   "emailRequired": {
     "title": "Vincule seu e-mail",
@@ -85,12 +98,12 @@
     "codeHint": "Digite os 6 dígitos enviados para seu e-mail.",
     "codeError": "Confira o código e tente novamente.",
     "success": "Código confirmado.",
-    "submit": "Confirmar e entrar",
+    "submit": "Confirmar",
     "failed": "Não foi possível confirmar o código.",
     "resend": "Reenviar código",
     "resent": "Código reenviado",
     "resendFailed": "Não foi possível reenviar o código.",
-    "back": "Voltar",
+    "back": "Voltar para entrar",
     "expired": "O login expirou. Entre com sua senha de novo."
   }
 }

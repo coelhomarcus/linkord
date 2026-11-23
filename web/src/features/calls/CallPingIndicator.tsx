@@ -15,8 +15,7 @@ const TONE_TEXT: Record<ConnectionTone, string> = {
 };
 
 /** Three rising bars; the ones not lit stay drawn, faint, so the strength
- * reads as "2 of 3" rather than as a smaller icon. Phosphor's CellSignal set
- * drops the missing bars instead. */
+ * reads as "2 of 3" rather than as a smaller icon. */
 function SignalBars({ bars }: { bars: number }) {
   return (
     // sized to the caption it sits beside: the tallest bar about the text's height

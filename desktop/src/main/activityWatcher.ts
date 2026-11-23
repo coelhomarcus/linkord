@@ -9,10 +9,14 @@ import {
   type DetectedActivity, type ForegroundProcess, type RunningProcess, type SteamGame,
 } from './activityDetect.js';
 import { needsForeground, pickActivity, settleActivity, type ActivityPreferences, type Challenger } from './activityResolve.js';
+import { attachRichPresence, isDiscordProcess, type RichPresence } from './richPresence.js';
+import { createRichPresenceServer } from './richPresenceServer.js';
 
 // Looks every few seconds at what is running (activityDetect.ts decides what counts, activityResolve.ts
 // which of it is shared) and tells the page when the activity changes. Windows is asked with its own
 // tools; a failed or slow command counts as "nothing running", never as an error the person sees.
+// While Discord is not running, games' Rich Presence also comes in (richPresenceServer.ts) and rides
+// on the activity it belongs to.
 
 const INTERVAL_MS = 15_000;
 const COMMAND_TIMEOUT_MS = 5_000;
@@ -25,6 +29,9 @@ export interface CurrentActivity {
   steamAppId?: number;
   /** when this activity was first seen, ms */
   startedAt: number;
+  /** the game's Discord application, when it sends Rich Presence */
+  discordAppId?: string;
+  rich?: RichPresence;
 }
 
 export interface RecentActivity {
@@ -115,7 +122,12 @@ export function createActivityWatcher(options: {
 }) {
   let detected: DetectedActivity | null = null;
   let current: CurrentActivity | null = null;
+  // what the last check found, before Rich Presence is attached; `candidates` is with it
+  let found: DetectedActivity[] = [];
   let candidates: DetectedActivity[] = [];
+  let steamInstallDir: string | null = null;
+  // the program file of each pid that sent Rich Presence, to tell whether it is the Steam game
+  const presenceExePaths = new Map<number, string>();
   let running: RecentActivity[] = [];
   let foreground: string | null = null;
   let challenger: Challenger | null = null;
@@ -130,7 +142,14 @@ export function createActivityWatcher(options: {
   // one check or re-pick at a time; a settings change during a check picks again when it ends
   let busy = false;
   let pickAgain = false;
+  let checkAgain = false;
   let stops = 0;
+
+  // a game starting or stopping its presence is checked at once (it is in the process list by then);
+  // a change of what it says only needs a new pick
+  const presence = createRichPresenceServer({
+    onChange: (structural) => { void (structural ? checkNow() : pickNow()); },
+  });
 
   void fs.readFile(options.recentFile, 'utf8').then((text) => {
     const saved = JSON.parse(text) as unknown;
@@ -151,18 +170,39 @@ export function createActivityWatcher(options: {
 
   /** Picks what to show from the last check, and tells the page when that changed. */
   async function resolve(now: number) {
+    candidates = attachRichPresence({ candidates: found, sessions: presence.sessions(), steamInstallDir, exePaths: presenceExePaths });
+    for (const key of firstSeen.keys()) if (!candidates.some((c) => c.key === key)) firstSeen.delete(key);
+    for (const candidate of candidates) if (!firstSeen.has(candidate.key)) firstSeen.set(candidate.key, now);
+    announceRunning();
     const pick = pickActivity(candidates, preferences(), foreground);
     const settled = settleActivity({ shown: detected?.key ?? null, pick, candidates, prefs: preferences(), challenger, now });
     challenger = settled.challenger;
     const next = settled.show;
     if (sameDetection(detected, next)) return;
     if (next && !next.exePath && next.pid !== undefined) next.exePath = (await windowsExePath(next.pid)) ?? undefined;
+    const renamed = !detected || !next || detected.key !== next.key || detected.name !== next.name;
     detected = next;
     current = next
-      ? { key: next.key, kind: next.kind, name: next.name, ...(next.steamAppId ? { steamAppId: next.steamAppId } : {}), startedAt: firstSeen.get(next.key) ?? now }
+      ? {
+        key: next.key,
+        kind: next.kind,
+        name: next.name,
+        ...(next.steamAppId ? { steamAppId: next.steamAppId } : {}),
+        startedAt: firstSeen.get(next.key) ?? now,
+        ...(next.discordAppId ? { discordAppId: next.discordAppId } : {}),
+        ...(next.rich ? { rich: next.rich } : {}),
+      }
       : null;
-    if (current) remember(current);
+    // a game updating its presence is the same activity: the recent list is written once
+    if (current && renamed) remember(current);
     options.onChange(current);
+  }
+
+  function announceRunning() {
+    const list = candidates.filter((c) => c.name).map((c) => ({ key: c.key, kind: c.kind, name: c.name }));
+    if (sameRunning(running, list)) return;
+    running = list;
+    options.onRunningChange({ running, preferred: prefs.preferred });
   }
 
   async function exclusive(work: () => Promise<void>, onBusy: () => void) {
@@ -173,9 +213,15 @@ export function createActivityWatcher(options: {
     busy = true;
     try {
       await work();
-      while (pickAgain) {
-        pickAgain = false;
-        await resolve(Date.now());
+      while (checkAgain || pickAgain) {
+        if (checkAgain) {
+          checkAgain = false;
+          pickAgain = false;
+          await check();
+        } else {
+          pickAgain = false;
+          await resolve(Date.now());
+        }
       }
     } catch (error) {
       console.error('[desktop] activity check failed', error);
@@ -186,9 +232,12 @@ export function createActivityWatcher(options: {
 
   const pickNow = () => (timer ? exclusive(() => resolve(Date.now()), () => { pickAgain = true; }) : Promise.resolve());
 
-  const tick = () => exclusive(async () => {
+  async function check() {
     const generation = stops;
     const [processes, steam] = await Promise.all([listProcesses(), steamState()]);
+    // Discord keeps the pipe whenever it runs; Linkord listens only while nothing else does
+    if (processes.some((p) => isDiscordProcess(p.path))) presence.yield();
+    else await presence.ensure();
     let game: SteamGame | null = null;
     if (steam.appId) {
       if (!steamGames.has(steam.appId)) steamGames.set(steam.appId, await steamGameInfo(steam.root, steam.appId));
@@ -196,20 +245,29 @@ export function createActivityWatcher(options: {
     }
     // turned off while the system was being asked: what it found is not shared
     if (generation !== stops) return;
-    candidates = detectCandidates({ processes, steam: game, catalog: ACTIVITY_CATALOG });
-    const now = Date.now();
-    for (const key of firstSeen.keys()) if (!candidates.some((c) => c.key === key)) firstSeen.delete(key);
-    for (const candidate of candidates) if (!firstSeen.has(candidate.key)) firstSeen.set(candidate.key, now);
-    foreground = needsForeground(candidates, preferences())
-      ? foregroundKey(candidates, await foregroundProcess().catch(() => null), processes, game)
-      : null;
-    await resolve(now);
-    const list = candidates.filter((c) => c.name).map((c) => ({ key: c.key, kind: c.kind, name: c.name }));
-    if (!sameRunning(running, list)) {
-      running = list;
-      options.onRunningChange({ running, preferred: prefs.preferred });
+    found = detectCandidates({ processes, steam: game, catalog: ACTIVITY_CATALOG });
+    steamInstallDir = game?.installDir ?? null;
+    const sessions = presence.sessions();
+    for (const pid of presenceExePaths.keys()) if (!sessions.some((s) => s.pid === pid)) presenceExePaths.delete(pid);
+    if (steamInstallDir) {
+      // only a pid no catalog entry owns can be the Steam game
+      for (const session of sessions) {
+        const pid = session.pid;
+        if (pid === null || presenceExePaths.has(pid) || found.some((c) => c.pids.includes(pid))) continue;
+        const exePath = await windowsExePath(pid);
+        if (exePath) presenceExePaths.set(pid, exePath);
+      }
     }
-  }, () => {});
+    if (generation !== stops) return;
+    const withPresence = attachRichPresence({ candidates: found, sessions, steamInstallDir, exePaths: presenceExePaths });
+    foreground = needsForeground(withPresence, preferences())
+      ? foregroundKey(withPresence, await foregroundProcess().catch(() => null), processes, game)
+      : null;
+    await resolve(Date.now());
+  }
+
+  const tick = () => exclusive(check, () => {});
+  const checkNow = () => (timer ? exclusive(check, () => { checkAgain = true; }) : Promise.resolve());
 
   return {
     start() {
@@ -222,8 +280,12 @@ export function createActivityWatcher(options: {
       if (timer) clearInterval(timer);
       timer = null;
       stops += 1;
+      presence.close();
+      presenceExePaths.clear();
+      steamInstallDir = null;
       detected = null;
       current = null;
+      found = [];
       candidates = [];
       running = [];
       foreground = null;

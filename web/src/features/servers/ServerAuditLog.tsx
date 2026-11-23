@@ -244,7 +244,7 @@ export function ServerAuditLog({ server }: { server: ServerSummary }) {
                 {t('auditLog.filters.target', { name: filters.target.label })}
                 <button type="button" aria-label={t('auditLog.filters.clearTarget')} onClick={() => setFilters((f) => ({ ...f, target: null }))}
                   className="relative grid size-5 touch-target place-items-center rounded-full text-text-muted focus-ring hover:bg-fill-hover hover:text-text-primary">
-                  <XIcon size={12} weight="bold" />
+                  <XIcon size={12} weight="fill" />
                 </button>
               </span>
             )}

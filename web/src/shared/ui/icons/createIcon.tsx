@@ -1,8 +1,8 @@
 import type { ReactElement, Ref, SVGProps } from 'react';
 
-// Only the weights the app draws: Phosphor's other three (thin, light,
-// duotone) were most of the icons' weight in the main chunk and never shown.
-export type IconWeight = 'regular' | 'bold' | 'fill';
+/** Fluent's two styles: `fill` for an active or emphasised icon, and for a line
+ * icon (check, chevron, dismiss) that needs a heavier stroke. */
+export type IconWeight = 'regular' | 'fill';
 
 interface IconProps extends Omit<SVGProps<SVGSVGElement>, 'ref'> {
   size?: string | number;
@@ -17,12 +17,12 @@ export type IconComponent = ((props: IconProps) => ReactElement) & { displayName
 
 type Paths = readonly string[];
 
-/** Draws the same <svg> as @phosphor-icons/react's IconBase, without its context. */
-export function createIcon(name: string, regular: Paths, bold: Paths, fill: Paths): IconComponent {
-  const weights: Record<IconWeight, Paths> = { regular, bold, fill };
+/** One Fluent icon, drawn from its 20 px artwork in either style. */
+export function createIcon(name: string, regular: Paths, fill: Paths): IconComponent {
+  const weights: Record<IconWeight, Paths> = { regular, fill };
   function Icon({ size = '1em', weight = 'regular', color = 'currentColor', mirrored = false, alt, children, ...rest }: IconProps) {
     return (
-      <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} fill={color} viewBox="0 0 256 256" transform={mirrored ? 'scale(-1, 1)' : undefined} {...rest}>
+      <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} fill={color} viewBox="0 0 20 20" transform={mirrored ? 'scale(-1, 1)' : undefined} {...rest}>
         {alt ? <title>{alt}</title> : null}
         {children}
         {weights[weight].map((d, index) => <path key={index} d={d} />)}

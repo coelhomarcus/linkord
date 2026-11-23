@@ -80,6 +80,22 @@ export interface DesktopActivity {
   steamAppId?: number;
   /** ms */
   startedAt: number;
+  /** the game's Discord application, when it sends Rich Presence; absent in builds up to 0.8.0 */
+  discordAppId?: string;
+  rich?: DesktopRichPresence;
+}
+
+/** A game's Rich Presence as the desktop app read it (desktop/src/main/richPresence.ts). */
+export interface DesktopRichPresence {
+  details?: string;
+  state?: string;
+  /** `key`: an asset name of the game's Discord application, an `https:` link or `mp:external/...` */
+  largeImage?: { key: string; text?: string };
+  smallImage?: { key: string; text?: string };
+  party?: { size: number; max: number };
+  /** ms, this computer's clock */
+  timestamps?: { start?: number; end?: number };
+  buttons?: { label: string; url: string }[];
 }
 
 export interface DesktopActivityApi {

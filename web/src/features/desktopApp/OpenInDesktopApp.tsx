@@ -27,7 +27,7 @@ export function OpenInDesktopApp({ link, className }: { link: string | null; cla
   if (!link || !available) return null;
   return (
     <a href={link} className={cn(buttonVariants({ variant: 'outline', size: 'lg' }), className)}>
-      <DesktopIcon weight="bold" aria-hidden />
+      <DesktopIcon weight="fill" aria-hidden />
       {t('openInApp')}
     </a>
   );

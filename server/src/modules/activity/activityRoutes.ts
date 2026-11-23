@@ -4,6 +4,7 @@ import { config } from '../../config/env.js';
 import { parseCookies } from '../../http/cookies.js';
 import { sendError, sendJson } from '../../http/respond.js';
 import { resolveSession } from '../auth/session.js';
+import { createDiscordAppClient } from '../../integrations/discord/discordApps.js';
 import { createIgdbClient } from '../../integrations/igdb/igdb.js';
 import { STEAM_ASSET_HOST } from '../../integrations/steam/steamAssets.js';
 import { createSteamGridDbClient, STEAMGRIDDB_IMAGE_HOST } from '../../integrations/steamgriddb/steamgriddb.js';
@@ -14,6 +15,7 @@ import { requireSession } from '../servers/serverHttp.js';
 import { canViewProfile } from '../users/profileAccess.js';
 import { findById } from '../users/users.js';
 import { readActivityHistory } from './activityHistory.js';
+import { createDiscordActivityHandler, createDiscordActivityLookup } from './activityDiscord.js';
 import { createActivityGameIconLookup } from './activityGameIcons.js';
 import { ActivityGameError, createActivityGameLookup, parseActivityGameQuery } from './activityGames.js';
 import { MAX_ACTIVITY_ICON_UPLOAD_BYTES, activityIconPath, isActivityIconId, storeActivityIcon } from './activityIcons.js';
@@ -32,6 +34,15 @@ const lookupIcon = createActivityGameIconLookup({
     return (await fetchImage({ url, redirects: 0 })).body;
   },
   storeIcon: storeActivityIcon,
+});
+const handleDiscord = createDiscordActivityHandler({
+  session: requireSession,
+  lookup: createDiscordActivityLookup({
+    client: createDiscordAppClient(),
+    // through the SSRF guard and the media proxy's size cap, checked to be a picture
+    download: async (source) => (await fetchImage(source)).body,
+    storeIcon: storeActivityIcon,
+  }),
 });
 const ICON_RULE = { windowMs: 60_000, max: 10 };
 
@@ -101,6 +112,7 @@ async function handleHistory(request: FastifyRequest<{ Params: { userId: string 
 
 export function registerActivityRoutes(fastify: FastifyInstance): void {
   fastify.get('/api/activity/game', handleGame);
+  fastify.post('/api/activity/discord', { bodyLimit: 8 * 1024 }, handleDiscord);
   fastify.get('/api/activity/icons/:file', handleIcon);
   fastify.get('/api/users/:userId/activity', handleHistory);
   // raw Buffer body, scoped so the wildcard parser doesn't reach the JSON routes

@@ -3,7 +3,7 @@ import type { ReactNode } from 'react';
 import { clearResourceCaches } from '@/shared/lib/resourceCache';
 import { clearNotificationIcons } from '@/shared/notificationIcon';
 import { fetchMe, login as apiLogin, logout as apiLogout, register as apiRegister, verifyLoginCode } from '@/shared/api/api';
-import type { ApiUser, LoginChallenge, SignedIn } from '@/shared/api/api';
+import type { ApiUser, LoginChallenge, RegisterInput, SignedIn } from '@/shared/api/api';
 import { clearAllDrafts } from '@/features/chat/conversationDrafts';
 import { clearPendingShares } from '@/features/chat/pendingShare';
 import { disablePush, restorePush } from '@/shared/pushNotifications';
@@ -25,7 +25,7 @@ interface AuthContextValue {
   /** null when signed in; a challenge when the account wants its emailed code first (`completeLogin`) */
   login: (username: string, password: string) => Promise<LoginChallenge | null>;
   completeLogin: (challenge: string, code: string) => Promise<void>;
-  register: (username: string, email: string, password: string, confirmPassword: string, code: string) => Promise<void>;
+  register: (input: RegisterInput) => Promise<void>;
   logout: () => Promise<void>;
   /** The deletion was scheduled and the server already ended every session: leave like a logout. */
   leaveAfterDeletion: (dueAt: string) => Promise<void>;
@@ -120,8 +120,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     signIn(await verifyLoginCode(challenge, code));
   }, [signIn]);
 
-  const register = useCallback(async (username: string, email: string, password: string, confirmPassword: string, code: string) => {
-    const { user: u } = await apiRegister(username, email, password, confirmPassword, code);
+  const register = useCallback(async (input: RegisterInput) => {
+    const { user: u } = await apiRegister(input);
     clearResourceCaches();
     clearNotificationIcons();
     setUser(u);

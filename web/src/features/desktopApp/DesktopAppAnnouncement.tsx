@@ -85,7 +85,7 @@ export function DesktopAppAnnouncement() {
             onClick={() => setOpen(false)}
             className={cn(buttonVariants({ size: 'lg' }), 'h-11 w-full text-body')}
           >
-            <DownloadSimpleIcon weight="bold" aria-hidden />
+            <DownloadSimpleIcon weight="fill" aria-hidden />
             {t('download')}
           </a>
           <p className="text-center text-caption text-text-muted">

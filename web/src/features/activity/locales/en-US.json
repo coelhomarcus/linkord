@@ -9,7 +9,8 @@
   },
   "timer": {
     "playing": "Playing for {{time}}",
-    "using": "Using for {{time}}"
+    "using": "Using for {{time}}",
+    "left": "{{time}} left"
   },
   "now": {
     "playing": "Playing now",
@@ -45,11 +46,11 @@
     },
     "share": {
       "label": "Share my activity",
-      "description": "Shows on your profile the game or app you are using, like \"Playing Minecraft\". It works in the Linkord desktop app, which only recognizes games and apps from a known list."
+      "description": "Shows on your profile the game or app you are using, like \"Playing Minecraft\". It works in the Linkord desktop app, which recognizes games and apps from a known list and, while Discord is closed, the details games send through Discord Rich Presence."
     },
     "shown": {
       "label": "Activity shown",
-      "description": "With more than one game or app open, choose which one to show. On automatic, the game in front wins, then the game Steam is running, then other games and apps.",
+      "description": "With more than one game or app open, choose which one to show. On automatic, the game in front wins, then a game sending Rich Presence, then the game Steam is running, then other games and apps.",
       "auto": "Automatic",
       "notRunning": "{{name}} (closed)"
     },
@@ -67,5 +68,9 @@
   "errors": {
     "saveFailed": "Could not save. Try again.",
     "offline": "No connection to the server. Try again in a moment."
+  },
+  "rich": {
+    "left": "{{time}} left",
+    "party": "({{size}} of {{max}})"
   }
 }

@@ -46,7 +46,7 @@ function TouchActions({ widget, disabled, index, count, onMove, onRemove }: {
         aria-label={t('wall.sortable.options', { name: widget.name })}
         className={cn(FLOATING, 'text-text-secondary hover:bg-fill-hover hover:text-text-primary')}
       >
-        <DotsThreeIcon size={16} weight="bold" />
+        <DotsThreeIcon size={16} weight="fill" />
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start">
         <DropdownMenuItem className={MENU_ITEM} disabled={index === 0} onClick={() => onMove(index - 1)}>
@@ -104,7 +104,7 @@ function Row({ widget, disabled, index, count, touch, takeDrop, onMove, onRemove
           {...attributes}
           {...listeners}
         >
-          <DotsSixVerticalIcon size={16} weight="bold" />
+          <DotsSixVerticalIcon size={16} weight="fill" />
         </button>
         {touch
           ? <TouchActions widget={widget} disabled={disabled} index={index} count={count} onMove={onMove} onRemove={onRemove} />

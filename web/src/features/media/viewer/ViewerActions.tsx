@@ -49,7 +49,7 @@ export function ViewerActionBar({ item, extraActions }: { item: ViewerItem; extr
       {extraActions.length > 0 && (
         <DropdownMenu>
           <DropdownMenuTrigger render={<button type="button" aria-label={t('viewer.moreActions')} title={t('viewer.moreActions')} className={viewerIconButton} />}>
-            <DotsThreeIcon size={20} weight="bold" aria-hidden />
+            <DotsThreeIcon size={20} weight="fill" aria-hidden />
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
             {extraActions.map((action, index) => (
@@ -104,7 +104,7 @@ export function ViewerActionSheet({ item, extraActions }: { item: ViewerItem; ex
   return (
     <DialogPrimitive.Root open={open} onOpenChange={setOpen}>
       <DialogPrimitive.Trigger render={<button type="button" aria-label={t('viewer.moreActions')} className={viewerIconButton} />}>
-        <DotsThreeIcon size={22} weight="bold" aria-hidden />
+        <DotsThreeIcon size={22} weight="fill" aria-hidden />
       </DialogPrimitive.Trigger>
       <DialogPrimitive.Portal>
         <DialogPrimitive.Backdrop className="fixed inset-0 z-50 bg-black/40 motion-modal data-open:animate-in data-open:fade-in-0 data-closed:animate-out data-closed:fade-out-0" />

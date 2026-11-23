@@ -326,7 +326,7 @@ export function VoiceMembers({ server, channel, onOpenProfile, onNavigate, drag,
               <button type="button" aria-label={t('voiceMembers.menu.more', { name: person.displayName })} aria-haspopup="menu"
                 onClick={(event) => openMenuFromButton(person, event)}
                 className="sr-only flex-none rounded-sm text-text-muted focus-ring focus-visible:not-sr-only">
-                <DotsThreeIcon size={16} weight="bold" />
+                <DotsThreeIcon size={16} weight="fill" />
               </button>
             </li>
           );

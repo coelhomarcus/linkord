@@ -160,8 +160,18 @@ export function endOtherSessions(): Promise<{ endedSessions: number }> {
   return apiFetch('/api/auth/sessions/end-others', { method: 'POST' });
 }
 
-export function register(username: string, email: string, password: string, confirmPassword: string, code: string): Promise<{ user: ApiUser }> {
-  return apiFetch('/api/auth/register', { method: 'POST', body: JSON.stringify({ username, email, password, confirmPassword, code, locale: i18n.language }) });
+export interface RegisterInput {
+  username: string;
+  displayName: string;
+  email: string;
+  password: string;
+  /** the invite code */
+  code: string;
+}
+
+export function register({ username, displayName, email, password, code }: RegisterInput): Promise<{ user: ApiUser }> {
+  // the form asks for the password once; the server still checks a confirmation, so it gets the same value
+  return apiFetch('/api/auth/register', { method: 'POST', body: JSON.stringify({ username, displayName, email, password, confirmPassword: password, code, locale: i18n.language }) });
 }
 
 export function updateLocale(locale: Language): Promise<{ locale: Language }> {

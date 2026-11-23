@@ -539,3 +539,33 @@ button:not(:disabled) {
     user-select: text;
   }
 }
+
+/* The signed-out screens (features/auth/AuthLayout.tsx): a night sky in the
+   theme's accent, deep on the left and bright on the right. Under a phone's
+   width the card fills the screen, so the backdrop is just the card's colour. */
+.auth-backdrop {
+  background:
+    radial-gradient(ellipse 55% 45% at 12% 30%, color-mix(in oklch, var(--color-accent-primary) 30%, transparent), transparent 70%),
+    radial-gradient(ellipse 60% 70% at 100% 100%, color-mix(in oklch, var(--color-accent-primary) 80%, white 8%), transparent 70%),
+    linear-gradient(115deg,
+      color-mix(in oklch, var(--color-accent-primary) 14%, #06061a) 0%,
+      color-mix(in oklch, var(--color-accent-primary) 45%, #0b0b30) 50%,
+      var(--color-accent-primary) 100%);
+}
+@media (width < 40rem) {
+  .auth-backdrop { background: var(--color-surface-panel); }
+}
+.auth-orb {
+  border-radius: 9999px;
+  background: radial-gradient(circle at 62% 38%, rgb(255 255 255 / 0.35), color-mix(in oklch, var(--color-accent-primary) 45%, transparent) 45%, transparent 70%);
+  box-shadow: inset -6px -4px 18px rgb(255 255 255 / 0.12);
+  filter: blur(2px);
+}
+@keyframes auth-twinkle {
+  0%, 100% { opacity: 0.35; }
+  50% { opacity: 1; }
+}
+.auth-twinkle { opacity: 0.6; }
+@media (prefers-reduced-motion: no-preference) {
+  .auth-twinkle { animation: auth-twinkle 4s ease-in-out infinite; }
+}

@@ -397,7 +397,7 @@ function Invites({ server }: { server: ServerSummary }) {
               <span role="cell" className="flex justify-end">
                 <button type="button" aria-label={t('invites.revoke')} onClick={() => void run(async () => { await revokeInviteLink(invite.code); await load(); })}
                   className="relative grid size-6 place-items-center rounded-full bg-red text-white opacity-0 transition-opacity touch-target focus-ring group-hover/invite:opacity-100 focus-visible:opacity-100 touch-first:opacity-100">
-                  <XIcon size={14} weight="bold" />
+                  <XIcon size={14} weight="fill" />
                 </button>
               </span>
             </div>

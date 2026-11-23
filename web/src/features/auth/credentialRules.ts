@@ -1,3 +1,5 @@
+import type { RecoveryIdentifier } from '@/shared/api/api';
+
 // What the account forms check before asking the server. The server stays the authority: these
 // mirror isValidEmail in server/src/modules/users/users.ts, isValidUsername in
 // server/src/modules/auth/usernameRules.ts and the MIN_/MAX_ lengths in server/src/config/env.ts,
@@ -12,3 +14,9 @@ export const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 export const MAX_EMAIL_LEN = 254;
 
 export const MIN_PASSWORD_LEN = 8;
+
+/** What was typed, as the server takes it: usernames cannot hold an `@`, so one means an email. */
+export function recoveryIdentifierOf(value: string): RecoveryIdentifier {
+  const trimmed = value.trim();
+  return { type: trimmed.includes('@') ? 'email' : 'username', value: trimmed };
+}

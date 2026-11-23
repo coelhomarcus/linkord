@@ -57,7 +57,7 @@ export function AppearanceSettings() {
                   >
                     {selected && (
                       <span aria-hidden className="absolute -right-2 -top-2 grid size-5 place-items-center rounded-full bg-accent-primary text-primary-foreground ring-2 ring-surface-app">
-                        <CheckIcon size={12} weight="bold" />
+                        <CheckIcon size={12} weight="fill" />
                       </span>
                     )}
                   </TooltipTrigger>

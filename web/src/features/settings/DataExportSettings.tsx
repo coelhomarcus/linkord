@@ -65,7 +65,7 @@ export function DataExportSettings() {
       <SettingsRow label={t('privacy.export.label')} description={t('privacy.export.description')}>
         {latest?.status === 'ready' && latest.expiresAt ? (
           <a href={dataExportDownloadUrl(latest.id)} download className={cn(buttonVariants({ variant: 'default', size: 'lg' }), SETTINGS_ACTION_BUTTON)}>
-            <DownloadSimpleIcon size={18} weight="bold" aria-hidden />
+            <DownloadSimpleIcon size={18} weight="fill" aria-hidden />
             <span>{t('privacy.export.download')}</span>
           </a>
         ) : (

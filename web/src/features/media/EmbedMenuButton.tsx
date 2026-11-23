@@ -42,7 +42,7 @@ export function EmbedMenuButton({ className }: { className?: string }) {
         className,
       )}
     >
-      <DotsThreeIcon size={18} weight="bold" />
+      <DotsThreeIcon size={18} weight="fill" />
     </button>
   );
 }

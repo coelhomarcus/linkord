@@ -153,7 +153,7 @@ export function SoundboardButton({ conversationId, callServerId, className, acti
                     onClick={() => sectionRefs.current.get(section.key)?.scrollIntoView({ block: 'start', behavior: 'smooth' })}
                     className="grid size-8 flex-none place-items-center rounded-md text-text-muted transition-colors duration-100 hover:bg-fill-hover hover:text-text-primary focus-ring pointer-coarse:size-11"
                   >
-                    {server ? <ServerIcon id={server.id} name={server.name} icon={server.icon} size={24} /> : <ClockIcon size={20} weight="bold" aria-hidden />}
+                    {server ? <ServerIcon id={server.id} name={server.name} icon={server.icon} size={24} /> : <ClockIcon size={20} weight="fill" aria-hidden />}
                   </button>
                 );
               })}
@@ -173,9 +173,9 @@ export function SoundboardButton({ conversationId, callServerId, className, acti
                     onClick={() => toggle(section.key)}
                     className="sticky top-0 z-10 flex w-full items-center gap-1.5 bg-surface-overlay py-2 text-left text-caption font-semibold uppercase text-text-secondary focus-ring focus-visible:ring-inset hover:text-text-primary"
                   >
-                    {server ? <ServerIcon id={server.id} name={server.name} icon={server.icon} size={16} /> : <ClockIcon size={14} weight="bold" aria-hidden />}
+                    {server ? <ServerIcon id={server.id} name={server.name} icon={server.icon} size={16} /> : <ClockIcon size={14} weight="fill" aria-hidden />}
                     <span className="min-w-0 truncate">{label(section)}</span>
-                    <CaretDownIcon size={12} weight="bold" aria-hidden className={cn('flex-none transition-transform duration-100 motion-reduce:transition-none', isCollapsed && '-rotate-90')} />
+                    <CaretDownIcon size={12} weight="fill" aria-hidden className={cn('flex-none transition-transform duration-100 motion-reduce:transition-none', isCollapsed && '-rotate-90')} />
                   </button>
                   {!isCollapsed && (
                     <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
@@ -205,7 +205,7 @@ export function SoundboardButton({ conversationId, callServerId, className, acti
                               section.full && 'cursor-not-allowed opacity-50 hover:border-border-strong hover:text-text-muted',
                             )}
                           >
-                            <PlusIcon size={18} weight="bold" />
+                            <PlusIcon size={18} weight="fill" />
                           </TooltipTrigger>
                           <TooltipContent>{section.full ? t('picker.fullIn', { server: label(section) }) : t('picker.addTo', { server: label(section) })}</TooltipContent>
                         </Tooltip>

@@ -272,7 +272,7 @@ export function StickerPicker({ onPick, className, autoFocus = true }: StickerPi
                           active?.section === sectionIndex && active.index === section.stickers.length && 'ring-2 ring-ring/60',
                         )}
                       >
-                        <PlusIcon size={22} weight="bold" aria-hidden />
+                        <PlusIcon size={22} weight="fill" aria-hidden />
                       </button>
                     )}
                   </div>
@@ -304,5 +304,5 @@ export function StickerPicker({ onPick, className, autoFocus = true }: StickerPi
 
 function SectionIcon({ section, server, small }: { section: StickerSection; server?: ServerSummary; small?: boolean }) {
   if (section.kind === 'server') return server ? <ServerIcon id={server.id} name={server.name} icon={server.icon} size={small ? 16 : 24} /> : null;
-  return <ClockIcon size={small ? 14 : 20} weight="bold" aria-hidden />;
+  return <ClockIcon size={small ? 14 : 20} weight="fill" aria-hidden />;
 }

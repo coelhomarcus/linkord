@@ -14,7 +14,7 @@ export function EscCloseButton({ onClose, className }: { onClose: () => void; cl
         aria-label={t('page.close')}
         className="grid size-9 place-items-center rounded-full border-2 border-text-secondary text-text-secondary transition-colors hover:bg-fill-hover hover:text-text-primary focus-ring"
       >
-        <XIcon size={18} weight="bold" />
+        <XIcon size={18} weight="fill" />
       </button>
       <span aria-hidden className="mt-2 text-caption font-semibold text-text-secondary">ESC</span>
     </div>
