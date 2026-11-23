@@ -5,7 +5,8 @@ import { createIgdbClient } from '../../../src/integrations/igdb/igdb.js';
 import { createAppToken } from '../../../src/integrations/twitch/appToken.js';
 import { createTwitchClient, parseTwitchLogin } from '../../../src/integrations/twitch/twitch.js';
 
-const user = { id: '310', login: 'example', display_name: 'Example', profile_image_url: 'https://static-cdn.jtvnw.net/avatar.jpg' };
+const user = { id: '310', login: 'example', display_name: 'Example', profile_image_url: 'https://static-cdn.jtvnw.net/avatar.jpg',
+  offline_image_url: 'https://static-cdn.jtvnw.net/offline-1920x1080.png' };
 const video = { id: '510', title: 'Replay', created_at: '2026-11-23T14:00:00Z', duration: '1h2m3s', thumbnail_url: 'https://static-cdn.jtvnw.net/vod-%{width}x%{height}.jpg' };
 const live = { user_login: 'example', type: 'live', title: 'Hello!', game_name: 'Linkord', viewer_count: 42, thumbnail_url: 'https://static-cdn.jtvnw.net/live-{width}x{height}.jpg' };
 
@@ -50,6 +51,8 @@ test('Twitch normalizes a login, validates the account, and parses its archived 
   assert.equal(vods?.kind, 'twitch-vods');
   assert.deepEqual(vods.items, [{ id: '510', title: 'Replay', createdAt: '2026-11-23T14:00:00.000Z', seconds: 3723,
     imageUrl: 'https://static-cdn.jtvnw.net/vod-640x360.jpg', url: 'https://www.twitch.tv/videos/510' }]);
+  const channel = result.snapshot.widgets['twitch-live'];
+  assert.equal(channel?.kind === 'twitch-live' && channel.offlineImageUrl, 'https://static-cdn.jtvnw.net/offline-1920x1080.png');
   await assert.rejects(twitch.profile('unknown'), { code: 'not_found' });
 });
 

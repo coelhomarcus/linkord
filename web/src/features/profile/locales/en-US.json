@@ -232,9 +232,10 @@
       "live": "Live",
       "offline": "Offline",
       "unknown": "Live status unavailable",
-      "lastStream": "Last archived stream: {{date}}",
-      "viewers_one": "{{count}} viewer",
-      "viewers_other": "{{count}} viewers"
+      "lastStream": "Last streamed {{date}}",
+      "viewers_one": "{{viewers}} viewer",
+      "viewers_other": "{{viewers}} viewers",
+      "vod": "{{title}}, {{date}}, {{duration}}"
     }
   },
   "editor": {

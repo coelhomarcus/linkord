@@ -3,6 +3,17 @@
 
 export const STEAM_ASSET_HOST = 'shared.fastly.steamstatic.com';
 const HASH = /^[0-9a-f]{40}$/;
+const STORE_ASSET_BASE = `https://${STEAM_ASSET_HOST}/store_item_assets/steam/apps/`;
+
+export function steamHeaderUrl(appId: number): string {
+  return `${STORE_ASSET_BASE}${appId}/header.jpg`;
+}
+
+export function steamHeaderAppId(url: string): number | null {
+  if (!url.startsWith(STORE_ASSET_BASE)) return null;
+  const match = /^([1-9]\d{0,9})\/header\.jpg$/.exec(url.slice(STORE_ASSET_BASE.length));
+  return match ? Number(match[1]) : null;
+}
 
 function assetUrl(appId: number, hash: string, extension: 'ico' | 'jpg'): string | null {
   if (!Number.isSafeInteger(appId) || appId <= 0 || !HASH.test(hash)) return null;

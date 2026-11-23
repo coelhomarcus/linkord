@@ -232,9 +232,10 @@
       "live": "Ao vivo",
       "offline": "Offline",
       "unknown": "Status da transmissão indisponível",
-      "lastStream": "Última transmissão arquivada: {{date}}",
-      "viewers_one": "{{count}} espectador",
-      "viewers_other": "{{count}} espectadores"
+      "lastStream": "Última transmissão em {{date}}",
+      "viewers_one": "{{viewers}} espectador",
+      "viewers_other": "{{viewers}} espectadores",
+      "vod": "{{title}}, {{date}}, {{duration}}"
     }
   },
   "editor": {

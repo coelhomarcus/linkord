@@ -1,3 +1,5 @@
+import { useState } from 'react';
+
 export interface Cover { id: string; title: string; url: string; imageUrl: string | null }
 
 // IGDB covers are shown at 264x352; the anime covers of MyAnimeList keep their own 2:3
@@ -8,8 +10,9 @@ export const COVER_BOX = 'flex w-full items-center justify-center overflow-hidde
 
 /** The picture of a cover; with none, the title, so the tile still says what it is. */
 export function CoverFace({ item }: { item: Cover }) {
-  return item.imageUrl
-    ? <img src={item.imageUrl} alt="" loading="lazy" referrerPolicy="no-referrer" className="size-full object-cover transition-transform duration-200 ease-out-expo motion-safe:group-hover:scale-105 motion-safe:group-focus-visible:scale-105 motion-safe:group-has-focus-visible:scale-105" />
+  const [failedUrl, setFailedUrl] = useState<string | null>(null);
+  return item.imageUrl && item.imageUrl !== failedUrl
+    ? <img src={item.imageUrl} alt="" loading="lazy" referrerPolicy="no-referrer" onError={() => setFailedUrl(item.imageUrl)} className="size-full object-cover transition-transform duration-200 ease-out-expo motion-safe:group-hover:scale-105 motion-safe:group-focus-visible:scale-105 motion-safe:group-has-focus-visible:scale-105" />
     : <span aria-hidden className="line-clamp-4 px-1 text-center text-caption text-text-muted">{item.title}</span>;
 }
 

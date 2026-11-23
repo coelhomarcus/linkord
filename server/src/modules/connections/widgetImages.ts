@@ -18,6 +18,7 @@ export function withProxiedImages(data: WidgetData): WidgetData {
     } }) };
   }
   if (data.kind === 'twitch-live') return { ...data, avatarUrl: proxiedImageUrl('twitch', data.avatarUrl),
+    ...(data.offlineImageUrl !== undefined && { offlineImageUrl: proxiedImageUrl('twitch', data.offlineImageUrl) }),
     stream: data.stream && { ...data.stream, imageUrl: proxiedImageUrl('twitch', data.stream.imageUrl) } };
   return data;
 }

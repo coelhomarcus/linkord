@@ -212,10 +212,10 @@ describe('ProfileModal — since when and what you have in common', () => {
     expect(spotify).toHaveAttribute('href', 'https://open.spotify.com/user/x');
     expect(spotify).toHaveTextContent('Spotifyopen.spotify.com');
     expect(github).toHaveAttribute('href', 'https://github.com/coelhomarcus');
-    expect(github).toHaveTextContent('@coelhomarcus');
+    // the logo names the site, so the row says only the account
+    expect(github).toHaveTextContent(/^@coelhomarcus$/);
     expect(steam).toHaveAttribute('href', steamUrl);
-    expect(steam).toHaveTextContent('@steam-player');
-    expect(github).toHaveTextContent('@coelhomarcusGitHub');
+    expect(steam).toHaveTextContent(/^@steam-player$/);
   });
 
   it('reads the account from the profile URL of more sites, and keeps a plain link as its host', async () => {

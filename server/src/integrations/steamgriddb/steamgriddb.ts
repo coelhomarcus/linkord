@@ -1,15 +1,11 @@
 import { ConnectionFetchError, fetchConnectionJson, imageUrl, list, numberValue, record, textValue, type RequestJson } from '../connectionHttp.js';
 
-// SteamGridDB: a catalog of games with community-made artwork, and the map from a game to its Steam
-// app and the hashes of Steam's own icons. Used for the icon of a game someone is playing
-// (modules/activity/activityGameIcons.ts): Steam's icon when the game is on Steam, the community's
-// otherwise (IGDB has covers and artworks, never an icon).
-
 const API_BASE = 'https://www.steamgriddb.com/api/v2';
 export const STEAMGRIDDB_IMAGE_HOST = 'cdn2.steamgriddb.com';
-// still pictures only, and nothing a profile should not show by surprise. Not filtered by type: most
-// icons are .ico files, and each of those comes with a PNG thumb (512 px), which is what is read.
-const ICON_FILTERS = new URLSearchParams({ types: 'static', nsfw: 'false', humor: 'false', epilepsy: 'false' }).toString();
+const ARTWORK_FILTERS = { types: 'static', nsfw: 'false', humor: 'false', epilepsy: 'false' };
+const ICON_FILTERS = new URLSearchParams(ARTWORK_FILTERS).toString();
+const BANNER_DIMENSIONS = ['460x215', '920x430'];
+const BANNER_FILTERS = new URLSearchParams({ ...ARTWORK_FILTERS, dimensions: BANNER_DIMENSIONS.join(',') }).toString();
 const SEARCH_LIMIT = 10;
 const STEAM_HASH = /^[0-9a-f]{40}$/;
 
@@ -47,6 +43,7 @@ export interface SteamGridDbClient {
   gameById(gameId: number): Promise<GridGame | null>;
   searchGames(term: string): Promise<GridGame[]>;
   gameIcons(gameId: number): Promise<GridIcon[]>;
+  steamBanners(appId: number): Promise<string[]>;
 }
 
 /** The `data` of a `{ success, data }` answer. */
@@ -99,6 +96,19 @@ function parseIcons(value: unknown): GridIcon[] {
   return icons;
 }
 
+function parseBanners(value: unknown): string[] {
+  const banners = new Set<string>();
+  for (const item of list(value)) {
+    if (!item || typeof item !== 'object') continue;
+    const { url, width, height, nsfw, humor, epilepsy } = item as Record<string, unknown>;
+    if (nsfw === true || humor === true || epilepsy === true) continue;
+    if (typeof width !== 'number' || typeof height !== 'number' || !BANNER_DIMENSIONS.includes(`${width}x${height}`)) continue;
+    const banner = imageUrl(url, STEAMGRIDDB_IMAGE_HOST);
+    if (banner && !new URL(banner).port) banners.add(banner);
+  }
+  return [...banners];
+}
+
 export function createSteamGridDbClient(options: { apiKey: string; request?: RequestJson }): SteamGridDbClient {
   const { apiKey, request = fetchConnectionJson } = options;
   const configured = Boolean(apiKey);
@@ -141,6 +151,10 @@ export function createSteamGridDbClient(options: { apiKey: string; request?: Req
     async gameIcons(gameId) {
       if (!validId(gameId)) return [];
       return orNotFound(async () => parseIcons(await get(`/icons/game/${gameId}?${ICON_FILTERS}`)), []);
+    },
+    async steamBanners(appId) {
+      if (!validId(appId)) return [];
+      return orNotFound(async () => parseBanners(await get(`/grids/steam/${appId}?${BANNER_FILTERS}`)), []);
     },
   };
 }

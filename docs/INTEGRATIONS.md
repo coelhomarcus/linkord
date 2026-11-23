@@ -16,7 +16,7 @@ Every external service Linkord talks to: what it is for, who makes the call (our
 | [IGDB](#igdb) | Game search for the Wall; names of games someone is playing | Server (on demand) | `IGDB_CLIENT_ID`, `IGDB_CLIENT_SECRET` | No |
 | [Steam](#steam) | Public profile, recent games and playtime on the Wall | Server (on connect and in the background) | `STEAM_WEB_API_KEY` | No |
 | [Twitch](#twitch) | Live streams and recent VODs on the Wall | Server; browser for the player | `IGDB_CLIENT_ID`, `IGDB_CLIENT_SECRET` | No |
-| [SteamGridDB](#steamgriddb) (and Steam's CDN) | The square icon of a game or app someone is playing or using | Server (on demand; icons stored and served by us) | `STEAMGRIDDB_API_KEY` | No |
+| [SteamGridDB](#steamgriddb) (and Steam's CDN) | Activity icons and fallback banners for Steam games on the Wall | Server (on demand; icons stored and banners cached by us) | `STEAMGRIDDB_API_KEY` | No |
 | [Discord application API](#discord-application-api) | Name and pictures of a game reporting through Discord Rich Presence | Server (on demand, cached) | None | No |
 | [Link previews](#link-previews) | Cards for links pasted in chat | Server | None | Built in |
 | [oEmbed providers](#oembed) | Previews for YouTube, Vimeo, SoundCloud, Spotify, X, TikTok, Reddit | Server | None | Built in |
@@ -133,30 +133,31 @@ The Wall shows the public Steam profile, drawn like Steam's own mini profile, an
 - **API** `ISteamUser` (`ResolveVanityURL`, `GetPlayerSummaries`) and `IPlayerService` (`GetOwnedGames`, `GetSteamLevel`, `GetProfileItemsEquipped`) on `api.steampowered.com`. A signed-out request to the profile on `steamcommunity.com` supplies the game count, in-game status and eligible app IDs. The playtime request includes only the recent games for which that page shows playtime. Steam requires sign-in to view the full library page.
 - **Sync** Connecting checks the profile and its **Game details** are public. The [worker](#how-connection-syncing-works) checks again every 24 hours. If a refresh fails, the Wall hides the saved Steam widgets until the next successful refresh.
 - **Mini profile:** the Points Shop items the profile has equipped (`GetProfileItemsEquipped`): the mini profile background (a still picture and its WebM/MP4 loop), the avatar frame and the animated avatar, all files under `community_assets/images/items/` on `shared.fastly.steamstatic.com`. An item Steam describes in an unexpected way is left out, never the profile. Snapshots from before this feature show the plain avatar until their next refresh. Under reduced motion the loop gives way to its still picture and the animated avatar and frame to their first frame. Steam draws levels past 100 as other shapes; we keep the ring with its colours per ten.
-- **Pictures:** covers, avatars, frames and the background's still through the media proxy, from an allowlist of Steam CDN hosts; the background loop through its video side.
+- **Pictures:** the media proxy serves game banners, avatars, frames and the background's still, and its video side serves the background loop. If the standard CDN address for a game banner fails, the proxy checks the public Steam Store `/api/appdetails` endpoint for that app's official header. If that image is also unavailable, it tries [SteamGridDB](#steamgriddb). The lookup is cached with the image and applies to existing widgets. If no banner loads, the tile displays the game's title in the same 460:215 space. With `MEDIA_PROXY=0`, banners use the direct Steam CDN address.
 - **Configuration:** a [Steam Web API key](https://steamcommunity.com/dev/apikey) in `STEAM_WEB_API_KEY`. It stays on the server.
 - **When missing:** the Steam connection option is hidden.
 
 ## Twitch
 
-The channel with its game, title and viewer count when live (or the last stream's date), and up to six recent VODs, as Wall widgets. The connection is a login name.
+The channel with its game, title and viewer count when live (or its offline banner and the last stream's date), and up to six recent VODs, as Wall widgets. The connection is a login name.
 
 - **API:** `server/src/integrations/twitch/twitch.ts` calls [Helix](https://dev.twitch.tv/docs/api/reference/): `GET /users` to check the login, `GET /videos?type=archive&first=6`, and `GET /streams` for live status. One client-credentials token per process is shared with IGDB and renewed a minute before expiry or after a 401.
 - **Sync:** connecting reads the profile and VODs; the [worker](#how-connection-syncing-works) refreshes them. Live status is read when a Wall is viewed, cached 60 seconds per login.
-- **Pictures:** avatars and thumbnails through the media proxy, from Twitch's CDN hosts. The player loads from Twitch after the viewer clicks it.
+- **Pictures:** avatars, offline banners and thumbnails through the media proxy, from Twitch's CDN hosts. The player loads from Twitch after the viewer clicks it.
 - **Configuration:** the IGDB app's `IGDB_CLIENT_ID` and `IGDB_CLIENT_SECRET`.
 - **When missing:** the Twitch connection option is hidden.
 
 ## SteamGridDB
 
-Community artwork for the square icon shown with a game someone is playing or an app they are using: IGDB has only box art, Steam's own icons are 32 px and cover only what is on Steam, and the icon the desktop app reads from a program is 32 px and out of reach when the program runs as administrator (OBS Studio often does) (`server/src/integrations/steamgriddb/steamgriddb.ts`, `server/src/modules/activity/activityGameIcons.ts`).
+Community artwork for activity icons and for Steam games on the Wall whose official banners are unavailable.
 
 - **When:** `GET /api/activity/game` looks the icon up next to the IGDB name; with `kind=using` (an app) it looks up only the icon and answers the name as sent. The page first uploads the icon the desktop app read from the program and sends it as `ref`, a reference for picking among the community's icons.
 - **Choosing:** the game is found by Steam app id, else by exact name (the newest release among equal names). An app is found as SteamGridDB files software, `<name> (Program)`, else by its exact name, and is kept under a key of its own (`app:<name>`) so it never takes a same-named game's icon. A Steam game uses Steam's own icon when it is 64 px or larger; otherwise the community icon closest to the reference (Steam's small icon, or the program's own for a game outside Steam) wins, falling back to the one marked official, then the first. Only safe-for-work, non-humor, non-epilepsy icons are requested.
+- **Wall banners:** the media proxy asks `/api/v2/grids/steam/<app id>` for still grids at 460 × 215 or 920 × 430, excluding NSFW, humorous and epilepsy-tagged artwork. It tries up to three matching images in API order.
 - **Stored:** re-encoded to a 96 px WebP in `UPLOAD_DIR/activity-icons/` and served by us; the choice is kept in `activity_game_icons` (30 days when found, a day when not). Which icon a game or app shows is always the server's when it found one, whatever a client reports; the program's own icon stands only for one it did not. 20 misses per user per minute, past which the answer comes without an icon.
 - **Configuration:** a key from <https://www.steamgriddb.com/profile/preferences/api> in `STEAMGRIDDB_API_KEY`, sent as a bearer token and never to the browser.
-- **When missing or failing:** a game or app shows the program's own icon, or a controller or window glyph.
-- **Data sent:** a game's Steam app id or name, or an app's name, and the key to SteamGridDB; to Steam's CDN only the icon's address. Downloads go only to `cdn2.steamgriddb.com` and `shared.fastly.steamstatic.com`.
+- **When missing or failing:** an activity uses the program's own icon, or a controller or window glyph. A Wall banner still tries Steam's artwork.
+- **Data sent:** a game's Steam app id or name, or an app's name, and the key to SteamGridDB. SteamGridDB artwork downloads go to `cdn2.steamgriddb.com`. Steam receives only the app id for a banner lookup or the artwork address for a download.
 
 ## Discord application API
 

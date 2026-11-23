@@ -194,8 +194,7 @@ const IGDB_CLIENT_SECRET = (process.env.IGDB_CLIENT_SECRET || '').trim();
 // Steam Web API access for public Wall connections.
 const STEAM_WEB_API_KEY = (process.env.STEAM_WEB_API_KEY || '').trim();
 
-// SteamGridDB's API key, for the square icon of a game someone is playing. Empty leaves those games
-// with the program's own icon, or none.
+// SteamGridDB's optional key for activity icons and fallback Steam Wall banners.
 const STEAMGRIDDB_API_KEY = (process.env.STEAMGRIDDB_API_KEY || '').trim();
 
 // The GitHub repository ("owner/repo") whose releases carry the desktop app's installers, the same one

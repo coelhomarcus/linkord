@@ -28,7 +28,9 @@ export type WidgetData =
       /** absent in a snapshot synced before the mini profile was drawn */
       items?: SteamProfileItems }
   | { kind: 'twitch-live'; login: string; name: string; avatarUrl: string | null; lastStreamAt: string | null;
-      stream: TwitchStream | null; status: 'live' | 'offline' | 'unknown' }
+      stream: TwitchStream | null; status: 'live' | 'offline' | 'unknown';
+      /** the channel's offline banner; absent in a snapshot synced before it was read */
+      offlineImageUrl?: string | null }
   | { kind: 'twitch-vods'; items: TwitchVideo[] };
 export interface ConnectionSnapshot {
   widgets: Partial<Record<ConnectionWidgetType, WidgetData>>;

@@ -4,6 +4,8 @@ import sharp from 'sharp';
 import { config } from '../../config/env.js';
 import { parseCookies } from '../../http/cookies.js';
 import { sendError } from '../../http/respond.js';
+import { createSteamBannerFetcher } from '../../integrations/steam/steamBanner.js';
+import { createSteamGridDbClient } from '../../integrations/steamgriddb/steamgriddb.js';
 import { requestSafe } from '../../net/safeRequest.js';
 import { allow, retryAfterMs } from '../../realtime/floodControl.js';
 import { resolveSession } from '../auth/session.js';
@@ -274,10 +276,18 @@ export function createMediaProxy({ fetch = (upstream) => fetchImage(upstream, up
 
 type MediaProxy = ReturnType<typeof createMediaProxy>;
 
+const fetchSteamBanner = createSteamBannerFetcher(
+  (url) => fetchImage({ url, redirects: 0 }),
+  createSteamGridDbClient({ apiKey: config.STEAMGRIDDB_API_KEY }),
+);
+
 /** The one cache of the process: the routes serve from it, and the link
  * preview fills it while it unfurls, so a card's picture is already there
  * when the first reader asks for it. */
-export const mediaProxy: MediaProxy = createMediaProxy();
+export const mediaProxy: MediaProxy = createMediaProxy({
+  fetch: (upstream) => upstream.redirects === 0 && !upstream.lookup
+    ? fetchSteamBanner(upstream.url) : fetchImage(upstream, upstream.lookup),
+});
 /** The videos' cache, apart so a few loops never push the pictures out. */
 const videoProxy: MediaProxy = createMediaProxy({ fetch: (upstream) => fetchVideo(upstream, upstream.lookup), maxBytes: VIDEO_CACHE_MAX_BYTES });
 
