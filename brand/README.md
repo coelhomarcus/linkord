@@ -17,7 +17,7 @@ Generated from the Linkord mark. Brand blue is `#2b99e7`. Nothing in `web/` refe
 | `tile-theme-<theme>-mono.svg` | light mark (the theme's primary text color) on the theme's app background |
 | `favicon.svg` | blue mark on a tile that flips black/white with the browser chrome |
 
-Themes: `black` (`#000000`), `old` (`#0d0d0f`), `graphite` (`#202225`). Backgrounds are each theme's `--color-surface-app`.
+Themes: `black` (`#000000`), `graphite` (`#202225`) and `old` (`#0d0d0f`, a theme the app no longer has). Backgrounds are each theme's `--color-surface-app`; the Catppuccin themes have no tiles.
 
 ## `png/app/`
 

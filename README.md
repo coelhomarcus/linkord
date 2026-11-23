@@ -19,14 +19,12 @@ Linkord is a self-hosted place to chat and call with friends. Talk in direct mes
 
 **Chat**
 - Direct messages and private servers with text channels, organized into categories.
-- Replies, reactions, edits, and deletes.
-- Message search in the header, as in Discord: filters for author (`de:`), channel (`em:`), content type (`tem:` image, video, link, file, audio, GIF, sticker, embed) and mentions (`menciona:`), plus dates, author type and pinned in the filters dialog; results beside the chat, by channel, sorted newest, oldest or by relevance, with recent searches kept per server.
-- Pinned messages per channel and DM (with their own role permission), and saved messages, private to each account, in the inbox.
-- Attachments, voice messages, and link cards: rich previews with galleries, YouTube and Twitch players (one playing at a time), and `||spoiler||` text and links.
-- A video player with keyboard shortcuts (Space/K, J/L, arrows, M, F, 0–9), playback speed, picture-in-picture, a frame preview when hovering the timeline, and one saved volume for every player; uploaded videos keep their shape before they load.
-- A media viewer that opens a message's pictures, link-card images, GIFs and videos as one set: zoom (wheel, pinch, double-click), pan and rotate, a thumbnail strip, download, open original, copy link or image, reply and jump to the message; swipe between items and back to close on phones.
-- Mentions of members, roles, `@everyone` and `@here`.
-- Emojis, GIFs, and stickers, plus custom emojis and stickers per server.
+- Replies, reactions, edits, deletes, mentions (members, roles, `@everyone`, `@here`) and `||spoilers||`.
+- Message search with filters for author, channel, content type, mentions and dates, as in Discord.
+- Pinned messages per channel and DM, and private saved messages.
+- Attachments, voice messages, and link cards with YouTube and Twitch players.
+- A video player with keyboard shortcuts and picture-in-picture, and a media viewer with zoom and a thumbnail strip.
+- Emojis, GIFs and stickers, plus custom emojis and stickers per server.
 - Unread markers that sync across tabs and devices.
 
 **Voice and video**
@@ -43,19 +41,18 @@ Linkord is a self-hosted place to chat and call with friends. Talk in direct mes
 **People**
 - Friends by exact `@username`, friend requests, and blocking.
 - Presence (available, idle, do not disturb, invisible) and custom statuses.
-- Activity: the desktop app shows what you are playing or using ("Jogando Minecraft", with the game's icon or the app's, and a running timer) on your profile, in member lists, in DM and friends rows, next to your name in a voice channel (hover or tap the icon for a "Jogando agora" card) and in your friends' Active Now. The full profile has an Activity tab with the current activity and the games and apps played lately ("2d atrás"). It only recognizes Steam games and a known list of games and apps; while Discord is closed it also shows what games send through Discord Rich Presence ("Competitive · In a match (2 of 5)", the game's own pictures, a countdown or elapsed time and up to two link buttons), including games it would not recognize otherwise. It is on by default, and can be turned off or limited per game in Settings → Activity; turning it off hides the activity widgets on your profile, and hiding a game removes its past activity from the recent list and the Wall totals. The Wall offers most played and an activity summary for the last 7 or 30 days, a year of daily activity, and a recently played widget. Playtime starts when Linkord first sees the activity, and sessions are retained for 400 days after their last observation.
-- Profile with connected accounts and a Wall of widgets: MyAnimeList, GitHub, hand-picked games from IGDB, Steam profiles and playtime, and Twitch live streams and recent VODs.
+- Activity: the desktop app shows what you are playing or using on your profile, in member lists and in your friends' Active Now, including what games send through Discord Rich Presence. It can be turned off or limited per game.
+- A profile with connected accounts and a Wall of widgets: MyAnimeList, GitHub, games from IGDB, Steam, Twitch, and your own playtime.
 
 **Notifications**
-- Web Push for messages, mentions, friend requests, and invites, plus an unread badge on the app icon. The desktop app and a browser without push get the same system notifications while the app is open.
+- Web Push for messages, mentions, friend requests, and invites, plus an unread badge on the app icon.
 - Notification level and mute per server, channel, and DM.
 
 **Account**
 - Two-step login by email, sign-in alerts, and a list of active sessions you can end.
 - Username and password changes, account deletion, and a download of your data.
-- Themes, density, text size and font, languages (Portuguese and English), device settings, and notification sounds.
-- Settings follow the account: the theme, density, font, language, clock format, which sounds play, the emoji skin tone, call view options, image compression, camera mirroring, the volume given to each person in a call and the folded channel categories are the same on every device, and change on the others as soon as you change them on one. What depends on the device stays on it: microphone, camera and speaker and their volumes, the input profile, the notification and soundboard volumes, text size, browser notifications, screen share quality, auto-away, panel sizes and recent searches.
-- Installable as a web app (PWA), with share-to-Linkord on Android; Settings → Baixar o app explains it beside the Windows app download.
+- Themes, density, fonts, languages (Portuguese and English) and notification sounds, synced across your devices.
+- Installable as a web app (PWA), with share-to-Linkord on Android.
 
 **Administration**
 - An `/admin` area for users, servers, webhooks, reports, audit history, and uploads.
@@ -76,11 +73,11 @@ Open [http://localhost:3000](http://localhost:3000) and create an account with t
 
 For local development, the frontend and backend run on the host, and `docker compose up -d` brings up the services they use (PostgreSQL, LiveKit and a mail sink). Follow the [local development guide](docs/DEVELOPMENT.md) for setup and run instructions.
 
-A desktop app for Windows is in progress in `desktop/`: an Electron window that opens your Linkord server, where `linkord://` links open invites and conversations. See [Desktop app](docs/DEVELOPMENT.md#desktop-app) for running it and [building its installer](docs/DEPLOY.md#desktop-app) for your server.
+A Windows desktop app lives in `desktop/`: an Electron window that opens your Linkord server, where `linkord://` links open invites and conversations. See [Desktop app](docs/DEVELOPMENT.md#desktop-app) for running it and [building its installer](docs/DEPLOY.md#desktop-app) for your server.
 
 ## 🐳 Deployment
 
-Linkord ships as one Docker image (web app, API and realtime server on port 3000) next to a PostgreSQL database and a LiveKit server. It runs on Dokploy, on its own with `docker run`, or with PostgreSQL and LiveKit bundled by the `full` profile of `docker-compose.yml`. The [deployment guide](docs/DEPLOY.md) covers the environment it needs, the folders it writes to and their permissions, updates while people are connected, security headers, backups and troubleshooting.
+Linkord ships as one Docker image (web app, API and realtime server on port 3000) next to a PostgreSQL database and a LiveKit server. It runs on Dokploy, on its own with `docker run`, or with PostgreSQL and LiveKit bundled by the `full` profile of `docker-compose.yml`. The [deployment guide](docs/DEPLOY.md) covers its environment, storage, updates, backups and troubleshooting.
 
 ## 🧰 Commands
 
