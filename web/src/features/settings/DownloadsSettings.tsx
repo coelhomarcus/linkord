@@ -109,7 +109,7 @@ function WindowsDownload({ recommended }: { recommended: boolean }) {
     );
   }
 
-  const label = <><DownloadSimpleIcon weight="bold" aria-hidden />{t('downloads.windows.download')}</>;
+  const label = <><DownloadSimpleIcon weight="fill" aria-hidden />{t('downloads.windows.download')}</>;
   return (
     <div className="flex flex-col gap-3">
       {installer ? (
@@ -126,7 +126,7 @@ function WindowsDownload({ recommended }: { recommended: boolean }) {
             <span aria-hidden>·</span>
             <a href={value.page} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 rounded-sm text-link focus-ring hover:underline">
               {t('downloads.windows.allVersions')}
-              <ArrowSquareOutIcon size={12} weight="bold" aria-hidden />
+              <ArrowSquareOutIcon size={12} weight="fill" aria-hidden />
             </a>
           </>
         ) : <span className="h-3 w-32 animate-pulse rounded-full bg-fill-subtle" aria-hidden />}
@@ -166,7 +166,7 @@ function WebAppInstall({ recommended }: { recommended: boolean }) {
   if (method === 'prompt') {
     return (
       <Button type="button" size="lg" variant={recommended ? 'default' : 'secondary'} className="h-11 w-full text-body" onClick={() => void install()}>
-        <DownloadSimpleIcon weight="bold" aria-hidden />
+        <DownloadSimpleIcon weight="fill" aria-hidden />
         {t('downloads.web.install')}
       </Button>
     );

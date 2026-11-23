@@ -33,7 +33,7 @@ export function TileMenuButton({ name, onOpen, className }: {
         className,
       )}
     >
-      <DotsThreeIcon size={18} weight="bold" />
+      <DotsThreeIcon size={18} weight="fill" />
     </button>
   );
 }

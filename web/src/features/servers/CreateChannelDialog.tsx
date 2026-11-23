@@ -72,7 +72,7 @@ export function CreateChannelDialog({ server, target, onClose }: { server: Serve
                     </span>
                     <span className="min-w-0 flex-1">
                       <span className="flex items-center gap-2 text-body font-medium text-text-primary">
-                        <Icon size={20} weight="bold" className="flex-none text-text-secondary" />
+                        <Icon size={20} weight="fill" className="flex-none text-text-secondary" />
                         {t(`channel.types.${option}`)}
                       </span>
                       <span className="mt-0.5 block text-label text-text-secondary">{t(`channel.typeHint.${option}`)}</span>

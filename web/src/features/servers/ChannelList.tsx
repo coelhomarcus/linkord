@@ -159,10 +159,10 @@ export function ChannelList({ server, activeChannelId, onNavigate, onOpenProfile
         <DropdownMenu>
           <DropdownMenuTrigger className="group/server-menu flex h-8 min-w-0 items-center gap-1 rounded-lg px-2 text-left text-text-primary hover:bg-nav-hover aria-expanded:bg-nav-hover">
             <span className="min-w-0 truncate text-body font-semibold">{server.name}</span>
-            <CaretDownIcon size={14} weight="bold" className="flex-none transition-transform group-aria-expanded/server-menu:rotate-180" />
+            <CaretDownIcon size={14} weight="fill" className="flex-none transition-transform group-aria-expanded/server-menu:rotate-180" />
           </DropdownMenuTrigger>
           <DropdownMenuContent anchor={headerRef} align="center" sideOffset={-6} className="min-w-[220px]">
-            <DropdownMenuItem disabled={!hasUnread} onClick={() => markServerRead(server.id)}><ChecksIcon size={18} weight="bold" />{t('menu.markAsRead')}</DropdownMenuItem>
+            <DropdownMenuItem disabled={!hasUnread} onClick={() => markServerRead(server.id)}><ChecksIcon size={18} weight="fill" />{t('menu.markAsRead')}</DropdownMenuItem>
             <DropdownMenuSeparator />
             <NotificationMenuItems target={{ scope: 'server', id: server.id }} />
             <DropdownMenuSeparator />
@@ -171,7 +171,7 @@ export function ChannelList({ server, activeChannelId, onNavigate, onOpenProfile
             {canManageChannels && <DropdownMenuItem onClick={() => setCreateTarget({ kind: 'channel', categoryId: null })}><PlusCircleIcon size={18} weight="fill" />{t('menu.createChannel')}</DropdownMenuItem>}
             {canManageChannels && <DropdownMenuItem onClick={() => setCreateTarget({ kind: 'category' })}><FolderPlusIcon size={18} weight="fill" />{t('menu.createCategory')}</DropdownMenuItem>}
             <DropdownMenuSeparator />
-            <DropdownMenuItem variant="destructive" onClick={() => { setLeaveError(null); setConfirmLeave(true); }}><SignOutIcon size={18} weight="bold" />{t('menu.leave')}</DropdownMenuItem>
+            <DropdownMenuItem variant="destructive" onClick={() => { setLeaveError(null); setConfirmLeave(true); }}><SignOutIcon size={18} weight="fill" />{t('menu.leave')}</DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
         <span className="flex-1" />
@@ -199,7 +199,7 @@ export function ChannelList({ server, activeChannelId, onNavigate, onOpenProfile
                     <button type="button" onClick={() => toggleCategory(category.id)} aria-expanded={!isCollapsed}
                       className="flex min-w-0 flex-1 items-center gap-1 rounded-sm text-left text-label font-medium text-text-muted focus-ring hover:text-text-primary">
                       <span className="truncate">{category.name}</span>
-                      {isCollapsed ? <CaretRightIcon size={12} weight="bold" className="flex-none" /> : <CaretDownIcon size={12} weight="bold" className="flex-none" />}
+                      {isCollapsed ? <CaretRightIcon size={12} weight="fill" className="flex-none" /> : <CaretDownIcon size={12} weight="fill" className="flex-none" />}
                     </button>
                     {canManageChannels && (
                       <Tooltip>

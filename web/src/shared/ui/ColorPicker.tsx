@@ -188,7 +188,7 @@ function Panel({ value, current, presets, noneLabel, note, onChange }: {
                   className={cn(SWATCH, selected && SELECTED)}
                   style={{ background: preset.css ?? preset.hex }}
                 >
-                  {selected && <CheckIcon size={12} weight="bold" style={{ color: contrastOn(preset.hex) }} />}
+                  {selected && <CheckIcon size={12} weight="fill" style={{ color: contrastOn(preset.hex) }} />}
                 </button>
               );
             })}

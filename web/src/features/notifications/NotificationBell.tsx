@@ -55,7 +55,7 @@ function NotificationBellContent({ collapsed, onNavigate }: { collapsed: boolean
               onClick={markAll}
               className={INBOX_ACTION}
             >
-              <ChecksIcon size={18} weight="bold" />
+              <ChecksIcon size={18} weight="fill" />
             </TooltipTrigger>
             <TooltipContent side="bottom">{t('actions.markAllRead')}</TooltipContent>
           </Tooltip>

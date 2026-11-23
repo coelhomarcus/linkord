@@ -77,7 +77,7 @@ export function MultiSelect({ label, placeholder, options, value, onChange }: {
               >
                 <span className="min-w-0 flex-1">{option.row ?? option.label}</span>
                 <span aria-hidden className={cn('grid size-5 flex-none place-items-center rounded-[5px] border', selected ? 'border-accent-primary bg-accent-primary text-primary-foreground' : 'border-border-strong')}>
-                  {selected && <CheckIcon size={14} weight="bold" />}
+                  {selected && <CheckIcon size={14} weight="fill" />}
                 </span>
               </button>
             );

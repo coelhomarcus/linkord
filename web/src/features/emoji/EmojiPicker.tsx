@@ -295,7 +295,7 @@ export function EmojiPicker({ onPick, allowCustom = true, className, autoFocus =
                       >
                         <SectionIcon section={row.section} server={row.section.kind === 'server' ? serverById.get(row.section.serverId) : undefined} small />
                         <span className="min-w-0 truncate">{label}</span>
-                        <CaretDownIcon size={12} weight="bold" aria-hidden className={cn('flex-none transition-transform duration-100 motion-reduce:transition-none', row.collapsed && '-rotate-90')} />
+                        <CaretDownIcon size={12} weight="fill" aria-hidden className={cn('flex-none transition-transform duration-100 motion-reduce:transition-none', row.collapsed && '-rotate-90')} />
                       </button>
                     </div>
                   </div>
@@ -345,7 +345,7 @@ export function EmojiPicker({ onPick, allowCustom = true, className, autoFocus =
                       )}
                       style={{ width: CELL - 4, height: CELL - 4, margin: 2 }}
                     >
-                      <PlusIcon size={18} weight="bold" aria-hidden />
+                      <PlusIcon size={18} weight="fill" aria-hidden />
                     </button>
                   )}
                 </div>
@@ -375,8 +375,8 @@ export function EmojiPicker({ onPick, allowCustom = true, className, autoFocus =
 
 function SectionIcon({ section, server, small }: { section: PickerSection; server?: ServerSummary; small?: boolean }) {
   const size = small ? 14 : 20;
-  if (section.kind === 'frequent' || section.kind === 'results') return <ClockIcon size={size} weight="bold" aria-hidden />;
+  if (section.kind === 'frequent' || section.kind === 'results') return <ClockIcon size={size} weight="fill" aria-hidden />;
   if (section.kind === 'server') return server ? <ServerIcon id={server.id} name={server.name} icon={server.icon} size={small ? 16 : 24} /> : null;
   const CategoryIcon = CATEGORY_ICONS[section.key];
-  return <CategoryIcon size={size} weight={small ? 'bold' : 'fill'} aria-hidden />;
+  return <CategoryIcon size={size} weight="fill" aria-hidden />;
 }

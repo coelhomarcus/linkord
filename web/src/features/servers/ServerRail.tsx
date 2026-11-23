@@ -232,7 +232,7 @@ export function ServerRail({ className }: { className?: string }) {
       </DndContext>
       <RailItem label={t('rail.add')} active={false} unread={false} onClick={() => setCreateOpen(true)}>
         <span className="grid size-10 place-items-center rounded-[12px] bg-surface-300 text-text-primary transition-colors duration-150 group-hover/server:bg-accent-primary group-hover/server:text-primary-foreground">
-          <PlusIcon size={20} weight="bold" />
+          <PlusIcon size={20} weight="fill" />
         </span>
       </RailItem>
       <CreateServerDialog open={createOpen} onOpenChange={setCreateOpen} />
