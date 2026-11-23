@@ -12,6 +12,11 @@ vi.mock('@/state/AuthContext', () => ({
   useAuth: () => ({ login, completeLogin, register: vi.fn() }),
 }));
 
+vi.mock('@/features/desktopApp/desktopDownloads', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/features/desktopApp/desktopDownloads')>()),
+  fetchDesktopDownloads: () => new Promise(() => {}),
+}));
+
 vi.mock('@/shared/api/api', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@/shared/api/api')>()),
   resendLoginCode: (...args: unknown[]) => resendLoginCode(...args),
@@ -20,7 +25,7 @@ vi.mock('@/shared/api/api', async (importOriginal) => ({
 const CHALLENGE = { challenge: 'c'.repeat(43), email: 'a***@example.com' };
 
 async function signIn(user: ReturnType<typeof userEvent.setup>) {
-  await user.type(screen.getByLabelText('Usuário'), 'ana');
+  await user.type(screen.getByLabelText('Nome de usuário'), 'ana');
   await user.type(screen.getByLabelText('Senha', { exact: true }), 'secret password');
   await user.click(screen.getByRole('button', { name: 'Entrar' }));
 }
