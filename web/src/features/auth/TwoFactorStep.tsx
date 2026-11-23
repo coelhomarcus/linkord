@@ -27,7 +27,12 @@ export function TwoFactorStep({ challenge, onBack }: { challenge: LoginChallenge
   const submittingRef = useRef(false);
 
   async function submit(nextCode = code) {
-    if (nextCode.length !== 6 || submittingRef.current) return;
+    if (submittingRef.current) return;
+    if (nextCode.length !== 6) {
+      setStatus('error');
+      setMessage(t('errors.codeIncomplete'));
+      return;
+    }
     submittingRef.current = true;
     setMessage(null);
     setStatus('idle');
@@ -63,6 +68,7 @@ export function TwoFactorStep({ challenge, onBack }: { challenge: LoginChallenge
     <div className="flex flex-col">
       <AuthHeading title={t('twoFactor.title')} subtitle={t('twoFactor.sentTo', { email: challenge.email })} />
       <OTPInput
+        className="self-center items-center text-center [&>label]:font-semibold [&>label]:text-text-strong"
         label={t('twoFactor.codeLabel')}
         hint={t('twoFactor.codeHint')}
         errorMessage={message ?? t('twoFactor.codeError')}
@@ -75,7 +81,7 @@ export function TwoFactorStep({ challenge, onBack }: { challenge: LoginChallenge
         autoFocus
         aria-label={t('twoFactor.codeLabel')}
       />
-      <Button type="button" size="lg" className="mt-5 h-11 w-full text-body" disabled={pending || code.length !== 6} onClick={() => void submit()}>
+      <Button type="button" size="lg" className="mt-5 h-11 w-full text-body" disabled={pending} onClick={() => void submit()}>
         {pending && <CircleNotchIcon size={20} className="animate-spin" />}
         {pending ? t('login.pending') : t('twoFactor.submit')}
       </Button>

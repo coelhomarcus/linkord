@@ -73,6 +73,16 @@ describe('AuthScreen with two-step login', () => {
     expect(screen.getByLabelText('Senha', { exact: true })).toHaveValue('');
   });
 
+  it('asks for every digit when confirmed with a short code', async () => {
+    const user = userEvent.setup();
+    render(<AuthScreen />);
+    await signIn(user);
+    await user.type(await screen.findByLabelText('Código de verificação'), '123');
+    await user.click(screen.getByRole('button', { name: 'Confirmar' }));
+    expect(screen.getByText('Digite os 6 dígitos do código.')).toBeInTheDocument();
+    expect(completeLogin).not.toHaveBeenCalled();
+  });
+
   it('a login without two-step goes straight in', async () => {
     const user = userEvent.setup();
     login.mockResolvedValue(null);

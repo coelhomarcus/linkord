@@ -194,7 +194,7 @@ export function OTPInput({
           onBlur={() => setFocused(false)}
           className="absolute inset-0 z-20 h-full w-full cursor-text bg-transparent text-transparent caret-transparent opacity-0 outline-none disabled:cursor-not-allowed"
         />
-        <div ref={slotsRef} className="flex items-center gap-2">
+        <div ref={slotsRef} className="flex items-center gap-1.5 sm:gap-2">
           {Array.from({ length }, (_, index) => {
             const char = slots[index] ?? "";
             const isActive = index === activeIndex;
