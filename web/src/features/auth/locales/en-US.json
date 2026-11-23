@@ -19,7 +19,8 @@
     "inviteCode": "Ask whoever invited you to Linkord for the code."
   },
   "errors": {
-    "required": "This field is required."
+    "required": "This field is required.",
+    "codeIncomplete": "Enter all 6 digits of the code."
   },
   "password": {
     "show": "Show password",

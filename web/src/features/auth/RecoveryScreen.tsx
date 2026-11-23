@@ -48,7 +48,12 @@ export function RecoveryScreen({ onBack }: { onBack: () => void }) {
   }
 
   async function submitReset(nextCode = code) {
-    if (nextCode.length !== 6 || pending) return;
+    if (pending) return;
+    if (nextCode.length !== 6) {
+      setStatus('error');
+      setMessage(t('errors.codeIncomplete'));
+      return;
+    }
     if (password.length < MIN_PASSWORD_LEN) {
       setPasswordError(password ? t('hints.password') : t('errors.required'));
       return;
@@ -117,6 +122,7 @@ export function RecoveryScreen({ onBack }: { onBack: () => void }) {
       />
       <form noValidate onSubmit={(e) => { e.preventDefault(); void submitReset(); }} className="flex flex-col">
         <OTPInput
+          className="self-center items-center text-center [&>label]:font-semibold [&>label]:text-text-strong"
           label={t('recovery.codeLabel')}
           hint={t('recovery.codeHint')}
           errorMessage={message ?? t('recovery.codeError')}
@@ -146,7 +152,7 @@ export function RecoveryScreen({ onBack }: { onBack: () => void }) {
           onChange={setPassword}
           error={passwordError}
         />
-        <Button type="submit" size="lg" className="mt-5 h-11 w-full text-body" disabled={pending || code.length !== 6}>
+        <Button type="submit" size="lg" className="mt-5 h-11 w-full text-body" disabled={pending}>
           {pending && <CircleNotchIcon size={20} className="animate-spin" />}
           {pending ? t('recovery.saving') : t('recovery.reset')}
         </Button>

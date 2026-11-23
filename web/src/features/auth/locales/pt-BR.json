@@ -19,7 +19,8 @@
     "inviteCode": "Peça o código a quem te convidou para o Linkord."
   },
   "errors": {
-    "required": "Este campo é obrigatório."
+    "required": "Este campo é obrigatório.",
+    "codeIncomplete": "Digite os 6 dígitos do código."
   },
   "password": {
     "show": "Mostrar senha",
