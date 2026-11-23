@@ -139,11 +139,11 @@ The Wall shows the public Steam profile, drawn like Steam's own mini profile, an
 
 ## Twitch
 
-The channel with its game, title and viewer count when live (or the last stream's date), and up to six recent VODs, as Wall widgets. The connection is a login name.
+The channel with its game, title and viewer count when live (or its offline banner and the last stream's date), and up to six recent VODs, as Wall widgets. The connection is a login name.
 
 - **API:** `server/src/integrations/twitch/twitch.ts` calls [Helix](https://dev.twitch.tv/docs/api/reference/): `GET /users` to check the login, `GET /videos?type=archive&first=6`, and `GET /streams` for live status. One client-credentials token per process is shared with IGDB and renewed a minute before expiry or after a 401.
 - **Sync:** connecting reads the profile and VODs; the [worker](#how-connection-syncing-works) refreshes them. Live status is read when a Wall is viewed, cached 60 seconds per login.
-- **Pictures:** avatars and thumbnails through the media proxy, from Twitch's CDN hosts. The player loads from Twitch after the viewer clicks it.
+- **Pictures:** avatars, offline banners and thumbnails through the media proxy, from Twitch's CDN hosts. The player loads from Twitch after the viewer clicks it.
 - **Configuration:** the IGDB app's `IGDB_CLIENT_ID` and `IGDB_CLIENT_SECRET`.
 - **When missing:** the Twitch connection option is hidden.
 

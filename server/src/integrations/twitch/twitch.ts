@@ -81,7 +81,7 @@ export function createTwitchClient({
         url: `https://www.twitch.tv/${login}`,
         snapshot: { widgets: {
           'twitch-live': { kind: 'twitch-live', login, name, avatarUrl: thumbnail(user.profile_image_url, 128, 128),
-            lastStreamAt: videos[0]?.createdAt ?? null, stream: null, status: 'unknown' },
+            offlineImageUrl: thumbnail(user.offline_image_url), lastStreamAt: videos[0]?.createdAt ?? null, stream: null, status: 'unknown' },
           'twitch-vods': { kind: 'twitch-vods', items: videos },
         } },
       };

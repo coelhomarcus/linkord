@@ -33,7 +33,9 @@ export type WidgetData =
       /** absent from a server or a snapshot older than the mini profile */
       items?: SteamProfileItems }
   | { kind: 'twitch-live'; login: string; name: string; avatarUrl: string | null; lastStreamAt: string | null;
-      stream: { title: string; game: string | null; viewers: number; imageUrl: string | null } | null; status: 'live' | 'offline' | 'unknown' }
+      stream: { title: string; game: string | null; viewers: number; imageUrl: string | null } | null; status: 'live' | 'offline' | 'unknown';
+      /** the channel's offline banner; absent from a server or a snapshot older than it */
+      offlineImageUrl?: string | null }
   | { kind: 'twitch-vods'; items: Array<MediaItem & { createdAt: string; seconds: number }> };
 /** What the Steam profile has equipped from the Points Shop, as proxied addresses. */
 interface SteamProfileItems {
