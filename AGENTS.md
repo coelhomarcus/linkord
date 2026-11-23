@@ -1,39 +1,31 @@
 # AGENTS.md
 
-Instructions for agents (and humans) working in this repository. For "what is this project, how do I run it, what's the stack" see [README.md](README.md) — this file is about **how the code is organized and the conventions to follow when touching it**.
+Instructions for agents (and humans) working in this repository. What the project is and how to run it is in [README.md](README.md) and [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md); this file is about **how the code is organized and the conventions to follow when touching it**.
 
-Monorepo: `web/` (frontend, React + Vite + Vitest), `server/` (backend, Fastify + Drizzle/Postgres + Socket.IO + LiveKit, `node --test`) and `desktop/` (Electron window around the web app, `node --test`). All TypeScript/ESM.
+Monorepo: `web/` (React + Vite + Vitest), `server/` (Fastify + Drizzle/Postgres + Socket.IO + LiveKit, `node --test`) and `desktop/` (an Electron window around the web app, `node --test`). All TypeScript/ESM.
 
 ## General rule: organize by feature, not by layer
 
-Code is grouped by **domain/feature**, not by technical type. Don't recreate a generic `hooks/`, `components/`, or `handlers/` folder at the root — each feature has its own folder with everything only it uses.
+Code is grouped by **domain/feature**, not by technical type. Don't create a generic `hooks/`, `components/` or `handlers/` folder at the root: each feature has its own folder with everything only it uses.
 
 ## Frontend (`web/src/`)
 
 ```
 web/src/
-  app/                  # composition root — nothing should import FROM app/
-    App.tsx
-    layout/             # app-wide screens and chrome: TopBar, GlobalContextMenu, LoadingScreen,
-                        # OutdatedClientScreen, RoomErrorScreen, ErrorBoundary, AppModals, AccessNotice,
-                        # DesktopFrame + WindowControls (the desktop app's own title bar)
-    providers/          # RoomProvider.tsx (the room's state root)
-  features/<domain>/    # activity, admin, auth, bots (webhooks), calls, chat, conversations (DMs), desktopApp,
-                        # friends, gifs, media, navigation, notifications, profile, reports, servers, settings, soundboard
-  shared/                # see criteria below
-    api/ hooks/ i18n/ lib/ types/ ui/{primitives,motion}/
-    Avatar.tsx, ConfirmDialog.tsx, notifications.ts, sounds.ts, ...
-  state/                 # RoomContext (the room store and its readers), RoomStoreProvider, AuthContext,
-                         # roomReducer + state/hooks/ (cross-cutting)
-  styles/                # global CSS
-web/tests/               # mirrors web/src/ — NO tests inside src/
+  app/              # composition root, nothing imports FROM it: App.tsx, layout/ (app-wide screens and
+                    # chrome, the desktop title bar), providers/RoomProvider.tsx (the room's state root)
+  features/<domain>/ # one folder per feature (chat, calls, profile, settings, ...), with its locales/
+  shared/           # api/ hooks/ i18n/ lib/ types/ ui/ and components with no single owner
+  state/            # RoomContext (the room store and its readers), RoomStoreProvider, AuthContext,
+                    # roomReducer, hooks/ (cross-cutting)
+  styles/           # global CSS
+web/tests/          # mirrors web/src/ — NO tests inside src/
 ```
 
-- **`features/<domain>/`**: a feature's component, hook, and test live together (the test in `web/tests/features/<domain>/`, mirroring the path). If a hook/component is only used by one feature, it lives there — not in `shared/`.
-- **`shared/` is only for things that genuinely have no owner** — used by 2+ features with none of them being the natural owner, or pure infrastructure (HTTP client, protocol types, UI primitives). Before putting something in `shared/`, confirm with a grep of who imports it — if only one feature uses it, it's not a `shared/` candidate.
-- **`state/hooks/`** is for the rare case of a cross-cutting hook with no owning feature at all (e.g. `usePresence`, `useTypingIndicator`, `useSocketConnection` — only used by `RoomProvider`, but don't belong to any specific feature).
-- **Alias `@/`** → `web/src`; **`@tests/`** → `web/tests` (configured in `vite.config.ts` and `tsconfig.app.json`). An import of a file in the same directory stays relative (`./Sibling`); any import that would need to climb out with `../` becomes `@/full/path` instead.
-- Tests ALWAYS in `web/tests/`, never inside `web/src/`.
+- **`features/<domain>/`**: a hook or component used by one feature lives in it. Its test lives at the mirrored path in `web/tests/features/<domain>/` (Vitest only runs `tests/**`).
+- **`shared/` is only for things with no owner**: used by two or more features with none the natural owner, or pure infrastructure (HTTP client, protocol types, UI primitives). Grep who imports something before moving it there.
+- **`state/hooks/`** is for the rare cross-cutting hook with no owning feature (`usePresence`, `useTypingIndicator`, `useSocketConnection`).
+- **Imports:** `@/` → `web/src`, `@tests/` → `web/tests`. A file in the same directory is imported relatively (`./Sibling`); anything that would climb out with `../` uses `@/full/path`.
 
 ### Reading the room
 
@@ -42,159 +34,144 @@ web/tests/               # mirrors web/src/ — NO tests inside src/
 - `useRoom('servers', 'openCall')` for fields of the value, `useRoomState('me', 'focusedId')` for the reducer's state; both compare each field by identity.
 - `useRoomSelector((room) => …, isEqual?)` for anything derived (one participant, one count, a lookup by a prop), so a row does not re-render for every other row's change. `useOptionalRoomSelector` where the component also renders outside `RoomProvider`.
 - Who is in which call without their media: `useCallRoster()` (`features/calls/callRoster.ts`), which keeps its identity while people only speak, mute or share. Only call UI reads `participants` itself.
-- A value or callback the provider hands out must keep its identity until it really changes (`useCallback`/`useMemo`, no inline lambdas or object literals), or everyone who reads it re-renders on every event.
+- A value or callback the provider hands out keeps its identity until it really changes (`useCallback`/`useMemo`, no inline lambdas or object literals), or everyone who reads it re-renders on every event.
 - Tests pass a fake value to `RoomStoreProvider` (`renderWithRoom` in `tests/fixtures/roomContextFixture.tsx`); to change it, pass a new object rather than mutating the old one.
 
 ### Server reads shown in several places
 
-A read that more than one surface shows (a profile, its details, its Wall, a relationship) goes through `createResourceCache` (`shared/lib/resourceCache.ts`) and `useResource`: what was read before renders at once and is read again behind it, requests in flight are shared, and `clearResourceCaches()` runs on sign-out. Skeletons are only for what was never read. A change the person makes shows at once and puts the previous value back if the server refuses (`changeRelationship` in `features/friends/useRelationship.ts`). Seed a profile a list row already knows with `rememberProfilePreview`.
+A read that more than one surface shows (a profile, its details, its Wall, a relationship) goes through `createResourceCache` (`shared/lib/resourceCache.ts`) and `useResource`: what was read before renders at once and is read again behind it, requests in flight are shared, and `clearResourceCaches()` runs on sign-out. Skeletons are only for what was never read. A change the person makes shows at once and is put back if the server refuses (`changeRelationship` in `features/friends/useRelationship.ts`). Seed a profile a list row already knows with `rememberProfilePreview`.
 
 ### React Compiler
 
-`vite build`, the dev server and Vitest all run the React Compiler (`babel-plugin-react-compiler` through `@rolldown/plugin-babel`, `web/vite.config.ts`). It memoizes every component and hook it can, so a value computed in render is recomputed only when something it reads from props, state, context or a hook changes.
+`vite build`, the dev server and Vitest all run the React Compiler (`web/vite.config.ts`). It memoizes every component and hook it can, so a value computed in render is recomputed only when something it reads from props, state, context or a hook changes.
 
-- **Render reads nothing else.** A module-level cache, `i18n.language`, `getTimeFormat()`, `localStorage` or the clock read during render is computed once and kept: the compiler cannot see it change. Take the language from `useLanguage()` and the time format from `useTimeFormat()` and pass them into the formatter (`formatTime(ts, language, timeFormat)`); a plain function that runs during render takes `language` and translates with `i18n.t(key, { lng: language })`. A cache that fills later is read through `useSyncExternalStore` (`useResolvedTwemoji`, `useEmojiData`), never through a counter bumped to force a render.
-- **No new `useMemo`/`useCallback`/`memo` by hand** in compiled code; keep the existing ones only where identity is a contract (what `RoomProvider` hands out, which the compiler skips). Remove one rather than fight a `preserve-manual-memoization` diagnostic.
-- **What it skips** still works, just unmemoized: a Rules of React violation (a ref read during render, a lint suppression), `try`/`finally` (move the `finally` body after the `try`/`catch`), getters in an object literal (build the object in a plain function outside the component). `REACT_COMPILER_LOG=1 npm run build --prefix web` lists every skipped component and why; check it for what you touch on a hot path (the chat view, call tiles).
-- `useVirtualizer` (TanStack Virtual) is an incompatible library: the compiler leaves `MessageTimeline` and the other virtual lists as written, so their manual memoization of rows stays.
+- **Render reads nothing else.** A module-level cache, `i18n.language`, `getTimeFormat()`, `localStorage` or the clock read during render is computed once and kept. Take the language from `useLanguage()` and the time format from `useTimeFormat()` and pass them in (`formatTime(ts, language, timeFormat)`); a plain function called during render takes `language` and translates with `i18n.t(key, { lng: language })`. A cache that fills later is read through `useSyncExternalStore` (`useResolvedTwemoji`, `useEmojiData`), never through a counter bumped to force a render.
+- **No new `useMemo`/`useCallback`/`memo` by hand** in compiled code; keep the existing ones only where identity is a contract (what `RoomProvider` hands out). Remove one rather than fight a `preserve-manual-memoization` diagnostic.
+- **What it skips** still works, unmemoized: a Rules of React violation (a ref read during render, a lint suppression), `try`/`finally` (move the `finally` body after the `try`/`catch`), getters in an object literal (build the object in a plain function outside the component). `REACT_COMPILER_LOG=1 npm run build --prefix web` lists every skipped component and why; check it for what you touch on a hot path (the chat view, call tiles).
+- `useVirtualizer` (TanStack Virtual) is incompatible: the compiler leaves `MessageTimeline` and the other virtual lists as written, so their manual memoization of rows stays.
 
 ### Touch: long press, selection, sliders
 
-On a phone, long press is the right-click. There is **one** long press in the app, `useLongPress` (`shared/hooks/useLongPress.ts`), on pointer events: 500 ms (`LONG_PRESS_DELAY_MS`), cancelled by moving past 10 px, by `pointercancel` (the browser started a scroll or a drag), by a second finger, or by anything scrolling under a still finger. While a press is its own, it swallows the browser's touch `contextmenu` (Android fires one; iOS Safari never does) and the click that may follow. Never write another timer for a hold: pass `delay`, `tolerance`, `pointerTypes` (`'all'` for the composer mic, which holds with the mouse too) and `onStart`/`onEnd`.
+On a phone, long press is the right-click. There is **one** long press in the app, `useLongPress` (`shared/hooks/useLongPress.ts`): 500 ms, cancelled by moving past 10 px, by `pointercancel`, by a second finger or by scrolling. Never write another timer for a hold: pass `delay`, `tolerance`, `pointerTypes` (`'all'` for the composer mic) and `onStart`/`onEnd`.
 
-- **Context menus**: `GlobalContextMenu` runs the hook over the whole app, and on firing dispatches a `contextmenu` event at the finger. So a menu is written once, for right-click (`onContextMenu` with `clientX/Y`), and works under a finger on Android and iOS alike. To make something long-pressable add its data attribute to `PRESSABLE` there (rows: `data-message-id`, `data-conversation-id`; menus of their own: `data-tile-kind`, `data-dm-call-avatar`, `data-voice-member`, which also belong in `DELEGATED_MENU` so the global menu stays out). Inside a pressable row, links, buttons, fields and downloads keep the browser's own long press, except the button that *is* the row (`ROW_CONTROL`). Base UI's trigger has its own touch timer, turned off there with `preventBaseUIHandler`.
-- **Feedback** is derived from the press, not timed separately: the row gets `data-long-pressing` and `--long-press-delay` in the pointerdown that starts the timer, both gone when it fires or ends (`styles/index.css`).
-- **Selection and callout**: `touch-first` (`@media (hover: none) and (pointer: coarse)`, also `TOUCH_FIRST_QUERY`) is a device whose main input is a finger. There, message text (`.message-press-text`) is not selectable, except its links and after the menu's "Select text"; Base UI's trigger turns the iOS callout off on the whole app. Don't add `user-select`/`-webkit-touch-callout` rules elsewhere.
-- **Drag vs long press**: something that is both draggable and long-pressable is not draggable on `touch-first` (see `VoiceMembers.tsx`); its menu offers the move instead.
-- **No gesture-only actions**: when a menu is reachable only by right-click or long press, give it a "more actions" button reachable by keyboard and screen readers (`TileMenuButton`, the one in `VoiceMembers`): VoiceOver and TalkBack do not pass a long press through the same way. Swipe-to-reply stays in the message menu; the channel list stays on the header back button.
-- **Horizontal swipes** (`useHorizontalSwipe`, numbers in `shared/lib/swipe.ts`): on `touch-first` only. Movement inside the same 10 px lock as long press is ignored, so the press still owns it; the first axis past that lock wins — vertical lets the browser scroll (`pointercancel` is not swallowed), horizontal captures. Reply is a right swipe on a message row (`useSwipeToReply`); the channel/DM list is a right swipe from the left edge of a conversation (`useDrawerEdgeSwipe`), and a left swipe closes it. Skip iOS Safari's back-swipe strip unless the app is standalone. Reduced motion jumps to the end state (no follow).
-- **Sliders**: use `shared/ui/primitives/slider.tsx` as is (`size="sm"` for compact controls) rather than restyling the thumb from the call site; it keeps the fill ending at the thumb's centre (`thumbAlignment="edge"`) and a 44 px+ target under a finger. Every slider needs an `aria-label`.
+- **Context menus:** `GlobalContextMenu` runs the hook over the whole app and dispatches a `contextmenu` event at the finger, so a menu is written once, for right-click (`onContextMenu` with `clientX/Y`), and works under a finger on Android and iOS. To make something long-pressable, add its data attribute to `PRESSABLE` there (menus of their own also go in `DELEGATED_MENU`). Inside a pressable row, links, buttons and fields keep the browser's own long press, except the button that *is* the row (`ROW_CONTROL`).
+- **Feedback** comes from the press itself: the row gets `data-long-pressing` and `--long-press-delay` while the timer runs (`styles/index.css`).
+- **Selection and callout:** `touch-first` (`@media (hover: none) and (pointer: coarse)`, also `TOUCH_FIRST_QUERY`) is a device whose main input is a finger. There, message text (`.message-press-text`) is not selectable except its links and after the menu's "Select text", and the iOS callout is off app-wide. Don't add `user-select`/`-webkit-touch-callout` rules elsewhere.
+- **Drag vs long press:** something both draggable and long-pressable is not draggable on `touch-first` (see `VoiceMembers.tsx`); its menu offers the move instead.
+- **No gesture-only actions:** a menu reachable only by right-click or long press also gets a "more actions" button for keyboards and screen readers (`TileMenuButton`). Swipe-to-reply stays in the message menu too.
+- **Horizontal swipes** (`useHorizontalSwipe`, numbers in `shared/lib/swipe.ts`), on `touch-first` only: inside the long press's 10 px nothing happens; past it the first axis wins (vertical scrolls). Reply is a right swipe on a message row (`useSwipeToReply`); the channel/DM list opens with a right swipe from the left edge (`useDrawerEdgeSwipe`). Reduced motion jumps to the end state.
+- **Sliders:** use `shared/ui/primitives/slider.tsx` as is (`size="sm"` for compact controls); it keeps the fill aligned with the thumb and a 44 px+ target. Every slider needs an `aria-label`.
 
 ### Motion
 
 Short and quiet, from three durations (`DURATION` in `shared/lib/ease.ts`): **100 ms** for a popup leaving and hover/focus feedback, **150 ms** for a popup appearing or a modal leaving, **200 ms** for a modal appearing and things moving into place. One curve for anything appearing or moving, `EASE_OUT` (`ease-out-expo` in CSS); drawers and sheets keep `EASE_DRAWER` and their springs.
 
-- Popovers, menus, selects and tooltips take `motion-popup`, dialogs and their backdrop `motion-modal` (`styles/index.css`), both on tw-animate's `animate-in`/`animate-out`. Use the primitives rather than restating their timing.
-- **Reduced motion** is handled once: under `prefers-reduced-motion` the `enter`/`exit` keyframes keep only the fade, and `MotionConfig reducedMotion="user"` (`App.tsx`) does the same for Motion. Something that moves by other means (a CSS transition on `transform`/`scale`, dnd-kit, `element.animate`) checks it itself (`motion-safe:`/`motion-reduce:`, `useReducedMotion`).
-- **Never delay the interaction**: an exit plays while what it hides already takes no input (Base UI does this for popups; `FloatingBar` is `inert` while it leaves).
-- **Tests**: exits are CSS animations waited on through `getAnimations()`, which jsdom lacks, so under test things unmount at once and assertions stay synchronous. Keep new exits on that pattern; a Motion `AnimatePresence` exit would keep nodes in the DOM after the state changes. Something that leaves on its own, outside Base UI, uses `useExitPresence` (`shared/hooks`) as `FloatingBar` does.
+- Popovers, menus, selects and tooltips take `motion-popup`, dialogs and their backdrop `motion-modal` (`styles/index.css`). Use the primitives rather than restating their timing.
+- **Reduced motion** is handled once (the keyframes keep only the fade; `MotionConfig reducedMotion="user"` in `App.tsx`). Anything that moves by other means (a CSS transition on `transform`, dnd-kit, `element.animate`) checks it itself (`motion-safe:`/`motion-reduce:`, `useReducedMotion`).
+- **Never delay the interaction:** an exit plays while what it hides already takes no input (`FloatingBar` is `inert` while it leaves).
+- **Tests:** jsdom lacks `getAnimations()`, so under test things unmount at once and assertions stay synchronous. Keep exits as CSS animations (not Motion's `AnimatePresence`); something that leaves on its own outside Base UI uses `useExitPresence` (`shared/hooks`).
 
 ### Error colour
 
-Words that report an error or a failure (an `role="alert"` line, a "failed" label, a counter past its limit) are `text-red-text`, the lighter red made to be read on the dark surfaces; so is the label of a destructive text button. `text-red` is the fill colour: icons, indicators, required-field asterisks and `bg-red/…` tints. A destructive button takes the `danger-outline` (neutral box, red label) or `destructive` (solid red) variant rather than recolouring another one. A boxed error is `ErrorBanner`. Success is `text-green`, never a Tailwind palette green.
+Error text (an `role="alert"` line, a "failed" label, a counter past its limit) and the label of a destructive text button are `text-red-text`, the red made for dark surfaces. `text-red` is the fill colour: icons, indicators, required-field asterisks, `bg-red/…` tints. A destructive button uses the `danger-outline` or `destructive` variant. A boxed error is `ErrorBanner`. Success is `text-green`, never a Tailwind palette green.
 
 ### Copy and save confirmations
 
-- **Copy**: never call `navigator.clipboard.writeText` directly. A copy button takes `useCopyToClipboard` (`shared/hooks`) with `CopyStatusIcon` and `CopyLabel` (`shared/CopyFeedback.tsx`): the icon turns into a green check and the label reads "Copiado" for 1.5 s. A menu item that closes as it copies calls `copyToClipboard` (`shared/lib/clipboard.ts`). Both say "Copiado" through the page's one polite live region (`announce` in `shared/lib/announce.ts`), so keep the button's accessible name as it is and add no `role="status"` of your own. A copy the browser refuses shows and says nothing. In tests, read the region with `liveAnnouncements()` (`tests/fixtures/announcerFixture.ts`).
-- **Save**: a form that waits for Save confirms through `FloatingBar` ("Alterações salvas."), and nothing else: no toast or second message beside it.
+- **Copy:** never call `navigator.clipboard.writeText` directly. A copy button takes `useCopyToClipboard` (`shared/hooks`) with `CopyStatusIcon` and `CopyLabel` (`shared/CopyFeedback.tsx`); a menu item that closes as it copies calls `copyToClipboard` (`shared/lib/clipboard.ts`). Both announce "Copiado" through the page's one live region (`announce` in `shared/lib/announce.ts`), so add no `role="status"` of your own. In tests, read it with `liveAnnouncements()` (`tests/fixtures/announcerFixture.ts`).
+- **Save:** a form that waits for Save confirms through `FloatingBar` ("Alterações salvas.") and nothing else.
 
 ## Backend (`server/src/`)
 
 ```
 server/src/
-  index.ts              # entry point: imports and calls app/bootstrap
-  app/                  # bootstrap.ts (the whole boot sequence, including restoring calls)
-  config/               # env.ts
-  db/                   # client.ts, schema.ts, migrate.ts
-  http/                 # app.ts (Fastify), cookies.ts, respond.ts, errors.ts, originGuard.ts
-  realtime/             # socket.ts — combines every module's `handlers` into one dispatch table;
-                        # protocolVersion.ts, floodControl.ts
-  integrations/<name>/  # external service adapters: livekit/, github/, myanimelist/, igdb/ (+ connectionHttp.ts)
-  net/                  # safeRequest.ts, ssrfGuard.ts — every request to a user-chosen URL
-  lib/                  # logger.ts
-  modules/<domain>/     # activity, admin, attachments, auth, blocks, bots, calls, connections, conversations, desktop,
-                        # friendships, games, gifs, limits, link-preview, logs, messages, migration,
-                        # moderation, notifications, presence, profile, reports, servers,
-                        # soundboard, users
-  scripts/              # CLI scripts behind `npm run db:*`, `admin:*`, `test:integration`
-server/tests/            # mirrors server/src/ — NO tests inside src/
+  index.ts, app/        # entry point; app/bootstrap.ts is the whole boot and shutdown sequence
+  config/env.ts         # every environment variable
+  db/                   # client, schema, migrations
+  http/                 # Fastify app, cookies, errors, origin guard, security headers
+  realtime/             # socket.ts combines every module's `handlers`; protocolVersion.ts, floodControl.ts
+  integrations/<name>/  # adapters for external services (livekit, github, igdb, steam, twitch, ...)
+  net/                  # safeRequest.ts, ssrfGuard.ts: every request to a URL a user or response chose
+  modules/<domain>/     # one folder per domain (messages, calls, presence, connections, ...)
+  scripts/              # the CLI scripts behind `npm run db:*`, `admin:*`, `backup`, `test:integration`
+server/tests/           # mirrors server/src/ — NO tests inside src/
 ```
 
-- **No alias** — every import is a relative path, with an explicit `.js` extension even though the file is `.ts` (this is real ESM; `.js` is what exists after the build). E.g. `import { db } from '../../db/client.js';`.
-- **When to split a large module into repository vs. handlers** (the pattern used in `conversations.ts`/`conversationsRepository.ts` and `attachmentUploads.ts`/`uploadSession.ts`): only split with **real fan-in evidence** — if specific functions in the file are already imported by several different external modules (a repository API buried alongside handlers nobody imports individually), splitting is worth it. File size alone is **not** a reason — `messages.ts` is large on purpose: it is one cohesive socket feature, and the few functions others import from it (`announceStoredMessage`, `postBotMessage`) are thin entry points into that same flow. Don't split "because it got big"; split when two different groups of external consumers each only need one half of the file.
-- **Never use a dynamic `import()` just to dodge an import cycle.** If two modules form a cycle, extract the part both need into a new leaf module (zero dependency back into the cycle) — that's what resolved the `conversations.ts`/`attachments.ts` cycle (see `modules/attachments/attachmentCleanup.ts`, which only depends on `db`/schema/`attachmentStorage.ts`). A dynamic import is a sign the module boundary is wrong, not a solution.
-- **Servers and channels**: a channel is a `conversations` row (`type` `text` or `voice`, with `serverId`); a DM is `type` `direct` with `conversation_members`. Access to a channel goes through `getConversationForUser(id, userId, permission)` in `conversationsRepository.ts`, which resolves the member's permissions (`modules/servers/permissions.ts`, mirrored in `web/src/features/servers/permissionBits.ts` and pinned by a test). Ask for the bit the action needs — never check membership by hand.
-- Tests ALWAYS in `server/tests/`, never inside `server/src/`.
+- **No alias:** every import is relative, with an explicit `.js` extension even though the file is `.ts` (`import { db } from '../../db/client.js';`).
+- **Split a module only on real fan-in evidence:** when several outside modules each need only one half of a file (as with `conversations.ts`/`conversationsRepository.ts`). Size alone is not a reason; `messages.ts` is large on purpose.
+- **Never use a dynamic `import()` to dodge an import cycle.** Extract what both modules need into a new leaf module with no dependency back into the cycle (as `modules/attachments/attachmentCleanup.ts` did).
+- **Servers and channels:** a channel is a `conversations` row (`type` `text` or `voice`, with `serverId`); a DM is `type` `direct` with `conversation_members`. Access to a channel goes through `getConversationForUser(id, userId, permission)` in `conversationsRepository.ts`, which resolves the member's permissions (`modules/servers/permissions.ts`, mirrored in `web/src/features/servers/permissionBits.ts` and pinned by a test). Ask for the bit the action needs; never check membership by hand.
 
 ## Desktop (`desktop/`)
 
 ```
 desktop/
-  src/main/      # Electron main process: index.ts (app lifecycle), mainWindow.ts, session.ts
-                 # (permission handlers), contentsGuard.ts (navigation and popups), plus the
-                 # rules they apply as plain modules: appUrl, navigation, permissions, windowState, loadRetry,
-                 # titleBar, loginItem, menus, strings, updates, preferences, trayMenuLayout, activityCatalog,
-                 # activityDetect, richPresence, notificationLayout, badge (tray.ts, trayMenuWindow.ts, startAtLogin.ts,
-                 # updater.ts, settingsBridge.ts, activityWatcher.ts, richPresenceServer.ts, activityBridge.ts,
-                 # notificationBridge.ts, taskbarBadge.ts wire them)
+  src/main/      # Electron main process: index.ts (lifecycle), mainWindow.ts, session.ts (permissions),
+                 # contentsGuard.ts (navigation and popups); rules as plain modules, wired by *Bridge/*Window files
   src/preload/   # index.cts, the only bridge into the page (trayMenu.cts serves the drawn tray menu)
-  scripts/       # package.mjs (`npm run package`: bakes LINKORD_URL in, runs electron-builder)
-  resources/     # installer icons; electron-builder.config.cjs sits next to package.json
+  scripts/       # package.mjs (`npm run package`)
+  resources/     # installer icons and NSIS include; electron-builder.config.cjs sits next to package.json
 desktop/tests/   # mirrors desktop/src/ — NO tests inside src/
 ```
 
-- **Windows only.** The app ships for Windows and nothing else (`electron-builder.config.cjs` builds the NSIS installer; see `docs/DEPLOY.md`). Build and test new desktop work for Windows; don't add macOS- or Linux-specific behaviour or layouts. The only macOS code left is what lets a development run start on a Mac (its title bar buttons and native tray menu, the microphone and camera prompt, staying open when the window closes); keep it working, but add no features there. The web app still accepts what old macOS and Linux installs (0.3.x) send (`'linux'` title bar style, the `'system'` share picker, the `'notify'` update mode).
-- **The window loads the server, not a bundled copy of `web/`.** Same origin means the server's cookies, `originGuard` and CSP work unchanged and a deploy updates the interface. Don't load local files or add an API proxy without a reason that outweighs that.
-- **Rules live in plain modules with no `electron` import**, so `node --test` covers them without Electron; the files that import `electron` only wire those rules to events. A new decision (what to allow, where to go, how long to wait) goes in a plain module with a test.
-- **The page is untrusted as far as the main process is concerned**: `contextIsolation`, `sandbox`, no `nodeIntegration` on every window (`SECURE_WEB_PREFERENCES`). Permissions are an allowlist checked against the app's origin (`permissions.ts`); add a permission only for a feature the web app really uses.
-- **Each preload is one CommonJS file** (`.cts`, a sandboxed preload can neither be ESM nor require local files). It exposes `window.linkordDesktop` and nothing else; anything more the page needs is a named function there that sends a specific IPC message, never `ipcRenderer` itself. The web side types that object in `shared/desktop.ts` (`desktopApp()`, `isDesktopApp()`); change both together, and keep the web app working when a field is missing (an older desktop build).
+- **Windows only.** Build and test new desktop work for Windows; add no macOS- or Linux-specific behaviour. What is left for macOS only lets a development run start on a Mac (its title bar buttons, native tray menu, camera and microphone prompt); keep it working, but add no features there. The web app still accepts what old macOS and Linux installs (0.3.x) send (the `'linux'` title bar style, the `'system'` share picker, the `'notify'` update mode).
+- **The window loads the server, not a bundled copy of `web/`.** Same origin means cookies, `originGuard` and CSP work unchanged and a deploy updates the interface. Don't load local files or add an API proxy without a reason that outweighs that.
+- **Rules live in plain modules with no `electron` import**, so `node --test` covers them; the files that import `electron` only wire them to events. A new decision (what to allow, where to go, how long to wait) goes in a plain module with a test.
+- **The page is untrusted:** `contextIsolation`, `sandbox`, no `nodeIntegration` on every window (`SECURE_WEB_PREFERENCES`). Permissions are an allowlist checked against the app's origin (`permissions.ts`); add one only for a feature the web app really uses.
+- **Each preload is one CommonJS file** (`.cts`; a sandboxed preload can neither be ESM nor require local files). It exposes `window.linkordDesktop` and nothing else: anything more the page needs is a named function that sends a specific IPC message, never `ipcRenderer` itself. The web side types that object in `shared/desktop.ts` (`desktopApp()`, `isDesktopApp()`); change both together, and keep the web app working when a field is missing (an older desktop build).
 - Imports are relative with `.js` extensions, as in `server/`.
 
 ## Internationalization (`web/`)
 
-i18next + react-i18next, strings bundled (no backend). Supported languages live in `web/src/shared/i18n/languages.ts` (mirrored by `server/src/modules/users/locale.ts`, pinned by a server test).
+i18next + react-i18next, strings bundled. Supported languages live in `web/src/shared/i18n/languages.ts` (mirrored by `server/src/modules/users/locale.ts`, pinned by a server test).
 
-- **Where strings live**: `features/<name>/locales/{pt-BR,en-US}.json`, one namespace per feature (the folder name); `shared/i18n/locales/` is the `common` namespace for things with no owner. Don't create a root-level translations folder.
-- **Using them**: `const { t } = useTranslation('<feature>')`. Outside React (hooks' error text, plain modules) use `i18n.t('<ns>:key')` from `@/shared/i18n/init`, at the moment the text is produced — never at module load, which would freeze the language. A plain function called during render takes the language as an argument instead (`{ lng: language }`; see **React Compiler**). For catalogs of labels (like `settingsCatalog.ts`), store the *key* and call `t()` where it renders.
-- **Keys**: nested and descriptive (`email.errors.sendFailed`), pt-BR is the source of truth for names and types (register the namespace in `shared/i18n/i18next.d.ts`). Plurals use `_one`/`_other` (pt-BR also `_zero` when 0 reads differently). Variables are `{{name}}`.
-- **Adding a language**: one entry in `languages.ts` (and the server's `LOCALES`), one JSON per namespace. `tests/shared/i18n/localeParity.test.ts` fails until every file has the same keys and `{{variables}}`.
-- **Language preference**: the account's `users.locale` wins; `ss-locale` in localStorage covers logged-out screens; then the browser's language; then pt-BR.
-- **Dates/numbers**: don't hardcode `'pt-BR'` in `toLocale*String` — use the active language.
-- Proper names (theme names, "Linkord") stay untranslated.
+- **Where strings live:** `features/<name>/locales/{pt-BR,en-US}.json`, one namespace per feature (the folder name); `shared/i18n/locales/` is the `common` namespace. No root-level translations folder.
+- **Using them:** `const { t } = useTranslation('<feature>')`. Outside React use `i18n.t('<ns>:key')` from `@/shared/i18n/init` when the text is produced, never at module load. A plain function called during render takes the language as an argument (`{ lng: language }`; see **React Compiler**). Catalogs of labels (like `settingsCatalog.ts`) store the *key* and call `t()` where it renders.
+- **Keys:** nested and descriptive (`email.errors.sendFailed`); pt-BR is the source of truth for names and types (register the namespace in `shared/i18n/i18next.d.ts`). Plurals use `_one`/`_other` (pt-BR also `_zero` when 0 reads differently). Variables are `{{name}}`.
+- **Adding a language:** one entry in `languages.ts` (and the server's `LOCALES`), one JSON per namespace. `tests/shared/i18n/localeParity.test.ts` fails until every file has the same keys and variables.
+- **Language preference:** the account's `users.locale`, then `ss-locale` in localStorage (logged-out screens), then the browser's language, then pt-BR.
+- **Dates and numbers** use the active language, never a hardcoded `'pt-BR'`. Proper names (theme names, "Linkord") stay untranslated.
 
 ## Realtime compatibility and deploys
 
 A deploy restarts the Node process while people are connected, and browsers keep running the old JS until they reload. Two things make that safe; both are easy to break without noticing.
 
 **1. The protocol version gate** (`server/src/realtime/protocolVersion.ts`, client side `web/src/shared/types/protocol.ts`).
-- Every client sends its `PROTOCOL_VERSION` in `join`. The server compares it with `MIN_PROTOCOL_VERSION` (`isClientCompatible`) and, if lower, answers `client_outdated` and disconnects. The client then stops reconnecting and replaces the whole app with `OutdatedClientScreen` ("reload the page").
-- The gate is a rule, not a reconnect check: an old tab that could technically reconnect is still refused once the minimum is raised. It also drops that person out of any call, because the server loses their connection.
-- So: **do not raise `MIN_PROTOCOL_VERSION` for a change an old client can tolerate.** Make wire changes additive instead: a new optional field in a server message (the client treats `undefined` as "old server"; see `welcome.callConversationId`), a new message type old clients ignore, a new handler that old clients simply never call. Raise the minimum only when an old client would misbehave or corrupt state (a message changing meaning, a removed field it depends on). When you do, say so in the commit body, and expect everyone to lose their calls once.
-- `PROTOCOL_VERSION` (what this build speaks) and `MIN_PROTOCOL_VERSION` (what the server accepts) are separate on purpose. Bump the first for any wire change worth knowing about; bump the second only as above. Keep the comment history in that file up to date.
 
-**2. Calls survive a restart** (LiveKit itself, tokens and rooms, is in [`docs/INTEGRATIONS.md`](docs/INTEGRATIONS.md#livekit)).
-- Media flows browser <-> LiveKit, so a restart never interrupts it. What a restart would lose is the server's bookkeeping: a participant's `id` is its LiveKit identity, and `participants` and the DM call `state` live in memory.
-- So call membership is written to Postgres as it changes (`call_presence`, via `setCallConversationId` in `modules/presence/participants.ts`; `dm_calls_active`, via `apply` in `modules/calls/dmCalls.ts`). On boot, `restoreCalls` in `app/bootstrap.ts` rebuilds those connections as ghosts with `socket: null` and the **same id and resume token**, held for `CALL_RESTORE_GRACE_MS`. A restart then looks exactly like a short network drop: the client's `join {id, token}` resumes the same participant and the tiles still match the LiveKit identities.
+- Every client sends its `PROTOCOL_VERSION` in `join`. Below `MIN_PROTOCOL_VERSION` the server answers `client_outdated` and disconnects; the client stops reconnecting and shows `OutdatedClientScreen`, dropping out of any call.
+- So: **do not raise `MIN_PROTOCOL_VERSION` for a change an old client can tolerate.** Make wire changes additive: a new optional field (the client treats `undefined` as "old server", as with `welcome.callConversationId`), a new message type old clients ignore, a new handler they never call. Raise the minimum only when an old client would misbehave or corrupt state, say so in the commit body, and expect everyone to lose their calls once.
+- Bump `PROTOCOL_VERSION` for any wire change worth knowing about, and keep the comment history in that file up to date.
+
+**2. Calls survive a restart** (LiveKit itself is in [`docs/INTEGRATIONS.md`](docs/INTEGRATIONS.md#livekit)).
+
+- Media flows browser ↔ LiveKit, so a restart never interrupts it; what it would lose is the server's bookkeeping, which lives in memory. So call membership is written to Postgres as it changes (`call_presence` via `setCallConversationId` in `modules/presence/participants.ts`; `dm_calls_active` via `apply` in `modules/calls/dmCalls.ts`), and on boot `restoreCalls` (`app/bootstrap.ts`) rebuilds those connections as ghosts with `socket: null` and the **same id and resume token** for `CALL_RESTORE_GRACE_MS`. A restart then looks like a short network drop: the client's `join {id, token}` resumes the same participant.
 - Rules that keep this working:
-  - The shutdown steps in `bootstrap.ts` (`lifecycle.ready`, run by `app/processLifecycle.ts` for SIGTERM/SIGINT and for an uncaught exception or unhandled rejection alike) must not call `removeParticipant`: removal deletes the persisted rows and tells everyone the person left, which is what a deploy must not do. A crash leaves through the same path with a non-zero code and the supervisor restarts the process, so calls come back as after a deploy.
-  - It must not call `socket.disconnect()` either, only `io.close()`. Behind the production proxy the disconnect packet reaches the browser, and Socket.IO never reconnects on its own after `io server disconnect`: the tab keeps its LiveKit media but stops hearing about the call (people who join later are invisible and silent to it) until it is focused. `io.close()` drops the transports, which every client build treats as a network drop. Clients also reconnect after a server disconnect that follows a `server-restart` message (`useSocketConnection.ts`), but not after one without it: a duplicated tab resuming the same identity would kick the other one in a loop.
-  - Anything that changes which call a connection is in must go through `setCallConversationId`, and DM call changes through the state machine plus `apply`. Writing `callConversationId` directly skips persistence, and the one-call rule: an account is in one call at a time across its tabs and devices, so entering a call takes the account's other connections out of theirs (`releaseCallsElsewhere`, which sends them `call-replaced`). A request to enter a call while another connection holds one is refused with `call-elsewhere` unless it carries `replace: true`, which the client sends once the person confirms the move.
-  - Persistence is injected (`setCallPresenceStore`, `setDmCallStore`) so `participants.ts` and `dmCalls.ts` stay free of the database and their tests run without one. Writes are queued and their failures only logged: a database problem must never break a live call.
-  - Only membership is stored. Mic, camera, share and speaking flags are not: the client reports them again after reconnecting (`syncLocalMedia` in the `welcome` handler).
-  - A fresh join of the same account must not evict restored ghosts (`restoredGhostIds`): another tab of that account may reach the server before the tab that is in the call.
-- Client fallback: `welcome` carries `callConversationId`. If a reconnecting client is still connected to LiveKit but the server does not have it in that call (a crash with the database down, the grace window expired), `reconcileAfterReconnect` (`features/calls/useCallLifecycle.ts`) rejoins a voice channel, or leaves a DM call that no longer exists.
-- A DM call answer (accept, decline, cancel) clicked while the socket is down is kept and sent after the next `welcome`, only if the same call is still waiting for it (`onReconnected` in `features/calls/useDmCall.ts`); other one-shot socket actions are not queued, so a new one that matters during a reconnect needs the same treatment.
-- Chat and uploads ride out a restart too, and must keep doing so: a chat send waits in the outbox (`features/chat/useMessageOutbox.ts`) while offline and is resent with the same `clientMessageId` after the next `welcome` (the server answers a duplicate with the original, so nothing is stored twice). An upload keeps its session on disk, a chunk sent again overwrites the same piece, and the client (`shared/lib/chunkedUpload.ts`) retries init, chunks and complete for up to 60 s of outage, counting a response without the app's error envelope (the proxy's 404/502 while the container is swapped) as an outage. The `restart` end-to-end specs guard all of this (see below).
-- Known limits: a page reload leaves the call (the LiveKit connection lives in the page), and a tab still running an older build has only that build's client behaviour.
-- When you add state to a call, decide whether a restart should keep it. If yes, persist it with the membership; if the client can report it again, do what the media flags do.
+  - The shutdown path (`lifecycle.ready`, run by `app/processLifecycle.ts` for SIGTERM/SIGINT and for an uncaught exception alike) must not call `removeParticipant` (that deletes the persisted rows and tells everyone the person left), and must not call `socket.disconnect()`, only `io.close()`: behind the production proxy the disconnect packet reaches the browser, and Socket.IO never reconnects on its own after `io server disconnect`. Clients do reconnect after a server disconnect that follows a `server-restart` message (`useSocketConnection.ts`), but not after one without it, or a duplicated tab resuming the same identity would kick the other in a loop.
+  - Anything that changes which call a connection is in goes through `setCallConversationId`, and DM call changes through the state machine plus `apply`. Writing `callConversationId` directly skips persistence and the one-call rule: an account is in one call at a time across its tabs and devices, so entering a call takes its other connections out (`releaseCallsElsewhere`, which sends them `call-replaced`). A request while another connection holds a call is refused with `call-elsewhere` unless it carries `replace: true`, sent once the person confirms.
+  - Persistence is injected (`setCallPresenceStore`, `setDmCallStore`) so `participants.ts` and `dmCalls.ts` stay free of the database. Writes are queued and failures only logged: a database problem must never break a live call.
+  - Only membership is stored; mic, camera, share and speaking flags are reported again by the client after reconnecting (`syncLocalMedia` in the `welcome` handler).
+  - A fresh join of the same account must not evict restored ghosts (`restoredGhostIds`): another tab may reach the server first.
+- Client fallbacks: if a reconnecting client is still in LiveKit but the server no longer has it in that call, `reconcileAfterReconnect` (`features/calls/useCallLifecycle.ts`) rejoins the voice channel or leaves the dead DM call. A DM call answer clicked while offline is sent after the next `welcome` if the same call still waits for it (`onReconnected` in `features/calls/useDmCall.ts`); other one-shot socket actions are not queued, so a new one that matters during a reconnect needs the same treatment.
+- Chat and uploads ride out a restart too: a chat send waits in the outbox (`features/chat/useMessageOutbox.ts`) and is resent with the same `clientMessageId` after `welcome` (the server answers a duplicate with the original). An upload keeps its session on disk, and the client (`shared/lib/chunkedUpload.ts`) retries for up to 60 s of outage, counting a response without the app's error envelope (the proxy's 404/502 during a swap) as an outage. The `restart` end-to-end specs guard all of this.
+- A page reload leaves the call (the LiveKit connection lives in the page). When you add state to a call, decide whether a restart should keep it: persist it with the membership, or have the client report it again like the media flags.
 
 ## Documentation (`docs/`)
 
-Docs are part of the change: when code changes what a doc describes, update that doc **in the same commit**. Skip it only when nothing a doc says is affected. Pick the doc by what the change touches:
+Docs are part of the change: when code changes what a doc describes, update that doc **in the same commit**. Pick the doc by what the change touches:
 
 | If the change touches... | Update |
 | --- | --- |
-| A third-party API or service: adding, removing or changing an endpoint, credential, env var, rate limit, data sent, or what happens when it is missing or fails | [`docs/INTEGRATIONS.md`](docs/INTEGRATIONS.md) (the overview table and the service's section) |
-| Webhooks: URL, payload, cards/embeds, limits, errors, security (`modules/bots`) | [`docs/WEBHOOK.md`](docs/WEBHOOK.md) |
-| Local setup, scripts, prerequisites, the env needed to run, troubleshooting, or notes for developing profile connections and the Wall | [`docs/DEVELOPMENT.md`](docs/DEVELOPMENT.md) |
+| A third-party API or service: an endpoint, credential, env var, rate limit, data sent, or what happens when it is missing or fails | [`docs/INTEGRATIONS.md`](docs/INTEGRATIONS.md) (the overview table and the service's section) |
+| Webhooks: URL, payload, cards, limits, errors, security (`modules/bots`) | [`docs/WEBHOOK.md`](docs/WEBHOOK.md) |
+| Local setup, scripts, tests, the env needed to run, troubleshooting, server limits, notes for developing a feature | [`docs/DEVELOPMENT.md`](docs/DEVELOPMENT.md) |
 | What the product does | [`README.md`](README.md) |
-| How it is deployed: the image, required env, mounted folders and their permissions, Dokploy, headers the server sets, production troubleshooting | [`docs/DEPLOY.md`](docs/DEPLOY.md) |
+| How it is deployed and operated: the image, required env, folders and permissions, backups and restore, Dokploy, headers, the desktop installer, production troubleshooting | [`docs/DEPLOY.md`](docs/DEPLOY.md) |
 | Any new or changed environment variable | [`.env.example`](.env.example), plus the doc of the feature that uses it |
 
-- Edit the existing section instead of appending a note; remove statements that are no longer true (a doc that is partly wrong is worse than a short one).
-- All documentation is written in English: every file in `docs/`, the README and `.env.example`, including headings, examples and sample data. Only text that quotes something the product really outputs stays as is (for example a server error message that is in Portuguese), and the doc should say so.
-- Never put secrets or real credentials in a doc; describe where to get them.
-- If a change fits no doc but a reader would need it, extend the closest one rather than creating a new file. `docs/` is ignored by git except for the files listed in `.gitignore` (local notes and screenshots stay out), so a brand-new doc needs its own `!docs/NAME.md` line there.
+- Edit the existing section instead of appending a note, and remove statements that are no longer true. Say each thing in one doc and link to it from the others.
+- Write for the reader (developer, operator, webhook user): what it does and why, not a walk through the code. Detail that only matters inside the code belongs in a code comment.
+- All documentation is in English. Only quoted product output (a server error message in Portuguese, for example) stays as is, and the doc says so.
+- Never put secrets or real credentials in a doc; say where to get them.
+- A change that fits no doc extends the closest one. `docs/` is ignored by git except the files listed in `.gitignore`, so a brand-new doc needs its own `!docs/NAME.md` line there.
 
 ## Verification before calling something done
 
@@ -218,30 +195,30 @@ npm run build                                  # tsc -p server + vite build
 npm test                                       # test:server + test:web
 ```
 
-A change that touches a real flow (upload, call, conversations, auth) deserves live manual verification (`npm run dev`, 2 accounts), not just automated tests.
+A change that touches a real flow (upload, call, conversations, auth) deserves live verification (`npm run dev`, two accounts), not just automated tests.
 
-**Scripts and sample data.** Every `npm run` script is listed, with what it does, in [`docs/DEVELOPMENT.md`](docs/DEVELOPMENT.md#scripts); look there before writing a one-off. `npm run db:seed` fills a local database with sample accounts, DMs and a server (`server/src/scripts/seedDev.ts`). A new script in `server/src/scripts/` gets a header comment, a `package.json` entry and a row in that table, or nobody will know it exists.
+**Scripts and sample data.** Every `npm run` script is in [`docs/DEVELOPMENT.md`](docs/DEVELOPMENT.md#scripts); look there before writing a one-off. `npm run db:seed` fills a local database with sample accounts, DMs and a server. A new script in `server/src/scripts/` gets a header comment, a `package.json` entry and a row in that table.
 
-**End-to-end suite (`e2e/`, Playwright).** Real Chrome sessions for several accounts against a production-shaped Docker stack (app behind Traefik, LiveKit, throwaway Postgres); setup and commands in [`docs/DEVELOPMENT.md`](docs/DEVELOPMENT.md#end-to-end-tests). Run the matching project when a change touches what it covers, and add a spec when you add a user-facing flow:
+**End-to-end suite (`e2e/`, Playwright),** set up as in [`docs/DEVELOPMENT.md`](docs/DEVELOPMENT.md#end-to-end-tests). Run the matching project when a change touches what it covers, and add a spec when you add a user-facing flow:
+
 - `npm run test:e2e:features`: every feature, one spec per area (`e2e/specs/features/<area>.spec.ts`).
 - `npm run test:e2e:restart`: anything a redeploy must survive (realtime, calls, chat sends, uploads, the shutdown path).
-- `npm run test:e2e:upgrade`: wire or protocol changes, migrations, anything an old tab talks to (production version vs the working tree).
+- `npm run test:e2e:upgrade`: wire or protocol changes, migrations, anything an old tab talks to.
 
-Rules for specs: set data up through the app's HTTP routes (`e2e/fixtures/api.ts`), never by writing to the database, since the app caches memberships in memory; find elements the way a person does, by role and pt-BR label (the English-only rule applies to everything else, as in `web/tests`); never `.click().catch(() => {})` on something that may not exist (it waits for the whole action timeout); a step that sends a socket message right after a restart waits for the tab's `welcome` first (`waitForSocketEvent`).
+Rules for specs: set data up through the app's HTTP routes (`e2e/fixtures/api.ts`), never the database, since the app caches memberships in memory; find elements by role and pt-BR label; never `.click().catch(() => {})` on something that may not exist (it waits for the whole action timeout); a step that sends a socket message right after a restart waits for the tab's `welcome` first (`waitForSocketEvent`).
 
-## Code Conventions
+## Code conventions
 
-No Portuguese comments in any source. Comments and identifiers in English; follow the existing language of surrounding prose.
+No Portuguese comments in any source. Comments, identifiers and commit messages are in English; UI strings are translated (pt-BR is the source).
 
-- Comments always explain the *why* (a non-obvious decision, an invariant, a workaround) — never the *what* (the code already says that). Prefer no comment at all when the name is already clear.
-- UI strings are translated (see **Internationalization** above); pt-BR is the source language. Code identifiers (variables, functions, types), comments and commit messages are in English.
-- **This English-only rule covers tests too**: `describe`/`it` titles, comments, and internal fixture/variable names are in English. The one exception is a literal that's asserting against real UI-rendered text (`getByText`, `aria-label`, toast copy, etc.) — that stays in Portuguese, because the suite renders the app in pt-BR (`tests/setup.ts`). To assert another language wrap the `describe` in `useLanguageForTests('en-US')` (`tests/fixtures/i18nFixture.ts`).
+- Comments explain the *why* (a non-obvious decision, an invariant, a workaround), never the *what*. Prefer no comment when the name is clear.
+- **Tests are in English too:** `describe`/`it` titles, comments and fixture names. The exception is a literal asserting real UI text (`getByText`, `aria-label`, toast copy), which stays in Portuguese because the suite renders the app in pt-BR (`tests/setup.ts`). To assert another language, wrap the `describe` in `useLanguageForTests('en-US')` (`tests/fixtures/i18nFixture.ts`).
 
 ## Commits
 
-Always in English, as short as possible, and always typed.
+Always in English, short, and typed.
 
-- Format: `type: imperative summary` — lowercase, no trailing period, ideally under 60 characters. One line; add a body only when the *why* is not obvious from the subject, and keep it to a sentence or two.
-- Types: `feat` (new behavior), `fix` (bug), `refactor` (no behavior change), `perf`, `test`, `docs`, `chore` (tooling, deps, cleanup), `build`, `ci`. Optional scope when it helps: `feat(settings): use the full page width`.
-- Describe the change, not the process: `fix: revoke pending invite when its card is deleted`, not `fix: some changes to invitations`. No stage or ticket numbers, no filler ("update", "improve stuff").
-- One logical change per commit; don't mix a feature with an unrelated fix.
+- Format: `type: imperative summary`, lowercase, no trailing period, ideally under 60 characters. Add a body only when the *why* is not obvious, a sentence or two.
+- Types: `feat`, `fix`, `refactor` (no behaviour change), `perf`, `test`, `docs`, `chore` (tooling, deps, cleanup), `build`, `ci`. Optional scope: `feat(settings): use the full page width`.
+- Describe the change, not the process: `fix: revoke pending invite when its card is deleted`, not `fix: some changes to invitations`. No stage or ticket numbers, no filler.
+- One logical change per commit.
