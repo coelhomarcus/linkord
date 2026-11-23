@@ -26,25 +26,40 @@ export interface SettingsGroup {
 // resolved where they are rendered so a language switch needs no reload.
 export const SETTINGS_GROUPS: SettingsGroup[] = [
   {
-    labelKey: 'catalog.groups.you',
+    labelKey: 'catalog.groups.account',
     categories: [
       { id: 'account', labelKey: 'catalog.categories.account', icon: IdentificationCardIcon },
+      { id: 'security', labelKey: 'catalog.categories.security', icon: KeyIcon },
+      { id: 'privacy', labelKey: 'catalog.categories.privacy', icon: LockIcon },
+    ],
+  },
+  {
+    labelKey: 'catalog.groups.social',
+    categories: [
       { id: 'connections', labelKey: 'catalog.categories.connections', icon: PlugsConnectedIcon },
       { id: 'activity', labelKey: 'catalog.categories.activity', icon: GameControllerIcon },
-      { id: 'privacy', labelKey: 'catalog.categories.privacy', icon: LockIcon },
-      { id: 'security', labelKey: 'catalog.categories.security', icon: KeyIcon },
+    ],
+  },
+  {
+    labelKey: 'catalog.groups.display',
+    categories: [
+      { id: 'appearance', labelKey: 'catalog.categories.appearance', icon: PaintBrushIcon },
+      { id: 'language', labelKey: 'catalog.categories.language', icon: TranslateIcon },
+    ],
+  },
+  {
+    labelKey: 'catalog.groups.communication',
+    categories: [
+      { id: 'av', labelKey: 'catalog.categories.av', icon: MicrophoneIcon },
+      { id: 'chat', labelKey: 'catalog.categories.chat', icon: ChatCircleTextIcon },
+      { id: 'notifications', labelKey: 'catalog.categories.notifications', icon: BellIcon },
     ],
   },
   {
     labelKey: 'catalog.groups.app',
     categories: [
-      { id: 'appearance', labelKey: 'catalog.categories.appearance', icon: PaintBrushIcon },
-      { id: 'av', labelKey: 'catalog.categories.av', icon: MicrophoneIcon },
-      { id: 'chat', labelKey: 'catalog.categories.chat', icon: ChatCircleTextIcon },
-      { id: 'notifications', labelKey: 'catalog.categories.notifications', icon: BellIcon },
-      { id: 'language', labelKey: 'catalog.categories.language', icon: TranslateIcon },
-      { id: 'downloads', labelKey: 'catalog.categories.downloads', icon: DownloadSimpleIcon },
       { id: 'desktop', labelKey: 'catalog.categories.desktop', icon: DesktopIcon, desktopOnly: true },
+      { id: 'downloads', labelKey: 'catalog.categories.downloads', icon: DownloadSimpleIcon },
     ],
   },
   {

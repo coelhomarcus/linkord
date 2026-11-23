@@ -117,14 +117,15 @@ describe('SettingsPage — category navigation', () => {
     expect(screen.getByTestId('where')).toHaveTextContent('/app/settings/appearance');
   });
 
-  it('groups the categories like Discord: user settings, then app settings', () => {
+  it('groups the categories under headings by topic: account, profile, display, communication, app', () => {
     renderSettings({ state: userState });
     const nav = screen.getByRole('navigation', { name: 'Categorias de ajustes' });
     expect(within(nav).getAllByRole('link').map((link) => link.textContent)).toEqual([
-      'Minha conta', 'Conexões', 'Atividade', 'Dados e privacidade', 'Segurança', 'Aparência', 'Voz e vídeo', 'Chat', 'Notificações', 'Idioma e hora', 'Baixar o app',
+      'Minha conta', 'Segurança', 'Dados e privacidade', 'Conexões', 'Atividade', 'Aparência', 'Idioma e hora', 'Voz e vídeo', 'Chat', 'Notificações', 'Baixar o app',
     ]);
-    expect(within(nav).getByText('Configurações de usuário')).toBeInTheDocument();
-    expect(within(nav).getByText('Configurações do app')).toBeInTheDocument();
+    for (const heading of ['Conta', 'Perfil e social', 'Aparência e idioma', 'Voz, vídeo e chat', 'Aplicativo']) {
+      expect(within(nav).getByText(heading)).toBeInTheDocument();
+    }
   });
 
   it('administration does not appear for a non-admin (not even by URL)', () => {
@@ -172,6 +173,17 @@ describe('SettingsPage — compact mode (index and detail)', () => {
 
   beforeEach(() => { mockMode = 'compact'; });
   afterEach(() => { mockMode = 'wide'; });
+
+  it('the index shows the same headings and order as the sidebar', () => {
+    renderRouted({ state: userState }, '/app/settings');
+    const nav = screen.getByRole('navigation', { name: 'Categorias de ajustes' });
+    expect(within(nav).getAllByRole('link').map((link) => link.textContent)).toEqual([
+      'Minha conta', 'Segurança', 'Dados e privacidade', 'Conexões', 'Atividade', 'Aparência', 'Idioma e hora', 'Voz e vídeo', 'Chat', 'Notificações', 'Baixar o app',
+    ]);
+    for (const heading of ['Conta', 'Perfil e social', 'Aparência e idioma', 'Voz, vídeo e chat', 'Aplicativo']) {
+      expect(within(nav).getByText(heading)).toBeInTheDocument();
+    }
+  });
 
   it('a category opens directly by link, with an accessible way back to the index', async () => {
     const user = userEvent.setup();

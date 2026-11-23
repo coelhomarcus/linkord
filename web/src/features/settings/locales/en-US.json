@@ -12,8 +12,11 @@
   },
   "catalog": {
     "groups": {
-      "you": "User settings",
-      "app": "App settings",
+      "account": "Account",
+      "social": "Profile & social",
+      "display": "Appearance & language",
+      "communication": "Voice, video & chat",
+      "app": "App",
       "admin": "Administration"
     },
     "categories": {
