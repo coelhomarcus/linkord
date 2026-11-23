@@ -27,6 +27,12 @@ describe('pickActivity', () => {
     assert.equal(pick([steam, roblox, minecraft], 'minecraft'), 'minecraft');
   });
 
+  it('shows a game sending Rich Presence before the Steam game, but not before the game in front', () => {
+    const rich: DetectedActivity = { key: 'discord:383226320970055681', kind: 'playing', name: '', discordAppId: '383226320970055681', pids: [9] };
+    assert.equal(pick([steam, roblox, rich]), 'discord:383226320970055681');
+    assert.equal(pick([steam, roblox, rich], 'roblox'), 'roblox');
+  });
+
   it('shows the Steam game when no game is in front', () => {
     assert.equal(pick([steam, roblox, spotify], 'spotify'), 'steam:570');
     assert.equal(pick([steam, roblox]), 'steam:570');

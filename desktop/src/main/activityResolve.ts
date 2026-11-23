@@ -42,8 +42,9 @@ export function needsForeground(candidates: readonly DetectedActivity[], prefs: 
 }
 
 /**
- * The best activity, in this order: the one picked by hand, the game in the foreground, the game
- * Steam says is running, any other game, the app in the foreground, any other app (catalog order).
+ * The best activity, in this order: the one picked by hand, the game in the foreground, a game
+ * sending Rich Presence (it says itself that it is being played), the game Steam says is running,
+ * any other game, the app in the foreground, any other app (catalog order).
  */
 export function pickActivity(
   candidates: readonly DetectedActivity[],
@@ -53,6 +54,7 @@ export function pickActivity(
   const open = allowed(candidates, prefs.hidden);
   return open.find((c) => c.key === prefs.preferred)
     ?? open.find((c) => c.kind === 'playing' && c.key === foregroundKey)
+    ?? open.find((c) => c.kind === 'playing' && c.discordAppId !== undefined)
     ?? open.find((c) => c.steamAppId !== undefined)
     ?? open.find((c) => c.kind === 'playing')
     ?? open.find((c) => c.key === foregroundKey)

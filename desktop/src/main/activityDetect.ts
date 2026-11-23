@@ -1,4 +1,5 @@
 import type { CatalogEntry } from './activityCatalog.js';
+import type { RichPresence } from './richPresence.js';
 
 // Turns what the system lists (activityWatcher.ts runs the commands) into the activities running now:
 // the Steam game Steam says is running and every catalog entry with a running program. Which one is
@@ -24,6 +25,9 @@ export interface DetectedActivity {
   pid?: number;
   /** every process of it, to tell whether it owns the window in front */
   pids: number[];
+  /** the Discord application of a game that sends Rich Presence (richPresence.ts) */
+  discordAppId?: string;
+  rich?: RichPresence;
 }
 
 export interface SteamGame {
@@ -99,7 +103,8 @@ export function foregroundKey(
 
 export function sameDetection(a: DetectedActivity | null, b: DetectedActivity | null): boolean {
   if (!a || !b) return a === b;
-  return a.key === b.key && a.name === b.name;
+  // the presence is built field by field in one order (richPresence.ts), so its text compares as a whole
+  return a.key === b.key && a.name === b.name && a.discordAppId === b.discordAppId && JSON.stringify(a.rich) === JSON.stringify(b.rich);
 }
 
 // --- what the systems print ---
