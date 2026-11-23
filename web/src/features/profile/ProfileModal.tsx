@@ -162,7 +162,7 @@ export function ProfileModal({ userId, initialTab, onClose, onOpenProfile }: Pro
                             </div>
                           )}
                         </dl>
-                        <ProfileConnections links={user.profileLinks ?? []} />
+                        <ProfileConnections links={user.profileLinks ?? []} steamConnection={details.details?.steamConnection} />
                       </div>
                     )}
                   />

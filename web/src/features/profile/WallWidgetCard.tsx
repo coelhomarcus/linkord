@@ -47,11 +47,12 @@ export function WallWidgetCard({ widget, accent, gameEditor, onPeriodChange }: {
   const number = (value: number) => value.toLocaleString(language);
   const showFooter = Boolean(connection?.syncError && data);
   const name = t(`wall.widgets.${widget.type}`);
+  const showAccountName = widget.type !== 'steam-recent' && widget.type !== 'steam-top';
   const periods = ([7, 30] as const).map((value) => ({ value, label: t('wall.activity.period', { count: value }) }));
   return (
     <article className="flex w-full min-w-0 flex-col gap-4 rounded-xl border border-border-strong bg-bg-secondary p-4">
       <WidgetHeader title={name} account={connection && brand
-        ? { brand, username: connection.value, href: connection.url, accessibleName: t('wall.profileLink', { service: brand.name, user: connection.value }) }
+        ? { brand, username: showAccountName ? connection.value : undefined, href: connection.url, accessibleName: t('wall.profileLink', { service: brand.name, user: connection.value }) }
         : undefined} />
       {widget.period && (onPeriodChange
         ? <div className="relative w-fit">
@@ -67,8 +68,8 @@ export function WallWidgetCard({ widget, accent, gameEditor, onPeriodChange }: {
         </div>
         : <p className="text-caption text-text-muted">{t('wall.activity.period', { count: widget.period })}</p>)}
       {!data && <WidgetMessage>{t(widget.hidden ? 'wall.activity.private' : connection?.syncError ? 'wall.unavailable' : 'wall.pending')}</WidgetMessage>}
-      {(data?.kind === 'activity-top' || data?.kind === 'activity-recent' || data?.kind === 'activity-calendar' || data?.kind === 'activity-summary') &&
-        <ActivityWallWidget data={data} accent={accent} />}
+      {(data?.kind === 'activity-top' || data?.kind === 'activity-recent' || data?.kind === 'activity-summary') &&
+        <ActivityWallWidget data={data} />}
       {(data?.kind === 'steam-games' || data?.kind === 'steam-profile' || data?.kind === 'twitch-live' || data?.kind === 'twitch-vods') &&
         <ConnectionWidgetContent data={data} />}
       {data?.kind === 'list' && (data.items.length === 0

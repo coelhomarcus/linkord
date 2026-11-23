@@ -11,6 +11,7 @@ import { findById, publicUser } from './users.js';
 import { friendsSince, listMutualFriends } from '../friendships/friendshipsRepository.js';
 import { canViewProfile } from './profileAccess.js';
 import { listSharedServers } from '../servers/serversRepository.js';
+import { readPublicSteamConnection } from '../connections/connections.js';
 
 type Params = { userId: string };
 
@@ -41,8 +42,7 @@ const NONE = { items: [], total: 0 };
  * besides the profile itself: since when the account exists, since when the
  * caller and it are friends, and the friends and servers they have in common.
  * Same access (and the same 404 for both "no" and "doesn't exist") as the
- * profile. Everything listed is already the caller's own: their friends,
- * their servers. */
+ * profile. The Steam label belongs to a connection already shown on the profile. */
 async function handleGetProfileDetails(request: FastifyRequest<{ Params: Params }>, reply: FastifyReply): Promise<void> {
   const cookies = parseCookies(request.headers.cookie || '');
   const sess = await resolveSession(cookies[config.SESSION_COOKIE]);
@@ -54,18 +54,18 @@ async function handleGetProfileDetails(request: FastifyRequest<{ Params: Params 
     return sendError(reply, 404, 'user_not_found', 'Conta não encontrada.');
   }
   const self = target.id === sess.userId;
-  const [since, mutualFriends, mutualServers] = self
-    ? [null, NONE, NONE]
-    : await Promise.all([
-      friendsSince(sess.userId, target.id),
-      listMutualFriends(sess.userId, target.id, MUTUAL_LIST_LIMIT),
-      listSharedServers(sess.userId, target.id, MUTUAL_LIST_LIMIT),
-    ]);
+  const [since, mutualFriends, mutualServers, steamConnection] = await Promise.all([
+    self ? null : friendsSince(sess.userId, target.id),
+    self ? NONE : listMutualFriends(sess.userId, target.id, MUTUAL_LIST_LIMIT),
+    self ? NONE : listSharedServers(sess.userId, target.id, MUTUAL_LIST_LIMIT),
+    readPublicSteamConnection(target.id, target.profileLinks),
+  ]);
   sendJson(reply, 200, {
     memberSince: target.createdAt.toISOString(),
     friendsSince: since ? since.toISOString() : null,
     mutualFriends,
     mutualServers,
+    ...(steamConnection && { steamConnection }),
   });
 }
 

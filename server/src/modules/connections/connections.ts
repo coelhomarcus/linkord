@@ -4,7 +4,7 @@ import { db } from '../../db/client.js';
 import { profileConnections, profileWallWidgets, users, type ProfileConnection } from '../../db/schema.js';
 import type { ErrorCode } from '../../http/errors.js';
 import { ConnectionFetchError } from '../../integrations/connectionHttp.js';
-import { fetchSteam } from '../../integrations/steam/steamWebApi.js';
+import { fetchSteam, parseSteamProfile } from '../../integrations/steam/steamWebApi.js';
 import { twitch } from '../../integrations/twitch/twitch.js';
 import { readActivityWidgets } from '../activity/activityWidgets.js';
 import { configuredProviders, isExternalGameProvider, MAX_CONNECTIONS, parseConnection, SYNC_INTERVAL_MS } from './policy.js';
@@ -102,11 +102,25 @@ async function project(tx: Tx, userId: string) {
 function publicLinks(rows: Pick<ProfileConnection, 'url' | 'showOnProfile'>[]): string[] {
   return rows.filter((row) => row.showOnProfile).map((row) => row.url);
 }
-// One per widget type: four games, four activity and eight connection widgets.
+
+/** A canonical Steam profile URL contains its ID, so the link alone loses the account name. */
+export async function readPublicSteamConnection(userId: string, links: string[]) {
+  if (!links.some((url) => url.startsWith('https://steamcommunity.com/profiles/'))) return undefined;
+  const [row] = await db.select({ url: profileConnections.url, value: profileConnections.value, snapshot: profileConnections.snapshot })
+    .from(profileConnections).where(and(eq(profileConnections.userId, userId), eq(profileConnections.provider, 'steam'), eq(profileConnections.showOnProfile, true)));
+  if (!row || !links.includes(row.url)) return undefined;
+  const input = parseSteamProfile(row.value);
+  const handle = row.snapshot?.steamProfileHandle ?? (input?.id === null ? input.value : null);
+  const profile = row.snapshot?.widgets['steam-profile'];
+  const label = handle ? `@${handle}` : profile?.kind === 'steam-profile' ? profile.name : null;
+  return label ? { url: row.url, label } : undefined;
+}
+// Old tabs can submit the retired calendar alongside all the current widgets.
 const MAX_WALL_WIDGETS = 16;
 const widgetKey = (connectionId: string | null, type: string) => `${connectionId ?? ''}:${type}`;
 
 function supportedWidget(type: string, extended: boolean) {
+  if (type === 'activity-calendar') return false;
   return extended || (!isActivityWidget(type) && !type.startsWith('steam-') && !type.startsWith('twitch-'));
 }
 
@@ -123,6 +137,7 @@ export async function saveWall(userId: string, input: unknown, gameInput?: unkno
     for (const value of input) {
       if (!value || typeof value !== 'object' || Array.isArray(value)) throw new ConnectionMutationError(400, 'invalid_wall');
       const { connectionId, type, period } = value as Record<string, unknown>;
+      if (extended && type === 'activity-calendar' && connectionId === null && period === undefined) continue;
       if (typeof type !== 'string' || !supportedWidget(type, extended)) throw new ConnectionMutationError(400, 'invalid_wall');
       let selection: WallSelection;
       if (gameListOf(type) || isActivityWidget(type)) {

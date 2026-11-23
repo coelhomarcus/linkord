@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { useResource } from '@/shared/lib/resourceCache';
 import { useOptionalRoomSelector } from '@/state/RoomContext';
 import { profileDetails } from './profileCache';
@@ -8,6 +9,14 @@ import { profileDetails } from './profileCache';
 export function useProfileDetails(userId: string | null) {
   const socialRevision = useOptionalRoomSelector((room) => room.socialRevision);
   const { status, value, retry } = useResource(profileDetails, userId, socialRevision);
+  useEffect(() => {
+    if (!userId) return;
+    const refresh = (event: Event) => {
+      if ((event as CustomEvent<string>).detail === userId) void profileDetails.load(userId, event).catch(() => {});
+    };
+    window.addEventListener('profile-connections-changed', refresh);
+    return () => window.removeEventListener('profile-connections-changed', refresh);
+  }, [userId]);
   return { status, details: value ?? null, retry } as const;
 }
 

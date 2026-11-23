@@ -3,12 +3,10 @@ import { ActivityIcon } from '@/features/activity/ActivityLine';
 import { playedAgo } from '@/features/activity/activityTime';
 import { useServerNow } from '@/features/activity/serverClock';
 import { useLanguage } from '@/shared/i18n/useLanguage';
-import { readableAccent } from './accentColor';
-import { ContributionCalendar } from './ContributionCalendar';
 import { widgetDuration } from './widgetDuration';
 import type { WidgetData } from './connectionsTypes';
 
-type ActivityData = Extract<WidgetData, { kind: 'activity-top' | 'activity-recent' | 'activity-calendar' | 'activity-summary' }>;
+type ActivityData = Extract<WidgetData, { kind: 'activity-top' | 'activity-recent' | 'activity-summary' }>;
 
 function RecentActivity({ items }: { items: Extract<ActivityData, { kind: 'activity-recent' }>['items'] }) {
   const { t } = useTranslation('activity');
@@ -31,7 +29,7 @@ function RecentActivity({ items }: { items: Extract<ActivityData, { kind: 'activ
   );
 }
 
-export function ActivityWallWidget({ data, accent }: { data: ActivityData; accent: string }) {
+export function ActivityWallWidget({ data }: { data: ActivityData }) {
   const { t } = useTranslation('profile');
   const language = useLanguage();
   const duration = (ms: number) => ms > 0 && ms < 60_000 ? t('wall.activity.underMinute') : widgetDuration(ms, language);
@@ -53,10 +51,6 @@ export function ActivityWallWidget({ data, accent }: { data: ActivityData; accen
         </li>
       ))}
     </ol>
-  );
-  if (data.kind === 'activity-calendar') return (
-    <ContributionCalendar days={data.days} accent={readableAccent(accent)} label={t('wall.activity.calendar')}
-      dayLabel={(date, count) => t('wall.activity.day', { date, duration: duration(count) })} fullYear />
   );
   return (
     <dl className="grid grid-cols-[repeat(auto-fit,minmax(7rem,1fr))] gap-2">

@@ -55,6 +55,25 @@ async function dragUp(user: ReturnType<typeof userEvent.setup>, name: string) {
 }
 const saveBar = () => screen.queryByRole('region', { name: 'Salvar alterações do Mural' });
 describe('profile Wall', () => {
+  it('groups branded categories and shows Steam widget choices without descriptions', async () => {
+    const user = userEvent.setup();
+    mocked.fetchWall.mockResolvedValue({ ...empty, providers: ['steam'], available: [...empty.available!, ...gameChoices] });
+    renderWall();
+
+    await user.click(await addWidgetButton());
+    const navigation = within(screen.getByRole('navigation', { name: 'Tipos de widget' }));
+    const linkord = within(navigation.getByRole('group', { name: 'Do Linkord' }));
+    const integrations = within(navigation.getByRole('group', { name: 'Integrações' }));
+    expect(linkord.getByRole('button', { name: 'Jogos' })).toHaveAttribute('aria-current', 'true');
+    const steam = integrations.getByRole('button', { name: 'Steam' });
+    expect(steam.querySelector('svg')).toBeInTheDocument();
+    await user.click(steam);
+    const choices = within(screen.getByRole('region', { name: 'Steam' }));
+    expect(choices.getByRole('button', { name: 'Jogados recentemente (Steam)' })).not.toHaveAccessibleDescription();
+    expect(choices.getByRole('button', { name: 'Mais jogados entre os recentes (Steam)' })).not.toHaveAccessibleDescription();
+    expect(choices.getByRole('button', { name: 'Perfil Steam' })).not.toHaveAccessibleDescription();
+  });
+
   it('holds the place of the widgets while the Wall loads, and tells screen readers', async () => {
     let resolve!: (value: WallResponse) => void;
     mocked.fetchWall.mockReturnValue(new Promise((done) => { resolve = done; }));
@@ -103,14 +122,15 @@ describe('profile Wall', () => {
     expect(screen.queryByRole('link', { name: 'Cowboy Bebop' })).not.toBeInTheDocument();
   });
 
-  it('lists every kind of widget, with plain text groups, even with no connection at all', async () => {
+  it('lists the categories with icons even when no accounts are connected', async () => {
     const user = userEvent.setup();
     mocked.fetchWall.mockResolvedValue({ widgets: [], available: gameChoices }); renderWall();
     await user.click(await addWidgetButton());
     const dialog = await screen.findByRole('dialog');
     const nav = within(dialog).getByRole('navigation', { name: 'Tipos de widget' });
-    expect(within(nav).getAllByRole('button').map((button) => button.textContent)).toEqual(['Jogos', 'Anime', 'GitHub', 'Gerenciar conexões']);
-    expect(nav.querySelector('svg')).toBeNull();
+    const buttons = within(nav).getAllByRole('button');
+    expect(buttons.map((button) => button.textContent)).toEqual(['Jogos', 'Anime', 'GitHub', 'Gerenciar conexões']);
+    expect(buttons.every((button) => button.querySelector('svg'))).toBe(true);
     for (const name of Object.values(names)) expect(within(dialog).getByRole('button', { name })).toBeInTheDocument();
     // a service with no account shows its widgets, locked, under a form to connect it
     await user.click(within(nav).getByRole('button', { name: 'GitHub' }));
@@ -619,6 +639,7 @@ describe('activity widgets', () => {
     await user.click(await addWidgetButton());
     const dialog = await screen.findByRole('dialog', { name: 'Adicionar widget de perfil' });
     await user.click(within(dialog).getByRole('button', { name: 'Atividade' }));
+    expect(within(dialog).queryByRole('button', { name: 'Calendário de atividade' })).not.toBeInTheDocument();
     await user.click(within(dialog).getByRole('button', { name: 'Mais jogados' }));
     expect(screen.getByText('Minecraft')).toBeInTheDocument();
     expect(screen.getByText('2 h')).toBeInTheDocument();
@@ -630,11 +651,4 @@ describe('activity widgets', () => {
     await waitFor(() => expect(mocked.saveWall).toHaveBeenCalledWith([{ connectionId: null, type: 'activity-top', period: 7 }]));
   });
 
-  it('renders day and duration labels on the activity calendar', () => {
-    render(<WallWidgetCard accent="#3366ff" widget={{ type: 'activity-calendar', connection: null, data: {
-      kind: 'activity-calendar', total: 3_600_000, days: [{ date: '2026-11-23', count: 3_600_000, level: 3 }],
-    } }} />);
-    const calendar = screen.getByRole('group', { name: 'Calendário de atividade' });
-    expect(within(calendar).getByRole('img', { name: '23/11/2026: 1 h de atividade' })).toBeInTheDocument();
-  });
 });

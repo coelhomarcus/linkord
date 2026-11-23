@@ -14,7 +14,7 @@ interface MediaItem {
   id: string; title: string; url: string; imageUrl: string | null;
 }
 type CalendarDay = { date: string; count: number; level: number };
-type ActivityWidgetType = 'activity-top' | 'activity-calendar' | 'activity-recent' | 'activity-summary';
+type ActivityWidgetType = 'activity-top' | 'activity-recent' | 'activity-summary';
 export type ActivityPeriod = 7 | 30;
 export const connectionInputLength = { url: 300, steam: 300, myanimelist: 16, github: 39, twitch: 25 } satisfies Record<ConnectionProvider, number>;
 export function isActivityWidget(type: WidgetType): type is ActivityWidgetType {
@@ -25,7 +25,6 @@ export type WidgetData =
   | { kind: 'games'; items: GameItem[] }
   | { kind: 'github-profile'; login: string; name: string | null; avatarUrl: string | null; repositories: number; followers: number; following: number }
   | { kind: 'github-calendar'; total: number; days: CalendarDay[] }
-  | { kind: 'activity-calendar'; total: number; days: CalendarDay[] }
   | { kind: 'activity-top'; items: Array<Omit<ActivityHistoryItem, 'lastPlayedAt'> & { milliseconds: number }> }
   | { kind: 'activity-recent'; items: ActivityHistoryItem[] }
   | { kind: 'activity-summary'; total: number; longestStreak: number; favorite: string | null }

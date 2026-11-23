@@ -1,13 +1,15 @@
 import { useId, useState, type FormEvent } from 'react';
-import { CheckIcon, PlusIcon } from '@/shared/ui/icons';
+import { CheckIcon, GameControllerIcon, PlugsConnectedIcon, PlusIcon } from '@/shared/ui/icons';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/shared/ui/primitives/button';
 import { Input } from '@/shared/ui/primitives/input';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/shared/ui/primitives/dialog';
+import { ActiveFill } from '@/shared/ui/active-fill';
 import { cn } from '@/shared/lib/utils';
 import { SERVICE_BRANDS } from './connectionBrands';
 import { describeConnectionError } from './connectionErrors';
 import { connectionInputLength, isActivityWidget, WIDGET_TYPES, type ConnectionProvider, type WallWidget, type WidgetType } from './connectionsTypes';
+import { BrandIcon } from './profileLinks';
 
 type AccountService = Exclude<ConnectionProvider, 'url'>;
 type Service = AccountService | 'igdb' | 'activity';
@@ -61,12 +63,14 @@ function Option({ type, state, onPick }: { type: WidgetType; state: 'available' 
   const { t } = useTranslation('profile');
   const descriptionId = useId();
   const name = t(`wall.widgets.${type}`);
+  const description = type === 'steam-recent' || type === 'steam-top' || type === 'steam-profile'
+    ? null : t(`wall.widgetDescriptions.${type}`);
   return (
     <button
       type="button"
       disabled={state !== 'available'}
       aria-label={name}
-      aria-describedby={descriptionId}
+      aria-describedby={description ? descriptionId : undefined}
       onClick={onPick}
       className="group relative flex w-full min-w-0 items-center gap-4 rounded-xl border border-border bg-bg-secondary p-4 text-left transition-colors hover:border-border-strong hover:bg-fill-hover focus-ring disabled:pointer-events-none disabled:opacity-60"
     >
@@ -74,7 +78,7 @@ function Option({ type, state, onPick }: { type: WidgetType; state: 'available' 
       <span aria-hidden className="w-24 flex-none sm:w-32"><WidgetPreview type={type} /></span>
       <span className="min-w-0 flex-1 pr-8">
         <span aria-hidden className="block text-body font-semibold text-text-primary [overflow-wrap:anywhere]">{name}</span>
-        <span id={descriptionId} className="mt-0.5 block text-caption text-text-muted">{t(`wall.widgetDescriptions.${type}`)}</span>
+        {description && <span id={descriptionId} className="mt-0.5 block text-caption text-text-muted">{description}</span>}
         {/* under the description on a phone: in the corner it would sit on a name that wraps */}
         {state === 'added' && <span aria-hidden className="mt-1.5 flex items-center gap-1 text-caption text-text-muted sm:absolute sm:top-3 sm:right-3 sm:mt-0"><CheckIcon size={14} />{t('wall.added')}</span>}
       </span>
@@ -129,28 +133,42 @@ function Body({ available, providers, added, onPick, onManage, onConnect }: {
 }) {
   const { t } = useTranslation('profile');
   const [current, setCurrent] = useState<Service>('igdb');
-  const services: Service[] = ['igdb'];
-  if (available.some((widget) => isActivityWidget(widget.type))) services.push('activity');
-  services.push('myanimelist', 'github');
-  if (providers?.includes('steam')) services.push('steam');
-  if (providers?.includes('twitch')) services.push('twitch');
-  const group = services.includes(current) ? current : 'igdb';
+  const builtIn: Service[] = ['igdb'];
+  if (available.some((widget) => isActivityWidget(widget.type))) builtIn.push('activity');
+  const integrations: Service[] = ['myanimelist', 'github'];
+  if (providers?.includes('steam')) integrations.push('steam');
+  if (providers?.includes('twitch')) integrations.push('twitch');
+  const groups = [{ key: 'linkord', services: builtIn }, { key: 'integrations', services: integrations }] as const;
+  const group = groups.some(({ services }) => services.includes(current)) ? current : 'igdb';
   const offered = available.filter((widget) => serviceOf(widget) === group);
   return (
     <div className="grid min-h-0 grid-rows-[auto_minmax(0,1fr)] md:grid-cols-[13rem_minmax(0,1fr)] md:grid-rows-1">
-      <nav aria-label={t('wall.categories')} className="flex gap-1 overflow-x-auto border-b border-border p-3 md:flex-col md:overflow-y-auto md:border-r md:border-b-0">
-        {services.map((service) => (
-          <button
-            key={service}
-            type="button"
-            aria-current={service === group ? 'true' : undefined}
-            onClick={() => setCurrent(service)}
-            className={cn('touch-target relative flex flex-none items-center rounded-md px-3 py-2 text-left text-label font-medium transition-colors hover:bg-fill-hover focus-ring', service === group ? 'bg-fill-hover text-text-primary' : 'text-text-secondary')}
-          >
-            {t(`wall.groups.${service}`)}
-          </button>
+      <nav aria-label={t('wall.categories')} className="flex items-end gap-2 overflow-x-auto border-b border-border p-3 md:flex-col md:items-stretch md:overflow-y-auto md:border-r md:border-b-0">
+        {groups.map(({ key, services }) => (
+          <div key={key} role="group" aria-label={t(`wall.sections.${key}`)} className="flex shrink-0 flex-col border-l border-border-divider pl-2 first:border-0 first:pl-0 md:border-l-0 md:border-t md:pt-2 md:pl-0 md:first:pt-0">
+            <p aria-hidden className="px-2.5 pb-1.5 text-label font-medium text-text-muted">{t(`wall.sections.${key}`)}</p>
+            <div className="flex gap-0.5 md:flex-col">
+              {services.map((service) => (
+                <button
+                  key={service}
+                  type="button"
+                  aria-current={service === group ? 'true' : undefined}
+                  onClick={() => setCurrent(service)}
+                  className={cn('relative isolate flex min-h-11 flex-none items-center gap-2 rounded-lg px-2.5 text-left text-label font-medium whitespace-nowrap focus-ring md:min-h-9', service === group ? 'text-text-strong' : 'text-text-secondary hover:bg-nav-hover hover:text-text-primary')}
+                >
+                  {service === group && <ActiveFill className="rounded-lg" />}
+                  <span aria-hidden className="flex shrink-0">
+                    {service === 'activity' ? <GameControllerIcon size={18} /> : <BrandIcon kind={SERVICE_BRANDS[service].kind} size={18} />}
+                  </span>
+                  {t(`wall.groups.${service}`)}
+                </button>
+              ))}
+            </div>
+          </div>
         ))}
-        <Button type="button" variant="ghost" size="sm" className="touch-target relative mt-auto flex-none justify-start" onClick={onManage}>{t('wall.manageConnections')}</Button>
+        <Button type="button" variant="ghost" size="sm" className="min-h-11 flex-none justify-start md:mt-auto md:min-h-9" onClick={onManage}>
+          <PlugsConnectedIcon size={18} aria-hidden />{t('wall.manageConnections')}
+        </Button>
       </nav>
       <div role="region" aria-label={t(`wall.groups.${group}`)} className="flex min-h-0 flex-col gap-3 overflow-y-auto p-4">
         {group !== 'igdb' && group !== 'activity' && offered.length === 0

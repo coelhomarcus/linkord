@@ -5,7 +5,7 @@ import type { ServiceBrand } from './connectionBrands';
  * the service's mark inside the badge; the games widgets have no account to link to. */
 export function WidgetHeader({ title, account }: {
   title: string;
-  account?: { brand: ServiceBrand; username: string; href: string; accessibleName: string };
+  account?: { brand: ServiceBrand; username?: string; href: string; accessibleName: string };
 }) {
   return (
     <header className="flex min-w-0 items-center justify-between gap-3">
@@ -19,7 +19,7 @@ export function WidgetHeader({ title, account }: {
           className="flex max-w-[55%] min-w-0 flex-none items-center gap-1.5 rounded-full bg-bg-tertiary px-2.5 py-1 text-caption font-medium text-text-primary transition-colors hover:bg-fill-hover focus-ring"
         >
           <span aria-hidden className="flex flex-none"><BrandIcon kind={account.brand.kind} size={14} /></span>
-          <span aria-hidden className="truncate">@{account.username}</span>
+          {account.username && <span aria-hidden className="truncate">@{account.username}</span>}
         </a>
       )}
     </header>

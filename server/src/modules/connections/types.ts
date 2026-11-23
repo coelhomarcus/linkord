@@ -20,7 +20,6 @@ export type WidgetData =
   | { kind: 'games'; items: GameItem[] }
   | { kind: 'github-profile'; login: string; name: string | null; avatarUrl: string | null; repositories: number; followers: number; following: number }
   | { kind: 'github-calendar'; total: number; days: CalendarDay[] }
-  | { kind: 'activity-calendar'; total: number; days: CalendarDay[] }
   | { kind: 'activity-top'; items: Array<Omit<ActivityHistoryItem, 'lastPlayedAt'> & { milliseconds: number }> }
   | { kind: 'activity-recent'; items: ActivityHistoryItem[] }
   | { kind: 'activity-summary'; total: number; longestStreak: number; favorite: string | null }
@@ -32,10 +31,11 @@ export type WidgetData =
 export interface ConnectionSnapshot {
   widgets: Partial<Record<ConnectionWidgetType, WidgetData>>;
   steamVisibilityVerified?: true;
+  steamProfileHandle?: string;
 }
 export interface WallSelection { connectionId: string | null; type: WidgetType; period?: ActivityPeriod }
 
-export const ACTIVITY_WIDGET_TYPES = ['activity-top', 'activity-calendar', 'activity-recent', 'activity-summary'] as const;
+export const ACTIVITY_WIDGET_TYPES = ['activity-top', 'activity-recent', 'activity-summary'] as const;
 export type ActivityWidgetType = (typeof ACTIVITY_WIDGET_TYPES)[number];
 export type ActivityPeriod = 7 | 30;
 export function isActivityWidget(type: string): type is ActivityWidgetType {

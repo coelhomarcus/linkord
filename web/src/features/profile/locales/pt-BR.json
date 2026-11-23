@@ -17,6 +17,7 @@
     "openProfile": "Abrir perfil",
     "displayName": "Nome de exibição",
     "openLink": "Abrir {{name}}",
+    "openAccountLink": "Abrir {{name}} em {{service}}",
     "admin": "Admin"
   },
   "modal": {
@@ -138,7 +139,6 @@
       "igdb-playing-games": "Jogos em rotação",
       "igdb-wishlist-games": "Quero jogar",
       "activity-top": "Mais jogados",
-      "activity-calendar": "Calendário de atividade",
       "activity-recent": "Jogando recentemente",
       "activity-summary": "Resumo de atividade",
       "steam-recent": "Jogados recentemente (Steam)",
@@ -156,12 +156,8 @@
       "igdb-playing-games": "O que você está jogando agora",
       "igdb-wishlist-games": "Sua lista de desejos",
       "activity-top": "Jogos e aplicativos por tempo de uso nos últimos 7 ou 30 dias",
-      "activity-calendar": "Tempo diário em jogos e aplicativos ao longo do último ano",
       "activity-recent": "Os últimos jogos e aplicativos vistos no Linkord",
       "activity-summary": "Tempo total, maior sequência de dias e jogo favorito",
-      "steam-recent": "Jogos usados na Steam nas últimas duas semanas, com tempo de jogo",
-      "steam-top": "Jogos recentes do perfil público Steam por tempo total de jogo",
-      "steam-profile": "Avatar, nível e total de jogos públicos na Steam",
       "twitch-live": "Transmissão ao vivo, jogo e espectadores",
       "twitch-vods": "As últimas transmissões arquivadas na Twitch"
     },
@@ -192,6 +188,10 @@
     "categories": "Tipos de widget",
     "added": "Adicionado",
     "barLabel": "Salvar alterações do Mural",
+    "sections": {
+      "linkord": "Do Linkord",
+      "integrations": "Integrações"
+    },
     "groups": {
       "igdb": "Jogos",
       "myanimelist": "Anime",
@@ -225,8 +225,6 @@
       "empty": "Nenhuma atividade ainda",
       "desktopOnly": "Só o aplicativo do Linkord para computador registra tempo de jogo e uso de aplicativos.",
       "private": "Oculto no seu perfil enquanto o compartilhamento de atividade estiver desativado.",
-      "calendar": "Calendário de atividade",
-      "day": "{{date}}: {{duration}} de atividade",
       "period": "Últimos {{count}} dias",
       "periodLabel": "Período de {{name}}",
       "underMinute": "Menos de 1 min",

@@ -60,6 +60,7 @@ test('resolves a vanity name and builds public widgets with separate recent and 
   const url = 'https://steamcommunity.com/id/example';
   const result = await fetchSteam('example', 'test-key', api({ GetPlayerSummaries: { players: [{ ...player, profileurl: `${url}/` }] } }), publicProfile({ url }));
   assert.equal(result.url, canonicalUrl);
+  assert.equal(result.snapshot.steamProfileHandle, 'example');
   const widgets = result.snapshot.widgets;
   assert.deepEqual(widgets['steam-profile'], { kind: 'steam-profile', name: 'Example', avatarUrl: player.avatarfull, currentGame: null, owned: 3, level: 47 });
   const top = widgets['steam-top'];

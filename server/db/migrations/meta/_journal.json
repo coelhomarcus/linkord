@@ -554,6 +554,13 @@
       "when": 1795460931041,
       "tag": "0078_refresh_public_steam_widgets",
       "breakpoints": true
+    },
+    {
+      "idx": 79,
+      "version": "7",
+      "when": 1795461731215,
+      "tag": "0079_remove_activity_calendar",
+      "breakpoints": true
     }
   ]
 }

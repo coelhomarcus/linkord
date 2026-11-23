@@ -89,7 +89,8 @@ export async function fetchSteam(value: string, key: string, request: RequestJso
   const url = `https://steamcommunity.com/profiles/${steamId}`;
   // Steam redirects numeric profile URLs to their vanity URL when one exists.
   const profileAddress = typeof profile.profileurl === 'string' ? parseSteamProfile(profile.profileurl) : null;
-  const profileUrl = profileAddress?.id === null ? profileAddress.url : url;
+  const vanity = profileAddress?.id === null ? profileAddress : null;
+  const profileUrl = vanity?.url ?? url;
   const { owned, currentGame, recentIds } = readSteamPublicProfile(await requestText(`${profileUrl}/?l=english`), steamId, profileUrl);
   const [ownedGames, level] = await Promise.all([
     recentIds.size ? get('IPlayerService/GetOwnedGames/v1', { input_json: JSON.stringify({
@@ -108,7 +109,7 @@ export async function fetchSteam(value: string, key: string, request: RequestJso
     .sort((a, b) => b.minutes - a.minutes).slice(0, 8);
   return {
     url,
-    snapshot: { steamVisibilityVerified: true, widgets: {
+    snapshot: { steamVisibilityVerified: true, ...(vanity && { steamProfileHandle: vanity.value }), widgets: {
       'steam-profile': { kind: 'steam-profile', name, avatarUrl: avatarUrl(profile.avatarfull), level: playerLevel, owned, currentGame },
       'steam-top': { kind: 'steam-games', items: top },
       'steam-recent': { kind: 'steam-games', items: recent },
