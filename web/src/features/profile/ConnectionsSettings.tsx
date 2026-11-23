@@ -18,7 +18,7 @@ import { SettingsSection, SettingsSections, SettingsSubheading } from '@/shared/
 
 const PROVIDERS = ['url', 'myanimelist', 'github'] as const;
 export function ConnectionsSettings() {
-  const { t, i18n } = useTranslation('profile');
+  const { t } = useTranslation('profile');
   const { t: tSettings } = useTranslation('settings');
   const { dispatch } = useRoom('dispatch');
   const state = useRoomState('me');
@@ -82,8 +82,8 @@ export function ConnectionsSettings() {
   const brand = (provider: ConnectionProvider) => provider === 'url' ? 'generic' : provider;
   return (
     <SettingsSections>
-    <SettingsSection title={tSettings('catalog.categories.connections')} description={t('integration.description')} contentClassName="gap-8">
-      <section aria-labelledby="connections-add-title" className="flex flex-col gap-4">
+    <SettingsSection title={tSettings('catalog.categories.connections')} description={t('integration.description')} contentClassName="mt-8 gap-10">
+      <section aria-labelledby="connections-add-title" className="flex flex-col gap-5">
         <SettingsSubheading><span id="connections-add-title">{t('integration.addTitle')}</span></SettingsSubheading>
         <div className="flex flex-wrap gap-2">
           {(data?.providers ?? PROVIDERS).map((provider) => {
@@ -101,7 +101,7 @@ export function ConnectionsSettings() {
                     />
                   }
                 >
-                  <BrandIcon kind={brand(provider)} size={28} />
+                  <BrandIcon kind={brand(provider)} size={26} />
                 </TooltipTrigger>
                 <TooltipContent side="bottom">{providerName(provider)}</TooltipContent>
               </Tooltip>
@@ -110,40 +110,42 @@ export function ConnectionsSettings() {
         </div>
       </section>
       {/* the size of one connection card, so the list arriving moves nothing below it */}
-      {!data && !loadError && <SkeletonGroup label={t('integration.loading')}><Skeleton className="h-[120px] w-full rounded-lg" /></SkeletonGroup>}
+      {!data && !loadError && <SkeletonGroup label={t('integration.loading')}><Skeleton className="h-32 w-full rounded-lg" /></SkeletonGroup>}
       {loadError && <div role="alert" className="text-label text-red-text">{t('integration.errors.load')} <Button type="button" variant="ghost" size="sm" onClick={() => void load()}>{t('modal.retry')}</Button></div>}
       {data?.connections.length === 0 && <p className="rounded-lg border border-border-divider px-4 py-6 text-center text-label text-text-muted">{t('integration.empty')}</p>}
       {!!data?.connections.length && (
-        <section aria-labelledby="connections-list-title" className="flex flex-col gap-4">
+        <section aria-labelledby="connections-list-title" className="flex flex-col gap-5">
           <SettingsSubheading><span id="connections-list-title">{t('integration.count', { count: data.connections.length })}</span></SettingsSubheading>
           <ul className="flex flex-col gap-3">
             {data.connections.map((connection) => (
-              <li key={connection.id} className="flex flex-col gap-3 rounded-lg border border-border-strong bg-fill-subtle p-4">
-                <div className="flex items-center gap-4">
-                  <span className="flex size-12 flex-none items-center justify-center text-text-primary"><BrandIcon kind={brand(connection.provider)} size={36} /></span>
+              <li key={connection.id} className="flex flex-col gap-6 rounded-lg border border-border-strong bg-fill-subtle p-5">
+                <div className="flex items-center gap-5">
+                  <span className="flex size-8 flex-none items-center justify-center text-text-primary"><BrandIcon kind={brand(connection.provider)} size={28} /></span>
                   <div className="min-w-0 flex-1">
-                    <a href={connection.url} target="_blank" rel="noreferrer" className="block truncate text-body font-semibold text-text-primary hover:underline">{connection.value}</a>
-                    <p className="truncate text-label text-text-muted">{providerName(connection.provider)}</p>
+                    <a href={connection.url} target="_blank" rel="noreferrer" className="block truncate text-body leading-5 font-semibold text-text-primary hover:underline">{connection.value}</a>
+                    <p className="truncate text-caption leading-4 text-text-muted">{providerName(connection.provider)}</p>
                   </div>
-                  <Button type="button" variant="ghost" size="icon" aria-label={t('integration.editConnection', { name: connection.value })} disabled={busy} onClick={() => open(connection.provider, connection)}><PencilSimpleIcon size={16} /></Button>
-                  <CloseButton variant="danger" label={t('integration.removeConnection', { name: connection.value })} disabled={busy} onClick={() => setRemoving(connection)} />
-                </div>
-                <div className="flex items-center justify-between gap-4 border-t border-border pt-3">
-                  <span className="text-body font-medium text-text-primary">{t('integration.showOnProfile')}</span>
-                  <Switch
-                    size="lg"
-                    checked={connection.showOnProfile}
-                    disabled={busy}
-                    onCheckedChange={(value) => void toggleVisibility(connection, value)}
-                    aria-label={t('integration.showOnProfileAria', { name: connection.value })}
-                  />
-                </div>
-                {connection.provider !== 'url' && (
-                  <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 border-t border-border pt-3 text-label text-text-muted">
-                    <p role="status">{connection.status === 'pending' ? t('integration.pending') : connection.syncError ? t(`integration.syncErrors.${(['not_found', 'private', 'rate_limited', 'invalid_response'] as const).find((key) => key === connection.syncError) ?? 'unavailable'}`) : t('integration.ready')}</p>
-                    {connection.syncedAt && <p className="text-caption">{t('wall.updated', { date: new Date(connection.syncedAt).toLocaleString(i18n.language) })}</p>}
+                  <div className="flex flex-none items-center gap-1">
+                    <Button type="button" variant="ghost" size="icon" className="size-8 text-text-muted hover:text-text-primary" aria-label={t('integration.editConnection', { name: connection.value })} disabled={busy} onClick={() => open(connection.provider, connection)}><PencilSimpleIcon size={18} /></Button>
+                    <CloseButton variant="danger" size="md" label={t('integration.removeConnection', { name: connection.value })} disabled={busy} onClick={() => setRemoving(connection)} />
                   </div>
-                )}
+                </div>
+                <div className="flex flex-col gap-3">
+                  <div className="flex items-center justify-between gap-4">
+                    <span className="text-body leading-5 font-medium text-text-primary">{t('integration.showOnProfile')}</span>
+                    <Switch
+                      size="lg"
+                      checked={connection.showOnProfile}
+                      disabled={busy}
+                      onCheckedChange={(value) => void toggleVisibility(connection, value)}
+                      aria-label={t('integration.showOnProfileAria', { name: connection.value })}
+                    />
+                  </div>
+                  {/* Only what needs attention: a synced connection reads like Discord's card, with nothing under it. */}
+                  {connection.provider !== 'url' && (connection.status === 'pending' || connection.syncError) && (
+                    <p role="status" className="text-label text-text-muted">{connection.status === 'pending' ? t('integration.pending') : t(`integration.syncErrors.${(['not_found', 'private', 'rate_limited', 'invalid_response'] as const).find((key) => key === connection.syncError) ?? 'unavailable'}`)}</p>
+                  )}
+                </div>
               </li>
             ))}
           </ul>

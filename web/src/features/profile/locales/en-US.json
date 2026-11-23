@@ -75,7 +75,6 @@
     "loading": "Loading connections…",
     "empty": "You have not added any connections yet.",
     "pending": "Waiting for the first sync…",
-    "ready": "Synced",
     "editConnection": "Edit connection {{name}}",
     "removeConnection": "Remove connection {{name}}",
     "showOnProfile": "Show on profile",
@@ -128,7 +127,6 @@
     "pending": "Data will appear after the first sync.",
     "noItems": "No public items available.",
     "stale": "The last sync failed. Showing the latest available data.",
-    "updated": "Updated on {{date}}",
     "profileLink": "{{service}}, @{{user}}",
     "widgets": {
       "mal-recent-anime": "Recent anime activity",
