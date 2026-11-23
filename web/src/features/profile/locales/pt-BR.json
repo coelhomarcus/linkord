@@ -142,7 +142,7 @@
       "activity-recent": "Jogando recentemente",
       "activity-summary": "Resumo de atividade",
       "steam-recent": "Jogados recentemente (Steam)",
-      "steam-top": "Mais jogados (Steam)",
+      "steam-top": "Mais jogados entre os recentes (Steam)",
       "steam-profile": "Perfil Steam",
       "twitch-live": "Twitch",
       "twitch-vods": "Últimos VODs"
@@ -160,8 +160,8 @@
       "activity-recent": "Os últimos jogos e aplicativos vistos no Linkord",
       "activity-summary": "Tempo total, maior sequência de dias e jogo favorito",
       "steam-recent": "Jogos usados na Steam nas últimas duas semanas, com tempo de jogo",
-      "steam-top": "Jogos da Steam por tempo total de jogo",
-      "steam-profile": "Avatar, nível e tamanho da biblioteca Steam",
+      "steam-top": "Jogos recentes do perfil público Steam por tempo total de jogo",
+      "steam-profile": "Avatar, nível e total de jogos públicos na Steam",
       "twitch-live": "Transmissão ao vivo, jogo e espectadores",
       "twitch-vods": "As últimas transmissões arquivadas na Twitch"
     },

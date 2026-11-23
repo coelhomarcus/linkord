@@ -547,6 +547,13 @@
       "when": 1795454446280,
       "tag": "0077_activity_wall_steam_twitch",
       "breakpoints": true
+    },
+    {
+      "idx": 78,
+      "version": "7",
+      "when": 1795460931041,
+      "tag": "0078_refresh_public_steam_widgets",
+      "breakpoints": true
     }
   ]
 }

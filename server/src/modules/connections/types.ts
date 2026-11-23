@@ -29,7 +29,10 @@ export type WidgetData =
   | { kind: 'twitch-live'; login: string; name: string; avatarUrl: string | null; lastStreamAt: string | null;
       stream: TwitchStream | null; status: 'live' | 'offline' | 'unknown' }
   | { kind: 'twitch-vods'; items: TwitchVideo[] };
-export interface ConnectionSnapshot { widgets: Partial<Record<ConnectionWidgetType, WidgetData>> }
+export interface ConnectionSnapshot {
+  widgets: Partial<Record<ConnectionWidgetType, WidgetData>>;
+  steamVisibilityVerified?: true;
+}
 export interface WallSelection { connectionId: string | null; type: WidgetType; period?: ActivityPeriod }
 
 export const ACTIVITY_WIDGET_TYPES = ['activity-top', 'activity-calendar', 'activity-recent', 'activity-summary'] as const;

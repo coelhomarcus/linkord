@@ -184,7 +184,10 @@ export async function readWall(userId: string, owner = false, extended = true) {
     const cached = views.get(key);
     if (cached) return cached;
     const result = (async (): Promise<ConnectionView> => {
-      let data = connection.provider === 'steam' && connection.syncError === 'private' ? null : connection.snapshot?.widgets[type] ?? null;
+      const snapshot = connection.snapshot;
+      // An older worker can still write a snapshot during a rolling deploy.
+      const canShow = connection.provider !== 'steam' || (snapshot?.steamVisibilityVerified === true && !connection.syncError);
+      let data = canShow ? snapshot?.widgets[type] ?? null : null;
       if (data?.kind === 'twitch-live' && twitch.configured && selected.some(({ widget }) => widget.connectionId === connection.id && widget.type === type)) {
         const stream = await twitch.live(data.login).catch(() => undefined);
         if (stream !== undefined) data = { ...data, stream, status: stream ? 'live' : 'offline' };

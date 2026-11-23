@@ -14,7 +14,7 @@ Every external service Linkord talks to: what it is for, who makes the call (our
 | [GitHub](#github) | Wall widgets | Server (background) | None | No |
 | [GitHub Releases](#github-releases) | The desktop installer the web app offers | Server (on demand, cached) | `DESKTOP_RELEASES_REPO` | No |
 | [IGDB](#igdb) | Game search for the Wall; names of games someone is playing | Server (on demand) | `IGDB_CLIENT_ID`, `IGDB_CLIENT_SECRET` | No |
-| [Steam](#steam) | Profile, recent games and playtime on the Wall | Server (on connect and in the background) | `STEAM_WEB_API_KEY` | No |
+| [Steam](#steam) | Public profile, recent games and playtime on the Wall | Server (on connect and in the background) | `STEAM_WEB_API_KEY` | No |
 | [Twitch](#twitch) | Live streams and recent VODs on the Wall | Server; browser for the player | `IGDB_CLIENT_ID`, `IGDB_CLIENT_SECRET` | No |
 | [SteamGridDB](#steamgriddb) (and Steam's CDN) | The square icon of a game someone is playing | Server (on demand; icons stored and served by us) | `STEAMGRIDDB_API_KEY` | No |
 | [Discord application API](#discord-application-api) | Name and pictures of a game reporting through Discord Rich Presence | Server (on demand, cached) | None | No |
@@ -128,10 +128,10 @@ Game search for the four games widgets (favorite game, games I like, games in ro
 
 ## Steam
 
-Steam profile, most played games and games played in the last two weeks, as Wall widgets. The connection accepts a vanity name, a SteamID64 or a profile URL, and stores the canonical profile URL.
+The Wall shows the public Steam profile and its recent games. The recent widget shows playtime for the last two weeks. The most-played widget ranks those games by lifetime playtime. The connection accepts a vanity name, a SteamID64 or a profile URL, and stores the canonical profile URL.
 
-- **API:** `server/src/integrations/steam/steamWebApi.ts` calls `api.steampowered.com`: `ISteamUser` (`ResolveVanityURL`, `GetPlayerSummaries`) and `IPlayerService` (`GetOwnedGames`, `GetRecentlyPlayedGames`, `GetSteamLevel`).
-- **Sync:** connecting checks that the profile and its **Game details** are public and takes the first snapshot; the [worker](#how-connection-syncing-works) refreshes it. While Steam reports the profile or game details private, the Wall hides the saved data.
+- **API** `ISteamUser` (`ResolveVanityURL`, `GetPlayerSummaries`) and `IPlayerService` (`GetOwnedGames`, `GetSteamLevel`) on `api.steampowered.com`. A signed-out request to the profile on `steamcommunity.com` supplies the game count, in-game status and eligible app IDs. The playtime request includes only the recent games for which that page shows playtime. Steam requires sign-in to view the full library page.
+- **Sync** Connecting checks the profile and its **Game details** are public. The [worker](#how-connection-syncing-works) checks again every 24 hours. If a refresh fails, the Wall hides the saved Steam widgets until the next successful refresh.
 - **Pictures:** covers and avatars through the media proxy, from an allowlist of Steam CDN hosts.
 - **Configuration:** a [Steam Web API key](https://steamcommunity.com/dev/apikey) in `STEAM_WEB_API_KEY`. It stays on the server.
 - **When missing:** the Steam connection option is hidden.

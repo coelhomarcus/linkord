@@ -77,7 +77,7 @@ export async function syncConnections(options: { request?: RequestJson; requestT
           case 'steam': snapshot = (await fetchSteam(row.url, steamKey, options.request ?? (async (url, init) => {
             await beforeRequest();
             return fetchSafeConnectionJson(url, init);
-          }))).snapshot; break;
+          }), requestText)).snapshot; break;
           case 'twitch':
             await beforeRequest();
             snapshot = (await twitchClient.profile(row.value)).snapshot;

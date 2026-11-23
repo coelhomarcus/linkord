@@ -1,6 +1,7 @@
-import { ConnectionFetchError, fetchSafeConnectionJson, list, record, textValue, type RequestJson } from '../connectionHttp.js';
+import { ConnectionFetchError, fetchConnectionText, fetchSafeConnectionJson, list, record, textValue, type RequestJson, type RequestText } from '../connectionHttp.js';
 import type { ConnectionSnapshot, SteamGame } from '../../modules/connections/types.js';
 import { STEAM_ASSET_HOST } from './steamAssets.js';
+import { readSteamPublicProfile } from './steamPublicProfile.js';
 
 export const STEAM_IMAGE_HOSTS = [STEAM_ASSET_HOST, 'avatars.steamstatic.com', 'avatars.akamai.steamstatic.com',
   'avatars.fastly.steamstatic.com', 'avatars.cloudflare.steamstatic.com', 'steamcdn-a.akamaihd.net'] as const;
@@ -42,22 +43,28 @@ function avatarUrl(value: unknown): string | null {
   } catch { return null; }
 }
 
-function games(value: Record<string, unknown>, minutesKey: string): SteamGame[] {
-  if (value.games === undefined && (value.game_count === 0 || value.total_count === 0)) return [];
-  return list(value.games).flatMap((item) => {
+function gameTimes(value: Record<string, unknown>, publicIds: Set<number>) {
+  if (!integer(value.game_count)) throw new ConnectionFetchError('invalid_response');
+  const matches = new Map<number, { game: SteamGame; recentMinutes: number }>();
+  if (value.games === undefined && value.game_count === 0) return matches;
+  for (const item of list(value.games)) {
     const row = record(item);
-    const minutes = row[minutesKey];
-    if (!integer(row.appid) || row.appid === 0 || !integer(minutes)) throw new ConnectionFetchError('invalid_response');
+    if (!integer(row.appid) || row.appid === 0) throw new ConnectionFetchError('invalid_response');
+    if (!publicIds.has(row.appid)) continue;
+    const minutes = row.playtime_forever;
+    const recentMinutes = row.playtime_2weeks ?? 0;
+    if (!integer(minutes) || !integer(recentMinutes)) throw new ConnectionFetchError('invalid_response');
     const name = textValue(row.name);
-    if (!name) return []; // a removed or unlisted title can still be in the library count
-    return [{
+    if (!name) continue; // a removed or unlisted title can still be in the library count
+    matches.set(row.appid, { recentMinutes, game: {
       id: String(row.appid), title: name, minutes, url: `https://store.steampowered.com/app/${row.appid}/`,
       imageUrl: `https://${STEAM_ASSET_HOST}/store_item_assets/steam/apps/${row.appid}/header.jpg`,
-    }];
-  });
+    } });
+  }
+  return matches;
 }
 
-export async function fetchSteam(value: string, key: string, request: RequestJson = fetchSafeConnectionJson):
+export async function fetchSteam(value: string, key: string, request: RequestJson = fetchSafeConnectionJson, requestText: RequestText = fetchConnectionText):
   Promise<{ snapshot: ConnectionSnapshot; url: string }> {
   if (!key) throw new ConnectionFetchError('unavailable');
   const input = parseSteamProfile(value);
@@ -79,23 +86,32 @@ export async function fetchSteam(value: string, key: string, request: RequestJso
   if (profile.communityvisibilitystate !== 3) throw new ConnectionFetchError('private');
   const name = textValue(profile.personaname);
   if (!name) throw new ConnectionFetchError('invalid_response');
-  const owned = record((await get('IPlayerService/GetOwnedGames/v1', { steamid: steamId, include_appinfo: '1', include_played_free_games: '1' })).response);
-  if (Object.keys(owned).length === 0) throw new ConnectionFetchError('private');
-  if (!integer(owned.game_count)) throw new ConnectionFetchError('invalid_response');
-  const top = games(owned, 'playtime_forever').filter((item) => item.minutes > 0).sort((a, b) => b.minutes - a.minutes).slice(0, 8);
-  const [recent, level] = await Promise.all([
-    get('IPlayerService/GetRecentlyPlayedGames/v1', { steamid: steamId, count: '8' }),
+  const url = `https://steamcommunity.com/profiles/${steamId}`;
+  // Steam redirects numeric profile URLs to their vanity URL when one exists.
+  const profileAddress = typeof profile.profileurl === 'string' ? parseSteamProfile(profile.profileurl) : null;
+  const profileUrl = profileAddress?.id === null ? profileAddress.url : url;
+  const { owned, currentGame, recentIds } = readSteamPublicProfile(await requestText(`${profileUrl}/?l=english`), steamId, profileUrl);
+  const [ownedGames, level] = await Promise.all([
+    recentIds.size ? get('IPlayerService/GetOwnedGames/v1', { input_json: JSON.stringify({
+      steamid: steamId, include_appinfo: true, include_played_free_games: true, include_family_licenses: true, appids_filter: [...recentIds],
+    }) }) : null,
     get('IPlayerService/GetSteamLevel/v1', { steamid: steamId }),
   ]);
   const { player_level: playerLevel } = record(level.response);
   if (!integer(playerLevel)) throw new ConnectionFetchError('invalid_response');
+  const visibleGames: ReturnType<typeof gameTimes> = ownedGames ? gameTimes(record(ownedGames.response), recentIds) : new Map();
+  const recent = [...recentIds].flatMap((id) => {
+    const match = visibleGames.get(id);
+    return match && match.recentMinutes > 0 ? [{ ...match.game, minutes: match.recentMinutes }] : [];
+  }).slice(0, 8);
+  const top = [...visibleGames.values()].map(({ game }) => game).filter((game) => game.minutes > 0)
+    .sort((a, b) => b.minutes - a.minutes).slice(0, 8);
   return {
-    url: `https://steamcommunity.com/profiles/${steamId}`,
-    snapshot: { widgets: {
-      'steam-profile': { kind: 'steam-profile', name, avatarUrl: avatarUrl(profile.avatarfull), level: playerLevel,
-        owned: owned.game_count, currentGame: textValue(profile.gameextrainfo) },
+    url,
+    snapshot: { steamVisibilityVerified: true, widgets: {
+      'steam-profile': { kind: 'steam-profile', name, avatarUrl: avatarUrl(profile.avatarfull), level: playerLevel, owned, currentGame },
       'steam-top': { kind: 'steam-games', items: top },
-      'steam-recent': { kind: 'steam-games', items: games(record(recent.response), 'playtime_2weeks').slice(0, 8) },
+      'steam-recent': { kind: 'steam-games', items: recent },
     } },
   };
 }
