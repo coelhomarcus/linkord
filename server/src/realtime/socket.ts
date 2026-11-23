@@ -108,8 +108,10 @@ export const ACTION_LIMITS: Record<string, ActionLimit> = {
   'presence-set': { windowMs: 60_000, max: 20 },
   // a client reports a change of state, not every input; a tab flapping on the threshold stays under this
   'presence-activity': { windowMs: 60_000, max: 30 },
-  // the desktop app reports a change of game or app, checked every few seconds at most
-  'activity-set': { windowMs: 60_000, max: 30, silent: true },
+  // the desktop app reports a change of game or app, checked every few seconds at most, and a game's rich
+  // presence as it changes (games resend it every ~5 s; the desktop app forwards only changes). A dropped
+  // report is never sent again, so this leaves room for both at once and for two of the account's computers
+  'activity-set': { windowMs: 60_000, max: 60, silent: true },
   'activity-settings-set': { windowMs: 60_000, max: 20 },
 };
 

@@ -81,9 +81,13 @@
 // shows it) to every open connection of the account, so a tab or desktop app without push can show
 // it. An old tab ignores it and only refreshes its lists on `social-changed`, as before, so the
 // minimum stays at 7.
+// Version 30 adds a game's Discord Rich Presence to its activity: an optional `rich` (details, state,
+// large and small images, party, the game's own timestamps, up to two link buttons) on the report in
+// `activity-set` and on `Activity` wherever one is sent. An old tab ignores it and shows the name and
+// icon only, so the minimum stays at 7.
 // Raising MIN_PROTOCOL_VERSION also drops open tabs out of their calls (they are refused and
 // disconnect), so keep it for changes an old client cannot tolerate.
-export const PROTOCOL_VERSION = 29;
+export const PROTOCOL_VERSION = 30;
 export const MIN_PROTOCOL_VERSION = 7;
 export const MIC_STARTING_PROTOCOL_VERSION = 18;
 export const CALL_ELSEWHERE_PROTOCOL_VERSION = 20;
