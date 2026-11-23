@@ -57,8 +57,8 @@ export function SteamMiniProfile({ data, title, profile }: {
       <div className="flex min-h-32 flex-1 items-center gap-4 p-4 pr-10">
         <div className="relative flex-none" style={{ width: AVATAR_PX, height: AVATAR_PX }}>
           {avatar
-            ? <img src={avatar} alt="" loading="lazy" className="size-full rounded-sm object-cover" />
-            : <div className="size-full rounded-sm bg-bg-secondary" />}
+            ? <img src={avatar} alt="" loading="lazy" className="size-full object-cover" />
+            : <div className="size-full bg-bg-secondary" />}
           {frame && <img src={frame} alt="" loading="lazy" data-testid="steam-avatar-frame"
             className="pointer-events-none absolute left-1/2 top-1/2 max-w-none -translate-x-1/2 -translate-y-1/2"
             style={{ width: `${FRAME_SCALE * 100}%`, height: `${FRAME_SCALE * 100}%` }} />}
