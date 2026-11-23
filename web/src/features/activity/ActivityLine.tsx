@@ -1,5 +1,6 @@
 import { AppWindowIcon, GameControllerIcon } from '@/shared/ui/icons';
 import { useState } from 'react';
+import { buttonVariants } from '@/shared/ui/primitives/button';
 import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { cn } from '@/shared/lib/utils';
@@ -10,7 +11,7 @@ import { useServerNow } from './serverClock';
 
 type ActivityKind = Activity['kind'];
 
-function ActivityIcon({ activity, size, className }: { activity: Pick<Activity, 'kind' | 'icon'>; size: number; className?: string }) {
+function ActivityIcon({ activity, size, className, title }: { activity: Pick<Activity, 'kind' | 'icon'>; size: number; className?: string; title?: string }) {
   const [failed, setFailed] = useState(false);
   const Fallback = activity.kind === 'playing' ? GameControllerIcon : AppWindowIcon;
   return (
@@ -21,6 +22,7 @@ function ActivityIcon({ activity, size, className }: { activity: Pick<Activity, 
         className,
       )}
       style={{ width: size, height: size }}
+      title={title}
     >
       {activity.icon && !failed
         ? <img src={activity.icon} alt="" className="size-full object-cover" onError={() => setFailed(true)} />
@@ -35,16 +37,53 @@ export function KindGlyph({ kind, size }: { kind: ActivityKind; size: number }) 
   return <Glyph size={size} weight="fill" aria-hidden className="flex-none" />;
 }
 
-/** "🎮 1:19:35" in green, ticking every second while it shows. */
-export function ActivityTimer({ activity, className }: { activity: Pick<Activity, 'kind' | 'startedAt'>; className?: string }) {
+/** "🎮 1:19:35" in green, ticking every second while it shows. A game's own timestamps win over the
+ * time it has run, as Discord shows them: its end counts down ("4:12 restantes"), its start up. */
+export function ActivityTimer({ activity, className }: { activity: Pick<Activity, 'kind' | 'startedAt' | 'rich'>; className?: string }) {
   const { t } = useTranslation('activity');
   const now = useServerNow(1000);
-  const time = formatActivityTimer(now - Date.parse(activity.startedAt));
+  const timestamps = activity.rich?.timestamps;
+  const end = timestamps?.end;
+  const remaining = end !== undefined && end > now;
+  const time = formatActivityTimer(remaining ? end - now : now - (timestamps?.start ?? Date.parse(activity.startedAt)));
   return (
-    <span role="timer" aria-label={t(`timer.${activity.kind}`, { time })} className={cn('flex items-center gap-1 font-mono text-caption font-semibold tabular-nums text-green', className)}>
+    <span role="timer" aria-label={remaining ? t('timer.left', { time }) : t(`timer.${activity.kind}`, { time })} className={cn('flex items-center gap-1 font-mono text-caption font-semibold tabular-nums text-green', className)}>
       <KindGlyph kind={activity.kind} size={14} />
-      <span aria-hidden>{time}</span>
+      <span aria-hidden>{remaining ? t('rich.left', { time }) : time}</span>
     </span>
+  );
+}
+
+/** What the game says of itself (Discord Rich Presence): its details, its state with the party size. */
+function RichLines({ rich }: { rich: NonNullable<Activity['rich']> }) {
+  const { t } = useTranslation('activity');
+  const party = rich.party ? t('rich.party', { size: rich.party.size, max: rich.party.max }) : null;
+  const state = [rich.state, party].filter(Boolean).join(' ');
+  return (
+    <>
+      {rich.details && <p className="truncate text-caption text-text-secondary">{rich.details}</p>}
+      {state && <p className="truncate text-caption text-text-secondary">{state}</p>}
+    </>
+  );
+}
+
+/** The game's links, at most two, opened outside the app like any other external link. */
+function RichButtons({ buttons }: { buttons: NonNullable<NonNullable<Activity['rich']>['buttons']> }) {
+  return (
+    <div className="flex flex-col gap-2 sm:flex-row">
+      {buttons.map((button) => (
+        <a
+          key={`${button.label}\n${button.url}`}
+          href={button.url}
+          target="_blank"
+          rel="noopener noreferrer nofollow"
+          title={button.url}
+          className={cn(buttonVariants({ variant: 'secondary', size: 'sm' }), 'min-w-0 flex-1')}
+        >
+          <span className="truncate">{button.label}</span>
+        </a>
+      ))}
+    </div>
   );
 }
 
@@ -80,6 +119,10 @@ export function ActivityCard({ activity, heading, large, className, children }: 
   children?: ReactNode;
 }) {
   const { t } = useTranslation('activity');
+  const { rich } = activity;
+  const size = large ? 112 : 56;
+  // the game's own picture takes the icon's place, with its small one as a badge, as Discord draws them
+  const picture = rich?.largeImage ? { kind: activity.kind, icon: rich.largeImage.url } : activity;
   return (
     <section
       aria-label={t(`line.${activity.kind}`, { name: activity.name })}
@@ -87,13 +130,25 @@ export function ActivityCard({ activity, heading, large, className, children }: 
     >
       <h3 className="text-caption font-semibold text-text-secondary">{heading ?? t(`kind.${activity.kind}`)}</h3>
       <div className={cn('flex min-w-0 items-center gap-3', large && 'gap-4')}>
-        <ActivityIcon activity={activity} size={large ? 112 : 56} />
+        <span className="relative flex-none">
+          <ActivityIcon activity={picture} size={size} title={rich?.largeImage?.text} />
+          {rich?.smallImage && (
+            <ActivityIcon
+              activity={{ kind: activity.kind, icon: rich.smallImage.url }}
+              size={Math.round(size * 0.4)}
+              title={rich.smallImage.text}
+              className="absolute -right-1 -bottom-1 rounded-full! border-2 border-bg-secondary bg-bg-secondary"
+            />
+          )}
+        </span>
         <div className="flex min-w-0 flex-col gap-1">
           <p className={cn('truncate font-semibold text-text-primary', large ? 'text-heading' : 'text-label')}>{activity.name}</p>
+          {rich && <RichLines rich={rich} />}
           <ActivityTimer activity={activity} />
           {children}
         </div>
       </div>
+      {rich?.buttons && <RichButtons buttons={rich.buttons} />}
     </section>
   );
 }

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef } from 'react';
-import { desktopApp, type DesktopActivity } from '@/shared/desktop';
-import type { ActivityReport, ActivitySettings, ClientMessage } from '@/shared/types/protocol';
-import { lookupActivityGame, uploadActivityIcon } from './activityApi';
+import { desktopApp, type DesktopActivity, type DesktopRichPresence } from '@/shared/desktop';
+import type { ActivityReport, ActivitySettings, ClientMessage, RichActivityReport } from '@/shared/types/protocol';
+import { lookupActivityGame, lookupDiscordActivity, uploadActivityIcon } from './activityApi';
 
 // Program icons already stored, by a hash of the picture the desktop app read: the same picture is
 // sent once, and a program whose icon changes sends the new one. Which icon a game shows is the
@@ -43,26 +43,83 @@ async function storedProgramIcon(readIcon: () => Promise<string | null>): Promis
   return id;
 }
 
+type DiscordLookup = Awaited<ReturnType<typeof lookupDiscordActivity>>;
+
+// A game resends its presence every few seconds with the same pictures: each application and set of
+// pictures is asked once per page. What the server answers is the same for everyone (public data).
+const discordLookups = new Map<string, Promise<DiscordLookup | null>>();
+const DISCORD_LOOKUPS_MAX = 50;
+
+function discordLookup(appId: string, images: string[]): Promise<DiscordLookup | null> {
+  const key = [appId, ...images].join('\n');
+  let found = discordLookups.get(key);
+  if (!found) {
+    if (discordLookups.size >= DISCORD_LOOKUPS_MAX) discordLookups.delete(discordLookups.keys().next().value!);
+    found = lookupDiscordActivity({ appId, images }).catch(() => {
+      // asked again with the next update
+      discordLookups.delete(key);
+      return null;
+    });
+    discordLookups.set(key, found);
+  }
+  return found;
+}
+
+function richImages(rich: DesktopRichPresence | undefined): string[] {
+  return [rich?.largeImage?.key, rich?.smallImage?.key].filter((key): key is string => !!key);
+}
+
+/** The presence as reported: its pictures as the icons the server stored, the rest as the desktop app read it. */
+function richReport(rich: DesktopRichPresence, images: Record<string, string | null>): RichActivityReport | undefined {
+  const picture = (image: DesktopRichPresence['largeImage']) => {
+    const local = image ? images[image.key] : null;
+    return local ? { local, ...(image?.text ? { text: image.text } : {}) } : undefined;
+  };
+  const report: RichActivityReport = {
+    ...(rich.details ? { details: rich.details } : {}),
+    ...(rich.state ? { state: rich.state } : {}),
+    ...(picture(rich.largeImage) ? { largeImage: picture(rich.largeImage) } : {}),
+    ...(picture(rich.smallImage) ? { smallImage: picture(rich.smallImage) } : {}),
+    ...(rich.party ? { party: rich.party } : {}),
+    ...(rich.timestamps ? { timestamps: rich.timestamps } : {}),
+    ...(rich.buttons?.length ? { buttons: rich.buttons } : {}),
+  };
+  return Object.keys(report).length > 0 ? report : undefined;
+}
+
 /** The name and icon a detected activity shows with: a game's IGDB name and icon when the server finds
- * them, the program's own icon otherwise. For a game the program's icon also goes to the server as the
- * reference it picks the game's icon by (server/src/modules/activity/activityGameIcons.ts). */
-async function describe(activity: DesktopActivity, readIcon: () => Promise<string | null>): Promise<ActivityReport> {
+ * them, then the icon of its Discord application, the program's own icon otherwise. For a game the
+ * program's icon also goes to the server as the reference it picks the game's icon by
+ * (server/src/modules/activity/activityGameIcons.ts). A game known only by Discord takes its name from there. */
+async function describe(activity: DesktopActivity, readIcon: () => Promise<string | null>): Promise<Pick<ActivityReport, 'name' | 'icon'>> {
   let name = activity.name;
   let icon: ActivityReport['icon'] = null;
   let program: Promise<string | null> | null = null;
   const programIcon = () => (program ??= storedProgramIcon(readIcon));
-  if (activity.kind === 'playing') {
+  const discord = activity.discordAppId ? await discordLookup(activity.discordAppId, richImages(activity.rich)) : null;
+  name = name || discord?.name || '';
+  if (activity.kind === 'playing' && (name || activity.steamAppId)) {
     const game = await lookupActivityGame({ steamAppId: activity.steamAppId, name, ref: await programIcon() }).catch(() => null);
     if (game) {
       name = name || game.name;
       if (game.icon) icon = { local: game.icon };
     }
   }
+  if (!icon && discord?.icon) icon = { local: discord.icon };
   if (!icon) {
     const id = await programIcon();
     if (id) icon = { local: id };
   }
-  return { key: activity.key, kind: activity.kind, name, icon, startedAt: activity.startedAt };
+  return { name, icon };
+}
+
+/** The whole report: the name and icon, described once per activity, and the presence of this update. */
+async function report(activity: DesktopActivity, base: Pick<ActivityReport, 'name' | 'icon'>): Promise<ActivityReport> {
+  const images = activity.discordAppId && activity.rich
+    ? (await discordLookup(activity.discordAppId, richImages(activity.rich)))?.images ?? {}
+    : {};
+  const rich = activity.rich ? richReport(activity.rich, images) : undefined;
+  return { key: activity.key, kind: activity.kind, ...base, startedAt: activity.startedAt, ...(rich ? { rich } : {}) };
 }
 
 /**
@@ -77,6 +134,8 @@ export function useActivityReporter({ sendWs, settings }: { sendWs: (msg: Client
   const settingsRef = useRef(settings);
   useEffect(() => { settingsRef.current = settings; }, [settings]);
   const generation = useRef(0);
+  // a game updating its presence is the same activity: its name and icon are not looked up again
+  const described = useRef<{ key: string; name: string; base: Promise<Pick<ActivityReport, 'name' | 'icon'>> } | null>(null);
 
   const send = useCallback(() => {
     const report = reportRef.current;
@@ -89,12 +148,17 @@ export function useActivityReporter({ sendWs, settings }: { sendWs: (msg: Client
     const run = ++generation.current;
     if (!activity || !desktop) {
       reportRef.current = null;
+      described.current = null;
       send();
       return;
     }
-    void describe(activity, () => desktop.icon()).then((report) => {
+    if (described.current?.key !== activity.key || described.current.name !== activity.name) {
+      described.current = { key: activity.key, name: activity.name, base: describe(activity, () => desktop.icon()) };
+    }
+    const { base } = described.current;
+    void base.then((value) => report(activity, value)).then((next) => {
       if (run !== generation.current) return;
-      reportRef.current = report.name ? report : null;
+      reportRef.current = next.name ? next : null;
       send();
     });
   }, [desktop, send]);

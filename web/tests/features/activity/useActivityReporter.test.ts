@@ -7,7 +7,8 @@ import type { ActivitySettings, ClientMessage } from '@/shared/types/protocol';
 
 const lookup = vi.hoisted(() => vi.fn());
 const upload = vi.hoisted(() => vi.fn());
-vi.mock('@/features/activity/activityApi', () => ({ lookupActivityGame: lookup, uploadActivityIcon: upload }));
+const discord = vi.hoisted(() => vi.fn());
+vi.mock('@/features/activity/activityApi', () => ({ lookupActivityGame: lookup, uploadActivityIcon: upload, lookupDiscordActivity: discord }));
 
 function stubDesktop(initial: DesktopActivity | null) {
   let listener: ((activity: DesktopActivity | null) => void) | null = null;
@@ -41,6 +42,7 @@ beforeEach(() => {
   localStorage.clear();
   lookup.mockReset();
   upload.mockReset();
+  discord.mockReset();
   upload.mockResolvedValue(null);
 });
 
@@ -155,6 +157,30 @@ describe('useActivityReporter', () => {
     rerender({ s: { sharing: false, hidden: [] } });
     expect(api.watch).toHaveBeenLastCalledWith(false);
     expect(reports().at(-1)).toBeNull();
+  });
+
+  it('names a game known only by Discord and sends its presence with stored pictures, looked up once', async () => {
+    const appId = '383226320970055681';
+    const game: DesktopActivity = {
+      key: `discord:${appId}`, kind: 'playing', name: '', startedAt: 1000, discordAppId: appId,
+      rich: { details: 'Ranked', largeImage: { key: 'map_dust', text: 'Dust II' }, smallImage: { key: 'gone' }, buttons: [{ label: 'Join', url: 'https://example.com/join' }] },
+    };
+    const { change } = stubDesktop(game);
+    lookup.mockResolvedValue(null);
+    discord.mockResolvedValue({ name: 'Some Game', icon: 'd'.repeat(64), images: { map_dust: 'e'.repeat(64), gone: null } });
+    const { reports } = render();
+    await waitFor(() => expect(reports().at(-1)).toEqual({
+      key: `discord:${appId}`, kind: 'playing', name: 'Some Game', icon: { local: 'd'.repeat(64) }, startedAt: 1000, sentAt: expect.any(Number),
+      rich: { details: 'Ranked', largeImage: { local: 'e'.repeat(64), text: 'Dust II' }, buttons: [{ label: 'Join', url: 'https://example.com/join' }] },
+    }));
+    expect(discord).toHaveBeenCalledWith({ appId, images: ['map_dust', 'gone'] });
+    expect(lookup).toHaveBeenCalledWith(expect.objectContaining({ name: 'Some Game' }));
+
+    // the game updates its text: nothing is looked up again
+    change({ ...game, rich: { ...game.rich, details: 'Casual' } });
+    await waitFor(() => expect(reports().at(-1)?.rich?.details).toBe('Casual'));
+    expect(discord).toHaveBeenCalledTimes(1);
+    expect(lookup).toHaveBeenCalledTimes(1);
   });
 
   it('does nothing in a browser', () => {

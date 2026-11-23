@@ -10,6 +10,12 @@ export function lookupActivityGame(query: { steamAppId?: number; name: string; r
   return apiFetch(`/api/activity/game?${params}`);
 }
 
+/** A game's Discord application name and icon, and its Rich Presence images, each stored on the server
+ * (`POST /api/activity/discord`); null for whatever Discord does not know. */
+export function lookupDiscordActivity(query: { appId: string; images: string[] }): Promise<{ name: string | null; icon: string | null; images: Record<string, string | null> }> {
+  return apiFetch('/api/activity/discord', { method: 'POST', body: JSON.stringify(query) });
+}
+
 /** Stores a program's own icon (a data URL from the desktop app) and returns its id. */
 export async function uploadActivityIcon(dataUrl: string): Promise<string> {
   const blob = await (await fetch(dataUrl)).blob();
