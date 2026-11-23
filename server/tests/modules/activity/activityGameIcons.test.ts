@@ -62,7 +62,7 @@ function setup(client: Partial<SteamGridDbClient>, options: {
     store,
     now: options.now ?? (() => NOW),
   });
-  const lookup = (query: { steamAppId?: string; name?: string }, userId = `u-${Math.random()}`, referenceId: string | null = null) => inner(userId, parseActivityGameQuery(query), referenceId);
+  const lookup = (query: { steamAppId?: string; name?: string; kind?: 'playing' | 'using' }, userId = `u-${Math.random()}`, referenceId: string | null = null) => inner(userId, parseActivityGameQuery(query), referenceId);
   return { lookup, calls, rows, downloaded };
 }
 
@@ -110,6 +110,26 @@ describe('activity game icon lookup', () => {
     });
     assert.equal(await lookup({ name: 'Fortnite' }), `id:${gridIcon('official').thumb}`);
     assert.deepEqual(calls, ['search:Fortnite', 'game:36136', 'icons:36136']);
+  });
+
+  test('finds an app as SteamGridDB files software, under a key of its own', async () => {
+    const { lookup, calls, rows } = setup({
+      searchGames: async () => [game(1, 'Spotify'), game(5248356, 'Spotify (Program)')],
+      gameById: async (id) => game(id, 'Spotify (Program)'),
+      gameIcons: async () => [gridIcon('spotify')],
+    });
+    assert.equal(await lookup({ name: 'Spotify', kind: 'using' }), `id:${gridIcon('spotify').thumb}`);
+    assert.deepEqual(calls, ['search:Spotify', 'game:5248356', 'icons:5248356']);
+    assert.ok(rows.has('app:spotify'));
+    assert.ok(!rows.has('name:spotify'));
+  });
+
+  test('gives an app on Steam Steam\'s own icon', async () => {
+    const { lookup } = setup(
+      { searchGames: async () => [game(5286338, 'OBS Studio')], gameById: async () => onSteam(5286338, 'OBS Studio', 1905180) },
+      { files: { [steamIco(1905180)]: await icoOf(256) } },
+    );
+    assert.equal(await lookup({ name: 'OBS Studio', kind: 'using' }), 'id:steam-ico');
   });
 
   test('outside Steam, takes the community icon that looks like the program\'s own', async () => {
@@ -213,6 +233,14 @@ describe('picking the game by name', () => {
     const picked = pickGame([game(1, 'Call of Duty', { releaseDate: 1067212800 }), game(2, 'Call of Duty', { releaseDate: 1666224000 }), game(3, 'Call of Duty: World at War')], 'Call of Duty');
     assert.equal(picked?.id, 2);
     assert.equal(pickGame([game(4, 'Baldur\'s Gate III')], 'Baldur\'s Gate 3')?.id, 4);
+  });
+
+  test('takes an app\'s software entry first, then its bare name, and a game only by its bare name', () => {
+    const games = [game(1, 'Blender Bros.'), game(2, 'Blender'), game(3, 'Blender (Program)')];
+    assert.equal(pickGame(games, 'Blender', 'using')?.id, 3);
+    assert.equal(pickGame(games, 'Blender')?.id, 2);
+    assert.equal(pickGame([game(4, 'OBS Studio')], 'OBS Studio', 'using')?.id, 4);
+    assert.equal(pickGame([game(5, 'Cursor - by Mr iLyn.')], 'Cursor', 'using'), null);
   });
 
   test('ranks official icons first, keeping SteamGridDB\'s order', () => {

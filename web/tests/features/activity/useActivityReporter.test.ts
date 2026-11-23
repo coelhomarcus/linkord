@@ -16,7 +16,7 @@ function stubDesktop(initial: DesktopActivity | null) {
     watch: vi.fn(async () => {}),
     current: vi.fn(async () => initial),
     recent: vi.fn(async () => []),
-    icon: vi.fn(async () => 'data:image/png;base64,AAAA'),
+    icon: vi.fn(async (): Promise<string | null> => 'data:image/png;base64,AAAA'),
     onChange: vi.fn((callback: (activity: DesktopActivity | null) => void) => {
       listener = callback;
       return () => { listener = null; };
@@ -44,6 +44,7 @@ beforeEach(() => {
   upload.mockReset();
   discord.mockReset();
   upload.mockResolvedValue(null);
+  lookup.mockResolvedValue({ name: '', icon: null });
 });
 
 afterEach(() => { delete window.linkordDesktop; });
@@ -55,7 +56,7 @@ describe('useActivityReporter', () => {
     lookup.mockResolvedValue({ name: 'Minecraft', image: 'co49x5', icon: 'b'.repeat(64) });
     const { reports } = render();
     await waitFor(() => expect(reports().at(-1)).toEqual({ key: 'minecraft', kind: 'playing', name: 'Minecraft', icon: { local: 'b'.repeat(64) }, startedAt: 1000, sentAt: expect.any(Number) }));
-    expect(lookup).toHaveBeenCalledWith({ steamAppId: undefined, name: 'Minecraft', ref: 'c'.repeat(64) });
+    expect(lookup).toHaveBeenCalledWith({ kind: 'playing', steamAppId: undefined, name: 'Minecraft', ref: 'c'.repeat(64) });
     expect(upload).toHaveBeenCalledTimes(1);
   });
 
@@ -79,7 +80,7 @@ describe('useActivityReporter', () => {
     // a better pick on the server shows on the next game
     await waitFor(() => expect(reports().at(-1)).toMatchObject({ icon: { local: 'd'.repeat(64) } }));
     expect(lookup).toHaveBeenCalledTimes(2);
-    expect(lookup).toHaveBeenLastCalledWith({ steamAppId: undefined, name: 'Minecraft', ref: 'c'.repeat(64) });
+    expect(lookup).toHaveBeenLastCalledWith({ kind: 'playing', steamAppId: undefined, name: 'Minecraft', ref: 'c'.repeat(64) });
     expect(upload).toHaveBeenCalledTimes(1);
   });
 
@@ -98,9 +99,10 @@ describe('useActivityReporter', () => {
     expect(upload).toHaveBeenCalledTimes(2);
   });
 
-  it('sends an app with its own icon, uploaded once', async () => {
+  it('sends an app the server has no icon for with its own icon, uploaded once', async () => {
     const { change } = stubDesktop(null);
     upload.mockResolvedValue('a'.repeat(64));
+    lookup.mockResolvedValue({ name: 'Spotify', icon: null });
     const { reports } = render();
     change(spotify);
     await waitFor(() => expect(reports().at(-1)).toMatchObject({ key: 'spotify', icon: { local: 'a'.repeat(64) } }));
@@ -108,7 +110,19 @@ describe('useActivityReporter', () => {
     change(spotify);
     await waitFor(() => expect(reports().at(-1)).toMatchObject({ key: 'spotify' }));
     expect(upload).toHaveBeenCalledTimes(1);
-    expect(lookup).not.toHaveBeenCalled();
+    expect(lookup).toHaveBeenLastCalledWith({ kind: 'using', steamAppId: undefined, name: 'Spotify', ref: 'a'.repeat(64) });
+  });
+
+  it('sends an app with the icon the server found, even when its program\'s cannot be read', async () => {
+    const obs: DesktopActivity = { key: 'obs-studio', kind: 'using', name: 'OBS Studio', startedAt: 3000 };
+    const { api } = stubDesktop(obs);
+    // run as administrator, the program's path and so its icon are out of reach
+    api.icon.mockResolvedValue(null);
+    lookup.mockResolvedValue({ name: 'OBS Studio', icon: 'b'.repeat(64) });
+    const { reports } = render();
+    await waitFor(() => expect(reports().at(-1)).toMatchObject({ key: 'obs-studio', name: 'OBS Studio', icon: { local: 'b'.repeat(64) } }));
+    expect(lookup).toHaveBeenCalledWith({ kind: 'using', steamAppId: undefined, name: 'OBS Studio', ref: null });
+    expect(upload).not.toHaveBeenCalled();
   });
 
   it('names a Steam game the desktop app could not name from the lookup', async () => {
@@ -117,7 +131,7 @@ describe('useActivityReporter', () => {
     upload.mockResolvedValue(null);
     const { reports } = render();
     await waitFor(() => expect(reports().at(-1)).toMatchObject({ key: 'steam:570', name: 'Dota 2', icon: null }));
-    expect(lookup).toHaveBeenCalledWith({ steamAppId: 570, name: '', ref: null });
+    expect(lookup).toHaveBeenCalledWith({ kind: 'playing', steamAppId: 570, name: '', ref: null });
   });
 
   it('sends nothing for a hidden activity, and the activity again once shown', async () => {

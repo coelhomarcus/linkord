@@ -19,7 +19,9 @@ import { iconDistance } from './iconMatch.js';
 // sends it; with no reference, or nothing like it, it takes SteamGridDB's first "official" icon. The picture is fetched
 // once by the server and stored like a program's own icon (activityIcons.ts), so viewers load it from
 // us. Every answer is kept in the database, as the IGDB name is (activityGames.ts): it is worked out
-// once per game, not once per person.
+// once per game, not once per person. An app ("Usando OBS Studio") is found the same way: SteamGridDB
+// lists software too, and some of it is on Steam (OBS Studio is), so an app has an icon even when the
+// desktop app cannot read the program's (a program run as administrator hides its path).
 
 const FOUND_TTL_MS = 30 * 24 * 60 * 60 * 1000;
 // a game without an icon may get one later, and a failure is retried sooner still
@@ -82,11 +84,14 @@ export function comparableName(name: string): string {
 }
 
 /** The game with exactly this name, the latest released when several share it (Call of Duty, Doom);
- * null when none has it: a near miss is another game ("Baldur's Gate 3 Toolkit"), not this one. */
-export function pickGame(games: GridGame[], name: string): GridGame | null {
+ * null when none has it: a near miss is another game ("Baldur's Gate 3 Toolkit"), not this one. An app
+ * (`using`) is first looked for as SteamGridDB files software, "Spotify (Program)", then by its bare
+ * name ("OBS Studio"), so a game that happens to share its name comes second. */
+export function pickGame(games: GridGame[], name: string, kind: 'playing' | 'using' = 'playing'): GridGame | null {
   const wanted = comparableName(name);
-  const same = games.filter((game) => comparableName(game.name) === wanted);
-  return same.sort((a, b) => (b.releaseDate ?? -1) - (a.releaseDate ?? -1))[0] ?? null;
+  const named = (target: string) => games.filter((game) => comparableName(game.name) === target)
+    .sort((a, b) => (b.releaseDate ?? -1) - (a.releaseDate ?? -1))[0] ?? null;
+  return kind === 'using' ? named(`${wanted} program`) ?? named(wanted) : named(wanted);
 }
 
 export function createActivityGameIconLookup(deps: {
@@ -104,13 +109,13 @@ export function createActivityGameIconLookup(deps: {
   const { client, download, storeIcon, readIcon = readStoredIcon, store = databaseIconStore, distance = iconDistance, now = Date.now } = deps;
   const inFlight = new Map<string, Promise<string | null>>();
 
-  async function findGame(steamAppId: number | null, name: string): Promise<GridGame | null> {
+  async function findGame({ steamAppId, name, kind }: ActivityGameQuery): Promise<GridGame | null> {
     if (steamAppId) {
       const game = await client.steamGame(steamAppId);
       if (game) return game;
     }
     if (!name) return null;
-    const found = pickGame(await client.searchGames(name), name);
+    const found = pickGame(await client.searchGames(name), name, kind);
     // a search does not say whether the game is on Steam
     return found ? (await client.gameById(found.id)) ?? found : null;
   }
@@ -186,7 +191,7 @@ export function createActivityGameIconLookup(deps: {
   async function resolve(query: ActivityGameQuery, referenceId: string | null): Promise<string | null> {
     let value: ActivityGameIcon = { iconId: null, referenced: false };
     try {
-      const game = await findGame(query.steamAppId, query.name);
+      const game = await findGame(query);
       const programIcon = referenceId ? await readIcon(referenceId).catch(() => null) : null;
       if (game) value = await iconFor(game, programIcon);
     } catch (error) {

@@ -57,6 +57,10 @@
     "gamesDescription": "A hidden game or app is never shown to others, even with sharing on.",
     "detected": "Detected on this computer",
     "detectedEmpty": "No game or app detected yet. Open one while Linkord is running and it shows up here.",
+    "kindLabel": {
+      "playing": "Game",
+      "using": "App"
+    },
     "hidden": "Hidden",
     "hiddenEmpty": "Nothing hidden.",
     "hide": "Hide",

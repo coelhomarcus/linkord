@@ -1,13 +1,16 @@
-import { AppWindowIcon, GameControllerIcon } from '@/shared/ui/icons';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useRoom } from '@/state/RoomContext';
+import { useRoom, useRoomState } from '@/state/RoomContext';
 import { desktopApp, type DesktopRunningActivities } from '@/shared/desktop';
 import { ErrorBanner } from '@/shared/ErrorBanner';
+import { useResource } from '@/shared/lib/resourceCache';
 import { Button } from '@/shared/ui/primitives/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/primitives/select';
 import { Switch } from '@/shared/ui/primitives/switch';
 import { SettingsRow, SettingsRowList, SettingsSection, SettingsSections, SettingsSubheading } from '@/shared/ui/settings-layout';
+import { ActivityIcon } from './ActivityLine';
+import { useUserActivity } from './activityDisplay';
+import { ownActivityHistories } from './activityHistory';
 
 interface Known { key: string; kind: 'playing' | 'using'; name: string }
 
@@ -47,6 +50,22 @@ function useRunningActivities(): DesktopRunningActivities | null {
   return state;
 }
 
+/** Each listed game's or app's icon and what the server knows of it, from this account's own history
+ * (the icons others see), read again as a new one is detected or the current one gets its icon. */
+function useKnownActivities(recent: Known[], wanted: boolean) {
+  const { me } = useRoomState('me');
+  const current = useUserActivity(me.userId);
+  const token = `${recent.map((item) => item.key).join(',')}|${current?.key ?? ''}|${current?.icon ?? ''}`;
+  const { value } = useResource(ownActivityHistories, wanted ? me.userId : null, token);
+  const byKey = new Map((value?.items ?? []).map((item) => [item.key, item]));
+  return (key: string) => {
+    const known = byKey.get(key);
+    // the one running now may show its icon before the history is read again
+    const icon = known?.icon ?? (current?.key === key ? current.icon : null);
+    return { icon, kind: known?.kind ?? (current?.key === key ? current.kind : null), name: known?.name ?? null };
+  };
+}
+
 const AUTO = 'auto';
 
 type Section = 'sharing' | 'games';
@@ -61,13 +80,14 @@ export function ActivitySettings() {
   const running = useRunningActivities();
   const inDesktop = !!desktopApp()?.activity;
   const hidden = new Set(activitySettings.hidden);
+  const knownOf = useKnownActivities(recent, recent.length > 0 || activitySettings.hidden.length > 0);
 
   const save = (section: Section, patch: Parameters<typeof updateActivitySettings>[0]) => {
     setError(null);
     updateActivitySettings(patch).catch((err: Error) => setError({ section, text: err.message }));
   };
   const toggle = (key: string) => save('games', { hidden: hidden.has(key) ? activitySettings.hidden.filter((k) => k !== key) : [...activitySettings.hidden, key] });
-  const nameOf = (key: string) => recent.find((item) => item.key === key)?.name ?? key;
+  const nameOf = (key: string) => recent.find((item) => item.key === key)?.name ?? knownOf(key).name ?? key;
   const hiddenElsewhere = activitySettings.hidden.filter((key) => !recent.some((item) => item.key === key));
   const errorIn = (section: Section) => error?.section === section && <ErrorBanner>{error.text}</ErrorBanner>;
 
@@ -85,13 +105,17 @@ export function ActivitySettings() {
     void desktopApp()?.activity?.prefer?.(value === AUTO ? null : value);
   };
 
-  const row = (key: string, name: string, kind: Known['kind'] | null) => {
+  const row = (key: string, name: string, listedKind: Known['kind'] | null) => {
     const isHidden = hidden.has(key);
-    const Icon = kind === 'using' ? AppWindowIcon : GameControllerIcon;
+    const known = knownOf(key);
+    const kind = listedKind ?? known.kind;
     return (
       <div key={key} className="flex items-center gap-3">
-        <Icon size={18} weight="fill" aria-hidden className="flex-none text-text-muted" />
-        <span className={isHidden ? 'min-w-0 flex-1 truncate text-body text-text-muted line-through' : 'min-w-0 flex-1 truncate text-body text-text-primary'}>{name}</span>
+        <ActivityIcon activity={{ kind: kind ?? 'using', icon: known.icon }} size={40} className={isHidden ? 'bg-fill-subtle opacity-50' : 'bg-fill-subtle'} />
+        <div className="flex min-w-0 flex-1 flex-col">
+          <span className={isHidden ? 'truncate text-body font-medium text-text-muted line-through' : 'truncate text-body font-medium text-text-primary'}>{name}</span>
+          {kind && <span className="truncate text-caption text-text-muted">{t(`settings.kindLabel.${kind}`)}</span>}
+        </div>
         <Button type="button" size="sm" variant="outline" aria-label={t(isHidden ? 'settings.showLabel' : 'settings.hideLabel', { name })} onClick={() => toggle(key)}>
           {t(isHidden ? 'settings.show' : 'settings.hide')}
         </Button>
