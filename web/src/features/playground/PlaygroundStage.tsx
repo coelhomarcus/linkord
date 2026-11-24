@@ -19,6 +19,7 @@ import { PlaygroundChat } from './PlaygroundChat';
 import { PlaygroundDeathScreen } from './PlaygroundDeathScreen';
 import { PixelIcon } from './PixelIcon';
 import { useVitals } from './playgroundCombat';
+import { experienceLevel } from './experience';
 import { PlaygroundHud } from './hud/PlaygroundHud';
 import { useGuiScale } from './hud/gui';
 import { InventoryScreen } from './inventory/InventoryScreen';
@@ -274,6 +275,31 @@ export default function PlaygroundStage({ allIds, onBack }: { allIds: string[]; 
   useEffect(() => {
     engineRef.current?.setHudShown(!hudHidden);
   }, [hudHidden, session, fontReady]);
+
+  // deafened in the call, the game goes silent too
+  useEffect(() => {
+    engineRef.current?.setSoundMuted(controls.deafen.on);
+  }, [controls.deafen.on, session, fontReady]);
+
+  // a chest creaks open and shut where it stands; a new level chimes
+  const openChest = inventory.open && (inventory.open.kind === 'chest' || inventory.open.kind === 'creative') ? inventory.open : null;
+  const chestAt = openChest ? `${openChest.x},${openChest.y},${openChest.z}` : null;
+  const lastChestRef = useRef<{ key: string; x: number; y: number; z: number } | null>(null);
+  useEffect(() => {
+    const last = lastChestRef.current;
+    if (last?.key === chestAt) return;
+    if (last) engineRef.current?.playSound('chestClose', { x: last.x + 0.5, y: last.y + 0.5, z: last.z + 0.5 });
+    lastChestRef.current = openChest && chestAt ? { key: chestAt, x: openChest.x, y: openChest.y, z: openChest.z } : null;
+    if (openChest) engineRef.current?.playSound('chestOpen', { x: openChest.x + 0.5, y: openChest.y + 0.5, z: openChest.z + 0.5 });
+  }, [chestAt, openChest]);
+  // the level the service first tells is where you stand, not one you just reached
+  const level = vitals.xpKnown ? experienceLevel(vitals.xp).level : null;
+  const lastLevelRef = useRef<number | null>(null);
+  useEffect(() => {
+    const last = lastLevelRef.current;
+    lastLevelRef.current = level;
+    if (last !== null && level !== null && level > last) engineRef.current?.playSound('levelUp');
+  }, [level]);
 
 
   // a crafting table or furnace opened from the world shows its screen, as E shows the inventory's

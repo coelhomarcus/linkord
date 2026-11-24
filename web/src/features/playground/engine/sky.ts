@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { celestialAngle, DAY_TICKS, daylight, moonPhase, timeOfDay } from '@game/dayTime';
-import moonUrl from '../assets/pixel-perfection/environment/moon_phases.png?url';
-import sunUrl from '../assets/pixel-perfection/environment/sun.png?url';
+import moonUrl from '../assets/kenuis-default/environment/moon_phases.png?url';
+import sunUrl from '../assets/kenuis-default/environment/sun.png?url';
 
 // The sky, as Pixel Perfection paints it: three boxes of pictures around the
 // view (its `fabricskyboxes/sky/` folder), each shown at its own hours and
@@ -12,8 +12,8 @@ import sunUrl from '../assets/pixel-perfection/environment/sun.png?url';
 // moon's path are the block game's, after minecraft-renderer
 // (src/three/skyboxRenderer.ts and modules/sunMoon.ts in
 // github.com/zardoy/minecraft-renderer, MIT, Copyright (c) 2020 PrismarineJS):
-// the sun and the phase of the moon are the pack's pictures too, added to the
-// sky, crossing it from east (+x) to west.
+// the sun and the phase of the moon are Kenui's Default's pictures, added to
+// the sky, crossing it from east (+x) to west.
 
 const skyUrls = import.meta.glob('../assets/pixel-perfection/sky/*.png', { eager: true, query: '?url', import: 'default' }) as Record<string, string>;
 

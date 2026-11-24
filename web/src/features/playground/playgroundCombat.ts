@@ -30,6 +30,8 @@ export interface Vitals {
   killerId: string | null;
   /** experience points in this playground (experience.ts makes them a level) */
   xp: number;
+  /** whether the service has said them yet (until then `xp` is 0 for want of knowing) */
+  xpKnown: boolean;
 }
 
 /** Whether a punch now is a critical one, by the game's rule: in the air (not swimming) and on the way down. */
@@ -37,7 +39,7 @@ export function isCriticalHit(body: { onGround: boolean; inWater?: boolean }, fa
   return !body.onGround && !body.inWater && fallDistance > 0;
 }
 
-const FULL: Vitals = { health: MAX_HEALTH, previousHealth: MAX_HEALTH, lastChange: null, hurts: 0, heals: 0, killerId: null, xp: 0 };
+const FULL: Vitals = { health: MAX_HEALTH, previousHealth: MAX_HEALTH, lastChange: null, hurts: 0, heals: 0, killerId: null, xp: 0, xpKnown: false };
 const noSubscription = () => () => {};
 const fullHealth = () => FULL;
 
@@ -83,8 +85,8 @@ export class PlaygroundCombat {
   /** A message from the server about this call's fighting. */
   receive(message: CombatMessage, now = performance.now()): void {
     if (message.t === 'playground-xp') {
-      if (Number.isFinite(message.xp) && message.xp >= 0 && message.xp !== this.vitals.xp) {
-        this.vitals = { ...this.vitals, xp: message.xp };
+      if (Number.isFinite(message.xp) && message.xp >= 0 && (message.xp !== this.vitals.xp || !this.vitals.xpKnown)) {
+        this.vitals = { ...this.vitals, xp: message.xp, xpKnown: true };
         for (const listener of this.listeners) listener();
       }
       return;

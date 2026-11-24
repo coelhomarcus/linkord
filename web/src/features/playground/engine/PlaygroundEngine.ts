@@ -29,6 +29,8 @@ import { computeBob, createBobState, tickBob } from './viewBob';
 import { ScreenDisplay } from './screen';
 import type { ScreenLabels } from './screen';
 import { buildWorld } from './voxelWorld';
+import { Footsteps, GameSounds, materialOf } from './sounds';
+import type { Place, SoundName } from './sounds';
 import type { World } from './voxelWorld';
 
 // The 3D view of a playground. Plain three.js driven by its own animation
@@ -77,6 +79,10 @@ const STILL: MoveIntent = { forward: 0, right: 0, sprint: false, sneak: false, j
 const DIG_DELAY_TICKS = 5;
 /** the arm swings this often while digging */
 const DIG_SWING_TICKS = 4;
+/** digging sounds every this many ticks, as in the game */
+const DIG_SOUND_TICKS = 4;
+/** a landing from higher than this (blocks) thuds on what it lands on */
+const LANDING_SOUND_FALL = 1;
 /** a held right button places a block this often */
 const USE_REPEAT_TICKS = 4;
 
@@ -94,6 +100,8 @@ interface RemoteAvatar {
   vanished: boolean;
   /** the item its hand shows */
   held: string | null;
+  /** its footsteps, counted from how far it moves */
+  steps: Footsteps;
 }
 
 /** Frame-rate independent smoothing toward a target. */
@@ -149,6 +157,9 @@ export class PlaygroundEngine {
   private swings = 0;
   private motion: Motion = 'idle';
   private readonly remotes = new Map<string, RemoteAvatar>();
+  private readonly sounds = new GameSounds();
+  private readonly earForward = new THREE.Vector3();
+  private readonly steps = new Footsteps();
   private readonly outline = new BlockOutline();
   private readonly particles: Particles;
   /** ticks left of the view's tilt from a hit, and where the hit came from (a direction in the world) */
@@ -210,11 +221,29 @@ export class PlaygroundEngine {
     this.unsubscribeSkins = session.onSkinsChange(() => this.refreshSkins());
     this.unsubscribeWorld = session.world.subscribe((event) => this.onWorldEvent(event));
 
+    // browsers let a page make sound only after a click or a key
+    container.addEventListener('pointerdown', this.unlockSound);
+    window.addEventListener('keydown', this.unlockSound);
+
     this.resizeObserver = new ResizeObserver(() => this.resize());
     this.resizeObserver.observe(container);
     this.resize();
     this.timer.connect(document);
     this.frame = requestAnimationFrame(this.tick);
+  }
+
+  private unlockSound = (): void => {
+    this.sounds.unlock();
+  };
+
+  /** Deafened in the call: the game goes silent too. */
+  setSoundMuted(muted: boolean): void {
+    this.sounds.setMuted(muted);
+  }
+
+  /** A sound the stage knows about (a chest opening, a new level): at `at`, or in the ears. */
+  playSound(name: SoundName, at: Place | null = null): void {
+    this.sounds.sound(name, at);
   }
 
   setPlayers(players: PlaygroundPlayer[]): void {
@@ -227,7 +256,7 @@ export class PlaygroundEngine {
         const avatar = new BlockAvatar(this.skinOf(player.userId), player.name);
         avatar.root.visible = false;
         this.scene.add(avatar.root);
-        remote = { userId: player.userId, avatar, position: new THREE.Vector3(), yaw: 0, headYaw: 0, swings: 0, placed: false, vanished: false, held: null };
+        remote = { userId: player.userId, avatar, position: new THREE.Vector3(), yaw: 0, headYaw: 0, swings: 0, placed: false, vanished: false, held: null, steps: new Footsteps() };
         this.remotes.set(player.id, remote);
       }
       remote.avatar.setLabel(player.name, player.speaking);
@@ -284,6 +313,9 @@ export class PlaygroundEngine {
     this.unsubscribeWorld();
     this.dropped.dispose();
     this.breakOverlay.dispose();
+    this.sounds.dispose();
+    this.container.removeEventListener('pointerdown', this.unlockSound);
+    window.removeEventListener('keydown', this.unlockSound);
     this.resizeObserver.disconnect();
     this.timer.dispose();
     this.controls.dispose();
@@ -321,9 +353,21 @@ export class PlaygroundEngine {
         break;
       case 'blocks':
         this.world.blocksChanged(event.cells);
+        for (const { x, y, z, before, after } of event.changes) {
+          const at = { x: x + 0.5, y: y + 0.5, z: z + 0.5 };
+          const broken = materialOf(before);
+          const placed = materialOf(after);
+          if (placed) this.sounds.placed(placed, at);
+          else if (broken) this.sounds.broken(broken, at);
+        }
         break;
       case 'items':
         for (const id of event.removed) this.dropped.remove(id, event.by ? () => this.chestOf(event.by!) : null);
+        if (event.by && event.removed.length) {
+          // the game's pop, a little higher or lower each time
+          const taker = event.by === this.options.localId ? null : this.chestOf(event.by);
+          if (event.by === this.options.localId || taker) this.sounds.sound('pickup', taker, 1, 1.4 + (Math.random() - Math.random()) * 1.4);
+        }
         for (const item of event.added) this.dropped.add(item);
         break;
       case 'furnace':
@@ -447,6 +491,8 @@ export class PlaygroundEngine {
       this.session.digStart(hit.x, hit.y, hit.z);
     }
     if (dig.elapsed % DIG_SWING_TICKS === 0) this.swingOnly();
+    const material = materialOf(block);
+    if (material && dig.elapsed % DIG_SOUND_TICKS === 0) this.sounds.dig(material, { x: dig.x + 0.5, y: dig.y + 0.5, z: dig.z + 0.5 });
     dig.elapsed++;
     // bedrock and the screen's wall: the arm swings at them, nothing gives
     if (dig.ticks === null || dig.elapsed < dig.ticks) return;
@@ -526,7 +572,9 @@ export class PlaygroundEngine {
     if (hit.hurt) {
       (onYou ? this.local : remote?.avatar)?.hurt();
       if (onYou) this.hurtTicks = HURT_TICKS;
+      this.sounds.sound('hurt', onYou ? null : at);
     }
+    if (hit.crit) this.sounds.sound('crit', onYou ? null : at);
     // your own, in first person, would burst inside the camera
     if (!at || (onYou && this.controls.mode === 'first')) return;
     if (hit.crit) this.particles.critical(at.x, at.y, at.z);
@@ -581,6 +629,8 @@ export class PlaygroundEngine {
     this.particles.update(partial);
     this.dropped.update(dt);
     this.placeCamera(partial);
+    this.camera.getWorldDirection(this.earForward);
+    this.sounds.listen(this.camera.position.x, this.camera.position.y, this.camera.position.z, this.earForward, this.camera.up);
     this.aimOutline();
     this.followWater();
     this.screen.update();
@@ -610,6 +660,9 @@ export class PlaygroundEngine {
     if (dead) this.deathTicks++;
     this.previous.set(this.body.x, this.body.y, this.body.z);
     this.previousEyeHeight = this.eyeHeight;
+    const fell = this.body.fallDistance;
+    const wasOnGround = this.body.onGround;
+    const wasInWater = this.body.inWater;
     stepBody(this.terrain, this.body, { ...intent, jump, yaw: this.controls.yaw }, HEIGHT);
     if (this.body.collidedHorizontally) this.controls.stopSprint();
     this.sneaking = intent.sneak;
@@ -620,11 +673,27 @@ export class PlaygroundEngine {
     const moved = Math.hypot(movedX, movedZ);
     this.speed = moved / TICK_SECONDS;
     tickBob(this.bob, moved, this.body.onGround);
+    this.soundOfMoving(moved, fell, wasOnGround, wasInWater, intent.sneak);
     if (this.attackTicks > 0) this.attackTicks--;
     this.previousFacing = this.facing;
     this.facing = turnBody(this.facing, this.headYaw(), movedX, movedZ, this.attackTicks > 0);
     this.eyeHeight += ((this.sneaking ? SNEAKING_EYE_HEIGHT : STANDING_EYE_HEIGHT) - this.eyeHeight) * 0.5;
     this.motion = !this.body.onGround ? 'jump' : this.speed > STILL_SPEED ? (this.sprinting ? 'run' : 'walk') : 'idle';
+  }
+
+  /** Footsteps on what the feet stand on (none while sneaking), the thud of a landing, a splash into
+   * water and strokes while swimming. Heard by this player only; the others' come from moveRemotes. */
+  private soundOfMoving(moved: number, fell: number, wasOnGround: boolean, wasInWater: boolean, sneaking: boolean): void {
+    const { body } = this;
+    const below = materialOf(this.session.world.grid?.get(Math.floor(body.x), Math.floor(body.y - 0.2), Math.floor(body.z)) ?? 0);
+    const feet = { x: body.x, y: body.y, z: body.z };
+    if (body.inWater && !wasInWater && body.vy < -0.1) this.sounds.sound('splash', feet);
+    if (body.inWater) {
+      if (this.steps.step(moved * 0.5)) this.sounds.sound('swim', feet);
+      return;
+    }
+    if (body.onGround && !wasOnGround && fell > LANDING_SOUND_FALL && below) this.sounds.footstep(below, feet, 0.5);
+    if (body.onGround && !sneaking && below && this.steps.step(moved)) this.sounds.footstep(below, feet);
   }
 
   /** How lit someone standing at `at` is: the sky light in the cell at their chest. */
@@ -689,6 +758,10 @@ export class PlaygroundEngine {
         remote.yaw += angleDelta(remote.yaw, state.yaw) * blend;
         remote.headYaw += angleDelta(remote.headYaw, state.headYaw) * blend;
         speed = dt > 0 ? Math.hypot(stepX, stepZ) / dt : 0;
+        // their footsteps where they walk
+        const grid = this.session.world.grid;
+        const below = grid ? materialOf(grid.get(Math.floor(remote.position.x), Math.floor(remote.position.y - 0.2), Math.floor(remote.position.z))) : null;
+        if (below && state.motion !== 'jump' && !state.crouch && remote.steps.step(Math.hypot(stepX, stepZ))) this.sounds.footstep(below, remote.position);
       }
       const held = this.session.world.held.get(id) ?? null;
       if (held !== remote.held) {

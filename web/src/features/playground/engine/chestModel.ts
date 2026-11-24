@@ -2,7 +2,7 @@ import { BLOCK } from '@game/blocks';
 
 // A chest as the block game draws it: not a cube but three boxes, a body, its
 // lid and the latch, a pixel in from the cell's sides, painted from a 64×64
-// entity texture (Pixel Perfection's entity/chest/normal.png; the creative
+// entity texture (Kenui's Default's entity/chest/normal.png; the creative
 // chest wears its ender.png). Each box takes its faces from the texture the
 // way the game's model boxes do: from a corner (u, v), the box's depth, width
 // and height side by side, and the game draws the 1.15+ textures turned

@@ -1,40 +1,40 @@
 import * as THREE from 'three';
 import { BLOCK, COLORED_KINDS, COLORS, coloredBlock, LOG_AXIS } from '@game/blocks';
 import type { Block, Color, ColoredKind } from '@game/blocks';
-import bedrockUrl from '../assets/pixel-perfection/bedrock.png?url';
-import coalOreUrl from '../assets/pixel-perfection/coal_ore.png?url';
-import cobblestoneUrl from '../assets/pixel-perfection/cobblestone.png?url';
-import tableFrontUrl from '../assets/pixel-perfection/crafting_table_front.png?url';
-import tableSideUrl from '../assets/pixel-perfection/crafting_table_side.png?url';
-import tableTopUrl from '../assets/pixel-perfection/crafting_table_top.png?url';
-import diamondOreUrl from '../assets/pixel-perfection/diamond_ore.png?url';
-import furnaceFrontUrl from '../assets/pixel-perfection/furnace_front.png?url';
-import furnaceFrontOnUrl from '../assets/pixel-perfection/furnace_front_on.png?url';
-import furnaceSideUrl from '../assets/pixel-perfection/furnace_side.png?url';
-import furnaceTopUrl from '../assets/pixel-perfection/furnace_top.png?url';
-import glassUrl from '../assets/pixel-perfection/glass.png?url';
-import goldOreUrl from '../assets/pixel-perfection/gold_ore.png?url';
-import gravelUrl from '../assets/pixel-perfection/gravel.png?url';
-import ironOreUrl from '../assets/pixel-perfection/iron_ore.png?url';
-import dirtUrl from '../assets/pixel-perfection/dirt.png?url';
-import grassSideUrl from '../assets/pixel-perfection/grass_block_side.png?url';
-import grassSideOverlayUrl from '../assets/pixel-perfection/grass_block_side_overlay.png?url';
-import grassTopUrl from '../assets/pixel-perfection/grass_block_top.png?url';
-import leavesUrl from '../assets/pixel-perfection/oak_leaves.png?url';
-import logSideUrl from '../assets/pixel-perfection/oak_log.png?url';
-import logTopUrl from '../assets/pixel-perfection/oak_log_top.png?url';
-import planksUrl from '../assets/pixel-perfection/oak_planks.png?url';
-import frameUrl from '../assets/pixel-perfection/polished_blackstone.png?url';
-import sandUrl from '../assets/pixel-perfection/sand.png?url';
-import stoneUrl from '../assets/pixel-perfection/stone.png?url';
-import waterUrl from '../assets/pixel-perfection/water_still.png?url';
-import chestUrl from '../assets/pixel-perfection/entity/chest/normal.png?url';
-import creativeChestUrl from '../assets/pixel-perfection/entity/chest/ender.png?url';
+import bedrockUrl from '../assets/kenuis-default/bedrock.png?url';
+import coalOreUrl from '../assets/kenuis-default/coal_ore.png?url';
+import cobblestoneUrl from '../assets/kenuis-default/cobblestone.png?url';
+import tableFrontUrl from '../assets/kenuis-default/crafting_table_front.png?url';
+import tableSideUrl from '../assets/kenuis-default/crafting_table_side.png?url';
+import tableTopUrl from '../assets/kenuis-default/crafting_table_top.png?url';
+import diamondOreUrl from '../assets/kenuis-default/diamond_ore.png?url';
+import furnaceFrontUrl from '../assets/kenuis-default/furnace_front.png?url';
+import furnaceFrontOnUrl from '../assets/kenuis-default/furnace_front_on.png?url';
+import furnaceSideUrl from '../assets/kenuis-default/furnace_side.png?url';
+import furnaceTopUrl from '../assets/kenuis-default/furnace_top.png?url';
+import glassUrl from '../assets/kenuis-default/glass.png?url';
+import goldOreUrl from '../assets/kenuis-default/gold_ore.png?url';
+import gravelUrl from '../assets/kenuis-default/gravel.png?url';
+import ironOreUrl from '../assets/kenuis-default/iron_ore.png?url';
+import dirtUrl from '../assets/kenuis-default/dirt.png?url';
+import grassSideUrl from '../assets/kenuis-default/grass_block_side.png?url';
+import grassSideOverlayUrl from '../assets/kenuis-default/grass_block_side_overlay.png?url';
+import grassTopUrl from '../assets/kenuis-default/grass_block_top.png?url';
+import leavesUrl from '../assets/kenuis-default/oak_leaves.png?url';
+import logSideUrl from '../assets/kenuis-default/oak_log.png?url';
+import logTopUrl from '../assets/kenuis-default/oak_log_top.png?url';
+import planksUrl from '../assets/kenuis-default/oak_planks.png?url';
+import frameUrl from '../assets/kenuis-default/polished_blackstone.png?url';
+import sandUrl from '../assets/kenuis-default/sand.png?url';
+import stoneUrl from '../assets/kenuis-default/stone.png?url';
+import waterUrl from '../assets/kenuis-default/water_still.png?url';
+import chestUrl from '../assets/kenuis-default/entity/chest/normal.png?url';
+import creativeChestUrl from '../assets/kenuis-default/entity/chest/ender.png?url';
 import { chestSidePixels } from './chestModel';
 
 // The world's pixel art: 16×16 tiles on one 256×256 atlas, read with nearest
-// filtering so every texel stays a crisp square. The tiles are Pixel
-// Perfection's (assets/pixel-perfection, CC BY-SA 4.0), tinted where the pack
+// filtering so every texel stays a crisp square. The tiles are Kenui's
+// Default's (assets/kenuis-default, MIT), tinted where the pack
 // leaves them grey for the game to colour (grass, leaves, water). Until they
 // load, and if they ever fail to, the atlas shows tiles painted in code: a base
 // colour broken up with seeded noise, plus a little structure.
@@ -310,8 +310,8 @@ interface PackTile {
   overlay?: { url: string; tint: Rgb };
 }
 
-const BLOCK_URLS = import.meta.glob<string>('../assets/pixel-perfection/*.png', { eager: true, query: '?url', import: 'default' });
-const blockUrl = (name: string): string => BLOCK_URLS[`../assets/pixel-perfection/${name}.png`] ?? '';
+const BLOCK_URLS = import.meta.glob<string>('../assets/kenuis-default/*.png', { eager: true, query: '?url', import: 'default' });
+const blockUrl = (name: string): string => BLOCK_URLS[`../assets/kenuis-default/${name}.png`] ?? '';
 
 const PACK_TILES: Record<TileName, PackTile> = {
   chestTop: { url: chestUrl, chest: 'top' },

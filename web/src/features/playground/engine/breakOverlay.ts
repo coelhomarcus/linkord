@@ -4,7 +4,7 @@ import { pixelTexture } from './blockTextures';
 // The cracks on a block being dug, the block game's ten stages (Pixel
 // Perfection's destroy_stage_0..9), drawn as a box a hair larger than the block.
 
-const STAGES = Object.values(import.meta.glob<string>('../assets/pixel-perfection/destroy/destroy_stage_*.png', { eager: true, query: '?url', import: 'default' }))
+const STAGES = Object.values(import.meta.glob<string>('../assets/kenuis-default/destroy/destroy_stage_*.png', { eager: true, query: '?url', import: 'default' }))
   .sort((a, b) => Number(/destroy_stage_(\d+)/.exec(a)?.[1]) - Number(/destroy_stage_(\d+)/.exec(b)?.[1]));
 
 export class BreakOverlay {

@@ -24,7 +24,7 @@ describe('PlaygroundCombat', () => {
     combat.subscribe(listener);
     combat.receive(hit());
     combat.receive(hit({ targetId: 'other', health: 12 }));
-    expect(combat.getVitals()).toEqual({ health: 19, previousHealth: 20, lastChange: 'hurt', hurts: 1, heals: 0, killerId: null, xp: 0 });
+    expect(combat.getVitals()).toEqual({ health: 19, previousHealth: 20, lastChange: 'hurt', hurts: 1, heals: 0, killerId: null, xp: 0, xpKnown: false });
     expect(listener).toHaveBeenCalledTimes(1);
     expect(combat.takeHits().map((h) => h.targetId)).toEqual(['me', 'other']);
     expect(combat.takeHits()).toEqual([]);

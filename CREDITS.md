@@ -12,7 +12,16 @@ The playground's movement, animation, lighting and game chat follow the block ga
 | [minecraft-renderer](https://github.com/zardoy/minecraft-renderer) by zardoy | first-person arm transforms, humanoid pose and limb swing, view bobbing, third-person camera, sky light, smooth lighting, ambient occlusion, sun shadows, the clouds' slab and two-pass drawing, the time of day (the sun's path, the sky's darkening, the sky and fog colours) | MIT |
 | [prismarine-physics](https://github.com/PrismarineJS/prismarine-physics) ([zardoy's fork](https://github.com/zardoy/prismarine-physics)) | walking, sprinting, sneaking, jumping and collisions at 20 ticks a second | MIT, Copyright (c) 2020 PrismarineJS |
 
-The world's block textures, the cracks of a block being dug, the clouds, the sky (its day and night skyboxes, the sun and the moon's phases), the items' pictures (tools, coal, ingots...), the chests, the fight's particles and the hearts, hotbar, inventory, crafting table, furnace, chest and creative screens are from **[Pixel Perfection Community Edition](https://github.com/Athemis/PixelPerfectionCE)**, originally by XSSheep and updated by its community, under [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/). The files are unchanged copies in `web/src/features/playground/assets/pixel-perfection/` (with the license and where they come from); the game tints the grass, leaves and water as it draws them, and those tinted textures are under the same license. Default skins and the rest of the interface are Linkord's own.
+The playground's art and sound come from these packs. Each folder under `web/src/features/playground/assets/` holds unchanged copies of the pack's files, with a README saying where each comes from:
+
+| Pack | What the playground uses | License |
+| --- | --- | --- |
+| **[Kenui's Default](https://modrinth.com/resourcepack/kenuis-default)** by KenuiZ (`kenuis-default/`) | the world's block textures, the cracks of a block being dug, the items' pictures, the chests, the clouds, the sun and the moon's phases | MIT |
+| **[Pixel Perfection Community Edition](https://github.com/Athemis/PixelPerfectionCE)**, originally by XSSheep and updated by its community (`pixel-perfection/`) | the sky's day and night skyboxes, the fight's particles, and the coal and charcoal pictures | [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/) |
+| **[Mandala's GUI - Dark mode](https://modrinth.com/resourcepack/mandalas-gui-dark-mode)** by CesarZorak (`mandalas-gui/`) | the hearts, experience bar, hotbar, and the inventory, crafting table, furnace, chest and creative screens | All rights reserved; used for now, to be replaced |
+| **[Enhanced Audio](https://modrinth.com/resourcepack/enhanced-audio)** by Frawzy (`enhanced-audio/`) | the game's sounds: footsteps, digging, breaking and placing blocks, chests, items picked up, water, hits, a new level | All rights reserved; used for now, to be replaced |
+
+The game tints Kenui's Default's grass, leaves and water as it draws them. Default skins and the rest of the interface are Linkord's own.
 
 The HUD, menu and name labels use **monogram** by [datagoblin](https://datagoblin.itch.io/monogram), CC0.
 

@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next';
-import dirtUrl from './assets/pixel-perfection/dirt.png?url';
+import dirtUrl from './assets/kenuis-default/dirt.png?url';
 import { guiText } from './hud/gui';
 import type { Loading } from './playgroundSession';
 

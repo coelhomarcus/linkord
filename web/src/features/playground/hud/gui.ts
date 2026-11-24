@@ -1,16 +1,16 @@
 import { useLayoutEffect, useState } from 'react';
 import type { CSSProperties, RefObject } from 'react';
-import iconsUrl from '../assets/pixel-perfection/gui/icons.png?url';
-import widgetsUrl from '../assets/pixel-perfection/gui/widgets.png?url';
-import inventoryUrl from '../assets/pixel-perfection/gui/inventory.png?url';
-import craftingTableUrl from '../assets/pixel-perfection/gui/crafting_table.png?url';
-import furnaceUrl from '../assets/pixel-perfection/gui/furnace.png?url';
-import chestUrl from '../assets/pixel-perfection/gui/generic_54.png?url';
-import creativeItemsUrl from '../assets/pixel-perfection/gui/creative_inventory/tab_items.png?url';
-import creativeTabsUrl from '../assets/pixel-perfection/gui/creative_inventory/tabs.png?url';
+import iconsUrl from '../assets/mandalas-gui/gui/icons.png?url';
+import widgetsUrl from '../assets/mandalas-gui/gui/widgets.png?url';
+import inventoryUrl from '../assets/mandalas-gui/gui/inventory.png?url';
+import craftingTableUrl from '../assets/mandalas-gui/gui/crafting_table.png?url';
+import furnaceUrl from '../assets/mandalas-gui/gui/furnace.png?url';
+import chestUrl from '../assets/mandalas-gui/gui/generic_54.png?url';
+import creativeItemsUrl from '../assets/mandalas-gui/gui/creative_inventory/tab_items.png?url';
+import creativeTabsUrl from '../assets/mandalas-gui/gui/creative_inventory/tabs.png?url';
 import { PIXEL_FONT } from '../pixelFont';
 
-// The block game's interface pieces, cut from Pixel Perfection's GUI sheets
+// The block game's interface pieces, cut from Mandala's GUI sheets
 // (256×256 each: icons.png has the hearts, widgets.png the hotbar,
 // inventory.png, crafting_table.png, furnace.png and generic_54.png (a chest)
 // their screens, creative_inventory/ the creative chest's and its scroll bar)

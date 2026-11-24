@@ -4,16 +4,18 @@ import type { Block } from '@game/blocks';
 
 // How this browser names and draws each item (the items themselves are the
 // game's, game/items.ts): a block as a little cube of its faces, anything else
-// as its picture from the pack (assets/pixel-perfection/item/).
+// as its picture from Kenui's Default (assets/kenuis-default/item/), or from
+// Pixel Perfection (assets/pixel-perfection/item/) for the few Kenui's does not draw.
 
 type ItemName = Extract<ParseKeys<'playground'>, `items.${string}`>;
 
 /** How an item looks in a slot, in a hand and on the ground. */
 export type ItemIcon = { kind: 'block'; block: Exclude<Block, 0> } | { kind: 'sprite'; url: string };
 
-const SPRITES = import.meta.glob<string>('../assets/pixel-perfection/item/*.png', { eager: true, query: '?url', import: 'default' });
+const SPRITES = import.meta.glob<string>(['../assets/kenuis-default/item/*.png', '../assets/pixel-perfection/item/*.png'], { eager: true, query: '?url', import: 'default' });
 
-const spriteUrl = (id: string): string | null => SPRITES[`../assets/pixel-perfection/item/${id}.png`] ?? null;
+const spriteUrl = (id: string): string | null =>
+  SPRITES[`../assets/kenuis-default/item/${id}.png`] ?? SPRITES[`../assets/pixel-perfection/item/${id}.png`] ?? null;
 const camel = (id: string) => id.replace(/_([a-z])/g, (_, letter: string) => letter.toUpperCase());
 
 /** An item's name in the playground namespace, or null for one this version does not know. */

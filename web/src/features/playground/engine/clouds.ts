@@ -1,8 +1,8 @@
 import * as THREE from 'three';
-import cloudsUrl from '../assets/pixel-perfection/environment/clouds.png?url';
+import cloudsUrl from '../assets/kenuis-default/environment/clouds.png?url';
 
 // The block game's clouds: one slab, 4 blocks thick, cut from a pattern
-// (Pixel Perfection's clouds.png, a 256 × 256 picture that wraps around) where
+// (Kenui's Default's clouds.png, a 256 × 256 picture that wraps around) where
 // every opaque pixel is a 12 × 12 block cell of cloud. Neighbouring cells share
 // one surface: only the faces that look out at the sky are built, each side
 // shaded as the game shades them, so clouds never show one inside another. They

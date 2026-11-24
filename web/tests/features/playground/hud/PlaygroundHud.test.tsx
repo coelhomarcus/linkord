@@ -5,7 +5,7 @@ import { guiScale } from '@/features/playground/hud/gui';
 import { createInventory } from '@game/inventory';
 import type { Vitals } from '@/features/playground/playgroundCombat';
 
-const vitals = (health: number, xp = 0): Vitals => ({ health, previousHealth: 20, lastChange: 'hurt', hurts: 1, heals: 0, killerId: null, xp });
+const vitals = (health: number, xp = 0): Vitals => ({ health, previousHealth: 20, lastChange: 'hurt', hurts: 1, heals: 0, killerId: null, xp, xpKnown: true });
 
 describe('guiScale', () => {
   it('is as large as it can be while 320 × 240 of it still fit, up to 4', () => {

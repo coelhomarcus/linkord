@@ -13,6 +13,8 @@ import type { Facing } from '@game/worldGen';
 // The 3D view listens for changes to redraw what they touch. The world's clock
 // arrives with it and runs on here at the game's 20 ticks a second.
 
+export interface BlockChange { x: number; y: number; z: number; before: Block; after: Block }
+
 export interface FurnaceLook { x: number; y: number; z: number; facing: Facing; lit: boolean }
 
 export interface GroundItem {
@@ -28,7 +30,8 @@ export interface GroundItem {
 
 export type WorldEvent =
   | { kind: 'loaded' }
-  | { kind: 'blocks'; cells: [number, number, number][] }
+  /** `changes`: each cell's block before and after, for the sounds of breaking and placing */
+  | { kind: 'blocks'; cells: [number, number, number][]; changes: BlockChange[] }
   | { kind: 'items'; added: GroundItem[]; removed: number[]; by: string | null }
   | { kind: 'furnace'; look: FurnaceLook }
   | { kind: 'held'; ids: string[] };
@@ -127,8 +130,9 @@ export class WorldState {
   /** A change this player asked for, shown before the service answers. */
   predict(x: number, y: number, z: number, block: Block, state = 0): void {
     if (!this.grid || !BlockGrid.inside(x, y, z)) return;
+    const before = this.grid.get(x, y, z);
     this.grid.set(x, y, z, block, state);
-    this.emit({ kind: 'blocks', cells: [[x, y, z]] });
+    this.emit({ kind: 'blocks', cells: [[x, y, z]], changes: before === block ? [] : [{ x, y, z, before, after: block }] });
   }
 
   /** `playground-blocks`: blocks that changed (or, to this player alone, the truth about one it guessed),
@@ -136,15 +140,18 @@ export class WorldState {
   applyBlocks(changes: unknown): void {
     if (!this.grid || !Array.isArray(changes)) return;
     const cells: [number, number, number][] = [];
+    const changed: BlockChange[] = [];
     for (const change of changes) {
       if (!Array.isArray(change)) continue;
       const [x, y, z, block, state] = change as unknown[];
       if (!isInt(x) || !isInt(y) || !isInt(z) || !isInt(block) || !isBlock(block) || !BlockGrid.inside(x, y, z)) continue;
+      const before = this.grid.get(x, y, z);
+      if (before !== block) changed.push({ x, y, z, before, after: block });
       this.grid.set(x, y, z, block, isInt(state) ? state : 0);
       if (block !== BLOCK.furnace) this.furnaces.delete(furnaceKey(x, y, z));
       cells.push([x, y, z]);
     }
-    if (cells.length) this.emit({ kind: 'blocks', cells });
+    if (cells.length) this.emit({ kind: 'blocks', cells, changes: changed });
   }
 
   /** `playground-items`: items that appeared (or moved), and items gone (`by` someone who took them). */
