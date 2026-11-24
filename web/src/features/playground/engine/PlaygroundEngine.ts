@@ -43,8 +43,6 @@ const MAX_FRAME_SECONDS = 0.1;
 const MAX_TICKS_PER_FRAME = 5;
 /** the arm swing turns the body toward the head for this long */
 const ATTACK_TICKS = 6;
-/** the arm's walking sway runs this much faster than the view's */
-const HAND_BOB_SPEED = 1.8;
 /** a peer moving slower than this (blocks per second) is standing */
 const STILL_SPEED = 0.3;
 
@@ -277,7 +275,7 @@ export class PlaygroundEngine {
     this.renderer.render(this.scene, this.camera);
     if (this.controls.mode === 'first') {
       // the arm in its own pass, over everything: it never sinks into a wall
-      this.arm.update(dt, this.controls.pitch, this.controls.yaw, computeBob(this.bob, partial, HAND_BOB_SPEED));
+      this.arm.update(dt, this.controls.pitch, this.controls.yaw, computeBob(this.bob, partial));
       this.renderer.autoClear = false;
       this.renderer.clearDepth();
       this.renderer.render(this.arm.scene, this.arm.camera);

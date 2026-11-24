@@ -37,10 +37,11 @@ export function tickBob(state: BobState, moved: number, onGround: boolean): void
   state.bob += (target - state.bob) * 0.4;
 }
 
-/** The bob between two ticks (`partial` 0..1); `speed` makes the arm's own sway faster than the view's. */
-export function computeBob(state: BobState, partial: number, speed = 1): Bob {
-  const walkDist = state.walkDist * speed;
-  const delta = walkDist - state.prevWalkDist * speed;
+/** The bob between two ticks (`partial` 0..1). The arm in first person sways with the same one, as
+ * in the original: one step of the sway per 1.67 blocks walked, whether walking or sprinting. */
+export function computeBob(state: BobState, partial: number): Bob {
+  const { walkDist } = state;
+  const delta = walkDist - state.prevWalkDist;
   // the original interpolates backwards, from the newer tick
   const walked = -(walkDist + delta * partial);
   const bob = state.prevBob + (state.bob - state.prevBob) * partial;
