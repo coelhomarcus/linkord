@@ -1,8 +1,8 @@
 import * as THREE from 'three';
-import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { BLOCK, SEA_LEVEL, SIZE } from '../islandMap';
 import type { IslandMap } from '../islandMap';
 import { applyPackTiles, BLOCK_TILES, blockAtlas, packWater, tileUv, waterTexture } from './blockTextures';
+import { Clouds } from './clouds';
 import { cornerBrightness, cornerOcclusion, MAX_LIGHT, sideShade, SkyLight } from './lighting';
 
 // The island as one mesh: only faces that touch air are built (the three.js
@@ -176,30 +176,6 @@ function sunLight(): THREE.DirectionalLight {
   return sun;
 }
 
-function cloudLayer(): THREE.Mesh {
-  // a fixed pattern of flat blocky clouds, from a seeded scatter of cells
-  const cell = 8;
-  const span = 36;
-  let state = 77;
-  const rand = () => { state = (Math.imul(state, 1664525) + 1013904223) >>> 0; return state / 4294967296; };
-  const boxes: THREE.BufferGeometry[] = [];
-  for (let gx = 0; gx < span; gx++) {
-    for (let gz = 0; gz < span; gz++) {
-      if (rand() > 0.16) continue;
-      const w = 1 + Math.floor(rand() * 3);
-      const d = 1 + Math.floor(rand() * 2);
-      const box = new THREE.BoxGeometry(w * cell, 2, d * cell);
-      box.translate((gx - span / 2) * cell + (w * cell) / 2, 0, (gz - span / 2) * cell + (d * cell) / 2);
-      boxes.push(box);
-    }
-  }
-  const geometry = mergeGeometries(boxes) ?? new THREE.BufferGeometry();
-  for (const box of boxes) box.dispose();
-  const clouds = new THREE.Mesh(geometry, new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.82, depthWrite: false }));
-  clouds.position.y = 38;
-  return clouds;
-}
-
 export interface World {
   /** advances what moves on its own: water, clouds */
   update(dt: number): void;
@@ -237,9 +213,8 @@ export function buildWorld(scene: THREE.Scene, island: IslandMap): World {
   sea.renderOrder = 1;
   scene.add(sea);
 
-  const clouds = cloudLayer();
-  scene.add(clouds);
-  const cloudSpan = 36 * 8;
+  const clouds = new Clouds();
+  scene.add(clouds.group);
 
   return {
     skyLightAt: (x, y, z) => sky.at(Math.floor(x), Math.floor(y), Math.floor(z)),
@@ -247,7 +222,7 @@ export function buildWorld(scene: THREE.Scene, island: IslandMap): World {
       stepWater(dt);
       water.offset.x = (water.offset.x + dt * 0.04) % 1;
       water.offset.y = (water.offset.y + dt * 0.015) % 1;
-      clouds.position.x = ((clouds.position.x + dt * 0.8 + cloudSpan / 2) % cloudSpan) - cloudSpan / 2;
+      clouds.update(dt);
     },
   };
 }
