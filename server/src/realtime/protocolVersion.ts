@@ -85,9 +85,13 @@
 // large and small images, party, the game's own timestamps, up to two link buttons) on the report in
 // `activity-set` and on `Activity` wherever one is sent. An old tab ignores it and shows the name and
 // icon only, so the minimum stays at 7.
+// Version 31 adds playground voice channels: `voiceMode` ('standard' | 'playground') on every channel
+// of a server summary, and in a playground the LiveKit token may publish data (avatar positions). An
+// old tab ignores the field and shows a playground's call as tiles, still hearing everyone, so the
+// minimum stays at 7.
 // Raising MIN_PROTOCOL_VERSION also drops open tabs out of their calls (they are refused and
 // disconnect), so keep it for changes an old client cannot tolerate.
-export const PROTOCOL_VERSION = 30;
+export const PROTOCOL_VERSION = 31;
 export const MIN_PROTOCOL_VERSION = 7;
 export const MIC_STARTING_PROTOCOL_VERSION = 18;
 export const CALL_ELSEWHERE_PROTOCOL_VERSION = 20;

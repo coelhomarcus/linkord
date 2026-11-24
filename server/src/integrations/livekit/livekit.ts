@@ -33,13 +33,18 @@ export function isLiveKitConfigured(): boolean {
  * can be mapped back to an account even after their socket is gone (see
  * evictFromCall). */
 /** What a participant may send into a call. A voice channel derives it from
- * SPEAK and STREAM (modules/calls/callPermissions.ts); a DM call allows both. */
+ * SPEAK and STREAM (modules/calls/callPermissions.ts); a DM call allows both.
+ * `data` is LiveKit's data channel, open only in a playground, where each
+ * client sends its avatar's position straight to the others through the SFU
+ * (a dozen small lossy packets a second that the app server never needs to
+ * see). Everywhere else it stays off, so nothing but media reaches a peer. */
 export interface PublishRights {
   microphone: boolean;
   video: boolean;
+  data: boolean;
 }
 
-const ALL_PUBLISH_RIGHTS: PublishRights = { microphone: true, video: true };
+const DM_PUBLISH_RIGHTS: PublishRights = { microphone: true, video: true, data: false };
 
 function publishSources(rights: PublishRights): TrackSource[] {
   return [
@@ -56,7 +61,7 @@ function publishGrant(rights: PublishRights): { canPublish: boolean; canPublishS
   return { canPublish: sources.length > 0, canPublishSources: sources };
 }
 
-export function createToken(p: Participant, roomName: string, rights: PublishRights = ALL_PUBLISH_RIGHTS): Promise<string> {
+export function createToken(p: Participant, roomName: string, rights: PublishRights = DM_PUBLISH_RIGHTS): Promise<string> {
   const at = new AccessToken(config.LIVEKIT_API_KEY, config.LIVEKIT_API_SECRET, {
     identity: p.id,
     name: p.name,
@@ -68,7 +73,7 @@ export function createToken(p: Participant, roomName: string, rights: PublishRig
     roomJoin: true,
     ...publishGrant(rights),
     canSubscribe: true,
-    canPublishData: false,
+    canPublishData: rights.data,
   });
   return at.toJwt();
 }
@@ -101,7 +106,7 @@ export async function updatePublishRights(
   await api.updateParticipant(roomName, identity, undefined, {
     ...publishGrant(rights),
     canSubscribe: true,
-    canPublishData: false,
+    canPublishData: rights.data,
     canUpdateMetadata: false,
   });
 }

@@ -1,6 +1,6 @@
 import { apiFetch } from '@/shared/api/api';
 import type { InviteResult, SocialUser } from '@/shared/api/api';
-import type { ServerSummary } from '@/shared/types/protocol';
+import type { ServerSummary, VoiceMode } from '@/shared/types/protocol';
 
 // HTTP surface of servers (server/src/modules/servers): every write answers
 // with little or nothing — the new state arrives as `server-updated`.
@@ -40,7 +40,7 @@ export function fetchBans(serverId: string): Promise<{ items: { user: SocialUser
 }
 export const setMemberRoles = (serverId: string, userId: string, roleIds: string[]) => apiFetch(`/api/servers/${id(serverId)}/members/${id(userId)}/roles`, json('PUT', { roleIds }));
 
-export const createChannel = (serverId: string, input: { name: string; type: 'text' | 'voice'; categoryId?: string | null }) =>
+export const createChannel = (serverId: string, input: { name: string; type: 'text' | 'voice'; voiceMode?: VoiceMode; categoryId?: string | null }) =>
   apiFetch<{ channelId: string }>(`/api/servers/${id(serverId)}/channels`, json('POST', input));
 export const updateChannel = (channelId: string, patch: { name?: string; topic?: string; permissionsSynced?: true }) => apiFetch(`/api/channels/${id(channelId)}`, json('PATCH', patch));
 export const deleteChannel = (channelId: string) => apiFetch(`/api/channels/${id(channelId)}`, json('DELETE'));

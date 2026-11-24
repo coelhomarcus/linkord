@@ -16,10 +16,18 @@ import {
 // purpose: everything that gates a channel imports it, and it imports
 // nothing back but the database.
 
+/** How a voice channel's call is shown (db/schema.ts#conversations.voiceMode). */
+export type VoiceMode = 'standard' | 'playground';
+
+export function toVoiceMode(value: unknown): VoiceMode {
+  return value === 'playground' ? 'playground' : 'standard';
+}
+
 interface ChannelShape {
   id: string;
   serverId: string;
   type: 'text' | 'voice';
+  voiceMode: VoiceMode;
   title: string;
   topic: string;
   categoryId: string | null;
@@ -62,7 +70,7 @@ async function loadSnapshot(serverId: string): Promise<ServerSnapshot | null> {
     overwrites.set(target, list);
   }
   const channels = channelRows.map((row) => ({
-    id: row.id, serverId, type: row.type === 'voice' ? 'voice' as const : 'text' as const, title: row.title, topic: row.topic,
+    id: row.id, serverId, type: row.type === 'voice' ? 'voice' as const : 'text' as const, voiceMode: toVoiceMode(row.voiceMode), title: row.title, topic: row.topic,
     categoryId: row.categoryId, position: row.position, permissionsSynced: row.permissionsSynced, createdAt: row.createdAt,
   }));
   return { server, roles, members, categories, channels, overwrites };

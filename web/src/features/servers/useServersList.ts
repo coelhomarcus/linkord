@@ -12,6 +12,7 @@ export function channelConversation(server: ServerSummary, channel: ServerSummar
     id: channel.id, type: channel.type, title: channel.name, memberIds: [], serverId: server.id,
     lastMessageAt: null, createdAt: server.createdAt, updatedAt: server.createdAt,
     topic: channel.topic, categoryId: channel.categoryId, position: channel.position, permissions: channel.permissions,
+    ...(channel.voiceMode === 'playground' ? { voiceMode: 'playground' as const } : {}),
   };
 }
 

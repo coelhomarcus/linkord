@@ -78,11 +78,13 @@
     "type": "Tipo de canal",
     "types": {
       "text": "Texto",
-      "voice": "Voz"
+      "voice": "Voz",
+      "playground": "Playground"
     },
     "typeHint": {
       "text": "Envie mensagens, imagens, GIFs, emoji, opiniões e piadas",
-      "voice": "Converse com voz, vídeo e compartilhamento de tela"
+      "voice": "Converse com voz, vídeo e compartilhamento de tela",
+      "playground": "Um mundo 3D: cada um é um personagem, a voz depende da distância e uma tela grande para assistir juntos"
     },
     "name": "Nome do canal",
     "namePlaceholder": "novo-canal",
@@ -518,7 +520,8 @@
       "text": "texto",
       "voice": "voz",
       "before": "Antes",
-      "after": "Depois"
+      "after": "Depois",
+      "playground": "playground"
     },
     "emptyText": "Mudanças em cargos, canais, membros e convites ficam registradas aqui.",
     "emptyFilteredText": "Ajuste ou limpe os filtros para ver tudo."

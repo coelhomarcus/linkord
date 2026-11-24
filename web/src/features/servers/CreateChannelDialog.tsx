@@ -1,4 +1,4 @@
-import { HashIcon, SpeakerHighIcon } from '@/shared/ui/icons';
+import { GameControllerIcon, HashIcon, SpeakerHighIcon } from '@/shared/ui/icons';
 import { useState } from 'react';
 import { useNavigate } from 'react-router';
 import { useTranslation } from 'react-i18next';
@@ -13,11 +13,15 @@ import { createCategory, createChannel } from './serversApi';
 
 export type CreateTarget = { kind: 'channel'; categoryId: string | null; type?: 'text' | 'voice' } | { kind: 'category' };
 
-/** Creating a channel (text or voice, optionally in a category) or a category. */
+/** What the dialog offers. A playground is a voice channel shown as a 3D world (`voiceMode`). */
+type ChannelKind = 'text' | 'voice' | 'playground';
+const KIND_ICON = { text: HashIcon, voice: SpeakerHighIcon, playground: GameControllerIcon } as const;
+
+/** Creating a channel (text, voice or playground, optionally in a category) or a category. */
 export function CreateChannelDialog({ server, target, onClose }: { server: ServerSummary; target: CreateTarget | null; onClose: () => void }) {
   const { t } = useTranslation('servers');
   const navigate = useNavigate();
-  const [type, setType] = useState<'text' | 'voice'>('text');
+  const [type, setType] = useState<ChannelKind>('text');
   const [name, setName] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -36,7 +40,9 @@ export function CreateChannelDialog({ server, target, onClose }: { server: Serve
       if (target.kind === 'category') {
         await createCategory(server.id, name);
       } else {
-        const { channelId } = await createChannel(server.id, { name, type, categoryId: target.categoryId });
+        const { channelId } = await createChannel(server.id, type === 'playground'
+          ? { name, type: 'voice', voiceMode: 'playground', categoryId: target.categoryId }
+          : { name, type, categoryId: target.categoryId });
         if (type === 'text') navigate(ROUTES.channel(server.id, channelId));
       }
       close();
@@ -47,6 +53,7 @@ export function CreateChannelDialog({ server, target, onClose }: { server: Serve
     }
   }
 
+  const TypeIcon = KIND_ICON[type];
   const preview = type === 'text' ? name.trim().toLocaleLowerCase().replace(/\s+/g, '-') : name.trim();
   return (
     <Dialog open={!!target} onOpenChange={(open) => { if (!open) close(); }}>
@@ -59,9 +66,9 @@ export function CreateChannelDialog({ server, target, onClose }: { server: Serve
           {!isCategory && (
             <div role="radiogroup" aria-label={t('channel.type')} className="flex flex-col gap-3">
               <span className="text-body font-medium text-text-primary">{t('channel.type')}</span>
-              {(['text', 'voice'] as const).map((option) => {
+              {(['text', 'voice', 'playground'] as const).map((option) => {
                 const checked = type === option;
-                const Icon = option === 'text' ? HashIcon : SpeakerHighIcon;
+                const Icon = KIND_ICON[option];
                 return (
                   // Discord's channel type: a radio on the left, the type and its
                   // one-line pitch beside it, no box around the option
@@ -85,7 +92,7 @@ export function CreateChannelDialog({ server, target, onClose }: { server: Serve
           <div className="flex flex-col gap-2">
             <Label htmlFor="channel-name" className="text-body font-medium text-text-primary">{isCategory ? t('channel.categoryName') : t('channel.name')}</Label>
             <div className="flex h-10 items-center gap-2 rounded-lg border border-border-field bg-bg-textarea px-3 focus-within:border-border-accent">
-              {!isCategory && (type === 'text' ? <HashIcon size={18} className="flex-none text-text-secondary" /> : <SpeakerHighIcon size={18} className="flex-none text-text-secondary" />)}
+              {!isCategory && <TypeIcon size={18} className="flex-none text-text-secondary" />}
               <input id="channel-name" value={name} maxLength={isCategory ? 100 : 80} autoFocus onChange={(e) => setName(e.target.value)}
                 placeholder={isCategory ? t('channel.categoryPlaceholder') : t('channel.namePlaceholder')}
                 className="h-full min-w-0 flex-1 bg-transparent text-body outline-none placeholder:text-text-faint" />

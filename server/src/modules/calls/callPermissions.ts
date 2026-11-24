@@ -1,6 +1,6 @@
 import { participants } from '../presence/participants.js';
 import { hasPermission, PERMISSIONS } from '../servers/permissions.js';
-import { channelPermissionsIn, loadServerSnapshot } from '../servers/serverAccess.js';
+import { channelPermissionsIn, loadServerSnapshot, type VoiceMode } from '../servers/serverAccess.js';
 import { roomNameFor, updatePublishRights, type PublishRights } from '../../integrations/livekit/livekit.js';
 import { revokeCallAccess } from './callAccess.js';
 import { logger } from '../../lib/logger.js';
@@ -14,14 +14,19 @@ const log = logger.child({ component: 'calls' });
 // STREAM their camera and screen. LiveKit enforces the last two, so a
 // change has to reach it, not just the client's buttons.
 
-export function publishRightsFor(permissions: number): PublishRights {
-  return { microphone: hasPermission(permissions, PERMISSIONS.SPEAK), video: hasPermission(permissions, PERMISSIONS.STREAM) };
+export function publishRightsFor(permissions: number, voiceMode: VoiceMode = 'standard'): PublishRights {
+  return {
+    microphone: hasPermission(permissions, PERMISSIONS.SPEAK),
+    video: hasPermission(permissions, PERMISSIONS.STREAM),
+    // moving around is not speaking: anyone allowed in may walk
+    data: voiceMode === 'playground',
+  };
 }
 
 // what the SFU was last told for each connection, so an unrelated change
 // (a rename, a role colour) costs no LiveKit call
 const applied = new WeakMap<Participant, string>();
-const keyOf = (conversationId: string, rights: PublishRights) => `${conversationId}:${Number(rights.microphone)}${Number(rights.video)}`;
+const keyOf = (conversationId: string, rights: PublishRights) => `${conversationId}:${Number(rights.microphone)}${Number(rights.video)}${Number(rights.data)}`;
 
 /** Records the rights a fresh token carried (realtime/socket.ts#handleCallJoin). */
 export function notePublishRights(p: Participant, conversationId: string, rights: PublishRights): void {
@@ -37,7 +42,7 @@ export async function enforceCallPermissions(serverId: string): Promise<void> {
   try {
     const snapshot = await loadServerSnapshot(serverId);
     if (!snapshot) return;
-    const voice = new Set(snapshot.channels.filter((c) => c.type === 'voice').map((c) => c.id));
+    const voice = new Map(snapshot.channels.filter((c) => c.type === 'voice').map((c) => [c.id, c.voiceMode]));
     const evicted = new Set<string>();
     for (const p of [...participants.values()]) {
       const channelId = p.callConversationId;
@@ -52,7 +57,7 @@ export async function enforceCallPermissions(serverId: string): Promise<void> {
         }
         continue;
       }
-      const rights = publishRightsFor(permissions);
+      const rights = publishRightsFor(permissions, voice.get(channelId));
       const key = keyOf(channelId, rights);
       if (applied.get(p) === key) continue;
       applied.set(p, key);

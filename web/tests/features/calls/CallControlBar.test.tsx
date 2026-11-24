@@ -6,6 +6,7 @@ import { initialRoomState } from '@/state/roomReducer';
 import { renderWithRoom } from '@tests/fixtures/roomContextFixture';
 import { CallControlBar } from '@/features/calls/CallControlBar';
 import { PERMISSIONS } from '@/features/servers/permissionBits';
+import type { Conversation, Participant } from '@/shared/types/protocol';
 
 const voiceChannel = (permissions: number) => ({
   id: 'c1', type: 'voice' as const, title: 'Geral', serverId: 's1', memberIds: [], lastMessageAt: null, createdAt: 0, updatedAt: 0, permissions,
@@ -138,4 +139,28 @@ describe('CallControlBar', () => {
     expect(screen.getByRole('menuitemcheckbox', { name: 'Ocultar participantes sem vídeo' })).toBeInTheDocument();
     expect(screen.getByRole('menuitemcheckbox', { name: 'Mostrar banners dos participantes' })).toBeInTheDocument();
   });
+
+  describe('in a playground', () => {
+    const playground = { ...voiceChannel(PERMISSIONS.VIEW_CHANNEL | PERMISSIONS.CONNECT | PERMISSIONS.STREAM), voiceMode: 'playground' as const };
+    const sharer = { id: 'conn-b', userId: 'b', callConversationId: 'c1', sharing: true } as Participant;
+    const withSharer = (conversation: Conversation) => ({
+      startSharing: vi.fn(), activeCallConversationId: 'c1', conversations: [conversation],
+      state: { ...initialRoomState, me: { ...initialRoomState.me, id: 'conn-me' }, participants: new Map([[sharer.id, sharer]]) },
+    });
+
+    it('locks screen sharing while someone else is on the big screen', () => {
+      const overrides = withSharer(playground);
+      renderWithRoom(<CallControlBar />, overrides);
+      const share = screen.getByLabelText('Outra pessoa já está no telão');
+      expect(share).toHaveAttribute('aria-disabled', 'true');
+      fireEvent.click(share);
+      expect(overrides.startSharing).not.toHaveBeenCalled();
+    });
+
+    it('leaves sharing alone in an ordinary voice channel', () => {
+      renderWithRoom(<CallControlBar />, withSharer(voiceChannel(PERMISSIONS.VIEW_CHANNEL | PERMISSIONS.CONNECT | PERMISSIONS.STREAM)));
+      expect(screen.getByLabelText('Compartilhar tela')).not.toHaveAttribute('aria-disabled');
+    });
+  });
 });
+

@@ -28,7 +28,7 @@ import * as streamPreview from '../modules/calls/streamPreview.js';
 import * as dmCalls from '../modules/calls/dmCalls.js';
 import { refusesImmediateJoin } from '../modules/calls/dmCallMachine.js';
 import { notePublishRights, publishRightsFor } from '../modules/calls/callPermissions.js';
-import { channelPermissions } from '../modules/servers/serverAccess.js';
+import { channelPermissions, toVoiceMode } from '../modules/servers/serverAccess.js';
 import { parseCookies } from '../http/cookies.js';
 import { resolveSession } from '../modules/auth/session.js';
 import { isSocketOriginAllowed } from '../http/originGuard.js';
@@ -270,7 +270,7 @@ export async function handleCallJoin(socket: AppSocket, msg: { conversationId?: 
     return;
   }
   // only voice channels get here, and they always belong to a server
-  const rights = publishRightsFor(conversation.serverId ? await channelPermissions(conversation.serverId, conversationId, p.userId) : 0);
+  const rights = publishRightsFor(conversation.serverId ? await channelPermissions(conversation.serverId, conversationId, p.userId) : 0, toVoiceMode(conversation.voiceMode));
   let livekitToken: string;
   try {
     livekitToken = await livekit.createToken(p, livekit.roomNameFor(conversationId), rights);
