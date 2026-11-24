@@ -1,5 +1,6 @@
 import { deflateRawSync } from 'node:zlib';
 import { BLOCK, type Block } from './game/blocks.js';
+import { advanceClock, NEW_WORLD_TIME, readClock } from './game/dayTime.js';
 import { PICKUP_DELAY_MS, DESPAWN_MS, restingPlace, type Motion } from './game/drops.js';
 import { BlockGrid } from './game/grid.js';
 import { parseFurnace, parseStack, type ItemStack } from './game/inventory.js';
@@ -17,7 +18,9 @@ const log = logger.child({ component: 'worlds' });
 // anyone is in the call and for a while after, and saved a few seconds after it
 // changes, when its last player leaves and when the service stops. Every change
 // goes to everyone in the call at once (`playground-blocks`, `playground-items`,
-// `playground-furnace`); what may change is building.ts's to decide.
+// `playground-furnace`); what may change is building.ts's to decide. Its clock
+// (game/dayTime.ts) runs with its ticks, only while it is loaded; browsers count
+// on from what `world-get` said and hear it again now and then (`playground-time`).
 
 /** a changed world is saved this soon after its first unsaved change */
 const SAVE_AFTER_MS = 10_000;
@@ -29,6 +32,8 @@ const MAX_CATCH_UP_TICKS = 20 * 60;
 const MAX_ITEMS = 400;
 /** what a furnace's viewers hear while it works, besides every change of its slots */
 const FURNACE_REFRESH_MS = 1000;
+/** how often everyone in a world hears its clock, against the drift of their own */
+const CLOCK_REFRESH_MS = 60_000;
 const TICK_MS = 50;
 
 export interface DroppedItem {
@@ -70,6 +75,10 @@ export interface World {
   emptySince: number | null;
   /** the time of its last game tick */
   tickedAt: number;
+  /** its clock in ticks: the time of day and the moon's phase */
+  clock: number;
+  /** when everyone in it last heard the clock */
+  clockShownAt: number;
 }
 
 const furnaceKey = (x: number, y: number, z: number) => `${x},${y},${z}`;
@@ -115,13 +124,13 @@ function readItems(value: unknown, now: number): DroppedItem[] {
   });
 }
 
-function newWorld(conversationId: string, grid: BlockGrid, furnaces: Furnace[], items: DroppedItem[], now: number): World {
+function newWorld(conversationId: string, grid: BlockGrid, furnaces: Furnace[], items: DroppedItem[], clock: number, now: number): World {
   return {
     conversationId, grid,
     furnaces: new Map(furnaces.map((furnace) => [furnaceKey(furnace.x, furnace.y, furnace.z), furnace])),
     items: new Map(items.map((item) => [item.id, item])),
     nextItemId: items.length + 1,
-    dirtySince: null, version: 0, packed: null, emptySince: null, tickedAt: now,
+    dirtySince: null, version: 0, packed: null, emptySince: null, tickedAt: now, clock, clockShownAt: now,
   };
 }
 
@@ -129,12 +138,12 @@ async function load(conversationId: string): Promise<World> {
   const now = Date.now();
   const stored = await store.load(conversationId);
   if (stored) {
-    return newWorld(conversationId, BlockGrid.from(stored.blocks), readFurnaces(stored.furnaces), readItems(stored.items, now), now);
+    return newWorld(conversationId, BlockGrid.from(stored.blocks), readFurnaces(stored.furnaces), readItems(stored.items, now), readClock(stored.clock), now);
   }
   const started = performance.now();
   const generated = generateWorld();
   const furnaces = generated.furnaces.map(({ x, y, z, facing }) => ({ x, y, z, facing, state: createFurnace(), lit: false, shownAt: 0 }));
-  const world = newWorld(conversationId, generated.grid, furnaces, [], now);
+  const world = newWorld(conversationId, generated.grid, furnaces, [], NEW_WORLD_TIME, now);
   log.info('world generated', { conversationId, ms: Math.round(performance.now() - started) });
   world.dirtySince = now;
   await save(world);
@@ -164,6 +173,7 @@ function snapshot(world: World, now: number) {
     blocks: world.grid.blocks,
     furnaces: [...world.furnaces.values()].map(({ x, y, z, facing, state }) => ({ x, y, z, facing, state })),
     items: [...world.items.values()].map((item) => ({ stack: item.stack, x: item.x, y: item.y, z: item.z, age: now - item.spawnedAt })),
+    clock: world.clock,
   };
 }
 
@@ -322,6 +332,12 @@ export function tickWorld(world: World, now: number, onFurnace: (furnace: Furnac
   if (ticks <= 0) return;
   world.tickedAt += ticks * TICK_MS;
   if (now - world.tickedAt > TICK_MS * 4) world.tickedAt = now;
+  world.clock = advanceClock(world.clock, ticks);
+  if (now - world.clockShownAt >= CLOCK_REFRESH_MS) {
+    world.clockShownAt = now;
+    // the clock is saved with the world's next change, or when its last player leaves
+    sendToCall(world.conversationId, { t: 'playground-time', conversationId: world.conversationId, clock: world.clock });
+  }
   for (const furnace of world.furnaces.values()) {
     if (!furnaceActive(furnace.state) && furnace.state.cook === 0) continue;
     const slotsChanged = stepFurnace(furnace.state, ticks);
@@ -349,6 +365,7 @@ export async function maintainWorlds(now: number, occupied: (conversationId: str
     if (!empty) world.emptySince = null;
     else if (world.emptySince === null) {
       world.emptySince = now;
+      changed(world, now);
       // its last player just left: saved now rather than later
       await save(world);
     }

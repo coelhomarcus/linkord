@@ -8,7 +8,7 @@ import { handleBreak, handleDigStart, handleInventoryOp, handlePlace, handleUse,
 import { clearCombat, handlePosition } from '../src/combat.js';
 import { dropEverything, inventoryOf, setInventory, setInventoryStore } from '../src/inventories.js';
 import { admit, clearRoster, type Player, type ServerMessage } from '../src/roster.js';
-import { loadedWorld, setWorldStore, worldFor } from '../src/worlds.js';
+import { loadedWorld, setWorldStore, tickWorld, worldFor } from '../src/worlds.js';
 import { memoryInventoryStore, memoryWorldStore } from '../src/worldStore.js';
 import { createInventory, type Slot } from '../src/game/inventory.js';
 
@@ -26,7 +26,7 @@ function flatWorld() {
   }
   grid.set(3, GROUND, 0, BLOCK.craftingTable);
   grid.set(-3, GROUND, 0, BLOCK.furnace);
-  return { generator: GENERATOR_VERSION, blocks: grid.blocks, furnaces: [{ x: -3, y: GROUND, z: 0, facing: 0 }], items: [] };
+  return { generator: GENERATOR_VERSION, blocks: grid.blocks, furnaces: [{ x: -3, y: GROUND, z: 0, facing: 0 }], items: [], clock: 30_000 };
 }
 
 const sent = new Map<string, ServerMessage[]>();
@@ -77,7 +77,19 @@ describe('building', () => {
     const blocks = new BlockGrid(new Uint8Array(inflateRawSync(answer.blocks as Buffer)));
     assert.equal(blocks.get(0, GROUND - 1, 0), BLOCK.dirt);
     assert.deepEqual(answer.furnaces, [{ x: -3, y: GROUND, z: 0, facing: 0, lit: false }]);
+    assert.equal(answer.clock, 30_000);
     assert.equal(lastInventory(player).ack, 0);
+  });
+
+  test('the clock runs with the world\'s ticks, is told to everyone now and then, and is saved', async () => {
+    const player = connect('a');
+    const world = loadedWorld(CALL)!;
+    const start = world.tickedAt;
+    tickWorld(world, start + 1000, () => {});
+    assert.equal(world.clock, 30_020);
+    assert.equal(messages(player, 'playground-time').length, 0);
+    tickWorld(world, start + 61_000, () => {});
+    assert.deepEqual(messages(player, 'playground-time').at(-1)?.clock, world.clock);
   });
 
   test('a block dug long enough breaks for everyone and drops what it is made of', async () => {

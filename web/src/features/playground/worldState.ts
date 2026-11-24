@@ -1,4 +1,5 @@
 import { BLOCK, isBlock } from '@game/blocks';
+import { advanceClock, NEW_WORLD_TIME, readClock } from '@game/dayTime';
 import type { Block } from '@game/blocks';
 import type { Motion } from '@game/drops';
 import { BlockGrid, CELL_COUNT } from '@game/grid';
@@ -9,7 +10,8 @@ import type { Facing } from '@game/worldGen';
 // link connects (`world-get`, the blocks deflated), then every change as it
 // happens. A change this player asks for (a block broken or placed) is shown at
 // once (`predict`); the service's answer confirms it or puts the block back.
-// The 3D view listens for changes to redraw what they touch.
+// The 3D view listens for changes to redraw what they touch. The world's clock
+// arrives with it and runs on here at the game's 20 ticks a second.
 
 export interface FurnaceLook { x: number; y: number; z: number; facing: Facing; lit: boolean }
 
@@ -32,6 +34,7 @@ export type WorldEvent =
   | { kind: 'held'; ids: string[] };
 
 const furnaceKey = (x: number, y: number, z: number) => `${x},${y},${z}`;
+const TICK_MS = 50;
 
 /** The deflated blocks the service sends, back to one byte a cell. */
 export async function inflateBlocks(bytes: ArrayBuffer | Uint8Array): Promise<Uint8Array> {
@@ -69,6 +72,8 @@ export class WorldState {
   readonly items = new Map<number, GroundItem>();
   /** what each connection in the call holds (an item id), as the service says */
   readonly held = new Map<string, string | null>();
+  /** the clock as last heard, and when (performance.now()) */
+  private clockHeard = { clock: NEW_WORLD_TIME, at: performance.now() };
   private readonly listeners = new Set<(event: WorldEvent) => void>();
 
   subscribe(listener: (event: WorldEvent) => void): () => void {
@@ -81,8 +86,9 @@ export class WorldState {
   }
 
   /** The world as the service sent it (`world-get`'s answer, the blocks already inflated). */
-  load(blocks: Uint8Array, answer: { furnaces?: unknown; items?: unknown; held?: unknown }): void {
+  load(blocks: Uint8Array, answer: { furnaces?: unknown; items?: unknown; held?: unknown; clock?: unknown }): void {
     if (blocks.length !== CELL_COUNT) return;
+    this.applyClock(answer.clock);
     this.grid = BlockGrid.from(blocks);
     this.furnaces.clear();
     for (const entry of Array.isArray(answer.furnaces) ? answer.furnaces : []) {
@@ -98,6 +104,16 @@ export class WorldState {
     this.held.clear();
     this.applyHeld(answer.held, false);
     this.emit({ kind: 'loaded' });
+  }
+
+  /** `playground-time`: the world's clock now (a service from before the clock sends none: morning). */
+  applyClock(clock: unknown): void {
+    this.clockHeard = { clock: readClock(clock), at: performance.now() };
+  }
+
+  /** The world's clock in ticks at `now` (performance.now()), with the fraction of the tick under way. */
+  clock(now: number): number {
+    return advanceClock(this.clockHeard.clock, Math.max(0, now - this.clockHeard.at) / TICK_MS);
   }
 
   get loaded(): boolean {

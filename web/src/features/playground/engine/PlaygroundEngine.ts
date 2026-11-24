@@ -16,7 +16,6 @@ import { angleDelta, turnBody } from './bipedPose';
 import { BlockOutline, targetBlock } from './blockTarget';
 import type { BlockHit } from './blockTarget';
 import { cameraDistance } from './cameraCollision';
-import { lightmap, MAX_LIGHT } from './lighting';
 import { Controls, nextCameraMode } from './controls';
 import type { CameraMode, MoveIntent } from './controls';
 import { applyKnockback, BODY_HEIGHT, createBody, HALF_WIDTH, SNEAKING_EYE_HEIGHT, STANDING_EYE_HEIGHT, stepBody, TICK_SECONDS } from './playerPhysics';
@@ -354,7 +353,7 @@ export class PlaygroundEngine {
   }
 
   private brightnessAt(x: number, y: number, z: number): number {
-    return lightmap(this.world.skyLightAt(x, y, z) / MAX_LIGHT);
+    return this.world.brightnessAt(x, y, z);
   }
 
   private heldItem(): string | null {
@@ -555,7 +554,8 @@ export class PlaygroundEngine {
     this.frame = requestAnimationFrame(this.tick);
     this.timer.update(time);
     const dt = Math.min(this.timer.getDelta(), MAX_FRAME_SECONDS);
-    this.world.update(dt);
+    // the sky follows last frame's eye: a frame behind is nothing a hundred blocks away
+    this.world.update(dt, this.session.world.clock(time), this.camera.position);
     if (this.session.world.grid) this.session.reportBuild(this.world.buildProgress());
     this.followDeath();
     this.playHits();

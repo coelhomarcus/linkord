@@ -73,6 +73,7 @@ export async function handleWorldGet(player: Player, _msg: Record<string, unknow
     furnaces: [...world.furnaces.values()].map(furnaceLook),
     items: [...world.items.values()].map((item) => itemView(item, now)),
     held: heldInCall(player.conversationId),
+    clock: world.clock,
   });
   sendInventory(player);
 }

@@ -8,12 +8,16 @@ import { applyPackTiles, blockAtlas, faceTile, packWater, tileUv, waterTexture }
 import { Clouds } from './clouds';
 import { cornerBrightness, cornerOcclusion, lightmap, MAX_LIGHT, sideShade, SkyLight } from './lighting';
 import type { LightChange } from './lighting';
+import { Sky, sunDirection } from './sky';
+import { daylight, MAX_SKY_DARKEN, skyDarken } from '@game/dayTime';
 
 // The world as meshes of 16×16-column chunks: only faces that touch something
 // see-through are built (the three.js manual's voxel geometry), and a change
 // rebuilds only the chunks whose blocks or light it touched. Each corner
-// carries its brightness (lighting.ts: the face's shade, sky light averaged
-// around it, ambient occlusion), and the sun casts shadows on top of that: a
+// carries its shade and ambient occlusion and the sky light averaged around it
+// (lighting.ts); the shader darkens that light with the time of day
+// (game/dayTime.ts: 15 by day is 4 at night, a little blue), so a sunset needs
+// no rebuilding. The sun, moving across the sky (sky.ts), casts shadows on top: a
 // shadow map, as minecraft-renderer's sun shadows (github.com/zardoy/
 // minecraft-web-client, MIT, Copyright (c) 2020 PrismarineJS) do it, taking sky
 // light down to 60% where the sun does not reach, including faces turned away
@@ -21,7 +25,6 @@ import type { LightChange } from './lighting';
 // under the top of its cells, and the sea goes on past the world's edge as a
 // plane. No other lighting: the pixel art's colours stay as painted.
 
-const SKY_COLOR = 0x9fcfff;
 const FOG = { near: 48, far: 140 } as const;
 /** under water the view closes in, blue */
 const WATER_FOG = { color: 0x1d3f8a, near: 0.5, far: 14 } as const;
@@ -31,15 +34,27 @@ const CHUNKS = SIZE / CHUNK;
 const BUILD_BUDGET_MS = 8;
 /** a water cell's surface, when nothing but air is over it */
 const WATER_TOP = 0.875;
+const WATER_OPACITY = 0.8;
+/** the sun's distance from the island's middle, for its shadow camera */
+const SUN_DISTANCE = 110;
 
 /** Light by face direction: +x, -x, +y, -y, +z, -z (the avatars' boxes use it too). */
 export const FACE_SHADE = [sideShade(1, 0, 0), sideShade(-1, 0, 0), sideShade(0, 1, 0), sideShade(0, -1, 0), sideShade(0, 0, 1), sideShade(0, 0, -1)] as const;
 
-/** Toward the sun: high in the east, a little to the north, so trees and people throw their shadows
- * sideways and toward someone facing the big screen (which stands at -z). */
-const SUN_DIRECTION = new THREE.Vector3(0.6, 1, -0.2).normalize();
 /** What is left of the sky's light in the sun's shadow. */
 const SHADOWED_SKY_LIGHT = 0.6;
+/** how high the sun must be (the y of the way to it) for its shadows to start and to be full: low
+ * shadows would be endless, and at night there are none */
+const SHADOW_FROM = 0.08;
+const SHADOW_FULL = 0.3;
+/** the moonlight's colour, which the sky's light takes on as it darkens */
+const NIGHT_TINT = new THREE.Color(0.78, 0.82, 1);
+
+/** How bright light of `level` (0..15) is with the sky darkened by `darken` steps: the sky light a
+ * block face or a person gets now. */
+export function darkenedLight(level: number, darken: number): number {
+  return lightmap(Math.max(0, level - darken) / MAX_LIGHT);
+}
 
 // corner positions and their uv, after the three.js manual's voxel geometry
 const FACES = [
@@ -63,15 +78,17 @@ function faceShown(block: Block, neighbour: Block): boolean {
   return true;
 }
 
-interface Arrays { positions: number[]; normals: number[]; uvs: number[]; colors: number[]; indices: number[] }
-const arrays = (): Arrays => ({ positions: [], normals: [], uvs: [], colors: [], indices: [] });
+/** `colors` is a corner's shade and occlusion, `light` the sky light around it (0..1) */
+interface Arrays { positions: number[]; normals: number[]; uvs: number[]; colors: number[]; light: number[]; indices: number[] }
+const arrays = (): Arrays => ({ positions: [], normals: [], uvs: [], colors: [], light: [], indices: [] });
 
-function toGeometry({ positions, normals, uvs, colors, indices }: Arrays): THREE.BufferGeometry {
+function toGeometry({ positions, normals, uvs, colors, light, indices }: Arrays): THREE.BufferGeometry {
   const geometry = new THREE.BufferGeometry();
   geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
   geometry.setAttribute('normal', new THREE.Float32BufferAttribute(normals, 3));
   geometry.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));
   geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
+  geometry.setAttribute('skyLight', new THREE.Float32BufferAttribute(light, 1));
   geometry.setIndex(indices);
   geometry.computeBoundingSphere();
   return geometry;
@@ -123,9 +140,11 @@ function chunkGeometry(grid: BlockGrid, sky: SkyLight, world: WorldState, cx: nu
               light += sky.at(bx, by, bz);
               lit++;
             });
-            const value = cornerBrightness(face.shade, occlusion, lit ? light / lit : MAX_LIGHT);
-            brightness.push(value);
-            blocks.colors.push(value, value, value);
+            const level = lit ? light / lit : MAX_LIGHT;
+            brightness.push(cornerBrightness(face.shade, occlusion, level));
+            const shade = cornerBrightness(face.shade, occlusion, MAX_LIGHT);
+            blocks.colors.push(shade, shade, shade);
+            blocks.light.push(level / MAX_LIGHT);
           }
           // split the quad along its brighter diagonal, or the occlusion shows a seam across it
           if (brightness[0]! + brightness[3]! > brightness[1]! + brightness[2]!) {
@@ -148,43 +167,85 @@ function waterFaces(grid: BlockGrid, sky: SkyLight, out: Arrays, x: number, y: n
     const [dx, dy, dz] = face.dir;
     if (!faceShown(BLOCK.water, grid.get(x + dx, y + dy, z + dz))) return;
     const start = out.positions.length / 3;
-    const value = face.shade * lightmap(sky.at(x + dx, y + dy, z + dz) / MAX_LIGHT);
+    const level = sky.at(x + dx, y + dy, z + dz) / MAX_LIGHT;
     for (const [cx, cy, cz] of face.corners) {
       const py = y + (cy ? top : 0);
       out.positions.push(x + cx, py, z + cz);
       out.normals.push(dx, dy, dz);
       // the texture repeats once a block: tops by x and z, sides along the face and up
       out.uvs.push(dy !== 0 ? x + cx : dx !== 0 ? z + cz : x + cx, dy !== 0 ? z + cz : py);
-      out.colors.push(value, value, value);
+      out.colors.push(face.shade, face.shade, face.shade);
+      out.light.push(level);
     }
     out.indices.push(start, start + 1, start + 2, start + 2, start + 1, start + 3);
   });
 }
 
-/** The blocks' material: the atlas, each corner's baked brightness, and the sun's shadow map. */
-function blockMaterial(atlas: THREE.Texture): THREE.ShaderMaterial {
+/** The uniforms the time of day moves, shared by the blocks' and the water's materials. */
+interface DayUniforms {
+  /** steps the sky light loses now (0..11) */
+  skyDarken: { value: number };
+  /** the colour the sky's light takes on (white by day) */
+  skyTint: { value: THREE.Color };
+  /** how strong the sun's shadows are now, 0..1 */
+  sunStrength: { value: number };
+  sunDirection: { value: THREE.Vector3 };
+}
+
+const dayUniforms = (): DayUniforms => ({
+  skyDarken: { value: 0 },
+  skyTint: { value: new THREE.Color(1, 1, 1) },
+  sunStrength: { value: 1 },
+  sunDirection: { value: new THREE.Vector3(0, 1, 0) },
+});
+
+/** The light a corner gets now, from its baked sky light (lighting.ts's lightmap, darkened). */
+const LIGHT_GLSL = /* glsl */ `
+  uniform float skyDarken;
+  uniform vec3 skyTint;
+  vec3 skyBrightness(float skyLight) {
+    float level = max(0.0, skyLight * ${MAX_LIGHT.toFixed(1)} - skyDarken) / ${MAX_LIGHT.toFixed(1)};
+    return vec3(${lightmap(0).toFixed(4)} + level * ${(1 - lightmap(0)).toFixed(4)}) * skyTint;
+  }
+`;
+
+/** The blocks' material, or with `water` the water's: the atlas (or the water's texture, moved by its
+ * matrix), each corner's baked shade and sky light, and for blocks the sun's shadow map. */
+function blockMaterial(map: THREE.Texture, uniforms: DayUniforms, water = false): THREE.ShaderMaterial {
   const material = new THREE.ShaderMaterial({
-    lights: true,
+    lights: !water,
     fog: true,
     vertexColors: true,
-    uniforms: THREE.UniformsUtils.merge([THREE.UniformsLib.lights, THREE.UniformsLib.fog, { map: { value: null }, sunDirection: { value: new THREE.Vector3() } }]),
-    defines: { SHADOWED_SKY_LIGHT: SHADOWED_SKY_LIGHT.toFixed(2) },
+    transparent: water,
+    depthWrite: !water,
+    side: water ? THREE.DoubleSide : THREE.FrontSide,
+    uniforms: {
+      ...THREE.UniformsUtils.merge([water ? {} : THREE.UniformsLib.lights, THREE.UniformsLib.fog, { map: { value: null }, mapTransform: { value: new THREE.Matrix3() } }]),
+      ...uniforms,
+    },
+    defines: { SHADOWED_SKY_LIGHT: SHADOWED_SKY_LIGHT.toFixed(2), ...(water ? { WATER: '' } : {}) },
     vertexShader: /* glsl */ `
       #include <common>
       #include <fog_pars_vertex>
       #include <shadowmap_pars_vertex>
+      uniform mat3 mapTransform;
+      attribute float skyLight;
       varying vec2 vUv;
-      varying vec3 vBrightness;
+      varying vec3 vShade;
+      varying float vSkyLight;
       varying vec3 vWorldNormal;
       void main() {
-        vUv = uv;
-        vBrightness = color;
+        vUv = (mapTransform * vec3(uv, 1.0)).xy;
+        vShade = color;
+        vSkyLight = skyLight;
         #include <beginnormal_vertex>
         #include <defaultnormal_vertex>
         #include <begin_vertex>
         #include <project_vertex>
         #include <worldpos_vertex>
+        #ifndef WATER
         #include <shadowmap_vertex>
+        #endif
         #include <fog_vertex>
         vWorldNormal = normalize(mat3(modelMatrix) * objectNormal);
       }
@@ -193,38 +254,46 @@ function blockMaterial(atlas: THREE.Texture): THREE.ShaderMaterial {
       #include <common>
       #include <packing>
       #include <fog_pars_fragment>
+      #ifndef WATER
       #include <bsdfs>
       #include <lights_pars_begin>
       #include <shadowmap_pars_fragment>
       #include <shadowmask_pars_fragment>
+      #endif
+      ${LIGHT_GLSL}
       uniform sampler2D map;
       uniform vec3 sunDirection;
+      uniform float sunStrength;
       varying vec2 vUv;
-      varying vec3 vBrightness;
+      varying vec3 vShade;
+      varying float vSkyLight;
       varying vec3 vWorldNormal;
       void main() {
         vec4 texel = texture2D(map, vUv);
+        vec3 light = vShade * skyBrightness(vSkyLight);
+        #ifdef WATER
+        gl_FragColor = vec4(texel.rgb * light, texel.a * ${WATER_OPACITY.toFixed(2)});
+        #else
         // the holes in the leaves and the glass
         if (texel.a < 0.5) discard;
         // a face turned away from the sun is in its own shadow; one side-on to it, half
         float facing = smoothstep(-0.15, 0.15, dot(vWorldNormal, sunDirection));
         float sunlit = facing * getShadowMask();
-        gl_FragColor = vec4(texel.rgb * vBrightness * mix(SHADOWED_SKY_LIGHT, 1.0, sunlit), texel.a);
+        gl_FragColor = vec4(texel.rgb * light * mix(1.0, mix(SHADOWED_SKY_LIGHT, 1.0, sunlit), sunStrength), texel.a);
+        #endif
         #include <tonemapping_fragment>
         #include <colorspace_fragment>
         #include <fog_fragment>
       }
     `,
   });
-  material.uniforms.map!.value = atlas;
-  material.uniforms.sunDirection!.value = SUN_DIRECTION;
+  material.uniforms.map!.value = map;
   return material;
 }
 
 /** The sun: only its shadow is used, over the whole world. */
 function sunLight(): THREE.DirectionalLight {
   const sun = new THREE.DirectionalLight(0xffffff, 0);
-  sun.position.copy(SUN_DIRECTION).multiplyScalar(110);
   sun.castShadow = true;
   const extent = HALF + 8;
   Object.assign(sun.shadow.camera, { left: -extent, right: extent, top: extent, bottom: -extent, near: 1, far: 260 });
@@ -250,10 +319,12 @@ function outerSea(material: THREE.Material): THREE.Mesh {
 export interface World {
   /** the blocks' pixel art, for the items' cubes */
   readonly atlas: THREE.Texture;
-  /** advances what moves on its own: water, clouds; rebuilds chunks that changed, as time allows */
-  update(dt: number): void;
-  /** the sky light at a point (0..15), to light the people standing there */
-  skyLightAt(x: number, y: number, z: number): number;
+  /** advances what moves on its own: water, clouds, the sky and the sun at the world's `clock` around
+   * the `eye`; rebuilds chunks that changed, as time allows */
+  update(dt: number, clock: number, eye: THREE.Vector3): void;
+  /** how lit a point is now (0..1, lighting.ts's lightmap of its sky light, darkened at night), to
+   * light the people and items there */
+  brightnessAt(x: number, y: number, z: number): number;
   /** blocks that changed: their light is worked out again and the chunks they touch rebuilt */
   blocksChanged(cells: readonly [number, number, number][]): void;
   /** a furnace lit or put out: its block is drawn again */
@@ -270,16 +341,18 @@ export interface World {
 interface Chunk { blocks: THREE.Mesh | null; water: THREE.Mesh | null }
 
 export function buildWorld(scene: THREE.Scene, state: WorldState): World {
-  const skyFog = new THREE.Fog(SKY_COLOR, FOG.near, FOG.far);
+  const heavens = new Sky();
+  scene.add(heavens.group);
+  const skyFog = new THREE.Fog(heavens.fogColor, FOG.near, FOG.far);
   const waterFog = new THREE.Fog(WATER_FOG.color, WATER_FOG.near, WATER_FOG.far);
-  const skyColor = new THREE.Color(SKY_COLOR);
   const waterColor = new THREE.Color(WATER_FOG.color);
-  scene.background = skyColor;
+  scene.background = null;
   scene.fog = skyFog;
 
+  const day = dayUniforms();
   const atlas = blockAtlas();
   void applyPackTiles(atlas);
-  const material = blockMaterial(atlas);
+  const material = blockMaterial(atlas, day);
   // the sun shines through the holes in the leaves too
   const depthMaterial = new THREE.MeshDepthMaterial({ depthPacking: THREE.RGBADepthPacking, map: atlas, alphaTest: 0.5 });
   const sun = sunLight();
@@ -288,12 +361,27 @@ export function buildWorld(scene: THREE.Scene, state: WorldState): World {
   const water = waterTexture();
   let stepWater = (_dt: number) => {};
   void packWater(water).then((step) => { stepWater = step; });
-  const waterMaterial = new THREE.MeshBasicMaterial({ map: water, vertexColors: true, transparent: true, opacity: 0.8, depthWrite: false, side: THREE.DoubleSide });
-  const sea = outerSea(new THREE.MeshBasicMaterial({ map: water, transparent: true, opacity: 0.84, depthWrite: false }));
+  const waterMaterial = blockMaterial(water, day, true);
+  const seaMaterial = new THREE.MeshBasicMaterial({ map: water, transparent: true, opacity: 0.84, depthWrite: false });
+  const sea = outerSea(seaMaterial);
   scene.add(sea);
 
   const clouds = new Clouds();
   scene.add(clouds.group);
+
+  /** The sky, the sun and the light at a clock. */
+  function followClock(clock: number, eye: THREE.Vector3): void {
+    heavens.update(clock, eye);
+    const darken = skyDarken(clock);
+    day.skyDarken.value = darken;
+    day.skyTint.value.setRGB(1, 1, 1).lerp(NIGHT_TINT, darken / MAX_SKY_DARKEN);
+    const toSun = sunDirection(clock, day.sunDirection.value);
+    day.sunStrength.value = THREE.MathUtils.smoothstep(toSun.y, SHADOW_FROM, SHADOW_FULL);
+    sun.position.copy(toSun).multiplyScalar(SUN_DISTANCE);
+    const open = darkenedLight(MAX_LIGHT, darken);
+    seaMaterial.color.copy(day.skyTint.value).multiplyScalar(open);
+    clouds.setDaylight(daylight(clock), day.skyTint.value);
+  }
 
   let sky: SkyLight | null = null;
   const chunks: Chunk[] = Array.from({ length: CHUNKS * CHUNKS }, () => ({ blocks: null, water: null }));
@@ -354,7 +442,7 @@ export function buildWorld(scene: THREE.Scene, state: WorldState): World {
 
   return {
     atlas,
-    skyLightAt: (x, y, z) => (sky ? sky.at(Math.floor(x), Math.floor(y), Math.floor(z)) : MAX_LIGHT),
+    brightnessAt: (x, y, z) => darkenedLight(sky ? sky.at(Math.floor(x), Math.floor(y), Math.floor(z)) : MAX_LIGHT, day.skyDarken.value),
     blocksChanged(cells) {
       if (!sky) return;
       for (const [x, , z] of cells) {
@@ -368,14 +456,18 @@ export function buildWorld(scene: THREE.Scene, state: WorldState): World {
     },
     reload,
     buildProgress: () => (sky ? 1 - firstBuild.size / chunks.length : 0),
-    setUnderwater(underwater) {
-      scene.fog = underwater ? waterFog : skyFog;
-      scene.background = underwater ? waterColor : skyColor;
+    setUnderwater(inWater) {
+      scene.fog = inWater ? waterFog : skyFog;
+      scene.background = inWater ? waterColor : null;
+      heavens.group.visible = !inWater;
     },
-    update(dt) {
+    update(dt, clock, eye) {
+      followClock(clock, eye);
       stepWater(dt);
       water.offset.x = (water.offset.x + dt * 0.04) % 1;
       water.offset.y = (water.offset.y + dt * 0.015) % 1;
+      water.updateMatrix();
+      waterMaterial.uniforms.mapTransform!.value = water.matrix;
       clouds.update(dt);
       const started = performance.now();
       for (const index of dirty) {
@@ -391,9 +483,10 @@ export function buildWorld(scene: THREE.Scene, state: WorldState): World {
       depthMaterial.dispose();
       atlas.dispose();
       waterMaterial.dispose();
+      seaMaterial.dispose();
+      heavens.dispose();
       water.dispose();
       sea.geometry.dispose();
-      (sea.material as THREE.Material).dispose();
       clouds.group.removeFromParent();
     },
   };

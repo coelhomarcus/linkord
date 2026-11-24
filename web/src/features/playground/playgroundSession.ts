@@ -289,6 +289,7 @@ export class PlaygroundSession {
       case 'playground-items': return this.world.applyItems(message);
       case 'playground-furnace': return this.world.applyFurnace(message);
       case 'playground-held': return this.world.applyHeld(message.players);
+      case 'playground-time': return this.world.applyClock(message.clock);
       case 'playground-inv': {
         const snapshot = readSnapshot(message as unknown as Record<string, unknown>);
         if (snapshot) this.inventory.receive(snapshot);

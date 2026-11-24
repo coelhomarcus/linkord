@@ -6,8 +6,10 @@ Textures from [Pixel Perfection Community Edition](https://github.com/Athemis/Pi
 the blocks at the top and `destroy/` (the ten stages of a block being dug, `engine/breakOverlay.ts`) from
 `assets/minecraft/textures/block/`, `item/` (the pictures of tools and materials) from `assets/minecraft/textures/item/`, `particle/` from
 `assets/minecraft/textures/particle/` (the stars of a critical hit, the damage heart and the puff a
-dead player leaves, drawn by `engine/particles.ts`), `environment/clouds.png` from
-`assets/minecraft/textures/environment/` (the clouds' pattern, `engine/clouds.ts`), and `gui/` from `assets/minecraft/textures/gui/`
+dead player leaves, drawn by `engine/particles.ts`), `environment/` from
+`assets/minecraft/textures/environment/` (`clouds.png`, the clouds' pattern, `engine/clouds.ts`; `sun.png` and
+`moon_phases.png`, `engine/sky.ts`), `sky/` from `assets/fabricskyboxes/sky/` (the pack's three skyboxes, day,
+night and stars, six faces each, `engine/sky.ts`), and `gui/` from `assets/minecraft/textures/gui/`
 (`icons.png` for the hearts, `widgets.png` for the hotbar, and `container/inventory.png`,
 `container/crafting_table.png` and `container/furnace.png` as `inventory.png`, `crafting_table.png` and
 `furnace.png` for their screens, cut by `hud/gui.ts`). The inventory's block icons are drawn

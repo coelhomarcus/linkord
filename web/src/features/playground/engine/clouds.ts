@@ -108,6 +108,13 @@ export class Clouds {
     });
   }
 
+  /** The clouds darken with the sky as the game darkens them: `daylight` (0..1, game/dayTime.ts) takes
+   * them from white down to a tenth, in the night's `tint`. */
+  setDaylight(daylight: number, tint: THREE.Color): void {
+    const level = daylight * 0.9 + 0.1;
+    this.colorPass.color.setRGB(level, level, level, THREE.SRGBColorSpace).multiply(tint);
+  }
+
   update(dt: number): void {
     this.drift += dt * DRIFT_PER_SECOND;
     if (!this.cover) return;

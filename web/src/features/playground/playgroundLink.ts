@@ -28,6 +28,8 @@ export type PlaygroundServerMessage =
   | { t: 'playground-furnace'; conversationId: string; x: number; y: number; z: number; facing: number; lit: boolean }
   /** what some connections hold now */
   | { t: 'playground-held'; conversationId: string; players: unknown }
+  /** the world's clock, in ticks (game/dayTime.ts), against the drift of this browser's own count */
+  | { t: 'playground-time'; conversationId: string; clock: unknown }
   /** your inventory as the service keeps it, up to your request `ack` (inventory/inventory.ts) */
   | { t: 'playground-inv'; conversationId: string; ack: number; inventory: unknown; furnace?: unknown };
 
@@ -88,6 +90,7 @@ const SOCKET_PATH = '/playground/ws';
 const SERVER_EVENTS = [
   'playground-hit', 'playground-health', 'playground-xp',
   'playground-blocks', 'playground-items', 'playground-furnace', 'playground-held', 'playground-inv',
+  'playground-time',
 ] as const;
 // the app's pass lasts 90 s (server/src/modules/playground/playgroundAccess.ts): two chances to renew it
 const RENEW_MS = 30_000;

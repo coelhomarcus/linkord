@@ -5,7 +5,7 @@ import { playgroundInventories, playgroundWorlds } from './db/schema.js';
 
 // Where worlds and inventories are kept between visits and restarts. A world is
 // saved whole (its blocks deflated: mostly whole layers of stone, then of air,
-// it shrinks to a small part of its megabyte), an inventory as JSON.
+// it shrinks to a small part of its megabyte) with its clock, an inventory as JSON.
 
 export interface StoredWorld {
   generator: number;
@@ -13,6 +13,8 @@ export interface StoredWorld {
   blocks: Uint8Array;
   furnaces: unknown;
   items: unknown;
+  /** its clock, in ticks (game/dayTime.ts) */
+  clock: number;
 }
 
 export interface WorldStore {
@@ -32,10 +34,10 @@ export function databaseWorldStore(db: PlaygroundDb): WorldStore {
     async load(conversationId) {
       const [row] = await db.select().from(playgroundWorlds).where(eq(playgroundWorlds.conversationId, conversationId)).limit(1);
       if (!row) return null;
-      return { generator: row.generator, blocks: new Uint8Array(inflateRawSync(row.blocks)), furnaces: row.furnaces, items: row.items };
+      return { generator: row.generator, blocks: new Uint8Array(inflateRawSync(row.blocks)), furnaces: row.furnaces, items: row.items, clock: row.clock };
     },
     async save(conversationId, world) {
-      const values = { generator: world.generator, blocks: deflateRawSync(world.blocks), furnaces: world.furnaces, items: world.items, updatedAt: new Date() };
+      const values = { generator: world.generator, blocks: deflateRawSync(world.blocks), furnaces: world.furnaces, items: world.items, clock: world.clock, updatedAt: new Date() };
       await db.insert(playgroundWorlds).values({ conversationId, ...values })
         .onConflictDoUpdate({ target: playgroundWorlds.conversationId, set: values });
     },
