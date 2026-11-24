@@ -3,6 +3,8 @@ import { BLOCK, isUsable } from '@game/blocks';
 import { heldStack } from '@game/inventory';
 import { HEIGHT, spawnPoint } from '@game/layout';
 import { breakTicks } from '@game/mining';
+import { canEat, EAT_TICKS, fallDamage, headInWater, MAX_AIR, stepAir } from '@game/vitals';
+import { itemIcon } from '../inventory/items';
 import type { Motion, PlayerState } from '../playgroundProtocol';
 import type { PlaygroundSession } from '../playgroundSession';
 import type { WorldEvent } from '../worldState';
@@ -47,6 +49,14 @@ import type { World } from './voxelWorld';
 // table or furnace (a sneaking player places against them instead), held
 // down it places one every 4 ticks; on a touch screen a finger held still
 // digs and a tap places or opens.
+//
+// Eating, the same: the right button held with food in the hand (and room for
+// it) eats it in 32 ticks, the food at the mouth, crumbs and munching every 4
+// ticks, and slow steps meanwhile; a tap on a touch screen eats it through.
+// The others see the hand at the mouth (the avatar packet's `eating`), the
+// crumbs and the sound. The view also counts the air of a head under water, for
+// the HUD, and tells the session about landings, sprints and jumps, which the
+// service turns into damage and hunger.
 
 /** Someone in the playground call, with what their nameplate shows. */
 export interface PlaygroundPlayer extends NameplateStatus {
@@ -87,8 +97,17 @@ const DIG_SOUND_TICKS = 4;
 const LANDING_SOUND_FALL = 1;
 /** a held right button places a block this often */
 const USE_REPEAT_TICKS = 4;
+/** eating, walking slows to this, as with any item in use */
+const EATING_SPEED = 0.2;
+/** a meal munches and crumbs every this many ticks, from this tick on */
+const MUNCH_TICKS = 4;
+const MUNCH_FROM = 7;
 
 interface Dig { x: number; y: number; z: number; block: number; ticks: number | null; elapsed: number }
+
+/** A meal: which slot and item, the ticks it has gone on, and whether a held button keeps it going (a tap
+ * eats it through). */
+interface Meal { slot: number; item: string; ticks: number; held: boolean }
 
 interface RemoteAvatar {
   userId: string;
@@ -104,6 +123,8 @@ interface RemoteAvatar {
   held: string | null;
   /** its footsteps, counted from how far it moves */
   steps: Footsteps;
+  /** ticks it has been eating, 0 when not */
+  eatTicks: number;
 }
 
 /** Frame-rate independent smoothing toward a target. */
@@ -129,6 +150,9 @@ export class PlaygroundEngine {
   private readonly breakOverlay = new BreakOverlay();
   private dig: Dig | null = null;
   private digDelay = 0;
+  private meal: Meal | null = null;
+  /** ticks of air left with the head under water */
+  private air = MAX_AIR;
   private useTicks = 0;
   /** the world arrived and the body was put on its ground */
   private landed = false;
@@ -266,7 +290,10 @@ export class PlaygroundEngine {
         const avatar = new BlockAvatar(this.skinOf(player.userId), player.name);
         avatar.root.visible = false;
         this.scene.add(avatar.root);
-        remote = { userId: player.userId, avatar, position: new THREE.Vector3(), yaw: 0, headYaw: 0, swings: 0, placed: false, vanished: false, held: null, steps: new Footsteps() };
+        remote = {
+          userId: player.userId, avatar, position: new THREE.Vector3(), yaw: 0, headYaw: 0, swings: 0, placed: false, vanished: false, held: null,
+          steps: new Footsteps(), eatTicks: 0,
+        };
         this.remotes.set(player.id, remote);
       }
       remote.avatar.setLabel(player.name, player);
@@ -451,16 +478,19 @@ export class PlaygroundEngine {
     return bodies.some((b) => b.x + HALF_WIDTH > x && b.x - HALF_WIDTH < x + 1 && b.z + HALF_WIDTH > z && b.z - HALF_WIDTH < z + 1 && b.y + BODY_HEIGHT > y && b.y < y + 1);
   }
 
-  /** A right click: open what is aimed at, or place the held block against it. */
+  /** A right click: open what is aimed at, eat the food in the hand, or place the held block against what is
+   * aimed at. */
   private use(): boolean {
     if (this.session.combat.isDead || !this.controls.enabled) return false;
+    if (this.meal) return true;
     const hit = this.targetedBlock();
     const grid = this.session.world.grid;
-    if (!hit || !grid) return false;
-    if (isUsable(grid.get(hit.x, hit.y, hit.z)) && !this.sneaking) {
+    if (hit && grid && isUsable(grid.get(hit.x, hit.y, hit.z)) && !this.sneaking) {
       if (this.session.useBlock(hit.x, hit.y, hit.z)) this.swingOnly();
       return true;
     }
+    if (this.startMeal()) return true;
+    if (!hit || !grid) return false;
     const [dx, dy, dz] = hit.face;
     if (dx === 0 && dy === 0 && dz === 0) return false;
     const x = hit.x + dx;
@@ -478,6 +508,49 @@ export class PlaygroundEngine {
   private tap(): void {
     if (this.playerAimed(this.targetedBlock())) this.swingArm();
     else if (!this.use()) this.swingArm();
+  }
+
+  /** Starts eating the food in the hand, if there is room for it (the service says how much food you have). */
+  private startMeal(): boolean {
+    const inventory = this.session.inventory.get();
+    const item = heldStack(inventory)?.item ?? null;
+    const { food, hungerKnown } = this.session.combat.getVitals();
+    if (!item || !hungerKnown || !canEat(food, item)) return false;
+    this.meal = { slot: inventory.selected, item, ticks: 0, held: this.controls.using };
+    this.session.eatStart();
+    return true;
+  }
+
+  /** One tick of a meal: it stops when the button is let go, the hand changes, the stomach is full or you
+   * dig; done, it is eaten. */
+  private mealTick(dead: boolean): void {
+    const meal = this.meal;
+    if (!meal) return;
+    const inventory = this.session.inventory.get();
+    const { food } = this.session.combat.getVitals();
+    const stopped = dead || !this.controls.enabled || (meal.held && !this.controls.using) || this.controls.digging
+      || inventory.selected !== meal.slot || heldStack(inventory)?.item !== meal.item || !canEat(food, meal.item);
+    if (stopped) {
+      this.meal = null;
+      return;
+    }
+    meal.ticks++;
+    if (meal.ticks >= MUNCH_FROM && meal.ticks % MUNCH_TICKS === 0) this.munch(meal.item, null, 5);
+    if (meal.ticks < EAT_TICKS) return;
+    this.meal = null;
+    this.munch(meal.item, null, 16);
+    if (this.session.eat()) this.sounds.sound('burp', null, 0.5, 0.9 + Math.random() * 0.1);
+    // a held button goes on to the next bite after a moment, as it places blocks
+    this.useTicks = USE_REPEAT_TICKS;
+  }
+
+  /** The sound of a bite and crumbs of `item` out of a mouth: yours (`other` null) or someone else's, whose
+   * eyes are at `other` and look along its yaw (the camera's way) and pitch. */
+  private munch(item: string, other: { x: number; y: number; z: number; yaw: number; pitch: number } | null, crumbs: number): void {
+    const icon = itemIcon(item);
+    const eye = other ?? { x: this.body.x, y: this.body.y + this.eyeHeight, z: this.body.z, yaw: this.controls.yaw, pitch: this.controls.pitch };
+    if (icon?.kind === 'sprite') this.particles.crumbs(icon.url, eye.x, eye.y, eye.z, eye.yaw, eye.pitch, crumbs);
+    this.sounds.sound('eat', other, 0.5 + 0.5 * Math.floor(Math.random() * 2), 1 + (Math.random() - Math.random()) * 0.2);
   }
 
   /** One tick of digging: the cracks grow while the button is held on the same block; done, it breaks. */
@@ -571,6 +644,7 @@ export class PlaygroundEngine {
     const onYou = hit.targetId === this.options.localId;
     const remote = this.remotes.get(hit.targetId);
     const at = onYou ? this.position : remote?.placed ? remote.position : null;
+    if (hit.cause === 'fall') this.sounds.sound(hit.damage > 4 ? 'fallBig' : 'fallSmall', onYou ? null : at);
     if (onYou && hit.push) {
       applyKnockback(this.body, hit.push, hit.extra);
       // the attacker is where the push comes from
@@ -604,6 +678,8 @@ export class PlaygroundEngine {
     this.controls.yaw = spawn.yaw + Math.PI;
     this.controls.pitch = 0;
     this.hurtTicks = 0;
+    this.air = MAX_AIR;
+    this.meal = null;
   }
 
   private tick = (time: number): void => {
@@ -644,6 +720,7 @@ export class PlaygroundEngine {
     this.renderer.render(this.scene, this.camera);
     if (this.controls.mode === 'first' && this.armShown) {
       // the arm in its own pass, over everything: it never sinks into a wall
+      this.arm.setEating(this.meal ? EAT_TICKS - this.meal.ticks - partial + 1 : null);
       this.arm.update(dt, this.controls.pitch, this.controls.yaw, computeBob(this.bob, partial));
       this.renderer.autoClear = false;
       this.renderer.clearDepth();
@@ -663,9 +740,12 @@ export class PlaygroundEngine {
       const [fx, fy, fz] = torchFlame(state);
       this.particles.torch(x + fx, y + fy, z + fz);
     });
-    const intent = dead ? STILL : this.controls.intent();
+    const wanted = dead ? STILL : this.controls.intent();
+    // eating, the steps are slow and there is no sprinting
+    const intent = this.meal ? { ...wanted, forward: wanted.forward * EATING_SPEED, right: wanted.right * EATING_SPEED, sprint: false } : wanted;
     const jump = (this.controls.consumeJump() && !dead) || intent.jump;
     this.digTick(dead);
+    this.mealTick(dead);
     if (this.useTicks > 0) this.useTicks--;
     else if (this.controls.using && !dead) this.use();
     if (this.hurtTicks > 0) this.hurtTicks--;
@@ -686,6 +766,9 @@ export class PlaygroundEngine {
     this.speed = moved / TICK_SECONDS;
     tickBob(this.bob, moved, this.body.onGround);
     this.soundOfMoving(moved, fell, wasOnGround, wasInWater, intent.sneak);
+    if (!dead) this.countEffort(moved, fell, wasOnGround, wasInWater);
+    this.breathe(dead);
+    this.remoteMeals();
     if (this.attackTicks > 0) this.attackTicks--;
     this.previousFacing = this.facing;
     this.facing = turnBody(this.facing, this.headYaw(), movedX, movedZ, this.attackTicks > 0);
@@ -706,6 +789,38 @@ export class PlaygroundEngine {
     }
     if (body.onGround && !wasOnGround && fell > LANDING_SOUND_FALL && below) this.sounds.footstep(below, feet, 0.5);
     if (body.onGround && !sneaking && below && this.steps.step(moved)) this.sounds.footstep(below, feet);
+  }
+
+  /** What this tick cost in hunger and what a landing dealt, for the session to report: blocks sprinted on
+   * the ground, a jump off it, and a fall that ended on solid ground (into water nothing happens). */
+  private countEffort(moved: number, fell: number, wasOnGround: boolean, wasInWater: boolean): void {
+    const { body } = this;
+    const jumped = wasOnGround && !body.onGround && body.vy > 0 && !body.inWater;
+    this.session.moved(this.sprinting && wasOnGround ? moved : 0, jumped ? (this.sprinting ? 'sprintJump' : 'jump') : null);
+    // a shallow lake: the tick that reaches its floor started above the water, so wasInWater misses it
+    const feetInWater = this.terrain.isWater(Math.floor(body.x), Math.floor(body.y), Math.floor(body.z));
+    if (body.onGround && !wasOnGround && !wasInWater && !feetInWater && fallDamage(fell) > 0) {
+      this.session.landed(fell, { x: body.x, y: body.y, z: body.z });
+    }
+  }
+
+  /** The head's air: counted down under water, full again out of it, for the HUD's bubbles. */
+  private breathe(dead: boolean): void {
+    const underwater = !dead && headInWater(this.terrain.isWater, this.body.x, this.body.y + this.eyeHeight, this.body.z);
+    this.air = stepAir(this.air, underwater).air;
+    this.session.combat.showAir(underwater ? Math.max(0, this.air) : null);
+  }
+
+  /** The others' meals: a bite and crumbs every 4 ticks while they eat. */
+  private remoteMeals(): void {
+    for (const [id, remote] of this.remotes) {
+      const state = this.session.remotes.get(id)?.state;
+      const eating = !!state?.eating && !!remote.held && remote.placed && !remote.vanished;
+      remote.eatTicks = eating ? remote.eatTicks + 1 : 0;
+      if (!eating || remote.eatTicks < MUNCH_FROM || remote.eatTicks % MUNCH_TICKS !== 0) continue;
+      const { x, y, z } = remote.position;
+      this.munch(remote.held!, { x, y: y + (state.crouch ? SNEAKING_EYE_HEIGHT : STANDING_EYE_HEIGHT), z, yaw: remote.headYaw - Math.PI, pitch: state.pitch }, 5);
+    }
   }
 
   private readonly bodyLight = new THREE.Color();
@@ -738,13 +853,13 @@ export class PlaygroundEngine {
     const light = this.lightAt(this.position);
     this.local.setLight(light);
     this.arm.setLight(light);
-    this.local.update(dt, { speed: this.speed, headYaw: angleDelta(facing, headYaw), headPitch: pitch, crouching: this.sneaking });
+    this.local.update(dt, { speed: this.speed, headYaw: angleDelta(facing, headYaw), headPitch: pitch, crouching: this.sneaking, eating: !!this.meal });
     // the body would fill the view from inside it; the first-person arm stands in
     this.local.root.visible = this.controls.mode !== 'first';
 
     const state: PlayerState = {
       x: this.position.x, y: this.position.y, z: this.position.z,
-      yaw: facing, pitch, motion: this.motion, headYaw, crouch: this.sneaking, swings: this.swings,
+      yaw: facing, pitch, motion: this.motion, headYaw, crouch: this.sneaking, swings: this.swings, eating: !!this.meal,
     };
     this.session.setLocal(state);
   }
@@ -798,7 +913,7 @@ export class PlaygroundEngine {
       remote.avatar.root.position.copy(remote.position);
       remote.avatar.root.rotation.y = remote.yaw;
       remote.avatar.setLight(this.lightAt(remote.position));
-      remote.avatar.update(dt, { speed, headYaw: angleDelta(remote.yaw, remote.headYaw), headPitch: state.pitch, crouching: state.crouch });
+      remote.avatar.update(dt, { speed, headYaw: angleDelta(remote.yaw, remote.headYaw), headPitch: state.pitch, crouching: state.crouch, eating: state.eating });
     }
   }
 

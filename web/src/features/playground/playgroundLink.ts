@@ -12,12 +12,19 @@ import type { ServerMessage } from '@/shared/types/protocol';
 // When the app says no (the service is off, or you are no longer in that
 // playground) the link stops; anything else that goes wrong is tried again.
 
+/** what hurt someone when no player did: a landing, a drowning, an empty stomach */
+export type HurtCause = 'fall' | 'drown' | 'starve';
+
 /** what the service says about a call's fighting (playground/src/combat.ts) */
 export type PlaygroundServerMessage =
   /** a hit: `health` is the target's after it; a fresh hit (`hurt`) knocks the target back by `push`
-   * (and `extra` from a sprinting attacker) */
-  | { t: 'playground-hit'; conversationId: string; attackerId: string; targetId: string; damage: number; health: number; crit: boolean; hurt: boolean; push?: [number, number]; extra?: [number, number, number] }
+   * (and `extra` from a sprinting attacker). Without an attacker (null), the world dealt it, for `cause`
+   * (a service from before falls, air and hunger always names an attacker). */
+  | { t: 'playground-hit'; conversationId: string; attackerId: string | null; targetId: string; damage: number; health: number; crit: boolean; hurt: boolean; push?: [number, number]; extra?: [number, number, number]; cause?: HurtCause }
   | { t: 'playground-health'; conversationId: string; players: { id: string; health: number }[] }
+  /** your food level and saturation (playground/src/game/vitals.ts), when they change; a service from
+   * before hunger never sends it */
+  | { t: 'playground-vitals'; conversationId: string; food: number; saturation: number }
   /** your experience points in that playground, after a kill or when you arrive */
   | { t: 'playground-xp'; conversationId: string; xp: number }
   /** blocks that changed: `[x, y, z, block]` each (worldState.ts reads the rest of these) */
@@ -34,11 +41,19 @@ export type PlaygroundServerMessage =
   | { t: 'playground-inv'; conversationId: string; ack: number; inventory: unknown; furnace?: unknown };
 
 export type PlaygroundClientMessage =
-  /** where your avatar stands (feet), and where its head faces; `first` asks for everyone's health */
-  | { t: 'playground-pos'; x: number; y: number; z: number; yaw: number; first?: boolean }
+  /** where your avatar stands (feet), and where its head faces; `first` asks for everyone's health. Since the
+   * last report: the blocks sprinted and the jumps, for hunger; `fall`, how far it fell before landing here */
+  | {
+    t: 'playground-pos'; x: number; y: number; z: number; yaw: number; first?: boolean;
+    sprinted?: number; jumps?: number; sprintJumps?: number; fall?: number;
+  }
   /** a punch that landed on `targetId` (a connection id), from where you stood */
   | { t: 'playground-attack'; targetId: string; x: number; y: number; z: number; yaw: number; crit: boolean; sprint: boolean }
   | { t: 'playground-respawn' }
+  /** you started eating what you hold */
+  | { t: 'eat-start' }
+  /** you held the button on it for 32 ticks: it is eaten */
+  | { t: 'eat'; seq: number }
   /** you started digging that block */
   | { t: 'dig-start'; x: number; y: number; z: number }
   /** you finished digging it; `seq` numbers every request that may change your inventory */
@@ -89,7 +104,7 @@ export interface ServiceLinkOptions {
 
 const SOCKET_PATH = '/playground/ws';
 const SERVER_EVENTS = [
-  'playground-hit', 'playground-health', 'playground-xp',
+  'playground-hit', 'playground-health', 'playground-xp', 'playground-vitals',
   'playground-blocks', 'playground-items', 'playground-furnace', 'playground-held', 'playground-inv',
   'playground-time',
 ] as const;

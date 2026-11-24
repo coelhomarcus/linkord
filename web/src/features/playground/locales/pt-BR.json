@@ -63,7 +63,15 @@
     "hearts_one": "{{count}} coração",
     "hearts_other": "{{count}} corações",
     "hotbar": "Barra de itens",
-    "level": "Nível {{level}}"
+    "level": "Nível {{level}}",
+    "food": "Fome",
+    "shanks_zero": "{{count}} coxas",
+    "shanks_one": "{{count}} coxa",
+    "shanks_other": "{{count}} coxas",
+    "air": "Ar",
+    "bubbles_zero": "{{count}} bolhas",
+    "bubbles_one": "{{count}} bolha",
+    "bubbles_other": "{{count}} bolhas"
   },
   "chat": {
     "notLinked": "Este playground não tem chat. Quem gerencia o canal escolhe um em Configurações do canal → Chat do jogo.",
@@ -77,7 +85,10 @@
   "death": {
     "title": "Você morreu!",
     "killedBy": "{{name}} te derrotou",
-    "respawn": "Renascer"
+    "respawn": "Renascer",
+    "fell": "Você caiu de um lugar alto",
+    "drowned": "Você se afogou",
+    "starved": "Você morreu de fome"
   },
   "inventory": {
     "title": "Inventário",
@@ -166,6 +177,15 @@
     "ironNugget": "Pepita de ferro",
     "goldIngot": "Barra de ouro",
     "diamond": "Diamante",
+    "apple": "Maçã",
+    "beef": "Carne crua",
+    "cookedBeef": "Bife",
+    "porkchop": "Costeleta de porco crua",
+    "cookedPorkchop": "Costeleta de porco assada",
+    "mutton": "Carne de carneiro crua",
+    "cookedMutton": "Carne de carneiro assada",
+    "chicken": "Frango cru",
+    "cookedChicken": "Frango assado",
     "woodenSword": "Espada de madeira",
     "woodenPickaxe": "Picareta de madeira",
     "woodenAxe": "Machado de madeira",

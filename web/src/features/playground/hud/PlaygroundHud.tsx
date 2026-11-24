@@ -4,26 +4,34 @@ import type { Vitals } from '../playgroundCombat';
 import { MAX_HEALTH } from '../playgroundCombat';
 import { HOTBAR_SIZE, heldStack } from '@game/inventory';
 import type { Inventory } from '@game/inventory';
+import { airBubbles, MAX_AIR, MAX_FOOD } from '@game/vitals';
 import { itemName } from '../inventory/items';
 import { experienceLevel } from '../experience';
 import { at, guiText } from './gui';
 import { GuiSprite, ItemStackView } from './GuiSprite';
 
 // The block game's HUD at the bottom of the screen, laid out as it does in GUI
-// pixels from the hotbar's corner: ten hearts above the hotbar's left end, the
-// experience bar right above the hotbar with the level in green over its middle,
-// the hotbar with the selected slot framed, and the held item's name above it
-// for a moment after it changes.
+// pixels from the hotbar's corner: ten hearts above the hotbar's left end, ten
+// shanks of food above its right end (with a service that keeps hunger) and,
+// with the head under water, the air's bubbles above them; the experience bar
+// right above the hotbar with the level in green over its middle, the hotbar
+// with the selected slot framed, and the held item's name above it for a moment
+// after it changes.
 //
 // The hearts behave like the game's: after a hit they blink white for 20 ticks
 // (10 after a heal), showing the health before the change in white under the
-// red; with 2 hearts or less they jiggle a pixel up and down every tick.
+// red; with 2 hearts or less they jiggle a pixel up and down every tick. With no
+// saturation left the shanks shiver now and then, more often the emptier they are.
 
 const TICK_MS = 50;
 const HOTBAR_WIDTH = 182;
 /** the hearts row is this far above the hotbar's top */
 const HEARTS_ABOVE = 17;
 const HEART = { container: 16, full: 52, half: 61, fullBlink: 70, halfBlink: 79 } as const;
+/** the shanks on icons.png, in the hearts' row of the screen from the right end */
+const SHANK = { v: 27, container: 16, full: 52, half: 61 } as const;
+/** the bubbles on icons.png, one row above the shanks */
+const BUBBLE = { v: 18, full: 16, popping: 25, above: 10 } as const;
 /** the experience bar on icons.png: empty, then full, 182 × 5; it sits 7 pixels above the hotbar */
 const XP_BAR = { empty: 64, full: 69, height: 5, above: 7 } as const;
 /** the game's green for the level, drawn with a black outline */
@@ -73,6 +81,53 @@ function Hearts({ vitals, scale }: { vitals: Vitals; scale: number }) {
   );
 }
 
+/** Which way a shank shivers at a tick (-1, 0 or 1), the same every time it is asked. */
+function shiver(tick: number, shank: number): number {
+  let n = Math.imul(tick * 668265263 + shank * 374761393, 0x85ebca6b) >>> 0;
+  n ^= n >>> 13;
+  return (n % 3) - 1;
+}
+
+function Shanks({ food, saturation, scale }: { food: number; saturation: number; scale: number }) {
+  const { t } = useTranslation('playground');
+  const [tick, setTick] = useState(0);
+  const shivering = saturation <= 0;
+
+  useEffect(() => {
+    if (!shivering) return;
+    const timer = setTimeout(() => setTick((n) => n + 1), TICK_MS);
+    return () => clearTimeout(timer);
+  }, [shivering, tick]);
+
+  const shake = shivering && tick % (food * 3 + 1) === 0;
+  return (
+    <div role="meter" aria-label={t('hud.food')} aria-valuemin={0} aria-valuemax={MAX_FOOD} aria-valuenow={food} aria-valuetext={t('hud.shanks', { count: food / 2 })}>
+      {Array.from({ length: MAX_FOOD / 2 }, (_, i) => {
+        const x = HOTBAR_WIDTH - 9 - i * 8;
+        const y = shake ? shiver(tick, i) : 0;
+        const fill = i * 2 + 1 < food ? SHANK.full : i * 2 + 1 === food ? SHANK.half : null;
+        return (
+          <GuiSprite key={i} sheet="icons" u={SHANK.container} v={SHANK.v} width={9} height={9} scale={scale} x={x} y={y}>
+            {fill !== null && <GuiSprite sheet="icons" u={fill} v={SHANK.v} width={9} height={9} scale={scale} />}
+          </GuiSprite>
+        );
+      })}
+    </div>
+  );
+}
+
+function Bubbles({ air, scale }: { air: number; scale: number }) {
+  const { t } = useTranslation('playground');
+  const { full, popping } = airBubbles(air);
+  return (
+    <div role="meter" aria-label={t('hud.air')} aria-valuemin={0} aria-valuemax={MAX_AIR} aria-valuenow={Math.max(0, air)} aria-valuetext={t('hud.bubbles', { count: full + popping })}>
+      {Array.from({ length: full + popping }, (_, i) => (
+        <GuiSprite key={i} sheet="icons" u={i < full ? BUBBLE.full : BUBBLE.popping} v={BUBBLE.v} width={9} height={9} scale={scale} x={HOTBAR_WIDTH - 9 - i * 8} y={-BUBBLE.above} />
+      ))}
+    </div>
+  );
+}
+
 function ExperienceBar({ xp, scale, top }: { xp: number; scale: number; top: number }) {
   const { t } = useTranslation('playground');
   const { level, progress } = experienceLevel(xp);
@@ -116,6 +171,8 @@ export function PlaygroundHud({ vitals, inventory, scale, onSelect }: { vitals: 
       <div role="meter" aria-label={t('hud.health')} aria-valuemin={0} aria-valuemax={MAX_HEALTH} aria-valuenow={vitals.health} aria-valuetext={t('hud.hearts', { count: vitals.health / 2 })}>
         <Hearts key={`${vitals.hurts}:${vitals.heals}`} vitals={vitals} scale={scale} />
       </div>
+      {vitals.hungerKnown && <Shanks food={vitals.food} saturation={vitals.saturation} scale={scale} />}
+      {vitals.air !== null && <Bubbles air={vitals.air} scale={scale} />}
       <ExperienceBar xp={vitals.xp} scale={scale} top={hotbarTop - XP_BAR.above} />
       <GuiSprite sheet="widgets" u={0} v={0} width={HOTBAR_WIDTH} height={22} scale={scale} y={hotbarTop} />
       <GuiSprite sheet="widgets" u={0} v={22} width={24} height={24} scale={scale} x={-1 + inventory.selected * 20} y={hotbarTop - 1} />

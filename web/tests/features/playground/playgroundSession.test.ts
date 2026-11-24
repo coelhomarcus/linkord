@@ -261,6 +261,42 @@ describe('PlaygroundSession fighting', () => {
     session.dispose();
   });
 
+  it('reports what you did for hunger with the next report, and a landing at once', () => {
+    const { session, sent } = sessionWithLink();
+    session.start();
+    session.moved(0.3, null);
+    session.moved(0.3, 'sprintJump');
+    session.moved(0, 'jump');
+    session.landed(7.25, { x: 22.5, y: 30, z: 23.5 });
+    expect(sent('playground-pos').at(-1)).toMatchObject({ sprinted: 0.6, jumps: 1, sprintJumps: 1, fall: 7.25 });
+    // counted once
+    session.landed(0, { x: 22.5, y: 30, z: 23.5 });
+    expect(sent('playground-pos')).toHaveLength(2);
+    session.dispose();
+  });
+
+  it('reports a landing from where the feet came down, not from the avatar a frame behind', () => {
+    const { session, sent } = sessionWithLink();
+    session.start();
+    session.setLocal({ ...session.local, x: 22.4, y: 37.1, z: 23.4 });
+    session.landed(7.1, { x: 22.5, y: 30, z: 23.5 });
+    expect(sent('playground-pos').at(-1)).toMatchObject({ x: 22.5, y: 30, z: 23.5, fall: 7.1 });
+    session.dispose();
+  });
+
+  it('eats the held food: the start, then one of the stack gone at once with the request', () => {
+    const { session, sent } = sessionWithLink();
+    const slots = Array.from({ length: 41 }, () => null as unknown);
+    slots[0] = { item: 'apple', count: 3 };
+    session.receive({ t: 'playground-inv', conversationId: 'conv', ack: 0, inventory: { slots, selected: 0 } });
+    session.eatStart();
+    expect(sent('eat-start')).toEqual([{ t: 'eat-start' }]);
+    expect(session.eat()).toBe(true);
+    expect(sent('eat')).toEqual([{ t: 'eat', seq: 1 }]);
+    expect(session.inventory.get().slots[0]).toEqual({ item: 'apple', count: 2 });
+    session.dispose();
+  });
+
   it('only listens to its own call', () => {
     const { session } = sessionWithLink();
     session.receive({ t: 'playground-health', conversationId: 'another', players: [{ id: 'conn-me', health: 3 }] });

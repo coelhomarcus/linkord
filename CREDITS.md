@@ -17,9 +17,9 @@ The playground's art and sound come from these packs. Each folder under `web/src
 | Pack | What the playground uses | License |
 | --- | --- | --- |
 | **[Kenui's Default](https://modrinth.com/resourcepack/kenuis-default)** by KenuiZ (`kenuis-default/`) | the world's block textures (among them the torch, the lantern and glowstone), a torch's flame, the cracks of a block being dug, the items' pictures, the chests, the clouds, the sun and the moon's phases | MIT |
-| **[Pixel Perfection Community Edition](https://github.com/Athemis/PixelPerfectionCE)**, originally by XSSheep and updated by its community (`pixel-perfection/`) | the fight's particles, and the coal, charcoal, iron nugget and lantern item pictures | [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/) |
-| **[Mandala's GUI - Dark mode](https://modrinth.com/resourcepack/mandalas-gui-dark-mode)** by CesarZorak (`mandalas-gui/`) | the hearts, experience bar, hotbar, and the inventory, crafting table, furnace, chest and creative screens | All rights reserved; used for now, to be replaced |
-| **[Enhanced Audio](https://modrinth.com/resourcepack/enhanced-audio)** by Frawzy (`enhanced-audio/`) | the game's sounds: footsteps, digging, breaking and placing blocks, chests, items picked up, water, hits, a new level | All rights reserved; used for now, to be replaced |
+| **[Pixel Perfection Community Edition](https://github.com/Athemis/PixelPerfectionCE)**, originally by XSSheep and updated by its community (`pixel-perfection/`) | the fight's particles, and the coal, charcoal, iron nugget, lantern and cooked porkchop item pictures | [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/) |
+| **[Mandala's GUI - Dark mode](https://modrinth.com/resourcepack/mandalas-gui-dark-mode)** by CesarZorak (`mandalas-gui/`) | the hearts, hunger, air bubbles, experience bar, hotbar, and the inventory, crafting table, furnace, chest and creative screens | All rights reserved; used for now, to be replaced |
+| **[Enhanced Audio](https://modrinth.com/resourcepack/enhanced-audio)** by Frawzy (`enhanced-audio/`) | the game's sounds: footsteps, digging, breaking and placing blocks, chests, items picked up, water, hits and falls, eating, a new level | All rights reserved; used for now, to be replaced |
 
 The game tints Kenui's Default's grass, leaves and water as it draws them. Default skins and the rest of the interface are Linkord's own.
 

@@ -80,6 +80,10 @@ export const SOUNDS = {
   swim: sound('liquid/swim', 0.25),
   hurt: sound('damage/hit'),
   crit: sound('entity/player/attack/crit'),
+  fallSmall: sound('damage/fallsmall'),
+  fallBig: sound('damage/fallbig'),
+  eat: sound('random/eat'),
+  burp: sound('random/burp'),
 } as const;
 export type SoundName = keyof typeof SOUNDS;
 

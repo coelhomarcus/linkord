@@ -5,7 +5,10 @@ import { guiScale } from '@/features/playground/hud/gui';
 import { createInventory } from '@game/inventory';
 import type { Vitals } from '@/features/playground/playgroundCombat';
 
-const vitals = (health: number, xp = 0): Vitals => ({ health, previousHealth: 20, lastChange: 'hurt', hurts: 1, heals: 0, killerId: null, xp, xpKnown: true });
+const vitals = (health: number, xp = 0, extra: Partial<Vitals> = {}): Vitals => ({
+  health, previousHealth: 20, lastChange: 'hurt', hurts: 1, heals: 0, killerId: null, deathCause: null,
+  food: 20, saturation: 5, hungerKnown: false, air: null, xp, xpKnown: true, ...extra,
+});
 
 describe('guiScale', () => {
   it('is as large as it can be while 320 × 240 of it still fit, up to 4', () => {
@@ -38,5 +41,29 @@ describe('PlaygroundHud', () => {
     const bar = screen.getByRole('meter', { name: 'Nível 1' });
     expect(bar.getAttribute('aria-valuenow')).toBe('44');
     expect(screen.getByText('1')).toBeTruthy();
+  });
+});
+
+describe('PlaygroundHud hunger and air', () => {
+  it('shows the food in shanks only when the service keeps hunger', () => {
+    const { rerender } = render(<PlaygroundHud vitals={vitals(20)} inventory={createInventory()} scale={1} onSelect={() => {}} />);
+    expect(screen.queryByRole('meter', { name: 'Fome' })).toBeNull();
+    rerender(<PlaygroundHud vitals={vitals(20, 0, { hungerKnown: true, food: 13 })} inventory={createInventory()} scale={1} onSelect={() => {}} />);
+    const food = screen.getByRole('meter', { name: 'Fome' });
+    expect(food.getAttribute('aria-valuenow')).toBe('13');
+    expect(food.getAttribute('aria-valuetext')).toBe('6.5 coxas');
+    rerender(<PlaygroundHud vitals={vitals(20, 0, { hungerKnown: true, food: 0, saturation: 0 })} inventory={createInventory()} scale={1} onSelect={() => {}} />);
+    expect(screen.getByRole('meter', { name: 'Fome' }).getAttribute('aria-valuetext')).toBe('0 coxas');
+  });
+
+  it('shows the air in bubbles only with the head under water, one popping as it runs out', () => {
+    const { rerender } = render(<PlaygroundHud vitals={vitals(20, 0, { hungerKnown: true })} inventory={createInventory()} scale={1} onSelect={() => {}} />);
+    expect(screen.queryByRole('meter', { name: 'Ar' })).toBeNull();
+    rerender(<PlaygroundHud vitals={vitals(20, 0, { hungerKnown: true, air: 271 })} inventory={createInventory()} scale={1} onSelect={() => {}} />);
+    const air = screen.getByRole('meter', { name: 'Ar' });
+    expect(air.getAttribute('aria-valuetext')).toBe('10 bolhas');
+    expect(air.children).toHaveLength(10);
+    rerender(<PlaygroundHud vitals={vitals(20, 0, { hungerKnown: true, air: 0 })} inventory={createInventory()} scale={1} onSelect={() => {}} />);
+    expect(screen.getByRole('meter', { name: 'Ar' }).children).toHaveLength(0);
   });
 });

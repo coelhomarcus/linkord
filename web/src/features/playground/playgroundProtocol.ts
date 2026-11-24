@@ -29,6 +29,8 @@ export interface PlayerState {
   crouch: boolean;
   /** counts the arm's swings, so the others play each one (wraps at 256) */
   swings: number;
+  /** eating what the hand holds: the arm goes to the mouth */
+  eating: boolean;
 }
 
 const round = (n: number) => Math.round(n * 100) / 100;
@@ -38,7 +40,7 @@ const MAX_PITCH = Math.PI / 2;
 export function encodeState(state: PlayerState): Uint8Array<ArrayBuffer> {
   const packet = {
     v: VERSION, p: [round(state.x), round(state.y), round(state.z)], r: round(state.yaw), h: round(state.pitch), m: MOTIONS.indexOf(state.motion),
-    t: round(state.headYaw), c: state.crouch ? 1 : 0, s: state.swings & 0xff,
+    t: round(state.headYaw), c: state.crouch ? 1 : 0, s: state.swings & 0xff, ...(state.eating ? { e: 1 } : {}),
   };
   return new TextEncoder().encode(JSON.stringify(packet));
 }
@@ -55,7 +57,7 @@ export function decodeState(bytes: Uint8Array): PlayerState | null {
     return null;
   }
   if (!packet || typeof packet !== 'object') return null;
-  const { v, p, r, h, m, t, c, s } = packet as Record<string, unknown>;
+  const { v, p, r, h, m, t, c, s, e } = packet as Record<string, unknown>;
   if (v !== VERSION || !Array.isArray(p) || p.length !== 3 || !p.every(Number.isFinite) || !Number.isFinite(r)) return null;
   const [x, y, z] = (p as number[]).map((n, i) => (i === 1 ? clamp(n, 0, HEIGHT) : clamp(n, -HALF, HALF)));
   const motion = typeof m === 'number' && MOTIONS[m] ? MOTIONS[m] : 'idle';
@@ -64,5 +66,6 @@ export function decodeState(bytes: Uint8Array): PlayerState | null {
   // so did the head's own heading, the sneak and the swings: without them the head looks where the body faces
   const headYaw = Number.isFinite(t) ? (t as number) : (r as number);
   const swings = Number.isInteger(s) ? (s as number) & 0xff : 0;
-  return { x: x!, y: y!, z: z!, yaw: r as number, pitch, motion, headYaw, crouch: c === 1, swings };
+  // and eating, later still
+  return { x: x!, y: y!, z: z!, yaw: r as number, pitch, motion, headYaw, crouch: c === 1, swings, eating: e === 1 };
 }

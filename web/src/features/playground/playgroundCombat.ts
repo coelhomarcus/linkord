@@ -1,19 +1,23 @@
 import { useSyncExternalStore } from 'react';
-import type { PlaygroundServerMessage } from './playgroundLink';
+import { airBubbles, MAX_FOOD, START_SATURATION } from '@game/vitals';
+import type { HurtCause, PlaygroundServerMessage } from './playgroundLink';
 
 // What this client knows of the fighting in a playground. The playground service
-// decides every hit and every point of health (playground/src/combat.ts);
-// this keeps the last word it said, counts the regeneration it will do in the
-// meantime with the same rule (1 point every 4 s, from when the health last
-// changed), hands each hit to the 3D view for its effects, and remembers who is
-// dead. It lives in the PlaygroundSession, so it outlives the view.
+// decides every hit, every point of health and of food (playground/src/combat.ts);
+// this keeps the last word it said, hands each hit to the 3D view for its
+// effects, and remembers who is dead. It lives in the PlaygroundSession, so it
+// outlives the view.
+//
+// A service that keeps hunger says every point of health that comes back. One
+// from before hunger healed everyone 1 point every 4 s from the last change
+// and said nothing: with it, this counts that regeneration itself.
 
 export const MAX_HEALTH = 20;
 const REGEN_INTERVAL_MS = 4000;
 
 export type PlaygroundHit = Extract<PlaygroundServerMessage, { t: 'playground-hit' }>;
 /** what the service says about fighting */
-type CombatMessage = Extract<PlaygroundServerMessage, { t: 'playground-hit' | 'playground-health' | 'playground-xp' }>;
+type CombatMessage = Extract<PlaygroundServerMessage, { t: 'playground-hit' | 'playground-health' | 'playground-xp' | 'playground-vitals' }>;
 
 /** The local player's health as the HUD shows it. */
 export interface Vitals {
@@ -28,6 +32,15 @@ export interface Vitals {
   heals: number;
   /** who dealt the killing blow (a connection id), while dead */
   killerId: string | null;
+  /** what killed you when no one did, while dead */
+  deathCause: HurtCause | null;
+  /** food level, 0..20 */
+  food: number;
+  saturation: number;
+  /** whether the service keeps hunger (one from before it never says): the HUD shows it only then */
+  hungerKnown: boolean;
+  /** air left with the head under water (ticks), or null with it out */
+  air: number | null;
   /** experience points in this playground (experience.ts makes them a level) */
   xp: number;
   /** whether the service has said them yet (until then `xp` is 0 for want of knowing) */
@@ -39,7 +52,10 @@ export function isCriticalHit(body: { onGround: boolean; inWater?: boolean }, fa
   return !body.onGround && !body.inWater && fallDistance > 0;
 }
 
-const FULL: Vitals = { health: MAX_HEALTH, previousHealth: MAX_HEALTH, lastChange: null, hurts: 0, heals: 0, killerId: null, xp: 0, xpKnown: false };
+const FULL: Vitals = {
+  health: MAX_HEALTH, previousHealth: MAX_HEALTH, lastChange: null, hurts: 0, heals: 0, killerId: null, deathCause: null,
+  food: MAX_FOOD, saturation: START_SATURATION, hungerKnown: false, air: null, xp: 0, xpKnown: false,
+};
 const noSubscription = () => () => {};
 const fullHealth = () => FULL;
 
@@ -75,6 +91,20 @@ export class PlaygroundCombat {
     return this.vitals.health <= 0;
   }
 
+  /** The air the 3D view counts for your head (null out of water); shown only when the service drowns
+   * people, and a change only when a bubble does. */
+  showAir(air: number | null): void {
+    const shown = this.vitals.air;
+    const next = this.vitals.hungerKnown && !this.isDead ? air : null;
+    if (next === shown) return;
+    if (next !== null && shown !== null) {
+      const [a, b] = [airBubbles(next), airBubbles(shown)];
+      if (a.full === b.full && a.popping === b.popping) return;
+    }
+    this.vitals = { ...this.vitals, air: next };
+    for (const listener of this.listeners) listener();
+  }
+
   /** The hits since the last call, oldest first (the 3D view plays them). */
   takeHits(): PlaygroundHit[] {
     const hits = this.hits;
@@ -84,6 +114,16 @@ export class PlaygroundCombat {
 
   /** A message from the server about this call's fighting. */
   receive(message: CombatMessage, now = performance.now()): void {
+    if (message.t === 'playground-vitals') {
+      const { food, saturation } = message;
+      if (!Number.isFinite(food) || !Number.isFinite(saturation)) return;
+      const known = this.vitals.hungerKnown;
+      this.vitals = { ...this.vitals, food: Math.max(0, Math.min(MAX_FOOD, food)), saturation: Math.max(0, saturation), hungerKnown: true };
+      for (const listener of this.listeners) listener();
+      // the service now says every heal
+      if (!known) this.scheduleRegen();
+      return;
+    }
     if (message.t === 'playground-xp') {
       if (Number.isFinite(message.xp) && message.xp >= 0 && (message.xp !== this.vitals.xp || !this.vitals.xpKnown)) {
         this.vitals = { ...this.vitals, xp: message.xp, xpKnown: true };
@@ -94,13 +134,13 @@ export class PlaygroundCombat {
     if (message.t === 'playground-hit') {
       this.hits.push(message);
       if (this.hits.length > 64) this.hits.shift();
-      this.setHealthOf(message.targetId, message.health, now, message.hurt, message.attackerId);
+      this.setHealthOf(message.targetId, message.health, now, message.hurt, message.attackerId ?? null, message.cause ?? null);
       return;
     }
-    for (const { id, health } of message.players) this.setHealthOf(id, health, now, false, null);
+    for (const { id, health } of message.players) this.setHealthOf(id, health, now, false, null, null);
   }
 
-  private setHealthOf(id: string, health: number, now: number, hurt: boolean, attackerId: string | null): void {
+  private setHealthOf(id: string, health: number, now: number, hurt: boolean, attackerId: string | null, cause: HurtCause | null): void {
     if (!Number.isFinite(health)) return;
     if (id !== this.localId) {
       if (health <= 0) this.dead.add(id);
@@ -119,11 +159,14 @@ export class PlaygroundCombat {
       hurts: this.vitals.hurts + (hurt ? 1 : 0),
       heals: this.vitals.heals + (healed ? 1 : 0),
       killerId: this.baseHealth <= 0 ? attackerId : null,
+      deathCause: this.baseHealth <= 0 ? cause : null,
+      air: this.baseHealth <= 0 ? null : this.vitals.air,
     });
   }
 
   private update(vitals: Vitals): void {
-    const changed = vitals.health !== this.vitals.health || vitals.hurts !== this.vitals.hurts || vitals.heals !== this.vitals.heals || vitals.killerId !== this.vitals.killerId || vitals.previousHealth !== this.vitals.previousHealth;
+    const changed = vitals.health !== this.vitals.health || vitals.hurts !== this.vitals.hurts || vitals.heals !== this.vitals.heals || vitals.killerId !== this.vitals.killerId
+      || vitals.previousHealth !== this.vitals.previousHealth || vitals.deathCause !== this.vitals.deathCause;
     if (changed) {
       this.vitals = vitals;
       for (const listener of this.listeners) listener();
@@ -131,12 +174,12 @@ export class PlaygroundCombat {
     this.scheduleRegen();
   }
 
-  /** The server heals 1 point every REGEN_INTERVAL_MS from the last change; shown when it does. */
+  /** A service from before hunger heals 1 point every REGEN_INTERVAL_MS from the last change; shown when it does. */
   private scheduleRegen(): void {
     if (this.regenTimer) clearTimeout(this.regenTimer);
     this.regenTimer = null;
     const { health } = this.vitals;
-    if (health <= 0 || health >= MAX_HEALTH) return;
+    if (this.vitals.hungerKnown || health <= 0 || health >= MAX_HEALTH) return;
     const due = this.baseAt + (Math.floor(health - this.baseHealth) + 1) * REGEN_INTERVAL_MS;
     this.regenTimer = setTimeout(() => {
       this.regenTimer = null;

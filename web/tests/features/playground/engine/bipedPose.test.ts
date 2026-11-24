@@ -46,6 +46,14 @@ describe('bipedPose', () => {
   it('raises the right arm forward through a punch', () => {
     expect(bipedPose({ ...still, attack: 0.5 }).rightArm.rotation[0]).toBeLessThan(bipedPose(still).rightArm.rotation[0] - 0.5);
   });
+
+  it('brings the right hand up and in to the mouth to eat, higher when looking up', () => {
+    const eating = bipedPose({ ...still, holding: true, eating: true }).rightArm.rotation;
+    expect(eating[0]).toBeLessThan(-1.2);
+    // turned in toward the middle (y and z flip into our space)
+    expect(eating[1]).toBeGreaterThan(0.4);
+    expect(bipedPose({ ...still, holding: true, eating: true, headPitch: 0.5 }).rightArm.rotation[0]).toBeLessThan(eating[0]);
+  });
 });
 
 describe('LimbSwing', () => {

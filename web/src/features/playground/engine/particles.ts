@@ -20,7 +20,9 @@ import type { Terrain } from './playerPhysics';
 // - damage: the dark hearts that rise from whoever was hurt;
 // - poof: the grey puffs left where a dead player vanishes, shrinking as they rise;
 // - flame and smoke, from a torch's tip (blockAnimation.ts): the flame hangs
-//   there at full brightness, shrinking; the dark smoke drifts up.
+//   there at full brightness, shrinking; the dark smoke drifts up;
+// - crumbs of what someone eats: a random 4-pixel square of the food's picture
+//   each, thrown out of the mouth and falling.
 
 const MAX_PARTICLES = 300;
 /** a particle's size 1 is this wide, in blocks */
@@ -30,7 +32,7 @@ const CRIT_TRIES_PER_TICK = 16;
 const PLAYER_WIDTH = 0.6;
 const PLAYER_HEIGHT = 1.8;
 
-type Kind = 'crit' | 'damage' | 'poof' | 'flame' | 'smoke';
+type Kind = 'crit' | 'damage' | 'poof' | 'flame' | 'smoke' | 'crumb';
 
 interface Particle {
   kind: Kind;
@@ -75,11 +77,14 @@ export class Particles {
   private readonly flame: THREE.Texture;
   /** the puff's frames, from the largest (smoke's too) */
   private readonly poof: THREE.Texture[];
+  private readonly loader = new THREE.TextureLoader();
+  /** item pictures crumbs are cut from, by url */
+  private readonly pictures = new Map<string, THREE.Texture>();
 
   constructor(terrain: Pick<Terrain, 'isSolid'>, lightAt: (x: number, y: number, z: number, out: THREE.Color) => THREE.Color) {
     this.terrain = terrain;
     this.lightAt = lightAt;
-    const loader = new THREE.TextureLoader();
+    const loader = this.loader;
     this.crit = loadTexture(loader, critUrl);
     this.damage = loadTexture(loader, damageUrl);
     this.flame = loadTexture(loader, flameUrl);
@@ -130,6 +135,36 @@ export class Particles {
       flame.vy *= 0.01;
       flame.vz *= 0.01;
       flame.maxAge = Math.floor(8 / (rand() * 0.8 + 0.2)) + 4;
+    }
+  }
+
+  /** Crumbs of a picture (`url`, an item's), thrown out of a mouth whose eyes are at (x, y, z) and look along
+   * `yaw`/`pitch` (radians; yaw 0 looks toward -z, pitch up is positive): the game's, 0.6 in front, a little
+   * below, flying forward and up before they fall. */
+  crumbs(url: string, x: number, y: number, z: number, yaw: number, pitch: number, count: number): void {
+    let picture = this.pictures.get(url);
+    if (!picture) {
+      picture = loadTexture(this.loader, url);
+      this.pictures.set(url, picture);
+    }
+    const look = new THREE.Euler(pitch, yaw, 0, 'YXZ');
+    const offset = new THREE.Vector3();
+    const speed = new THREE.Vector3();
+    for (let i = 0; i < count; i++) {
+      offset.set((rand() - 0.5) * 0.3, -rand() * 0.6 - 0.3, -0.6).applyEuler(look);
+      speed.set((rand() - 0.5) * 0.1, rand() * 0.1 + 0.1, 0).applyEuler(look);
+      const texture = picture.clone();
+      texture.repeat.set(0.25, 0.25);
+      texture.offset.set((rand() * 12) / 16, (rand() * 12) / 16);
+      const crumb = this.add('crumb', texture, x + offset.x, y + offset.y, z + offset.z, 0, 0, 0);
+      if (!crumb) {
+        texture.dispose();
+        return;
+      }
+      crumb.vx = crumb.vx * 0.1 + speed.x;
+      crumb.vy = crumb.vy * 0.1 + speed.y + 0.05;
+      crumb.vz = crumb.vz * 0.1 + speed.z;
+      crumb.size /= 2;
     }
   }
 
@@ -214,6 +249,12 @@ export class Particles {
         p.vx *= drag;
         p.vy *= drag;
         p.vz *= drag;
+      } else if (p.kind === 'crumb') {
+        p.vy -= 0.04;
+        this.move(p);
+        p.vx *= 0.98;
+        p.vy *= 0.98;
+        p.vz *= 0.98;
       } else if (p.kind === 'flame') {
         // nothing stops a flame: it hangs where it was lit, slowing
         p.x += p.vx;
@@ -279,6 +320,8 @@ export class Particles {
     const [p] = this.particles.splice(index, 1);
     if (!p) return;
     p.sprite.removeFromParent();
+    // a crumb's square is its own copy of the picture
+    if (p.kind === 'crumb') p.material.map?.dispose();
     p.material.dispose();
   }
 
@@ -289,6 +332,8 @@ export class Particles {
     this.damage.dispose();
     this.flame.dispose();
     for (const texture of this.poof) texture.dispose();
+    for (const texture of this.pictures.values()) texture.dispose();
+    this.pictures.clear();
     this.group.removeFromParent();
   }
 }

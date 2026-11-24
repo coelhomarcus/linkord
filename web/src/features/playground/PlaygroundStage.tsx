@@ -338,8 +338,8 @@ export default function PlaygroundStage({ allIds, onBack }: { allIds: string[]; 
 
   const toggleView = () => engineRef.current?.setCameraMode(nextCameraMode(cameraMode));
   const showHud = !menuOpen && !hudHidden && !failed && !!session && inWorld;
-  // the hearts and hotbar's height, which the chat lines and notices stay above
-  const hudHeight = showHud ? 39 * scale + 4 : 0;
+  // the hearts and hotbar's height (and the bubbles' row over the shanks), which the chat lines and notices stay above
+  const hudHeight = showHud ? (39 + (vitals.air !== null ? 10 : 0)) * scale + 4 : 0;
   function closeInventory() {
     session?.inventoryOp({ op: 'close' });
     setInventoryOpen(false);
@@ -445,7 +445,7 @@ export default function PlaygroundStage({ allIds, onBack }: { allIds: string[]; 
           onOp={(op) => session.inventoryOp(op)} onClose={closeInventory} />
       )}
 
-      {dead && !menuOpen && <PlaygroundDeathScreen key={vitals.hurts} killerName={killerName} onRespawn={respawn} />}
+      {dead && !menuOpen && <PlaygroundDeathScreen key={vitals.hurts} killerName={killerName} cause={vitals.deathCause} onRespawn={respawn} />}
 
       {menuOpen && session && me.id && me.userId && (
         <PlaygroundMenu

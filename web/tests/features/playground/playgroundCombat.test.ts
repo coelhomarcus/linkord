@@ -24,13 +24,16 @@ describe('PlaygroundCombat', () => {
     combat.subscribe(listener);
     combat.receive(hit());
     combat.receive(hit({ targetId: 'other', health: 12 }));
-    expect(combat.getVitals()).toEqual({ health: 19, previousHealth: 20, lastChange: 'hurt', hurts: 1, heals: 0, killerId: null, xp: 0, xpKnown: false });
+    expect(combat.getVitals()).toEqual({
+      health: 19, previousHealth: 20, lastChange: 'hurt', hurts: 1, heals: 0, killerId: null, deathCause: null,
+      food: 20, saturation: 5, hungerKnown: false, air: null, xp: 0, xpKnown: false,
+    });
     expect(listener).toHaveBeenCalledTimes(1);
     expect(combat.takeHits().map((h) => h.targetId)).toEqual(['me', 'other']);
     expect(combat.takeHits()).toEqual([]);
   });
 
-  it('heals 1 every 4 s from the last change, as the server does', () => {
+  it('heals 1 every 4 s from the last change, as a service from before hunger does', () => {
     const combat = new PlaygroundCombat('me');
     combat.receive(hit({ health: 17 }), performance.now());
     vi.advanceTimersByTime(3999);
@@ -70,5 +73,50 @@ describe('PlaygroundCombat', () => {
     combat.receive(hit());
     expect(combat.getVitals()).toMatchObject({ xp: 7, health: 19 });
     expect(listener).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe('PlaygroundCombat hunger and air', () => {
+  beforeEach(() => { vi.useFakeTimers(); });
+  afterEach(() => { vi.useRealTimers(); });
+
+  const vitals = (food: number, saturation = 0) => ({ t: 'playground-vitals' as const, conversationId: 'conv', food, saturation });
+
+  it('keeps the food the service says, and from then waits for it to say every heal', () => {
+    const combat = new PlaygroundCombat('me');
+    combat.receive(hit({ health: 17 }), performance.now());
+    combat.receive(vitals(19, 2.5));
+    expect(combat.getVitals()).toMatchObject({ food: 19, saturation: 2.5, hungerKnown: true });
+    vi.advanceTimersByTime(60_000);
+    expect(combat.getVitals().health).toBe(17);
+    combat.receive({ t: 'playground-health', conversationId: 'conv', players: [{ id: 'me', health: 18 }] });
+    expect(combat.getVitals()).toMatchObject({ health: 18, lastChange: 'heal' });
+    combat.dispose();
+  });
+
+  it('remembers what killed you when no one did', () => {
+    const combat = new PlaygroundCombat('me');
+    combat.receive(hit({ attackerId: null, cause: 'drown', health: 0, push: undefined }));
+    expect(combat.getVitals()).toMatchObject({ killerId: null, deathCause: 'drown' });
+    combat.receive({ t: 'playground-health', conversationId: 'conv', players: [{ id: 'me', health: MAX_HEALTH }] });
+    expect(combat.getVitals().deathCause).toBeNull();
+  });
+
+  it('shows the air only from a service that drowns people, and changes only with a bubble', () => {
+    const combat = new PlaygroundCombat('me');
+    const listener = vi.fn();
+    combat.subscribe(listener);
+    combat.showAir(250);
+    expect(combat.getVitals().air).toBeNull();
+    combat.receive(vitals(20, 5));
+    listener.mockClear();
+    combat.showAir(299);
+    combat.showAir(298);
+    expect(combat.getVitals().air).toBe(299);
+    expect(listener).toHaveBeenCalledTimes(1);
+    combat.showAir(250);
+    expect(combat.getVitals().air).toBe(250);
+    combat.showAir(null);
+    expect(combat.getVitals().air).toBeNull();
   });
 });

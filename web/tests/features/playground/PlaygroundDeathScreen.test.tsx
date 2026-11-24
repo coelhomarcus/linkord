@@ -24,3 +24,14 @@ describe('PlaygroundDeathScreen', () => {
     expect(screen.queryByText(/te derrotou/)).toBeNull();
   });
 });
+
+describe('PlaygroundDeathScreen causes', () => {
+  it('says what killed you when no one did', () => {
+    const { rerender } = render(<PlaygroundDeathScreen killerName={null} cause="fall" onRespawn={() => {}} />);
+    expect(screen.getByText('Você caiu de um lugar alto')).toBeTruthy();
+    rerender(<PlaygroundDeathScreen killerName={null} cause="drown" onRespawn={() => {}} />);
+    expect(screen.getByText('Você se afogou')).toBeTruthy();
+    rerender(<PlaygroundDeathScreen killerName={null} cause="starve" onRespawn={() => {}} />);
+    expect(screen.getByText('Você morreu de fome')).toBeTruthy();
+  });
+});

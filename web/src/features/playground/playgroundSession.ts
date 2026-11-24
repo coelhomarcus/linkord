@@ -40,7 +40,9 @@ import { InventoryState, readSnapshot } from './inventory/inventory';
 //
 // Fighting is the playground service's (playgroundCombat.ts, playgroundLink.ts):
 // the session also reports your position to it, less often than to the others,
-// sends your punches and passes on what it says about health.
+// with what you did since the last report that makes you hungry (sprinting,
+// jumping) and how far you fell when you land; it sends your punches and what
+// you eat, and passes on what it says about health and hunger.
 //
 // So is the world (worldState.ts) and what you carry (inventory/inventory.ts):
 // the session reads the world when the link connects, keeps it as the service
@@ -101,6 +103,10 @@ export class PlaygroundSession {
   private lastReportedKey = '';
   /** the next report asks the service for everyone's health, until one goes out */
   private askHealth = true;
+  /** what you did since the last report that went out, for hunger */
+  private activity = { sprinted: 0, jumps: 0, sprintJumps: 0 };
+  /** a landing not yet reported: how far you fell, and where the feet came down */
+  private pendingFall: { distance: number; x: number; y: number; z: number } | null = null;
   private readonly link: ServiceLink;
   readonly combat: PlaygroundCombat;
   /** what you carry, as the service keeps it */
@@ -144,7 +150,7 @@ export class PlaygroundSession {
       onStatus: (status) => this.linkStatus(status),
     });
     const spawn = spawnPoint(localId);
-    this.local = { ...spawn, pitch: 0, motion: 'idle', headYaw: spawn.yaw, crouch: false, swings: 0 };
+    this.local = { ...spawn, pitch: 0, motion: 'idle', headYaw: spawn.yaw, crouch: false, swings: 0, eating: false };
   }
 
   start(): void {
@@ -291,7 +297,39 @@ export class PlaygroundSession {
 
   /** Back to life, once dead; the service answers with the health. */
   respawn(): void {
+    this.activity = { sprinted: 0, jumps: 0, sprintJumps: 0 };
+    this.pendingFall = null;
     this.link.send({ t: 'playground-respawn' });
+  }
+
+  /** One tick of your movement, as hunger counts it: blocks sprinted on the ground, and a jump. */
+  moved(sprinted: number, jump: 'jump' | 'sprintJump' | null): void {
+    if (this.combat.isDead) return;
+    this.activity.sprinted += sprinted;
+    if (jump === 'jump') this.activity.jumps++;
+    else if (jump === 'sprintJump') this.activity.sprintJumps++;
+  }
+
+  /** You landed at `at` after falling `distance` blocks: reported at once, from there (the service decides
+   * what it deals, checking the water where the feet are). The avatar drawn is a frame behind, still in the
+   * air, so its position would miss a lake that broke the fall. */
+  landed(distance: number, at: { x: number; y: number; z: number }): void {
+    if (this.combat.isDead || distance <= 0) return;
+    if (!this.pendingFall || distance > this.pendingFall.distance) this.pendingFall = { distance, x: at.x, y: at.y, z: at.z };
+    this.report();
+  }
+
+  /** You started eating what you hold (the service times the meal). */
+  eatStart(): void {
+    this.link.send({ t: 'eat-start' });
+  }
+
+  /** The meal is done: one of what you hold is gone at once; the service confirms it and says your food. */
+  eat(): boolean {
+    return this.inventory.predict(
+      (window) => ({ ...window, inventory: useHeld(window.inventory) }),
+      (seq) => this.link.send({ t: 'eat', seq }),
+    );
   }
 
   /** What the playground service says about this call: its fighting, its world, your inventory. */
@@ -480,8 +518,8 @@ export class PlaygroundSession {
 
   private send(force: boolean): void {
     const now = performance.now();
-    const { x, y, z, yaw, headYaw, pitch, motion, crouch, swings } = this.local;
-    const key = `${x.toFixed(2)},${y.toFixed(2)},${z.toFixed(2)},${yaw.toFixed(2)},${headYaw.toFixed(2)},${pitch.toFixed(2)},${motion},${crouch},${swings}`;
+    const { x, y, z, yaw, headYaw, pitch, motion, crouch, swings, eating } = this.local;
+    const key = `${x.toFixed(2)},${y.toFixed(2)},${z.toFixed(2)},${yaw.toFixed(2)},${headYaw.toFixed(2)},${pitch.toFixed(2)},${motion},${crouch},${swings},${eating}`;
     const due = force || now - this.lastSentAt >= HEARTBEAT_MS || (key !== this.lastSentKey && now - this.lastSentAt >= SEND_INTERVAL_MS);
     if (!due || this.room.state !== ConnectionState.Connected) return;
     this.lastSentAt = now;
@@ -492,15 +530,28 @@ export class PlaygroundSession {
 
   private report(): void {
     const now = performance.now();
-    const { x, y, z, headYaw } = this.local;
+    const fall = this.pendingFall;
+    const { x, y, z } = fall ?? this.local;
+    const { headYaw } = this.local;
     const key = `${x.toFixed(2)},${y.toFixed(2)},${z.toFixed(2)},${headYaw.toFixed(2)}`;
-    const due = this.askHealth || now - this.lastReportedAt >= HEARTBEAT_MS || (key !== this.lastReportedKey && now - this.lastReportedAt >= SERVER_REPORT_MS);
+    const due = this.askHealth || fall !== null || now - this.lastReportedAt >= HEARTBEAT_MS
+      || (key !== this.lastReportedKey && now - this.lastReportedAt >= SERVER_REPORT_MS);
     if (!due) return;
-    const sent = this.link.send({ t: 'playground-pos', x, y, z, yaw: headYaw, ...(this.askHealth ? { first: true } : {}) });
+    const { sprinted, jumps, sprintJumps } = this.activity;
+    const sent = this.link.send({
+      t: 'playground-pos', x, y, z, yaw: headYaw,
+      ...(this.askHealth ? { first: true } : {}),
+      ...(sprinted > 0 ? { sprinted: Math.round(sprinted * 100) / 100 } : {}),
+      ...(jumps > 0 ? { jumps } : {}),
+      ...(sprintJumps > 0 ? { sprintJumps } : {}),
+      ...(fall ? { fall: Math.round(fall.distance * 100) / 100 } : {}),
+    });
     if (!sent) return;
     this.lastReportedAt = now;
     this.lastReportedKey = key;
     this.askHealth = false;
+    this.activity = { sprinted: 0, jumps: 0, sprintJumps: 0 };
+    this.pendingFall = null;
   }
 
   /** A change someone just saved. From a connection not yet in the roster it is ignored: the read

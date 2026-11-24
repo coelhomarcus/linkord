@@ -11,7 +11,7 @@ import creativeTabsUrl from '../assets/mandalas-gui/gui/creative_inventory/tabs.
 import { PIXEL_FONT } from '../pixelFont';
 
 // The block game's interface pieces, cut from Mandala's GUI sheets
-// (256×256 each: icons.png has the hearts, widgets.png the hotbar,
+// (256×256 each: icons.png has the hearts, shanks, bubbles and experience bar, widgets.png the hotbar,
 // inventory.png, crafting_table.png, furnace.png and generic_54.png (a chest)
 // their screens, creative_inventory/ the creative chest's and its scroll bar)
 // and drawn at the game's GUI scale: every

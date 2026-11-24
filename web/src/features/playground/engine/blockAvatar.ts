@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { EAT_TICKS } from '@game/vitals';
 import { boxFaces, partLayout, SKIN_HEIGHT, SKIN_WIDTH } from '../skins/skinFormat';
 import type { PartName } from '../skins/skinFormat';
 import type { Skin } from '../skins/skins';
@@ -144,6 +145,8 @@ export interface AvatarMotion {
   /** positive looks up */
   headPitch: number;
   crouching: boolean;
+  /** eating what the hand holds */
+  eating?: boolean;
 }
 
 export class BlockAvatar {
@@ -284,6 +287,7 @@ export class BlockAvatar {
       attack,
       slim: this.slim,
       holding: !!this.held,
+      eating: !!this.held && motion.eating,
     });
     for (const part of PARTS) {
       const pivot = this.parts.get(part)!;
@@ -445,10 +449,27 @@ function heldItemMatrix(swing: number, shape: ItemModel['shape']): THREE.Matrix4
   return matrix;
 }
 
+/** The game's first-person eating (ItemRenderer.performDrinking), to apply before the held item's own
+ * transforms: the food swings in to the middle, below the eyes, and bobs there every four ticks until its last
+ * fifth. `ticksLeft` counts down from the meal's length to 0, between ticks. */
+function eatingMatrix(ticksLeft: number): THREE.Matrix4 {
+  const matrix = new THREE.Matrix4();
+  const left = ticksLeft / EAT_TICKS;
+  const bob = left >= 0.8 ? 0 : Math.abs(Math.cos((ticksLeft / 4) * Math.PI) * 0.1);
+  const raised = 1 - Math.pow(left, 27);
+  matrix.multiply(scratch.makeTranslation(0, bob, 0));
+  matrix.multiply(scratch.makeTranslation(raised * 0.6, raised * -0.5, 0));
+  matrix.multiply(scratch.makeRotationY(raised * 90 * DEG));
+  matrix.multiply(scratch.makeRotationX(raised * 10 * DEG));
+  matrix.multiply(scratch.makeRotationZ(raised * 30 * DEG));
+  return matrix;
+}
+
 /** The local player's right arm as seen in first person: it bobs with the
  * walk, lags a little behind the view when turning, and punches on a click.
- * Holding an item, the item takes the arm's place, as in the game. Drawn in
- * its own pass over the world, so it never sinks into a wall. */
+ * Holding an item, the item takes the arm's place, as in the game; eating, the
+ * food comes up to the mouth. Drawn in its own pass over the world, so it never
+ * sinks into a wall. */
 export class FirstPersonArm {
   readonly scene = new THREE.Scene();
   readonly camera = new THREE.PerspectiveCamera(70, 1, 0.05, 100);
@@ -461,6 +482,8 @@ export class FirstPersonArm {
   private materials: SkinMaterials | null = null;
   private slim = false;
   private swingTime: number | null = null;
+  /** ticks left of a meal, or null when not eating */
+  private eating: number | null = null;
   private lagPitch: number | null = null;
   private lagYaw = 0;
 
@@ -505,6 +528,11 @@ export class FirstPersonArm {
     }
   }
 
+  /** Eating what the hand holds, with `ticksLeft` of the meal to go (between ticks), or not (null). */
+  setEating(ticksLeft: number | null): void {
+    this.eating = ticksLeft;
+  }
+
   /** A click: the punch starts over once it is past its middle. */
   swing(): void {
     if (this.swingTime === null || this.swingTime >= ARM_SWING_SECONDS / 2) this.swingTime = 0;
@@ -528,7 +556,10 @@ export class FirstPersonArm {
     }
     this.view.position.set(bob.x, bob.y, 0);
     this.view.rotation.set(bob.pitch + (pitch - this.lagPitch) * -0.05, angleDelta(this.lagYaw, yaw) * -0.035, bob.roll);
-    if (this.held) {
+    if (this.held && this.eating !== null) {
+      this.item.matrix.copy(eatingMatrix(this.eating).multiply(heldItemMatrix(0, this.held.shape)));
+      this.item.matrixWorldNeedsUpdate = true;
+    } else if (this.held) {
       this.item.matrix.copy(heldItemMatrix(progress, this.held.shape));
       this.item.matrixWorldNeedsUpdate = true;
     } else {

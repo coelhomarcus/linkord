@@ -1,7 +1,7 @@
 // How a person's box model moves: legs and arms swinging with the distance
 // walked, arms breathing while still, the right arm's punch, the sneak's bend,
-// and a body that turns toward where it walks while the head turns toward
-// where it looks. The angles and offsets are the block game's humanoid model
+// the right hand brought to the mouth to eat, and a body that turns toward
+// where it walks while the head turns toward where it looks. The angles and offsets are the block game's humanoid model
 // (as minecraft-renderer, github.com/zardoy/minecraft-web-client, MIT,
 // Copyright (c) 2020 PrismarineJS, reproduces them), converted from its model
 // space (y down, facing -z) to ours (y up, facing +z): x rotations keep their
@@ -45,6 +45,8 @@ export interface PoseInput {
   slim: boolean;
   /** the right hand holds something: the arm is raised a little and swings half as much */
   holding?: boolean;
+  /** eating it: the hand goes to the mouth and bobs there */
+  eating?: boolean;
 }
 
 const LIMB_FREQUENCY = 0.6662;
@@ -67,6 +69,12 @@ export function bipedPose(input: PoseInput): BipedPose {
 
   // the game's ArmPose.ITEM
   if (input.holding) rightArm.xRot = rightArm.xRot * 0.5 - Math.PI / 10;
+  // up and in to the mouth, following the head's pitch, bobbing four ticks a beat as the first-person food does
+  if (input.eating) {
+    const ticks = input.age * TICKS_PER_SECOND;
+    rightArm.xRot = head.xRot - 1.35 + Math.abs(Math.cos((ticks / 4) * Math.PI)) * 0.15;
+    rightArm.yRot = -0.45;
+  }
 
   if (input.attack > 0) {
     const t = input.attack;

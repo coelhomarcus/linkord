@@ -7,6 +7,6 @@ copies of the pack's files of the same path under `assets/minecraft/sounds/`, on
 
 - `step/`, `dig/` and `block/<material>/`: footsteps, digging, breaking and placing, by what a block is made of;
 - `block/chest/`: a chest opening and closing;
-- `random/`: picking items up, glass breaking, a new level;
+- `random/`: picking items up, glass breaking, a new level, eating and the burp after;
 - `liquid/`: splashing into water and swimming;
-- `damage/` and `entity/player/attack/`: hits and critical hits.
+- `damage/` and `entity/player/attack/`: hits, critical hits and landing from a fall.

@@ -63,7 +63,13 @@
     "hearts_one": "{{count}} heart",
     "hearts_other": "{{count}} hearts",
     "hotbar": "Hotbar",
-    "level": "Level {{level}}"
+    "level": "Level {{level}}",
+    "food": "Hunger",
+    "shanks_one": "{{count}} shank",
+    "shanks_other": "{{count}} shanks",
+    "air": "Air",
+    "bubbles_one": "{{count}} bubble",
+    "bubbles_other": "{{count}} bubbles"
   },
   "chat": {
     "notLinked": "This playground has no chat. Whoever manages the channel picks one in Channel settings → Game chat.",
@@ -77,7 +83,10 @@
   "death": {
     "title": "You died!",
     "killedBy": "Slain by {{name}}",
-    "respawn": "Respawn"
+    "respawn": "Respawn",
+    "fell": "You fell from a high place",
+    "drowned": "You drowned",
+    "starved": "You starved to death"
   },
   "inventory": {
     "title": "Inventory",
@@ -166,6 +175,15 @@
     "ironNugget": "Iron Nugget",
     "goldIngot": "Gold Ingot",
     "diamond": "Diamond",
+    "apple": "Apple",
+    "beef": "Raw Beef",
+    "cookedBeef": "Steak",
+    "porkchop": "Raw Porkchop",
+    "cookedPorkchop": "Cooked Porkchop",
+    "mutton": "Raw Mutton",
+    "cookedMutton": "Cooked Mutton",
+    "chicken": "Raw Chicken",
+    "cookedChicken": "Cooked Chicken",
     "woodenSword": "Wooden Sword",
     "woodenPickaxe": "Wooden Pickaxe",
     "woodenAxe": "Wooden Axe",
