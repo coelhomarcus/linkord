@@ -312,9 +312,12 @@ export function VoiceMembers({ server, channel, onOpenProfile, onNavigate, drag,
               <button type="button" onClick={() => onOpenProfile(person.userId)}
                 className="flex min-w-0 flex-1 items-center gap-2 rounded-sm text-left text-label text-text-secondary focus-ring group-hover/member:text-text-primary">
                 {/* the name beside it already says who: the avatar's initials would only repeat it */}
+                {/* the colour stays set while the ring fades out: the ring is drawn in
+                    currentColor, and dropping the colour with it made the fade start from
+                    the text colour, a flash of grey before it disappeared */}
                 <span aria-hidden data-speaking={person.speaking || undefined}
                   className={cn('inline-flex flex-none rounded-full ring-2 transition-shadow', person.speaking ? 'ring-current' : 'ring-transparent')}
-                  style={person.speaking ? { color: colorFor(person.userId, person.avatarColor) } : undefined}>
+                  style={{ color: colorFor(person.userId, person.avatarColor) }}>
                   <Avatar id={person.userId} name={person.displayName} avatar={person.avatar} poster={person.avatarPoster} avatarColor={person.avatarColor} size={24} />
                 </span>
                 <span className="truncate">{person.displayName}</span>
