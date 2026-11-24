@@ -28,6 +28,8 @@ interface ChannelSummary {
   type: 'text' | 'voice';
   /** added in protocol 31; an older client shows every voice channel as tiles */
   voiceMode: VoiceMode;
+  /** added in protocol 32, on playgrounds only: the text channel its game chat is (or null) */
+  playgroundChatId?: string | null;
   name: string;
   topic: string;
   categoryId: string | null;
@@ -63,6 +65,7 @@ export function buildServerSummary(snapshot: ServerSnapshot, userId: string): Se
     .map(({ channel, permissions: granted }) => ({
       id: channel.id, serverId: channel.serverId, type: channel.type, voiceMode: channel.voiceMode, name: channel.title, topic: channel.topic,
       categoryId: channel.categoryId, position: channel.position, permissionsSynced: channel.permissionsSynced, permissions: granted,
+      ...(channel.voiceMode === 'playground' && { playgroundChatId: channel.playgroundChatId }),
     }));
   // a category with nothing visible in it is hidden too — unless the member
   // can manage channels, who needs it to drop channels into

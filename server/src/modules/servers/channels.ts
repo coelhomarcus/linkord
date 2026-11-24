@@ -11,6 +11,7 @@ import { enforceCallPermissions } from '../calls/callPermissions.js';
 import { participants } from '../presence/participants.js';
 import { ALL_PERMISSIONS, canManageRole, hasPermission, outranks, PERMISSIONS } from './permissions.js';
 import { channelPermissionsIn, invalidateServer, memberInput, toVoiceMode, type ServerSnapshot } from './serverAccess.js';
+import { playgroundChatFrom } from './playgroundChat.js';
 import { sanitizeCategoryName, sanitizeChannelName, sanitizeTopic } from './serversRepository.js';
 import { sendServerUpdateToMembers } from './serverSummaries.js';
 import { requireServerMember, requireSession, type ServerActor } from './serverHttp.js';
@@ -84,7 +85,7 @@ async function handleUpdateChannel(request: FastifyRequest<{ Params: ChannelPara
   const { actor, channelId } = target;
   const channel = actor.snapshot.channels.find((c) => c.id === channelId)!;
   const body = jsonBody(request.body);
-  const updates: { title?: string; topic?: string; permissionsSynced?: boolean; updatedAt: Date } = { updatedAt: new Date() };
+  const updates: { title?: string; topic?: string; permissionsSynced?: boolean; playgroundChatId?: string | null; updatedAt: Date } = { updatedAt: new Date() };
   if (body.name !== undefined) {
     const name = sanitizeChannelName(body.name, channel.type);
     if (!name) return sendError(reply, 400, 'invalid_name', 'Dê um nome ao canal.');
@@ -92,8 +93,14 @@ async function handleUpdateChannel(request: FastifyRequest<{ Params: ChannelPara
   }
   if (body.topic !== undefined) updates.topic = sanitizeTopic(body.topic);
   if (body.permissionsSynced === true) updates.permissionsSynced = true;
-  const changes = diffFields({ name: channel.title, topic: channel.topic, permissionsSynced: channel.permissionsSynced },
-    { name: updates.title, topic: updates.topic, permissionsSynced: updates.permissionsSynced }, ['name', 'topic', 'permissionsSynced']);
+  if (body.playgroundChatId !== undefined) {
+    const chatId = playgroundChatFrom(actor.snapshot.channels, channel, body.playgroundChatId);
+    if (chatId === 'invalid') return sendError(reply, 400, 'invalid_request', 'Escolha um canal de texto deste servidor.');
+    updates.playgroundChatId = chatId;
+  }
+  const titleOf = (id: string | null | undefined) => (id ? actor.snapshot.channels.find((c) => c.id === id)?.title ?? id : id);
+  const changes = diffFields({ name: channel.title, topic: channel.topic, permissionsSynced: channel.permissionsSynced, gameChat: titleOf(channel.playgroundChatId) },
+    { name: updates.title, topic: updates.topic, permissionsSynced: updates.permissionsSynced, gameChat: titleOf(updates.playgroundChatId) }, ['name', 'topic', 'permissionsSynced', 'gameChat']);
   await db.transaction(async (tx) => {
     await tx.update(conversations).set(updates).where(eq(conversations.id, channelId));
     // following the category again drops the channel's own rules

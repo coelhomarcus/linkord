@@ -28,6 +28,8 @@ interface ChannelShape {
   serverId: string;
   type: 'text' | 'voice';
   voiceMode: VoiceMode;
+  /** a playground's game chat (a text channel of the same server), or null */
+  playgroundChatId: string | null;
   title: string;
   topic: string;
   categoryId: string | null;
@@ -70,7 +72,7 @@ async function loadSnapshot(serverId: string): Promise<ServerSnapshot | null> {
     overwrites.set(target, list);
   }
   const channels = channelRows.map((row) => ({
-    id: row.id, serverId, type: row.type === 'voice' ? 'voice' as const : 'text' as const, voiceMode: toVoiceMode(row.voiceMode), title: row.title, topic: row.topic,
+    id: row.id, serverId, type: row.type === 'voice' ? 'voice' as const : 'text' as const, voiceMode: toVoiceMode(row.voiceMode), playgroundChatId: row.playgroundChatId, title: row.title, topic: row.topic,
     categoryId: row.categoryId, position: row.position, permissionsSynced: row.permissionsSynced, createdAt: row.createdAt,
   }));
   return { server, roles, members, categories, channels, overwrites };

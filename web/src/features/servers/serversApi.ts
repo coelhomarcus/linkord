@@ -42,7 +42,7 @@ export const setMemberRoles = (serverId: string, userId: string, roleIds: string
 
 export const createChannel = (serverId: string, input: { name: string; type: 'text' | 'voice'; voiceMode?: VoiceMode; categoryId?: string | null }) =>
   apiFetch<{ channelId: string }>(`/api/servers/${id(serverId)}/channels`, json('POST', input));
-export const updateChannel = (channelId: string, patch: { name?: string; topic?: string; permissionsSynced?: true }) => apiFetch(`/api/channels/${id(channelId)}`, json('PATCH', patch));
+export const updateChannel = (channelId: string, patch: { name?: string; topic?: string; permissionsSynced?: true; playgroundChatId?: string | null }) => apiFetch(`/api/channels/${id(channelId)}`, json('PATCH', patch));
 export const deleteChannel = (channelId: string) => apiFetch(`/api/channels/${id(channelId)}`, json('DELETE'));
 export const createCategory = (serverId: string, name: string) => apiFetch<{ categoryId: string }>(`/api/servers/${id(serverId)}/categories`, json('POST', { name }));
 
