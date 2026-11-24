@@ -146,7 +146,9 @@ function boxMaterial(): THREE.ShaderMaterial {
       varying vec3 vDirection;
       void main() {
         vDirection = position;
-        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+        // only the view's turn, never where the eye is: the sky is infinitely far, so it never moves
+        // with the player (walking, jumping, the view's bob)
+        gl_Position = projectionMatrix * vec4(mat3(modelViewMatrix) * position, 1.0);
         // always at the far end of the view
         gl_Position.z = gl_Position.w;
       }

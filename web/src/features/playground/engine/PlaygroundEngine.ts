@@ -604,8 +604,6 @@ export class PlaygroundEngine {
     this.frame = requestAnimationFrame(this.tick);
     this.timer.update(time);
     const dt = Math.min(this.timer.getDelta(), MAX_FRAME_SECONDS);
-    // the sky follows last frame's eye: a frame behind is nothing a hundred blocks away
-    this.world.update(dt, this.session.world.clock(time), this.camera.position);
     if (this.session.world.grid) this.session.reportBuild(this.world.buildProgress());
     this.followDeath();
     this.playHits();
@@ -629,6 +627,8 @@ export class PlaygroundEngine {
     this.particles.update(partial);
     this.dropped.update(dt);
     this.placeCamera(partial);
+    // the sky, the sun and the moon around this frame's eye
+    this.world.update(dt, this.session.world.clock(time), this.camera.position);
     this.camera.getWorldDirection(this.earForward);
     this.sounds.listen(this.camera.position.x, this.camera.position.y, this.camera.position.z, this.earForward, this.camera.up);
     this.aimOutline();

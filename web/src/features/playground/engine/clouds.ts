@@ -14,7 +14,8 @@ import cloudsUrl from '../assets/kenuis-default/environment/clouds.png?url';
 
 export const CLOUD_CELL = 12;
 const CLOUD_THICKNESS = 4;
-const CLOUD_HEIGHT = 44;
+/** well over the island's mountain (its peak is at 58), as the game's float far over its land */
+const CLOUD_HEIGHT = 96;
 const CLOUD_OPACITY = 0.8;
 const DRIFT_PER_SECOND = 0.6;
 /** cells built around the island on each side: past the fog, they are sky */
