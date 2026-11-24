@@ -46,6 +46,8 @@ export class Controls {
   private jumpQueued = false;
   private joystick: Drag | null = null;
   private look: Drag | null = null;
+  /** a held mouse button turning the view where the pointer cannot be locked */
+  private mouseLook: Drag | null = null;
   private readonly joystickBase: HTMLDivElement;
   private readonly joystickKnob: HTMLDivElement;
 
@@ -168,6 +170,7 @@ export class Controls {
     this.keys.clear();
     this.joystick = null;
     this.look = null;
+    this.mouseLook = null;
     this.joystickBase.classList.add('hidden');
   };
 
@@ -184,8 +187,12 @@ export class Controls {
   private onPointerDown = (event: PointerEvent): void => {
     this.container.focus({ preventScroll: true });
     if (event.pointerType === 'mouse') {
-      if (event.button === 0 && !this.locked) {
-        // a browser that refuses (no user gesture, or not supported) leaves the mouse free
+      if (this.locked) return;
+      // dragging turns the view too, so the mouse still steers where the lock is
+      // refused (an older desktop app, a browser setting, no user gesture)
+      this.mouseLook = { pointerId: event.pointerId, startX: event.clientX, startY: event.clientY, x: event.clientX, y: event.clientY };
+      this.canvas.setPointerCapture(event.pointerId);
+      if (event.button === 0) {
         const request = this.canvas.requestPointerLock() as unknown;
         if (request instanceof Promise) request.catch(() => {});
       }
@@ -209,6 +216,13 @@ export class Controls {
   };
 
   private onPointerMove = (event: PointerEvent): void => {
+    if (this.mouseLook?.pointerId === event.pointerId) {
+      // once locked, document mousemove does the turning
+      if (!this.locked) this.turn(event.clientX - this.mouseLook.x, event.clientY - this.mouseLook.y, MOUSE_SENSITIVITY * 1.6);
+      this.mouseLook.x = event.clientX;
+      this.mouseLook.y = event.clientY;
+      return;
+    }
     if (this.joystick?.pointerId === event.pointerId) {
       this.joystick.x = event.clientX;
       this.joystick.y = event.clientY;
@@ -225,6 +239,10 @@ export class Controls {
   };
 
   private onPointerUp = (event: PointerEvent): void => {
+    if (this.mouseLook?.pointerId === event.pointerId) {
+      this.mouseLook = null;
+      return;
+    }
     if (this.joystick?.pointerId === event.pointerId) {
       this.joystick = null;
       this.joystickBase.classList.add('hidden');

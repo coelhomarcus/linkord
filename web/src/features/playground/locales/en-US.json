@@ -4,7 +4,7 @@
   "unsupported": "This browser could not open the 3D world (WebGL is off or unavailable). You are still in the call and hear everyone as usual.",
   "jump": "Jump",
   "hint": {
-    "desktop": "Click the scene to walk · WASD or arrows · Shift runs · Space jumps · V switches camera · Esc frees the mouse",
+    "desktop": "Click or drag the scene to look around · WASD or arrows · Shift runs · Space jumps · V switches camera · Esc frees the mouse",
     "touch": "Drag on the left to walk and on the right to look around"
   },
   "camera": {

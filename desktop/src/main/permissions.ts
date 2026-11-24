@@ -1,6 +1,7 @@
 // The browser features the web app actually uses: calls and voice messages
 // (media, plus picking the output device), screen sharing, notifications,
-// copying images, fullscreen video. Granting display-capture only lets the
+// copying images, fullscreen video, and locking the mouse to steer a
+// playground character (pointer lock; Esc always releases it). Granting display-capture only lets the
 // request reach the display media handler (screenShare.ts), which decides
 // what, if anything, is captured.
 const GRANTED_PERMISSIONS = new Set([
@@ -10,6 +11,7 @@ const GRANTED_PERMISSIONS = new Set([
   'notifications',
   'clipboard-sanitized-write',
   'fullscreen',
+  'pointerLock',
 ]);
 
 const MEDIA_TYPES = new Set(['audio', 'video']);
