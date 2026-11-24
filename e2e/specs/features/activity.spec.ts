@@ -18,8 +18,9 @@ test.describe('activity', () => {
     await play('steam:570', 'Dota 2', 79);
 
     const a = await alice.app();
-    const row = a.page.getByRole('button', { name: `Ver perfil de ${bob.username}` });
-    await expect(row).toContainText('Jogando Dota 2');
+    // the friends row, not bob's card in Active now, which opens the same profile
+    const row = a.page.getByRole('button', { name: `Ver perfil de ${bob.username}` }).filter({ hasText: 'Jogando Dota 2' });
+    await expect(row).toBeVisible();
     await row.click();
 
     const profile = a.page.getByRole('dialog');
