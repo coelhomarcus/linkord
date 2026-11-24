@@ -20,6 +20,7 @@ import { registerMediaProxyRoutes } from '../modules/media-proxy/mediaProxy.js';
 import { registerFriendshipRoutes } from '../modules/friendships/friendships.js';
 import { registerBlockRoutes } from '../modules/blocks/blocks.js';
 import { registerUserRoutes } from '../modules/users/usersRoutes.js';
+import { registerPlaygroundRoutes } from '../modules/playground/playgroundSkins.js';
 import { registerServerInvitationRoutes } from '../modules/servers/serverInvitations.js';
 import { registerServerRoutes } from '../modules/servers/servers.js';
 import { registerChannelRoutes } from '../modules/servers/channels.js';
@@ -112,6 +113,7 @@ export function createApp(): FastifyInstance {
   registerFriendshipRoutes(fastify, { onlineUserIds: listVisibleOnlineUserIds });
   registerBlockRoutes(fastify);
   registerUserRoutes(fastify);
+  registerPlaygroundRoutes(fastify);
   registerServerRoutes(fastify);
   registerChannelRoutes(fastify);
   registerRoleRoutes(fastify);
