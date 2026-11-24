@@ -27,6 +27,14 @@ const log = logger.child({ component: 'playground-combat' });
 //
 // Kept in memory with the connection: a restart heals everyone, and the first
 // report after it starts each player again at full health.
+//
+// A kill earns experience, which fills the bar under the hearts and counts up
+// levels with the game's curve (7 points to level 1, then 2 more for each level,
+// 5 more from level 15, 9 more from 30). The game drops 7 points per level of the
+// one killed, at most 100; here a kill always earns at least 7, so the first one
+// already reaches level 1. Experience stays through a death and belongs to the
+// account in that playground (leaving and coming back keeps it), in memory: a
+// restart starts everyone from zero.
 
 export const MAX_HEALTH = 20;
 const FIST_DAMAGE = 1;
@@ -39,6 +47,8 @@ export const MAX_ATTACK_DISTANCE = 6;
 const KNOCKBACK = 0.4;
 const SPRINT_KNOCKBACK = 0.5;
 const SPRINT_KNOCKBACK_UP = 0.1;
+const MIN_KILL_XP = 7;
+const MAX_KILL_XP = 100;
 /** far past any island; a report beyond it is garbage */
 const MAX_COORDINATE = 4096;
 
@@ -66,6 +76,29 @@ export function createFighter(conversationId: string, now: number): Fighter {
 export function healthOf(fighter: Fighter, now: number): number {
   if (fighter.health <= 0) return 0;
   return Math.min(MAX_HEALTH, fighter.health + Math.floor(Math.max(0, now - fighter.healthAt) / REGEN_INTERVAL_MS));
+}
+
+/** Points to go from `level` to the next (the game's xpBarCap). */
+function pointsToNextLevel(level: number): number {
+  if (level >= 30) return 112 + (level - 30) * 9;
+  if (level >= 15) return 37 + (level - 15) * 5;
+  return 7 + level * 2;
+}
+
+/** The level `points` of experience reach. Mirrored by web/src/features/playground/experience.ts. */
+export function levelOf(points: number): number {
+  let level = 0;
+  let left = Math.max(0, Math.floor(points));
+  while (left >= pointsToNextLevel(level)) {
+    left -= pointsToNextLevel(level);
+    level++;
+  }
+  return level;
+}
+
+/** What killing someone at `points` of experience earns. */
+export function killReward(victimPoints: number): number {
+  return Math.max(MIN_KILL_XP, Math.min(levelOf(victimPoints) * 7, MAX_KILL_XP));
 }
 
 function setHealth(fighter: Fighter, health: number, now: number): void {
@@ -154,6 +187,14 @@ function place(fighter: Fighter, position: Position, now: number): void {
 // ---- the connections ----
 
 const fighters = new WeakMap<Participant, Fighter>();
+/** experience points by playground and account (`conversationId:userId`) */
+const experience = new Map<string, number>();
+const xpKey = (conversationId: string, userId: string) => `${conversationId}:${userId}`;
+const xpOf = (conversationId: string, userId: string) => experience.get(xpKey(conversationId, userId)) ?? 0;
+
+function sendXp(p: Participant, conversationId: string): void {
+  send(p.socket, { t: 'playground-xp', conversationId, xp: xpOf(conversationId, p.userId) });
+}
 
 /** Whether a call is a playground's; voice channels never change mode, so an answer is kept. */
 const playgroundChecks = new Map<string, Promise<boolean>>();
@@ -236,6 +277,7 @@ async function handlePosition(socket: AppSocket, msg: { x?: unknown; y?: unknown
   place(fighter, position, now);
   if (msg.first === true) {
     send(p.socket, { t: 'playground-health', conversationId: fighter.conversationId, players: fightersIn(fighter.conversationId).map(([q, f]) => healthEntry(q, f, now)) });
+    sendXp(p, fighter.conversationId);
   }
 }
 
@@ -269,6 +311,10 @@ async function handleAttack(socket: AppSocket, msg: { targetId?: unknown; x?: un
     hurt: outcome.hurt,
     ...(knockback ? { push: knockback.push, ...(knockback.extra ? { extra: knockback.extra } : {}) } : {}),
   });
+  if (outcome.health > 0 || targetP.userId === p.userId) return;
+  const key = xpKey(attacker.conversationId, p.userId);
+  experience.set(key, xpOf(attacker.conversationId, p.userId) + killReward(xpOf(attacker.conversationId, targetP.userId)));
+  sendXp(p, attacker.conversationId);
 }
 
 /** `playground-respawn`: back at full health after dying. Answered with the health either way, so a

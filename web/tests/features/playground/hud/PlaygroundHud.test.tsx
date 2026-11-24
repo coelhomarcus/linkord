@@ -5,7 +5,7 @@ import { guiScale } from '@/features/playground/hud/gui';
 import { createInventory } from '@/features/playground/inventory/inventory';
 import type { Vitals } from '@/features/playground/playgroundCombat';
 
-const vitals = (health: number): Vitals => ({ health, previousHealth: 20, lastChange: 'hurt', hurts: 1, heals: 0, killerId: null });
+const vitals = (health: number, xp = 0): Vitals => ({ health, previousHealth: 20, lastChange: 'hurt', hurts: 1, heals: 0, killerId: null, xp });
 
 describe('guiScale', () => {
   it('is as large as it can be while 320 × 240 of it still fit, up to 4', () => {
@@ -31,5 +31,12 @@ describe('PlaygroundHud', () => {
     expect(onSelect).toHaveBeenCalledWith(0);
     // the held item's name shows above the hotbar
     expect(screen.getByText('Terra')).toBeTruthy();
+  });
+
+  it('shows the level and how full the experience bar is', () => {
+    render(<PlaygroundHud vitals={vitals(20, 7 + 4)} inventory={createInventory()} scale={1} onSelect={() => {}} />);
+    const bar = screen.getByRole('meter', { name: 'Nível 1' });
+    expect(bar.getAttribute('aria-valuenow')).toBe('44');
+    expect(screen.getByText('1')).toBeTruthy();
   });
 });

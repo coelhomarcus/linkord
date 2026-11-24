@@ -377,6 +377,7 @@ export function RoomProvider({ children }: { children: ReactNode }) {
         break;
       case 'playground-hit':
       case 'playground-health':
+      case 'playground-xp':
         getActivePlaygroundSession()?.receive(m);
         break;
       case 'server-sounds-changed':

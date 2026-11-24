@@ -5,13 +5,15 @@ import { MAX_HEALTH } from '../playgroundCombat';
 import { HOTBAR_SIZE, heldStack } from '../inventory/inventory';
 import type { Inventory } from '../inventory/inventory';
 import { itemDef } from '../inventory/items';
+import { experienceLevel } from '../experience';
 import { at, guiText } from './gui';
 import { GuiSprite, ItemStackView } from './GuiSprite';
 
 // The block game's HUD at the bottom of the screen, laid out as it does in GUI
 // pixels from the hotbar's corner: ten hearts above the hotbar's left end, the
-// hotbar with the selected slot framed, and the held item's name above it for a
-// moment after it changes.
+// experience bar right above the hotbar with the level in green over its middle,
+// the hotbar with the selected slot framed, and the held item's name above it
+// for a moment after it changes.
 //
 // The hearts behave like the game's: after a hit they blink white for 20 ticks
 // (10 after a heal), showing the health before the change in white under the
@@ -22,6 +24,10 @@ const HOTBAR_WIDTH = 182;
 /** the hearts row is this far above the hotbar's top */
 const HEARTS_ABOVE = 17;
 const HEART = { container: 16, full: 52, half: 61, fullBlink: 70, halfBlink: 79 } as const;
+/** the experience bar on icons.png: empty, then full, 182 × 5; it sits 7 pixels above the hotbar */
+const XP_BAR = { empty: 64, full: 69, height: 5, above: 7 } as const;
+/** the game's green for the level, drawn with a black outline */
+const LEVEL_GREEN = '#80ff20';
 const BLINK_TICKS = { hurt: 20, heal: 10 } as const;
 const LOW_HEALTH = 4;
 /** the held item's name shows for 2 s; the last 10 ticks fade it, as in the game */
@@ -67,6 +73,24 @@ function Hearts({ vitals, scale }: { vitals: Vitals; scale: number }) {
   );
 }
 
+function ExperienceBar({ xp, scale, top }: { xp: number; scale: number; top: number }) {
+  const { t } = useTranslation('playground');
+  const { level, progress } = experienceLevel(xp);
+  const filled = Math.floor(progress * (HOTBAR_WIDTH + 1));
+  const outline = [[1, 0], [-1, 0], [0, 1], [0, -1]].map(([x, y]) => `${x! * scale}px ${y! * scale}px 0 #000`).join(', ');
+  return (
+    <div role="meter" aria-label={t('hud.level', { level })} aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(progress * 100)}>
+      <GuiSprite sheet="icons" u={0} v={XP_BAR.empty} width={HOTBAR_WIDTH} height={XP_BAR.height} scale={scale} y={top} />
+      {filled > 0 && <GuiSprite sheet="icons" u={0} v={XP_BAR.full} width={filled} height={XP_BAR.height} scale={scale} y={top} />}
+      {level > 0 && (
+        <span aria-hidden className="absolute inset-x-0 text-center" style={{ ...guiText(scale), color: LEVEL_GREEN, textShadow: outline, top: (top - 10) * scale }}>
+          {level}
+        </span>
+      )}
+    </div>
+  );
+}
+
 function HeldItemName({ name, scale }: { name: string; scale: number }) {
   const [fading, setFading] = useState(false);
   useEffect(() => {
@@ -92,6 +116,7 @@ export function PlaygroundHud({ vitals, inventory, scale, onSelect }: { vitals: 
       <div role="meter" aria-label={t('hud.health')} aria-valuemin={0} aria-valuemax={MAX_HEALTH} aria-valuenow={vitals.health} aria-valuetext={t('hud.hearts', { count: vitals.health / 2 })}>
         <Hearts key={`${vitals.hurts}:${vitals.heals}`} vitals={vitals} scale={scale} />
       </div>
+      <ExperienceBar xp={vitals.xp} scale={scale} top={hotbarTop - XP_BAR.above} />
       <GuiSprite sheet="widgets" u={0} v={0} width={HOTBAR_WIDTH} height={22} scale={scale} y={hotbarTop} />
       <GuiSprite sheet="widgets" u={0} v={22} width={24} height={24} scale={scale} x={-1 + inventory.selected * 20} y={hotbarTop - 1} />
       <div role="toolbar" aria-label={t('hud.hotbar')} className="absolute inset-0">

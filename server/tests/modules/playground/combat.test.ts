@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import type { AppSocket, Participant } from '../../../src/types.js';
 import { participants, join } from '../../../src/modules/presence/participants.js';
 import {
-  attackDamage, createFighter, handlers, healthOf, HURT_IMMUNITY_MS, knockbackFor, landHit, MAX_ATTACK_DISTANCE, MAX_HEALTH,
+  attackDamage, createFighter, handlers, healthOf, HURT_IMMUNITY_MS, killReward, knockbackFor, landHit, levelOf, MAX_ATTACK_DISTANCE, MAX_HEALTH,
   readPosition, REGEN_INTERVAL_MS, setPlaygroundCheck, withinReach,
 } from '../../../src/modules/playground/combat.js';
 
@@ -61,6 +61,25 @@ describe('knockbackFor', () => {
     const fighter = createFighter('c', 0);
     const { push } = knockbackFor(fighter, { ...fighter }, false, () => 0.3);
     assert.ok(Math.abs(Math.hypot(push[0], push[1]) - 0.4) < 0.002);
+  });
+});
+
+describe('experience', () => {
+  test('levels follow the game\'s curve', () => {
+    assert.equal(levelOf(0), 0);
+    assert.equal(levelOf(6), 0);
+    assert.equal(levelOf(7), 1);
+    assert.equal(levelOf(7 + 9), 2);
+    // 315 points is level 15, 1395 level 30, as in the game
+    assert.equal(levelOf(315), 15);
+    assert.equal(levelOf(314), 14);
+    assert.equal(levelOf(1395), 30);
+  });
+
+  test('a kill earns 7 points per level of the one killed, at least 7 and at most 100', () => {
+    assert.equal(killReward(0), 7);
+    assert.equal(killReward(352), 100);
+    assert.equal(killReward(7 + 9 + 11), 21);
   });
 });
 
@@ -160,6 +179,8 @@ describe('handlers', () => {
         await report(b.socket, 1);
       }
       assert.equal(messages(b.p.userId, 'playground-hit').at(-1)!.health, 0);
+      assert.deepEqual(messages(a.p.userId, 'playground-xp'), [{ t: 'playground-xp', conversationId: 'playground-1', xp: 7 }]);
+      assert.deepEqual(messages(b.p.userId, 'playground-xp'), []);
       // the dead can neither be hit nor hit back
       await attack(a.socket, b.p.id, 0);
       await report(a.socket, 0);
@@ -180,5 +201,6 @@ describe('handlers', () => {
     await report(b.socket, 1, { first: true });
     const [health] = messages(b.p.userId, 'playground-health');
     assert.deepEqual(health!.players, [{ id: a.p.id, health: MAX_HEALTH }, { id: b.p.id, health: MAX_HEALTH - 1 }]);
+    assert.deepEqual(messages(b.p.userId, 'playground-xp'), [{ t: 'playground-xp', conversationId: 'playground-1', xp: 0 }]);
   });
 });

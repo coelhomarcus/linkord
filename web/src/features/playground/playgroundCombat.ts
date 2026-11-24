@@ -13,6 +13,7 @@ const REGEN_INTERVAL_MS = 4000;
 
 export type PlaygroundHit = Extract<ServerMessage, { t: 'playground-hit' }>;
 type PlaygroundHealth = Extract<ServerMessage, { t: 'playground-health' }>;
+type PlaygroundXp = Extract<ServerMessage, { t: 'playground-xp' }>;
 
 /** The local player's health as the HUD shows it. */
 export interface Vitals {
@@ -27,6 +28,8 @@ export interface Vitals {
   heals: number;
   /** who dealt the killing blow (a connection id), while dead */
   killerId: string | null;
+  /** experience points in this playground (experience.ts makes them a level) */
+  xp: number;
 }
 
 /** Whether a punch now is a critical one, by the game's rule: in the air and on the way down. */
@@ -34,7 +37,7 @@ export function isCriticalHit(body: { onGround: boolean }, fallDistance: number)
   return !body.onGround && fallDistance > 0;
 }
 
-const FULL: Vitals = { health: MAX_HEALTH, previousHealth: MAX_HEALTH, lastChange: null, hurts: 0, heals: 0, killerId: null };
+const FULL: Vitals = { health: MAX_HEALTH, previousHealth: MAX_HEALTH, lastChange: null, hurts: 0, heals: 0, killerId: null, xp: 0 };
 const noSubscription = () => () => {};
 const fullHealth = () => FULL;
 
@@ -78,7 +81,14 @@ export class PlaygroundCombat {
   }
 
   /** A message from the server about this call's fighting. */
-  receive(message: PlaygroundHit | PlaygroundHealth, now = performance.now()): void {
+  receive(message: PlaygroundHit | PlaygroundHealth | PlaygroundXp, now = performance.now()): void {
+    if (message.t === 'playground-xp') {
+      if (Number.isFinite(message.xp) && message.xp >= 0 && message.xp !== this.vitals.xp) {
+        this.vitals = { ...this.vitals, xp: message.xp };
+        for (const listener of this.listeners) listener();
+      }
+      return;
+    }
     if (message.t === 'playground-hit') {
       this.hits.push(message);
       if (this.hits.length > 64) this.hits.shift();
@@ -100,6 +110,7 @@ export class PlaygroundCombat {
     this.baseAt = now;
     const healed = this.baseHealth > previous;
     this.update({
+      ...this.vitals,
       health: this.baseHealth,
       previousHealth: previous,
       lastChange: hurt ? 'hurt' : healed ? 'heal' : this.vitals.lastChange,

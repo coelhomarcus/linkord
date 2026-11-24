@@ -24,7 +24,7 @@ describe('PlaygroundCombat', () => {
     combat.subscribe(listener);
     combat.receive(hit());
     combat.receive(hit({ targetId: 'other', health: 12 }));
-    expect(combat.getVitals()).toEqual({ health: 19, previousHealth: 20, lastChange: 'hurt', hurts: 1, heals: 0, killerId: null });
+    expect(combat.getVitals()).toEqual({ health: 19, previousHealth: 20, lastChange: 'hurt', hurts: 1, heals: 0, killerId: null, xp: 0 });
     expect(listener).toHaveBeenCalledTimes(1);
     expect(combat.takeHits().map((h) => h.targetId)).toEqual(['me', 'other']);
     expect(combat.takeHits()).toEqual([]);
@@ -60,5 +60,15 @@ describe('PlaygroundCombat', () => {
     expect(combat.dead.has('other')).toBe(true);
     combat.receive({ t: 'playground-health', conversationId: 'conv', players: [{ id: 'other', health: MAX_HEALTH }] });
     expect(combat.dead.has('other')).toBe(false);
+  });
+
+  it('keeps the experience the server says', () => {
+    const combat = new PlaygroundCombat('me');
+    const listener = vi.fn();
+    combat.subscribe(listener);
+    combat.receive({ t: 'playground-xp', conversationId: 'conv', xp: 7 });
+    combat.receive(hit());
+    expect(combat.getVitals()).toMatchObject({ xp: 7, health: 19 });
+    expect(listener).toHaveBeenCalledTimes(2);
   });
 });

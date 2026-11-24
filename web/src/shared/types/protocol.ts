@@ -28,9 +28,8 @@ export type ReactionEmoji = string;
 
 /** Wire protocol version this build speaks; the server refuses older ones
  * (client_outdated). Keep in sync with server/src/realtime/protocolVersion.ts
- * — version 33 adds fighting in a playground (`playground-pos`, `playground-attack`, `playground-respawn`,
- * `playground-hit`, `playground-health`). */
-export const PROTOCOL_VERSION = 33;
+ * — version 34 adds `playground-xp` (experience from kills in a playground). */
+export const PROTOCOL_VERSION = 34;
 
 export interface LiveNotice {
   kind: 'friend_request' | 'friend_accepted' | 'server_invitation';
@@ -549,6 +548,8 @@ export type ServerMessage =
    * a fresh hit (`hurt`) knocks the target back by `push` (and `extra` from a sprinting attacker) */
   | { t: 'playground-hit'; conversationId: string; attackerId: string; targetId: string; damage: number; health: number; crit: boolean; hurt: boolean; push?: [number, number]; extra?: [number, number, number] }
   | { t: 'playground-health'; conversationId: string; players: { id: string; health: number }[] }
+  /** your experience points in that playground, after a kill or when you arrive */
+  | { t: 'playground-xp'; conversationId: string; xp: number }
   // payload-free like social-changed: the list itself comes from GET /api/servers/:id/sounds
   | { t: 'server-sounds-changed'; serverId: string }
   | { t: 'server-emojis-changed'; serverId: string }

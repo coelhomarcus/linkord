@@ -141,7 +141,7 @@ export class PlaygroundSession {
   }
 
   /** What the server says about this call's fighting (RoomProvider passes it on). */
-  receive(message: Extract<ServerMessage, { t: 'playground-hit' | 'playground-health' }>): void {
+  receive(message: Extract<ServerMessage, { t: 'playground-hit' | 'playground-health' | 'playground-xp' }>): void {
     if (message.conversationId === this.conversationId && !this.disposed) this.combat.receive(message);
   }
 

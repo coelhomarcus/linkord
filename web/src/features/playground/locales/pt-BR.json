@@ -62,7 +62,8 @@
     "health": "Vida",
     "hearts_one": "{{count}} coração",
     "hearts_other": "{{count}} corações",
-    "hotbar": "Barra de itens"
+    "hotbar": "Barra de itens",
+    "level": "Nível {{level}}"
   },
   "chat": {
     "notLinked": "Este playground não tem chat. Quem gerencia o canal escolhe um em Configurações do canal → Chat do jogo.",

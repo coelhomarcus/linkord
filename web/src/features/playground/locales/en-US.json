@@ -62,7 +62,8 @@
     "health": "Health",
     "hearts_one": "{{count}} heart",
     "hearts_other": "{{count}} hearts",
-    "hotbar": "Hotbar"
+    "hotbar": "Hotbar",
+    "level": "Level {{level}}"
   },
   "chat": {
     "notLinked": "This playground has no chat. Whoever manages the channel picks one in Channel settings → Game chat.",
