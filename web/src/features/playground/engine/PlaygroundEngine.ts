@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { IslandMap } from '../islandMap';
+import { BLOCK, IslandMap } from '../islandMap';
 import type { Motion, PlayerState } from '../playgroundProtocol';
 import type { PlaygroundSession } from '../playgroundSession';
 import { MAX_HEIGHT } from '../playgroundWorld';
@@ -7,6 +7,7 @@ import { defaultSkin } from '../skins/defaultSkins';
 import type { Skin } from '../skins/skins';
 import { BlockAvatar, FirstPersonArm } from './blockAvatar';
 import { angleDelta, turnBody } from './bipedPose';
+import { BlockOutline, targetBlock } from './blockTarget';
 import { cameraDistance } from './cameraCollision';
 import { lightmap, MAX_LIGHT } from './lighting';
 import { Controls, nextCameraMode } from './controls';
@@ -93,6 +94,8 @@ export class PlaygroundEngine {
   private swings = 0;
   private motion: Motion = 'idle';
   private readonly remotes = new Map<string, RemoteAvatar>();
+  private readonly outline = new BlockOutline();
+  private outlineShown = true;
   private readonly unsubscribeSkins: () => void;
   private frame = 0;
   private disposed = false;
@@ -110,6 +113,7 @@ export class PlaygroundEngine {
     container.prepend(canvas);
 
     this.world = buildWorld(this.scene, this.island);
+    this.scene.add(this.outline.object);
     this.screen = new ScreenDisplay(options.screenLabels);
     this.scene.add(this.screen.group);
 
@@ -205,6 +209,7 @@ export class PlaygroundEngine {
     this.controls.dispose();
     this.local.dispose();
     this.arm.dispose();
+    this.outline.dispose();
     for (const remote of this.remotes.values()) remote.avatar.dispose();
     this.remotes.clear();
     this.screen.dispose();
@@ -240,7 +245,10 @@ export class PlaygroundEngine {
     this.camera.aspect = width / height;
     this.camera.updateProjectionMatrix();
     this.arm.setAspect(width / height);
+    this.outline.setResolution(width, height, this.renderer.getPixelRatio());
   }
+
+
 
   private swingArm(): void {
     this.arm.swing();
@@ -272,6 +280,7 @@ export class PlaygroundEngine {
     this.drawLocal(dt, partial);
     this.moveRemotes(dt);
     this.placeCamera(partial);
+    this.aimOutline();
     this.screen.update();
     this.renderer.render(this.scene, this.camera);
     if (this.controls.mode === 'first') {
@@ -371,6 +380,18 @@ export class PlaygroundEngine {
       remote.avatar.setLight(this.lightAt(remote.position));
       remote.avatar.update(dt, { speed, headYaw: angleDelta(remote.yaw, remote.headYaw), headPitch: state.pitch, crouching: state.crouch });
     }
+  }
+
+  private readonly aim = new THREE.Vector3();
+
+  /** Outlines the block the eyes look at, from the eyes whatever the camera mode, as the game does. */
+  private aimOutline(): void {
+    if (!this.outlineShown || !this.controls.enabled) {
+      this.outline.show(null);
+      return;
+    }
+    this.aim.set(0, 0, -1).applyQuaternion(this.viewQuaternion);
+    this.outline.show(targetBlock((x, y, z) => this.island.get(x, y, z) !== BLOCK.air, this.eye, this.aim));
   }
 
   private readonly viewQuaternion = new THREE.Quaternion();
