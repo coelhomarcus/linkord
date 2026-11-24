@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ArrowLeftIcon, CaretUpIcon, EyeIcon, DotsThreeIcon, MicrophoneSlashIcon, MonitorIcon, SpeakerSlashIcon, UserIcon } from '@/shared/ui/icons';
+import { ArrowLeftIcon, CaretUpIcon, MicrophoneSlashIcon, MonitorIcon, SpeakerSlashIcon } from '@/shared/ui/icons';
 import { useMediaQuery } from '@/shared/hooks/useMediaQuery';
 import { TOUCH_FIRST_QUERY } from '@/shared/hooks/useLongPress';
 import { cn } from '@/shared/lib/utils';
@@ -11,7 +11,7 @@ import { usePlaygroundSession } from './playgroundSession';
 import { screenPresenterId } from './screenPresenter';
 import { PlaygroundEngine } from './engine/PlaygroundEngine';
 import type { PlaygroundPlayer } from './engine/PlaygroundEngine';
-import { CAMERA_LABEL, CAMERA_SWITCH_LABEL, nextCameraMode } from './engine/controls';
+import { nextCameraMode } from './engine/controls';
 import type { CameraMode } from './engine/controls';
 import { PlaygroundMenu } from './PlaygroundMenu';
 import { loadPixelFont, PIXEL_FONT, PIXEL_TEXT } from './pixelFont';
@@ -54,8 +54,6 @@ export default function PlaygroundStage({ allIds, onBack }: { allIds: string[]; 
   const engineRef = useRef<PlaygroundEngine | null>(null);
   const relockRef = useRef(false);
   const [cameraMode, setCameraMode] = useState<CameraMode>('third');
-  const [locked, setLocked] = useState(false);
-  const [moved, setMoved] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [fontReady, setFontReady] = useState(false);
   // no WebGL (turned off, or a GPU the browser refuses): the call itself still works
@@ -89,8 +87,6 @@ export default function PlaygroundStage({ allIds, onBack }: { allIds: string[]; 
         localUserId: me.userId,
         screenLabels: { idle: '', idleHint: '' },
         onCameraModeChange: setCameraMode,
-        onPointerLockChange: setLocked,
-        onFirstInput: () => setMoved(true),
       });
     } catch (err) {
       console.warn('[playground] could not start the 3D view', err);
@@ -163,8 +159,7 @@ export default function PlaygroundStage({ allIds, onBack }: { allIds: string[]; 
     };
   }, [callStageRef]);
 
-  const nextMode = nextCameraMode(cameraMode);
-  const toggleView = () => engineRef.current?.setCameraMode(nextMode);
+  const toggleView = () => engineRef.current?.setCameraMode(nextCameraMode(cameraMode));
   const resume = () => setMenuOpen(false);
   const notices = [
     controls.shareError ? { text: controls.shareError, dismiss: controls.dismissShareError } : null,
@@ -206,26 +201,9 @@ export default function PlaygroundStage({ allIds, onBack }: { allIds: string[]; 
           <button type="button" aria-label={t('back')} onClick={onBack} className={cn(HUD_BUTTON, 'md:invisible')}>
             <ArrowLeftIcon size={18} />
           </button>
-          {!failed && !locked && !moved && (
-            <p className={cn(`max-w-lg px-3 py-1.5 text-center ${PIXEL_TEXT.sm} leading-tight text-white/90 ${PIXEL_SHADOW}`, PIXEL_PANEL)}>
-              {(touchFirst ? t('hint.touch') : t('hint.desktop')).split(' / ').map((part, index) => (
-                <span key={part} className="inline-block whitespace-nowrap">
-                  {index > 0 && <span aria-hidden className="mx-2.5 inline-block size-1 bg-white/45 align-middle" />}
-                  {part}
-                </span>
-              ))}
-            </p>
-          )}
-          <div className="flex gap-2">
-            <button type="button" onClick={toggleView} disabled={failed} aria-label={t(CAMERA_SWITCH_LABEL[nextMode])} className={HUD_BUTTON}>
-              {nextMode === 'first' ? <EyeIcon size={18} /> : <UserIcon size={18} />}
-              <span className="max-sm:hidden">{t(CAMERA_LABEL[cameraMode])}</span>
-            </button>
-            <button type="button" onClick={() => { relockRef.current = false; setMenuOpen(true); }} aria-label={t('menu.open')} className={HUD_BUTTON}>
-              <DotsThreeIcon size={18} />
-              <span className="max-sm:hidden">{t('menu.title')}{touchFirst ? '' : ' (Tab)'}</span>
-            </button>
-          </div>
+          <button type="button" onClick={() => { relockRef.current = false; setMenuOpen(true); }} aria-label={t('menu.open')} className={HUD_BUTTON}>
+            {t('menu.title')}{touchFirst ? '' : ' (Tab)'}
+          </button>
         </div>
       )}
 

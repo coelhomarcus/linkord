@@ -35,9 +35,6 @@ export interface EngineOptions {
   localUserId: string;
   screenLabels: ScreenLabels;
   onCameraModeChange: (mode: CameraMode) => void;
-  onPointerLockChange: (locked: boolean) => void;
-  /** the person started moving: the controls hint can go */
-  onFirstInput: () => void;
 }
 
 const MAX_FRAME_SECONDS = 0.1;
@@ -129,8 +126,6 @@ export class PlaygroundEngine {
     // start behind the avatar, looking the way it faces
     this.controls.yaw = this.facing + Math.PI;
     this.controls.onToggleMode = () => this.setCameraMode(nextCameraMode(this.controls.mode));
-    this.controls.onLockChange = options.onPointerLockChange;
-    this.controls.onFirstInput = options.onFirstInput;
     this.controls.onAction = () => this.swingArm();
 
     this.unsubscribeSkins = session.onSkinsChange(() => this.refreshSkins());

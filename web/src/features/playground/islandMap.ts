@@ -21,7 +21,7 @@ export const SEA_LEVEL = 4;
 const PLAZA_RADIUS = 9.5;
 const ISLAND_RADIUS = 28;
 /** A block wall for the big screen, its front face at this z. */
-export const SCREEN_WALL = { minX: -7, maxX: 7, z: -18, bottom: PLAZA_HEIGHT, top: PLAZA_HEIGHT + 10 } as const;
+export const SCREEN_WALL = { minX: -7, maxX: 7, z: -18, bottom: PLAZA_HEIGHT, top: PLAZA_HEIGHT + 8 } as const;
 
 const SEED = 20261123;
 

@@ -3,17 +3,10 @@
   "back": "Voltar para o servidor",
   "unsupported": "Este navegador não conseguiu abrir o mundo 3D (WebGL desligado ou indisponível). Você continua na chamada e ouve todo mundo normalmente.",
   "jump": "Pular",
-  "hint": {
-    "desktop": "Clique ou arraste na cena para olhar / WASD anda / W duas vezes corre / Shift agacha / Espaço pula / V troca a câmera / Tab abre o menu",
-    "touch": "Arraste à esquerda para andar e à direita para olhar em volta"
-  },
   "camera": {
     "first": "1ª pessoa",
     "third": "3ª pessoa",
-    "front": "3ª pessoa (de frente)",
-    "toFirst": "Ver em primeira pessoa",
-    "toThird": "Ver de costas, em terceira pessoa",
-    "toFront": "Ver de frente, em terceira pessoa"
+    "front": "3ª pessoa (de frente)"
   },
   "screen": {
     "idle": "Nenhuma transmissão no telão",

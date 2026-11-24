@@ -8,9 +8,8 @@ export type CameraMode = 'first' | 'third' | 'front';
 
 export const CAMERA_MODES: readonly CameraMode[] = ['first', 'third', 'front'];
 
-/** the playground namespace's names for each mode, and for switching to it */
+/** the playground namespace's name for each mode */
 export const CAMERA_LABEL = { first: 'camera.first', third: 'camera.third', front: 'camera.front' } as const satisfies Record<CameraMode, string>;
-export const CAMERA_SWITCH_LABEL = { first: 'camera.toFirst', third: 'camera.toThird', front: 'camera.toFront' } as const satisfies Record<CameraMode, string>;
 
 export function nextCameraMode(mode: CameraMode): CameraMode {
   return CAMERA_MODES[(CAMERA_MODES.indexOf(mode) + 1) % CAMERA_MODES.length]!;
@@ -55,12 +54,8 @@ export class Controls {
   distance = DEFAULT_CAMERA_DISTANCE;
   mode: CameraMode = 'third';
   onToggleMode: () => void = () => {};
-  onLockChange: (locked: boolean) => void = () => {};
-  /** the first key, drag or mouse lock that moves anything */
-  onFirstInput: () => void = () => {};
   /** a click while the mouse is locked: the arm swings */
   onAction: () => void = () => {};
-  private engaged = false;
 
   private readonly keys = new Set<string>();
   private jumpQueued = false;
@@ -138,12 +133,6 @@ export class Controls {
     this.sprinting = false;
   }
 
-  private engage(): void {
-    if (this.engaged) return;
-    this.engaged = true;
-    this.onFirstInput();
-  }
-
   intent(): MoveIntent {
     if (this.joystick) {
       const dx = (this.joystick.x - this.joystick.startX) / JOYSTICK_RADIUS;
@@ -214,7 +203,6 @@ export class Controls {
       this.lastForwardPress = event.timeStamp;
     }
     this.keys.add(event.code);
-    this.engage();
   };
 
   private onKeyUp = (event: KeyboardEvent): void => {
@@ -231,12 +219,9 @@ export class Controls {
   };
 
   private onPointerLockChange = (): void => {
-    if (!this.locked) {
-      this.keys.clear();
-      this.sprinting = false;
-    }
-    else this.engage();
-    this.onLockChange(this.locked);
+    if (this.locked) return;
+    this.keys.clear();
+    this.sprinting = false;
   };
 
   private onMouseMove = (event: MouseEvent): void => {
@@ -265,7 +250,6 @@ export class Controls {
       if (event.button === 0) this.requestLock();
       return;
     }
-    this.engage();
     const rect = this.canvas.getBoundingClientRect();
     const drag: Drag = { pointerId: event.pointerId, startX: event.clientX, startY: event.clientY, x: event.clientX, y: event.clientY };
     if (event.clientX - rect.left < rect.width / 2 && !this.joystick) {

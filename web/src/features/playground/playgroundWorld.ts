@@ -12,7 +12,7 @@ export const MAX_HEIGHT = 24;
 
 export const SCREEN = {
   /** centre of the picture, just in front of its block wall */
-  x: 0, y: PLAZA_HEIGHT + 5, z: -17,
+  x: 0, y: PLAZA_HEIGHT + 3.9, z: -17,
   width: 12, height: 6.75,
 } as const;
 
