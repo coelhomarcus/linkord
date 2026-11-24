@@ -104,7 +104,7 @@ const BLOCK_DEFS = {
   ...coloredDefs('concrete', solid(1.8, 'pickaxe', null, 0)),
   ...coloredDefs('terracotta', solid(1.25, 'pickaxe', null, 0)),
   [BLOCK.terracotta]: solid(1.25, 'pickaxe', 'terracotta', 0),
-  // a chest is a little smaller than its cell: what is behind it shows round its edges
+  // a chest is drawn as a model (its latch stands out of the cell) and lets the light through
   [BLOCK.chest]: { ...solid(2.5, 'axe', 'chest'), opaque: false, lightOpacity: 0 },
   [BLOCK.creativeChest]: { ...solid(-1, null, null), opaque: false, lightOpacity: 0 },
 } as Record<Block, BlockDef>;
