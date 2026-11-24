@@ -1,6 +1,21 @@
 import * as THREE from 'three';
-import { BLOCK } from '../islandMap';
-import type { Block } from '../islandMap';
+import { BLOCK } from '@game/blocks';
+import type { Block } from '@game/blocks';
+import bedrockUrl from '../assets/pixel-perfection/bedrock.png?url';
+import coalOreUrl from '../assets/pixel-perfection/coal_ore.png?url';
+import cobblestoneUrl from '../assets/pixel-perfection/cobblestone.png?url';
+import tableFrontUrl from '../assets/pixel-perfection/crafting_table_front.png?url';
+import tableSideUrl from '../assets/pixel-perfection/crafting_table_side.png?url';
+import tableTopUrl from '../assets/pixel-perfection/crafting_table_top.png?url';
+import diamondOreUrl from '../assets/pixel-perfection/diamond_ore.png?url';
+import furnaceFrontUrl from '../assets/pixel-perfection/furnace_front.png?url';
+import furnaceFrontOnUrl from '../assets/pixel-perfection/furnace_front_on.png?url';
+import furnaceSideUrl from '../assets/pixel-perfection/furnace_side.png?url';
+import furnaceTopUrl from '../assets/pixel-perfection/furnace_top.png?url';
+import glassUrl from '../assets/pixel-perfection/glass.png?url';
+import goldOreUrl from '../assets/pixel-perfection/gold_ore.png?url';
+import gravelUrl from '../assets/pixel-perfection/gravel.png?url';
+import ironOreUrl from '../assets/pixel-perfection/iron_ore.png?url';
 import dirtUrl from '../assets/pixel-perfection/dirt.png?url';
 import grassSideUrl from '../assets/pixel-perfection/grass_block_side.png?url';
 import grassSideOverlayUrl from '../assets/pixel-perfection/grass_block_side_overlay.png?url';
@@ -14,7 +29,7 @@ import sandUrl from '../assets/pixel-perfection/sand.png?url';
 import stoneUrl from '../assets/pixel-perfection/stone.png?url';
 import waterUrl from '../assets/pixel-perfection/water_still.png?url';
 
-// The island's pixel art: 16×16 tiles on one 64×64 atlas, read with nearest
+// The world's pixel art: 16×16 tiles on one 128×128 atlas, read with nearest
 // filtering so every texel stays a crisp square. The tiles are Pixel
 // Perfection's (assets/pixel-perfection, CC BY-SA 4.0), tinted where the pack
 // leaves them grey for the game to colour (grass, leaves, water). Until they
@@ -22,7 +37,7 @@ import waterUrl from '../assets/pixel-perfection/water_still.png?url';
 // colour broken up with seeded noise, plus a little structure.
 
 const TILE = 16;
-const COLUMNS = 4;
+const COLUMNS = 8;
 const ATLAS_SIZE = TILE * COLUMNS;
 
 type Rgb = [number, number, number];
@@ -31,11 +46,16 @@ const scale = ([r, g, b]: Rgb, f: number): Rgb => [r * f, g * f, b * f];
 
 const TILES = {
   grassTop: 0, grassSide: 1, dirt: 2, stone: 3, sand: 4, logSide: 5, logTop: 6, leaves: 7, frame: 8, planks: 9,
+  cobblestone: 10, coalOre: 11, ironOre: 12, goldOre: 13, diamondOre: 14, bedrock: 15, gravel: 16, glass: 17,
+  tableTop: 18, tableSide: 19, tableFront: 20, furnaceTop: 21, furnaceSide: 22, furnaceFront: 23, furnaceFrontOn: 24,
 } as const;
-type TileName = keyof typeof TILES;
+export type TileName = keyof typeof TILES;
 
-/** Which tile a block shows on its top, sides and bottom. */
-export const BLOCK_TILES: Record<Exclude<Block, 0>, [TileName, TileName, TileName]> = {
+type FaceTiles = [top: TileName, side: TileName, bottom: TileName, front?: TileName];
+
+/** Which tile a block shows on its top, sides and bottom, and on its front where it has one. Water is
+ * drawn apart (voxelWorld.ts). */
+const BLOCK_TILES: Record<Exclude<Block, 0 | 15>, FaceTiles> = {
   [BLOCK.grass]: ['grassTop', 'grassSide', 'dirt'],
   [BLOCK.dirt]: ['dirt', 'dirt', 'dirt'],
   [BLOCK.stone]: ['stone', 'stone', 'stone'],
@@ -44,7 +64,32 @@ export const BLOCK_TILES: Record<Exclude<Block, 0>, [TileName, TileName, TileNam
   [BLOCK.leaves]: ['leaves', 'leaves', 'leaves'],
   [BLOCK.frame]: ['frame', 'frame', 'frame'],
   [BLOCK.planks]: ['planks', 'planks', 'planks'],
+  [BLOCK.cobblestone]: ['cobblestone', 'cobblestone', 'cobblestone'],
+  [BLOCK.coalOre]: ['coalOre', 'coalOre', 'coalOre'],
+  [BLOCK.ironOre]: ['ironOre', 'ironOre', 'ironOre'],
+  [BLOCK.goldOre]: ['goldOre', 'goldOre', 'goldOre'],
+  [BLOCK.diamondOre]: ['diamondOre', 'diamondOre', 'diamondOre'],
+  [BLOCK.bedrock]: ['bedrock', 'bedrock', 'bedrock'],
+  [BLOCK.gravel]: ['gravel', 'gravel', 'gravel'],
+  [BLOCK.glass]: ['glass', 'glass', 'glass'],
+  [BLOCK.craftingTable]: ['tableTop', 'tableSide', 'planks', 'tableFront'],
+  [BLOCK.furnace]: ['furnaceTop', 'furnaceSide', 'furnaceTop', 'furnaceFront'],
 };
+
+/** Face directions as voxelWorld.ts lists them: +x, -x, +y, -y, +z, -z. */
+const FACE_SIDE = ['side', 'side', 'top', 'bottom', 'side', 'side'] as const;
+/** The face a furnace's front is on, for each way it faces (+z, -x, -z, +x). */
+const FACING_FACE = [4, 1, 5, 0] as const;
+
+/** The tile on face `face` (voxelWorld.ts's order) of `block`; a furnace's front by where it faces and
+ * whether it burns, a crafting table's front on its north and west faces, as the game draws it. */
+export function faceTile(block: Exclude<Block, 0 | 15>, face: number, furnace?: { facing: number; lit: boolean }): TileName {
+  const [top, side, bottom, front] = BLOCK_TILES[block];
+  if (block === BLOCK.furnace && face === FACING_FACE[furnace?.facing ?? 0]) return furnace?.lit ? 'furnaceFrontOn' : front!;
+  if (block === BLOCK.craftingTable && (face === 1 || face === 5)) return front!;
+  const kind = FACE_SIDE[face]!;
+  return kind === 'top' ? top : kind === 'bottom' ? bottom : side;
+}
 
 function random(seed: number): () => number {
   let a = seed;
@@ -86,6 +131,21 @@ const PAINTERS: Record<TileName, Paint> = {
     const joint = (y >> 2) % 2 === 0 ? x === 5 : x === 12;
     return scale(hex(0xb98d55), (seam || joint ? 0.72 : 1) * (0.92 + rand() * 0.12));
   },
+  cobblestone: noisy(hex(0x7a7a7a), 0.4),
+  coalOre: (x, y, rand) => (rand() < 0.15 ? hex(0x222222) : PAINTERS.stone(x, y, rand)),
+  ironOre: (x, y, rand) => (rand() < 0.15 ? hex(0xd8af93) : PAINTERS.stone(x, y, rand)),
+  goldOre: (x, y, rand) => (rand() < 0.15 ? hex(0xfcee4b) : PAINTERS.stone(x, y, rand)),
+  diamondOre: (x, y, rand) => (rand() < 0.15 ? hex(0x5decf5) : PAINTERS.stone(x, y, rand)),
+  bedrock: noisy(hex(0x555555), 0.6),
+  gravel: noisy(hex(0x857f7c), 0.4),
+  glass: (x, y) => (x === 0 || y === 0 || x === TILE - 1 || y === TILE - 1 ? hex(0xdbf1f7) : hex(0xc0e0ea)),
+  tableTop: (x, y, rand) => PAINTERS.planks(x, y, rand),
+  tableSide: (x, y, rand) => PAINTERS.planks(x, y, rand),
+  tableFront: (x, y, rand) => PAINTERS.planks(x, y, rand),
+  furnaceTop: noisy(hex(0x6e6e6e), 0.2),
+  furnaceSide: noisy(hex(0x7a7a7a), 0.25),
+  furnaceFront: (x, y, rand) => (y > 8 && x > 3 && x < 12 ? hex(0x2a2a2a) : PAINTERS.furnaceSide(x, y, rand)),
+  furnaceFrontOn: (x, y, rand) => (y > 8 && x > 3 && x < 12 ? hex(0xe0782a) : PAINTERS.furnaceSide(x, y, rand)),
 };
 
 function paintTile(ctx: CanvasRenderingContext2D, name: TileName): void {
@@ -187,6 +247,21 @@ const PACK_TILES: Record<TileName, PackTile> = {
   leaves: { url: leavesUrl, tint: FOLIAGE_TINT },
   frame: { url: frameUrl },
   planks: { url: planksUrl },
+  cobblestone: { url: cobblestoneUrl },
+  coalOre: { url: coalOreUrl },
+  ironOre: { url: ironOreUrl },
+  goldOre: { url: goldOreUrl },
+  diamondOre: { url: diamondOreUrl },
+  bedrock: { url: bedrockUrl },
+  gravel: { url: gravelUrl },
+  glass: { url: glassUrl },
+  tableTop: { url: tableTopUrl },
+  tableSide: { url: tableSideUrl },
+  tableFront: { url: tableFrontUrl },
+  furnaceTop: { url: furnaceTopUrl },
+  furnaceSide: { url: furnaceSideUrl },
+  furnaceFront: { url: furnaceFrontUrl },
+  furnaceFrontOn: { url: furnaceFrontOnUrl },
 };
 
 function loadImage(url: string): Promise<HTMLImageElement> {
@@ -226,9 +301,11 @@ function overlay(base: ImageData, top: ImageData): ImageData {
   return base;
 }
 
-/** The pack's tile a block shows on its top or its sides, tinted as the island draws it (an item's icon). */
-export async function blockFacePixels(block: Exclude<Block, 0>, face: 'top' | 'side'): Promise<ImageData> {
-  const tile = PACK_TILES[BLOCK_TILES[block][face === 'top' ? 0 : 1]];
+/** The pack's tile a block shows on its top, its sides or its front (the side for a block without one),
+ * tinted as the world draws it (an item's icon). */
+export async function blockFacePixels(block: Exclude<Block, 0 | 15>, face: 'top' | 'side' | 'front'): Promise<ImageData> {
+  const tiles = BLOCK_TILES[block];
+  const tile = PACK_TILES[face === 'top' ? tiles[0] : face === 'front' ? tiles[3] ?? tiles[1] : tiles[1]];
   const [base, top] = await Promise.all([loadImage(tile.url), tile.overlay ? loadImage(tile.overlay.url) : null]);
   const pixels = pixelsOf(base, tile.tint);
   return top && tile.overlay ? overlay(pixels, pixelsOf(top, tile.overlay.tint)) : pixels;

@@ -1,18 +1,26 @@
 import * as THREE from 'three';
-import { BLOCK, IslandMap } from '../islandMap';
+import { BLOCK, isUsable } from '@game/blocks';
+import { heldStack } from '@game/inventory';
+import { HEIGHT, spawnPoint } from '@game/layout';
+import { breakTicks } from '@game/mining';
 import type { Motion, PlayerState } from '../playgroundProtocol';
 import type { PlaygroundSession } from '../playgroundSession';
-import { MAX_HEIGHT, spawnPoint } from '../playgroundWorld';
+import type { WorldEvent } from '../worldState';
+import { BreakOverlay } from './breakOverlay';
+import { DroppedItems } from './droppedItems';
+import { ItemModels } from './itemModels';
 import { defaultSkin } from '../skins/defaultSkins';
 import type { Skin } from '../skins/skins';
 import { BlockAvatar, DEATH_TICKS, FirstPersonArm } from './blockAvatar';
 import { angleDelta, turnBody } from './bipedPose';
 import { BlockOutline, targetBlock } from './blockTarget';
+import type { BlockHit } from './blockTarget';
 import { cameraDistance } from './cameraCollision';
 import { lightmap, MAX_LIGHT } from './lighting';
 import { Controls, nextCameraMode } from './controls';
 import type { CameraMode, MoveIntent } from './controls';
-import { applyKnockback, createBody, SNEAKING_EYE_HEIGHT, STANDING_EYE_HEIGHT, stepBody, TICK_SECONDS } from './playerPhysics';
+import { applyKnockback, BODY_HEIGHT, createBody, HALF_WIDTH, SNEAKING_EYE_HEIGHT, STANDING_EYE_HEIGHT, stepBody, TICK_SECONDS } from './playerPhysics';
+import type { Terrain } from './playerPhysics';
 import { cellBox, rayBoxDistance, targetPlayer } from './playerTarget';
 import { Particles } from './particles';
 import { isCriticalHit } from '../playgroundCombat';
@@ -26,8 +34,16 @@ import type { World } from './voxelWorld';
 
 // The 3D view of a playground. Plain three.js driven by its own animation
 // frame, outside React: React hands it who is in the call and the stream for
-// the big screen; positions and skins come and go through the
-// PlaygroundSession, which outlives this view.
+// the big screen; positions, skins, the world and the inventory come and go
+// through the PlaygroundSession, which outlives this view. Until the world
+// arrives from the playground service, nobody moves.
+//
+// Building, the block game's way: holding the left button on a block digs it
+// (cracks show how far, the time set by the block and the held tool), a right
+// click places the held block against the face aimed at or opens a crafting
+// table or furnace (a sneaking player places against them instead), held
+// down it places one every 4 ticks; on a touch screen a finger held still
+// digs and a tap places or opens.
 
 export interface PlaygroundPlayer {
   id: string;
@@ -58,6 +74,14 @@ const SPRINT_HIT_SLOWDOWN = 0.6;
 const HURT_TICKS = 10;
 const HURT_TILT = (14 * Math.PI) / 180;
 const STILL: MoveIntent = { forward: 0, right: 0, sprint: false, sneak: false, jump: false, autoJump: false };
+/** a block broken, the next waits this many ticks (the game's dig delay) */
+const DIG_DELAY_TICKS = 5;
+/** the arm swings this often while digging */
+const DIG_SWING_TICKS = 4;
+/** a held right button places a block this often */
+const USE_REPEAT_TICKS = 4;
+
+interface Dig { x: number; y: number; z: number; block: number; ticks: number | null; elapsed: number }
 
 interface RemoteAvatar {
   userId: string;
@@ -69,6 +93,8 @@ interface RemoteAvatar {
   placed: boolean;
   /** dead long enough to have gone up in a puff */
   vanished: boolean;
+  /** the item its hand shows */
+  held: string | null;
 }
 
 /** Frame-rate independent smoothing toward a target. */
@@ -83,8 +109,24 @@ export class PlaygroundEngine {
   private readonly camera = new THREE.PerspectiveCamera(70, 1, 0.05, 300);
   private readonly timer = new THREE.Timer();
   private readonly controls: Controls;
-  private readonly island = new IslandMap();
   private readonly world: World;
+  /** the world as bodies, particles and the camera meet it; before it arrives, only the ground under it */
+  private readonly terrain: Terrain = {
+    isSolid: (x, y, z) => this.session.world.grid?.isSolid(x, y, z) ?? y < 0,
+    isWater: (x, y, z) => this.session.world.grid?.isWater(x, y, z) ?? false,
+  };
+  private readonly models: ItemModels;
+  private readonly dropped: DroppedItems;
+  private readonly breakOverlay = new BreakOverlay();
+  private dig: Dig | null = null;
+  private digDelay = 0;
+  private useTicks = 0;
+  /** the world arrived and the body was put on its ground */
+  private landed = false;
+  /** the item the local hand shows */
+  private heldShown: string | null = null;
+  private underwater = false;
+  private readonly unsubscribeWorld: () => void;
   private readonly screen: ScreenDisplay;
   private readonly resizeObserver: ResizeObserver;
   private readonly local: BlockAvatar;
@@ -134,15 +176,20 @@ export class PlaygroundEngine {
     canvas.className = 'block size-full touch-none outline-none';
     container.prepend(canvas);
 
-    this.world = buildWorld(this.scene, this.island);
-    this.scene.add(this.outline.object);
-    this.particles = new Particles(this.island, (x, y, z) => lightmap(this.world.skyLightAt(x, y, z) / MAX_LIGHT));
+    this.world = buildWorld(this.scene, session.world);
+    this.scene.add(this.outline.object, this.breakOverlay.object);
+    this.particles = new Particles(this.terrain, (x, y, z) => this.brightnessAt(x, y, z));
     this.scene.add(this.particles.group);
+    this.models = new ItemModels(this.world.atlas);
+    this.dropped = new DroppedItems(this.models, () => session.world.grid, (x, y, z) => this.brightnessAt(x, y, z));
+    this.scene.add(this.dropped.group);
+    this.dropped.reset(session.world.items.values());
     this.screen = new ScreenDisplay(options.screenLabels);
     this.scene.add(this.screen.group);
 
     const start = session.local;
-    this.body = createBody(start.x, Math.max(start.y, this.island.groundAt(start.x, start.z)), start.z);
+    this.body = createBody(start.x, start.y, start.z);
+    this.land();
     this.previous.set(this.body.x, this.body.y, this.body.z);
     this.position.copy(this.previous);
     this.facing = start.yaw;
@@ -157,9 +204,12 @@ export class PlaygroundEngine {
     // start behind the avatar, looking the way it faces
     this.controls.yaw = this.facing + Math.PI;
     this.controls.onAction = () => this.swingArm();
+    this.controls.onUse = () => this.use();
+    this.controls.onTap = () => this.tap();
     this.controls.onHotbarScroll = (steps) => this.options.onHotbarScroll(steps);
 
     this.unsubscribeSkins = session.onSkinsChange(() => this.refreshSkins());
+    this.unsubscribeWorld = session.world.subscribe((event) => this.onWorldEvent(event));
 
     this.resizeObserver = new ResizeObserver(() => this.resize());
     this.resizeObserver.observe(container);
@@ -178,7 +228,7 @@ export class PlaygroundEngine {
         const avatar = new BlockAvatar(this.skinOf(player.userId), player.name);
         avatar.root.visible = false;
         this.scene.add(avatar.root);
-        remote = { userId: player.userId, avatar, position: new THREE.Vector3(), yaw: 0, headYaw: 0, swings: 0, placed: false, vanished: false };
+        remote = { userId: player.userId, avatar, position: new THREE.Vector3(), yaw: 0, headYaw: 0, swings: 0, placed: false, vanished: false, held: null };
         this.remotes.set(player.id, remote);
       }
       remote.avatar.setLabel(player.name, player.speaking);
@@ -231,6 +281,9 @@ export class PlaygroundEngine {
     this.disposed = true;
     cancelAnimationFrame(this.frame);
     this.unsubscribeSkins();
+    this.unsubscribeWorld();
+    this.dropped.dispose();
+    this.breakOverlay.dispose();
     this.resizeObserver.disconnect();
     this.timer.dispose();
     this.controls.dispose();
@@ -241,6 +294,8 @@ export class PlaygroundEngine {
     for (const remote of this.remotes.values()) remote.avatar.dispose();
     this.remotes.clear();
     this.screen.dispose();
+    this.world.dispose();
+    this.models.dispose();
     this.scene.traverse((node) => {
       const mesh = node as THREE.Mesh;
       if (!mesh.isMesh) return;
@@ -253,6 +308,149 @@ export class PlaygroundEngine {
     });
     this.renderer.dispose();
     this.renderer.domElement.remove();
+  }
+
+  /** The world arrived (or arrived again), or changed. */
+  private onWorldEvent(event: WorldEvent): void {
+    switch (event.kind) {
+      case 'loaded':
+        this.world.reload();
+        this.dropped.reset(this.session.world.items.values());
+        this.dig = null;
+        this.land();
+        break;
+      case 'blocks':
+        this.world.blocksChanged(event.cells);
+        break;
+      case 'items':
+        for (const id of event.removed) this.dropped.remove(id, event.by ? () => this.chestOf(event.by!) : null);
+        for (const item of event.added) this.dropped.add(item);
+        break;
+      case 'furnace':
+        this.world.furnaceChanged(event.look.x, event.look.z);
+        break;
+      case 'held':
+        // moveRemotes picks it up
+        break;
+    }
+  }
+
+  /** The first time the world is there, the body stands on its ground. */
+  private land(): void {
+    const grid = this.session.world.grid;
+    if (this.landed || !grid) return;
+    this.landed = true;
+    this.body.y = Math.max(this.body.y, grid.groundAt(this.body.x, this.body.z));
+    this.previous.set(this.body.x, this.body.y, this.body.z);
+    this.position.copy(this.previous);
+  }
+
+  /** Where an item someone picked up flies to: their chest. */
+  private chestOf(id: string): THREE.Vector3 | null {
+    if (id === this.options.localId) return this.position.clone().setY(this.position.y + 0.8);
+    const remote = this.remotes.get(id);
+    return remote?.placed ? remote.position.clone().setY(remote.position.y + 0.8) : null;
+  }
+
+  private brightnessAt(x: number, y: number, z: number): number {
+    return lightmap(this.world.skyLightAt(x, y, z) / MAX_LIGHT);
+  }
+
+  private heldItem(): string | null {
+    return heldStack(this.session.inventory.get())?.item ?? null;
+  }
+
+  /** The hands show what the inventory says is held. */
+  private showHeld(): void {
+    const held = this.heldItem();
+    if (held === this.heldShown) return;
+    this.heldShown = held;
+    this.arm.setHeld(held ? this.models.create(held) : null);
+    this.local.setHeld(held ? this.models.create(held) : null);
+  }
+
+  /** The block the eyes look at, within reach (water is looked through). */
+  private targetedBlock(): BlockHit | null {
+    const grid = this.session.world.grid;
+    if (!grid) return null;
+    this.aim.set(0, 0, -1).applyQuaternion(this.viewQuaternion);
+    return targetBlock((x, y, z) => { const block = grid.get(x, y, z); return block !== BLOCK.air && block !== BLOCK.water; }, this.eye, this.aim);
+  }
+
+  /** Whoever stands in front of the block aimed at takes the click instead. */
+  private playerAimed(block: BlockHit | null): string | null {
+    this.aim.set(0, 0, -1).applyQuaternion(this.viewQuaternion);
+    const blockDistance = block ? rayBoxDistance(this.eye, this.aim, cellBox(block)) ?? Infinity : Infinity;
+    const { dead } = this.session.combat;
+    const candidates = [...this.remotes].filter(([id, remote]) => remote.placed && remote.avatar.root.visible && !dead.has(id));
+    return targetPlayer(this.eye, this.aim, candidates, blockDistance);
+  }
+
+  /** Swings the arm for everyone to see, without punching. */
+  private swingOnly(): void {
+    this.arm.swing();
+    this.local.swingArm();
+    this.attackTicks = ATTACK_TICKS;
+    this.swings = (this.swings + 1) & 0xff;
+  }
+
+  /** Whether a body (the local one or anyone else's, as last seen) is in the cell. */
+  private cellTaken(x: number, y: number, z: number): boolean {
+    const bodies = [this.body, ...[...this.remotes.values()].filter((remote) => remote.placed && !remote.vanished).map((remote) => remote.position)];
+    return bodies.some((b) => b.x + HALF_WIDTH > x && b.x - HALF_WIDTH < x + 1 && b.z + HALF_WIDTH > z && b.z - HALF_WIDTH < z + 1 && b.y + BODY_HEIGHT > y && b.y < y + 1);
+  }
+
+  /** A right click: open what is aimed at, or place the held block against it. */
+  private use(): boolean {
+    if (this.session.combat.isDead || !this.controls.enabled) return false;
+    const hit = this.targetedBlock();
+    const grid = this.session.world.grid;
+    if (!hit || !grid) return false;
+    if (isUsable(grid.get(hit.x, hit.y, hit.z)) && !this.sneaking) {
+      if (this.session.useBlock(hit.x, hit.y, hit.z)) this.swingOnly();
+      return true;
+    }
+    const [dx, dy, dz] = hit.face;
+    if (dx === 0 && dy === 0 && dz === 0) return false;
+    const x = hit.x + dx;
+    const y = hit.y + dy;
+    const z = hit.z + dz;
+    if (this.cellTaken(x, y, z) || !this.session.placeBlock(x, y, z)) return false;
+    this.swingOnly();
+    this.useTicks = USE_REPEAT_TICKS;
+    return true;
+  }
+
+  /** A tap on a touch screen: a player aimed at is punched; otherwise it opens or places. */
+  private tap(): void {
+    if (this.playerAimed(this.targetedBlock())) this.swingArm();
+    else if (!this.use()) this.swingArm();
+  }
+
+  /** One tick of digging: the cracks grow while the button is held on the same block; done, it breaks. */
+  private digTick(dead: boolean): void {
+    if (this.digDelay > 0) this.digDelay--;
+    const hit = !dead && this.controls.enabled && this.controls.digging ? this.targetedBlock() : null;
+    const grid = this.session.world.grid;
+    if (!hit || !grid || this.playerAimed(hit)) {
+      this.dig = null;
+      return;
+    }
+    if (this.digDelay > 0) return;
+    const block = grid.get(hit.x, hit.y, hit.z);
+    let dig = this.dig;
+    if (!dig || dig.x !== hit.x || dig.y !== hit.y || dig.z !== hit.z || dig.block !== block) {
+      dig = { x: hit.x, y: hit.y, z: hit.z, block, ticks: breakTicks(block, this.heldItem()), elapsed: 0 };
+      this.dig = dig;
+      this.session.digStart(hit.x, hit.y, hit.z);
+    }
+    if (dig.elapsed % DIG_SWING_TICKS === 0) this.swingOnly();
+    dig.elapsed++;
+    // bedrock and the screen's wall: the arm swings at them, nothing gives
+    if (dig.ticks === null || dig.elapsed < dig.ticks) return;
+    this.session.breakBlock(dig.x, dig.y, dig.z);
+    this.dig = null;
+    this.digDelay = DIG_DELAY_TICKS;
   }
 
   private skinOf(userId: string): Skin {
@@ -298,12 +496,7 @@ export class PlaygroundEngine {
 
   /** The punch lands on whoever the eyes look at, within reach and before any block. */
   private attack(): void {
-    this.aim.set(0, 0, -1).applyQuaternion(this.viewQuaternion);
-    const block = targetBlock((x, y, z) => this.island.get(x, y, z) !== BLOCK.air, this.eye, this.aim);
-    const blockDistance = block ? rayBoxDistance(this.eye, this.aim, cellBox(block)) ?? Infinity : Infinity;
-    const { dead } = this.session.combat;
-    const candidates = [...this.remotes].filter(([id, remote]) => remote.placed && remote.avatar.root.visible && !dead.has(id));
-    const targetId = targetPlayer(this.eye, this.aim, candidates, blockDistance);
+    const targetId = this.playerAimed(this.targetedBlock());
     if (!targetId) return;
     this.session.attack(targetId, isCriticalHit(this.body, this.body.fallDistance), this.sprinting);
     if (this.sprinting) {
@@ -347,7 +540,8 @@ export class PlaygroundEngine {
     this.deathTicks = 0;
     if (dead) return;
     const spawn = spawnPoint(this.options.localId);
-    Object.assign(this.body, { x: spawn.x, y: Math.max(spawn.y, this.island.groundAt(spawn.x, spawn.z)), z: spawn.z, vx: 0, vy: 0, vz: 0, fallDistance: 0 });
+    const ground = this.session.world.grid?.groundAt(spawn.x, spawn.z) ?? spawn.y;
+    Object.assign(this.body, { x: spawn.x, y: Math.max(spawn.y, ground), z: spawn.z, vx: 0, vy: 0, vz: 0, fallDistance: 0 });
     this.previous.set(this.body.x, this.body.y, this.body.z);
     this.position.copy(this.previous);
     this.controls.yaw = spawn.yaw + Math.PI;
@@ -377,11 +571,14 @@ export class PlaygroundEngine {
       this.previous.z + (this.body.z - this.previous.z) * partial,
     );
 
+    this.showHeld();
     this.drawLocal(dt, partial);
     this.moveRemotes(dt);
     this.particles.update(partial);
+    this.dropped.update(dt);
     this.placeCamera(partial);
     this.aimOutline();
+    this.followWater();
     this.screen.update();
     this.renderer.render(this.scene, this.camera);
     if (this.controls.mode === 'first' && this.armShown) {
@@ -397,14 +594,19 @@ export class PlaygroundEngine {
   /** One step of the game's 20 a second: movement, the body's turn, the eyes and the bob. */
   private physicsTick(): void {
     const dead = this.session.combat.isDead;
+    this.particles.tick();
+    // nobody moves before the world is there to stand on
+    if (!this.session.world.grid) return;
     const intent = dead ? STILL : this.controls.intent();
     const jump = (this.controls.consumeJump() && !dead) || intent.jump;
-    this.particles.tick();
+    this.digTick(dead);
+    if (this.useTicks > 0) this.useTicks--;
+    else if (this.controls.using && !dead) this.use();
     if (this.hurtTicks > 0) this.hurtTicks--;
     if (dead) this.deathTicks++;
     this.previous.set(this.body.x, this.body.y, this.body.z);
     this.previousEyeHeight = this.eyeHeight;
-    stepBody(this.island, this.body, { ...intent, jump, yaw: this.controls.yaw }, MAX_HEIGHT);
+    stepBody(this.terrain, this.body, { ...intent, jump, yaw: this.controls.yaw }, HEIGHT);
     if (this.body.collidedHorizontally) this.controls.stopSprint();
     this.sneaking = intent.sneak;
     this.sprinting = intent.sprint && intent.forward > 0 && !intent.sneak;
@@ -423,7 +625,15 @@ export class PlaygroundEngine {
 
   /** How lit someone standing at `at` is: the sky light in the cell at their chest. */
   private lightAt(at: THREE.Vector3): number {
-    return lightmap(this.world.skyLightAt(at.x, at.y + 1, at.z) / MAX_LIGHT);
+    return this.brightnessAt(at.x, at.y + 1, at.z);
+  }
+
+  /** With the eyes in water, the view closes in, blue. */
+  private followWater(): void {
+    const underwater = this.terrain.isWater(Math.floor(this.camera.position.x), Math.floor(this.camera.position.y), Math.floor(this.camera.position.z));
+    if (underwater === this.underwater) return;
+    this.underwater = underwater;
+    this.world.setUnderwater(underwater);
   }
 
   /** Where the head faces: where the camera looks. */
@@ -476,6 +686,11 @@ export class PlaygroundEngine {
         remote.headYaw += angleDelta(remote.headYaw, state.headYaw) * blend;
         speed = dt > 0 ? Math.hypot(stepX, stepZ) / dt : 0;
       }
+      const held = this.session.world.held.get(id) ?? null;
+      if (held !== remote.held) {
+        remote.held = held;
+        remote.avatar.setHeld(held ? this.models.create(held) : null);
+      }
       if (state.swings !== remote.swings) {
         remote.swings = state.swings;
         remote.avatar.swingArm();
@@ -498,14 +713,16 @@ export class PlaygroundEngine {
 
   private readonly aim = new THREE.Vector3();
 
-  /** Outlines the block the eyes look at, from the eyes whatever the camera mode, as the game does. */
+  /** Outlines the block the eyes look at, from the eyes whatever the camera mode, as the game does; the
+   * one being dug shows its cracks. */
   private aimOutline(): void {
+    const dig = this.dig;
+    this.breakOverlay.show(dig && dig.ticks ? dig : null, dig?.ticks ? dig.elapsed / dig.ticks : 0);
     if (!this.outlineShown || !this.controls.enabled) {
       this.outline.show(null);
       return;
     }
-    this.aim.set(0, 0, -1).applyQuaternion(this.viewQuaternion);
-    this.outline.show(targetBlock((x, y, z) => this.island.get(x, y, z) !== BLOCK.air, this.eye, this.aim));
+    this.outline.show(this.targetedBlock());
   }
 
   private readonly viewQuaternion = new THREE.Quaternion();
@@ -562,7 +779,7 @@ export class PlaygroundEngine {
     this.lookDirection.set(0, 0, -1).applyQuaternion(this.viewQuaternion);
     const away = this.controls.mode === 'third' ? -1 : 1;
     this.lookDirection.multiplyScalar(away);
-    const distance = cameraDistance(this.island, this.eye, this.lookDirection, this.controls.distance);
+    const distance = cameraDistance(this.terrain, this.eye, this.lookDirection, this.controls.distance);
     this.camera.position.copy(this.eye).addScaledVector(this.lookDirection, distance);
     if (this.controls.mode === 'third') {
       this.camera.quaternion.copy(this.viewQuaternion);

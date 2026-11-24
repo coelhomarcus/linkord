@@ -1,9 +1,11 @@
 import { io } from 'socket.io-client';
 import type { Socket } from 'socket.io-client';
+import type { InventoryOp } from '@game/inventory';
 import type { ServerMessage } from '@/shared/types/protocol';
 
 // The connection to the playground service (playground/ at the repo root), where
-// fighting is decided and skins are kept, apart from the app's own socket so either can restart
+// the world, inventories and fighting are decided and skins are kept, apart
+// from the app's own socket so either can restart
 // without the other. The service knows nobody: the app hands this connection a
 // short-lived pass (`playground-token` on the app's socket) naming who it is and
 // which call it is in, it is shown when connecting and renewed while you play.
@@ -17,20 +19,43 @@ export type PlaygroundServerMessage =
   | { t: 'playground-hit'; conversationId: string; attackerId: string; targetId: string; damage: number; health: number; crit: boolean; hurt: boolean; push?: [number, number]; extra?: [number, number, number] }
   | { t: 'playground-health'; conversationId: string; players: { id: string; health: number }[] }
   /** your experience points in that playground, after a kill or when you arrive */
-  | { t: 'playground-xp'; conversationId: string; xp: number };
+  | { t: 'playground-xp'; conversationId: string; xp: number }
+  /** blocks that changed: `[x, y, z, block]` each (worldState.ts reads the rest of these) */
+  | { t: 'playground-blocks'; conversationId: string; changes: unknown }
+  /** items that appeared or moved on the ground, and items gone (`by` whoever picked them up) */
+  | { t: 'playground-items'; conversationId: string; add?: unknown; remove?: unknown; by?: unknown }
+  /** a furnace placed, lit or gone out */
+  | { t: 'playground-furnace'; conversationId: string; x: number; y: number; z: number; facing: number; lit: boolean }
+  /** what some connections hold now */
+  | { t: 'playground-held'; conversationId: string; players: unknown }
+  /** your inventory as the service keeps it, up to your request `ack` (inventory/inventory.ts) */
+  | { t: 'playground-inv'; conversationId: string; ack: number; inventory: unknown; furnace?: unknown };
 
 export type PlaygroundClientMessage =
   /** where your avatar stands (feet), and where its head faces; `first` asks for everyone's health */
   | { t: 'playground-pos'; x: number; y: number; z: number; yaw: number; first?: boolean }
   /** a punch that landed on `targetId` (a connection id), from where you stood */
   | { t: 'playground-attack'; targetId: string; x: number; y: number; z: number; yaw: number; crit: boolean; sprint: boolean }
-  | { t: 'playground-respawn' };
+  | { t: 'playground-respawn' }
+  /** you started digging that block */
+  | { t: 'dig-start'; x: number; y: number; z: number }
+  /** you finished digging it; `seq` numbers every request that may change your inventory */
+  | { t: 'block-break'; seq: number; x: number; y: number; z: number }
+  /** the held block, put there */
+  | { t: 'block-place'; seq: number; x: number; y: number; z: number }
+  /** a right click on a crafting table or a furnace */
+  | { t: 'block-use'; seq: number; x: number; y: number; z: number }
+  | { t: 'inv-op'; seq: number; op: InventoryOp };
 
 export type PlaygroundTokenReply = Extract<ServerMessage, { t: 'playground-token' }>;
 
-/** Questions the service answers (playground/src/skins.ts): `skin-get {userId}` and `skin-set {skin}`,
- * both answered with `{ skin }` (a base64 PNG, or null for the account's default). */
-export type PlaygroundRequest = { event: 'skin-get'; payload: { userId: string } } | { event: 'skin-set'; payload: { skin: string | null } };
+/** Questions the service answers: `skin-get {userId}` and `skin-set {skin}` (playground/src/skins.ts), both
+ * answered with `{ skin }` (a base64 PNG, or null for the account's default); `world-get`
+ * (playground/src/building.ts), answered with the world. */
+export type PlaygroundRequest =
+  | { event: 'skin-get'; payload: { userId: string } }
+  | { event: 'skin-set'; payload: { skin: string | null } }
+  | { event: 'world-get'; payload: Record<string, never> };
 
 /** The service's refusal (`not-here`, `invalid`, `unavailable`, `rate-limited`), or no answer at all. */
 export class PlaygroundRequestError extends Error {}
@@ -43,7 +68,7 @@ export interface ServiceLink {
   send(message: PlaygroundClientMessage): boolean;
   receiveToken(reply: PlaygroundTokenReply): void;
   /** Asks the service, waiting a few seconds for the link to connect; throws PlaygroundRequestError. */
-  request(request: PlaygroundRequest): Promise<{ skin?: unknown }>;
+  request(request: PlaygroundRequest): Promise<Record<string, unknown>>;
 }
 
 export interface ServiceLinkOptions {
@@ -56,13 +81,18 @@ export interface ServiceLinkOptions {
 }
 
 const SOCKET_PATH = '/playground/ws';
-const SERVER_EVENTS = ['playground-hit', 'playground-health', 'playground-xp'] as const;
+const SERVER_EVENTS = [
+  'playground-hit', 'playground-health', 'playground-xp',
+  'playground-blocks', 'playground-items', 'playground-furnace', 'playground-held', 'playground-inv',
+] as const;
 // the app's pass lasts 90 s (server/src/modules/playground/playgroundAccess.ts): two chances to renew it
 const RENEW_MS = 30_000;
 const TOKEN_TIMEOUT_MS = 5000;
 // a question asked before the link is up (the first skins, as you arrive) waits for it this long
 const CONNECT_WAIT_MS = 10_000;
 const ANSWER_TIMEOUT_MS = 5000;
+/** a world nobody visited yet is generated first */
+const WORLD_TIMEOUT_MS = 20_000;
 const RETRY_MS = [1000, 2000, 5000, 10_000, 20_000];
 
 type Grant = { url: string; token: string } | 'refused' | 'unanswered';
@@ -100,17 +130,17 @@ export class PlaygroundLink implements ServiceLink {
     return true;
   }
 
-  async request({ event, payload }: PlaygroundRequest): Promise<{ skin?: unknown }> {
+  async request({ event, payload }: PlaygroundRequest): Promise<Record<string, unknown>> {
     const socket = await this.connectedSocket();
     let answer: unknown;
     try {
-      answer = await socket.timeout(ANSWER_TIMEOUT_MS).emitWithAck(event, payload);
+      answer = await socket.timeout(event === 'world-get' ? WORLD_TIMEOUT_MS : ANSWER_TIMEOUT_MS).emitWithAck(event, payload);
     } catch {
       throw new PlaygroundRequestError('unanswered');
     }
     if (!answer || typeof answer !== 'object') throw new PlaygroundRequestError('unanswered');
     if ('error' in answer) throw new PlaygroundRequestError(String(answer.error));
-    return answer;
+    return answer as Record<string, unknown>;
   }
 
   private connectedSocket(): Promise<Socket> {

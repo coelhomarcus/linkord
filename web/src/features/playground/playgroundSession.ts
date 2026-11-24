@@ -10,11 +10,17 @@ import { decodeSkin, MAX_SKIN_BYTES } from './skins/skins';
 import type { Skin } from './skins/skins';
 import type { PlayerState } from './playgroundProtocol';
 import { proximityGain } from './proximity';
-import { spawnPoint } from './playgroundWorld';
+import { spawnPoint } from '@game/layout';
+import { heldBlock, openContainer, useHeld, wearHeld } from '@game/inventory';
+import type { InventoryOp } from '@game/inventory';
+import { BLOCK, isReplaceable } from '@game/blocks';
+import type { Block } from '@game/blocks';
+import { brokenInto, wearForBreaking } from '@game/mining';
+import { inflateBlocks, WorldState } from './worldState';
 import { PlaygroundCombat } from './playgroundCombat';
 import { PlaygroundLink } from './playgroundLink';
 import type { ServiceLink, ServiceLinkOptions, PlaygroundServerMessage, PlaygroundTokenReply } from './playgroundLink';
-import { InventoryStore } from './inventory/inventory';
+import { InventoryState, readSnapshot } from './inventory/inventory';
 
 // Everything a playground call needs while you are in it, whether or not its
 // 3D view is on screen: where you stand, where everyone else last said they
@@ -34,6 +40,11 @@ import { InventoryStore } from './inventory/inventory';
 // Fighting is the playground service's (playgroundCombat.ts, playgroundLink.ts):
 // the session also reports your position to it, less often than to the others,
 // sends your punches and passes on what it says about health.
+//
+// So is the world (worldState.ts) and what you carry (inventory/inventory.ts):
+// the session reads the world when the link connects, keeps it as the service
+// changes it, and sends the blocks you break and place and your clicks in the
+// inventory, showing each at once.
 
 // a moving avatar is sent at most this often...
 const SEND_INTERVAL_MS = 66;
@@ -82,8 +93,12 @@ export class PlaygroundSession {
   private askHealth = true;
   private readonly link: ServiceLink;
   readonly combat: PlaygroundCombat;
-  /** what you carry; kept in this browser for as long as you are in the call */
-  readonly inventory = new InventoryStore();
+  /** what you carry, as the service keeps it */
+  readonly inventory = new InventoryState();
+  /** the world, as the service sent it */
+  readonly world = new WorldState();
+  /** bumped by each new connection, so a world read for an older one is dropped */
+  private linkGeneration = 0;
   private timer: ReturnType<typeof setInterval> | null = null;
 
   private readonly room: Room;
@@ -111,6 +126,8 @@ export class PlaygroundSession {
       onConnect: () => {
         this.askHealth = true;
         this.report();
+        this.inventory.forgetPending();
+        void this.loadWorld(++this.linkGeneration);
       },
     });
     const spawn = spawnPoint(localId);
@@ -143,6 +160,73 @@ export class PlaygroundSession {
     this.skinListeners.clear();
     this.link.dispose();
     this.combat.dispose();
+    this.world.dispose();
+  }
+
+  /** The world as it is now, from the service (a failed read is tried again a little later). */
+  private async loadWorld(generation: number): Promise<void> {
+    let answer: Record<string, unknown>;
+    let blocks: Uint8Array;
+    try {
+      answer = await this.link.request({ event: 'world-get', payload: {} });
+      const packed = answer.blocks;
+      if (!(packed instanceof ArrayBuffer) && !(packed instanceof Uint8Array)) throw new Error('no blocks');
+      blocks = await inflateBlocks(packed);
+    } catch {
+      if (generation === this.linkGeneration) this.retry(() => { if (generation === this.linkGeneration) void this.loadWorld(generation); });
+      return;
+    }
+    if (this.disposed || generation !== this.linkGeneration) return;
+    this.world.load(blocks, answer);
+  }
+
+  private sendInventoryOp = (seq: number, op: InventoryOp): boolean => this.link.send({ t: 'inv-op', seq, op });
+
+  /** A click, a key or a screen closing in the inventory: shown now, sent to the service. */
+  inventoryOp(op: InventoryOp): void {
+    this.inventory.perform(op, this.sendInventoryOp);
+  }
+
+  /** You started digging a block (the service times the dig). */
+  digStart(x: number, y: number, z: number): void {
+    this.link.send({ t: 'dig-start', x, y, z });
+  }
+
+  /** A block dug out: gone at once here, the held tool worn; the service confirms or puts it back. */
+  breakBlock(x: number, y: number, z: number): void {
+    const grid = this.world.grid;
+    if (!grid) return;
+    const block = grid.get(x, y, z);
+    const into = brokenInto(grid, x, y, z);
+    const sent = this.inventory.predict(
+      (window) => ({ ...window, inventory: wearHeld(window.inventory, wearForBreaking(window.inventory.slots[window.inventory.selected]?.item ?? null, block)) }),
+      (seq) => this.link.send({ t: 'block-break', seq, x, y, z }),
+    );
+    if (sent) this.world.predict(x, y, z, into);
+  }
+
+  /** The held block put in a cell; false when the hand holds no block or the cell is taken. */
+  placeBlock(x: number, y: number, z: number): boolean {
+    const grid = this.world.grid;
+    const block = heldBlock(this.inventory.get());
+    if (!grid || block === null || !isReplaceable(grid.get(x, y, z))) return false;
+    const sent = this.inventory.predict(
+      (window) => ({ ...window, inventory: useHeld(window.inventory) }),
+      (seq) => this.link.send({ t: 'block-place', seq, x, y, z }),
+    );
+    if (sent) this.world.predict(x, y, z, block as Block);
+    return sent;
+  }
+
+  /** A crafting table or furnace opened: its screen shows at once, its contents when the service answers. */
+  useBlock(x: number, y: number, z: number): boolean {
+    const block = this.world.grid?.get(x, y, z);
+    if (block !== BLOCK.craftingTable && block !== BLOCK.furnace) return false;
+    const kind = block === BLOCK.furnace ? 'furnace' : 'table';
+    return this.inventory.predict(
+      (window) => openContainer(window.inventory, { kind, x, y, z }).window,
+      (seq) => this.link.send({ t: 'block-use', seq, x, y, z }),
+    );
   }
 
   /** A punch that landed on someone, as this client saw it; the service decides whether it counts. */
@@ -157,9 +241,21 @@ export class PlaygroundSession {
     this.link.send({ t: 'playground-respawn' });
   }
 
-  /** What the playground service says about this call's fighting. */
+  /** What the playground service says about this call: its fighting, its world, your inventory. */
   receive(message: PlaygroundServerMessage): void {
-    if (message.conversationId === this.conversationId && !this.disposed) this.combat.receive(message);
+    if (message.conversationId !== this.conversationId || this.disposed) return;
+    switch (message.t) {
+      case 'playground-blocks': return this.world.applyBlocks(message.changes);
+      case 'playground-items': return this.world.applyItems(message);
+      case 'playground-furnace': return this.world.applyFurnace(message);
+      case 'playground-held': return this.world.applyHeld(message.players);
+      case 'playground-inv': {
+        const snapshot = readSnapshot(message as unknown as Record<string, unknown>);
+        if (snapshot) this.inventory.receive(snapshot);
+        return;
+      }
+      default: this.combat.receive(message);
+    }
   }
 
   /** The app's answer to a pass request (RoomProvider passes it on). */

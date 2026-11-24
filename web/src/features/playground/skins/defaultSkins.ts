@@ -1,4 +1,4 @@
-import { hashString } from '../playgroundWorld';
+import { hashString } from '@game/layout';
 import { boxFaces, partLayout, SKIN_HEIGHT, SKIN_WIDTH } from './skinFormat';
 import type { PartName } from './skinFormat';
 import type { Skin } from './skins';

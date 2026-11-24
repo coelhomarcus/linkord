@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { SCREEN } from '../playgroundWorld';
+import { SCREEN } from '@game/layout';
 import { PIXEL_FONT } from '../pixelFont';
 
 // The big screen: one shared stream fitted inside its frame, or a resting

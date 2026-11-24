@@ -64,14 +64,14 @@ export class Particles {
   readonly group = new THREE.Group();
   private readonly particles: Particle[] = [];
   private readonly emitters: Emitter[] = [];
-  private readonly terrain: Terrain;
+  private readonly terrain: Pick<Terrain, 'isSolid'>;
   private readonly lightAt: (x: number, y: number, z: number) => number;
   private readonly crit: THREE.Texture;
   private readonly damage: THREE.Texture;
   /** the puff's frames, from the largest */
   private readonly poof: THREE.Texture[];
 
-  constructor(terrain: Terrain, lightAt: (x: number, y: number, z: number) => number) {
+  constructor(terrain: Pick<Terrain, 'isSolid'>, lightAt: (x: number, y: number, z: number) => number) {
     this.terrain = terrain;
     this.lightAt = lightAt;
     const loader = new THREE.TextureLoader();

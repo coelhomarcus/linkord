@@ -4,7 +4,8 @@
 // themselves are the controls' (engine/controls.ts), which this lets through.
 //
 // The block game's keys: Esc and Tab open the menu, T, Enter and / open the
-// chat, E the inventory, 1 to 9 pick a hotbar slot, F1 hides the HUD, F5
+// chat, E the inventory, 1 to 9 pick a hotbar slot, Q throws what the hand
+// holds (Ctrl+Q all of it), F1 hides the HUD, F5
 // changes the camera (V too), F11 is fullscreen. Alt lets go of the mouse
 // without pausing, to use another window or monitor while the game goes on.
 // Anything else the browser would act on is swallowed: reload (F5, Ctrl+R),
@@ -20,6 +21,8 @@ export type GameKeyAction =
   | 'inventory'
   /** pick the hotbar slot of the digit pressed */
   | 'hotbar'
+  /** throw one of what the hand holds, or all of it with Ctrl */
+  | 'drop'
   /** let go of the mouse, nothing else */
   | 'release'
   | 'camera'
@@ -77,6 +80,7 @@ export function gameKeyAction(key: GameKey, state: GameKeyState): GameKeyAction 
   // Ctrl with a walking key is the sprint (the controls see it); copy and paste stay in fields.
   if (key.ctrlKey || key.metaKey) {
     if (state.typing && BROWSER_KEPT.has(code)) return null;
+    if (code === 'KeyQ' && key.ctrlKey && !key.metaKey && !state.typing && !state.menuOpen && !state.chatOpen && !state.inventoryOpen) return 'drop';
     if (key.ctrlKey && !key.metaKey && !key.altKey && WALKING.has(code) && !state.typing) return null;
     return /^(Key[A-Z]|Digit\d|Equal|Minus|NumpadAdd|NumpadSubtract|Numpad0|Comma|Period|Slash|BracketLeft|BracketRight|Backquote)$/.test(code) ? 'swallow' : null;
   }
@@ -96,6 +100,7 @@ export function gameKeyAction(key: GameKey, state: GameKeyState): GameKeyAction 
   if (code === 'KeyT' || code === 'Enter' || code === 'NumpadEnter' || code === 'Slash') return key.repeat ? 'swallow' : 'chat';
   if (code === 'KeyV') return key.repeat ? 'swallow' : 'camera';
   if (code === 'KeyE') return key.repeat ? 'swallow' : 'inventory';
+  if (code === 'KeyQ') return 'drop';
   if (/^Digit[1-9]$/.test(code)) return 'hotbar';
   // Firefox's quick find, and the browser going back
   if (code === 'Quote' || code === 'Backspace') return 'swallow';

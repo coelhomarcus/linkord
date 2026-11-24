@@ -1,14 +1,17 @@
 import { describe, expect, it } from 'vitest';
-import { BLOCK, HEIGHT } from '@/features/playground/islandMap';
-import type { Block } from '@/features/playground/islandMap';
+import { BLOCK } from '@game/blocks';
+import type { Block } from '@game/blocks';
+import { HEIGHT } from '@game/layout';
 import { cornerBrightness, cornerOcclusion, lightmap, MAX_LIGHT, sideShade, SkyLight } from '@/features/playground/engine/lighting';
 
-/** flat stone up to y = 4, a stone roof over x 0..2 at y = 8, a leaf block over x = 10 at y = 8 */
+/** flat stone up to y = 4, a stone roof over x 0..2 at y = 8 (but where `holes` says), a leaf block over
+ * x = 10 at y = 8 */
+const holes = new Set<string>();
 const grid = {
   get(x: number, y: number, z: number): Block {
     if (y < 0 || y >= HEIGHT) return BLOCK.air;
     if (y < 5) return BLOCK.stone;
-    if (y === 8 && x >= 0 && x <= 2 && z >= 0 && z <= 2) return BLOCK.stone;
+    if (y === 8 && x >= 0 && x <= 2 && z >= 0 && z <= 2 && !holes.has(`${x},${z}`)) return BLOCK.stone;
     if (y === 8 && x === 10 && z === 0) return BLOCK.leaves;
     return BLOCK.air;
   },
@@ -32,6 +35,17 @@ describe('SkyLight', () => {
 
   it('loses a step under a leaf block', () => {
     expect(sky.at(10, 5, 0)).toBe(MAX_LIGHT - 1);
+  });
+
+  it('works the light out again around a block that changed, and says where it changed', () => {
+    const own = new SkyLight(grid);
+    holes.add('1,1');
+    const change = own.update(1, 1);
+    holes.clear();
+    expect(own.at(1, 5, 1)).toBe(MAX_LIGHT);
+    expect(change).not.toBeNull();
+    expect(change!.minX).toBeLessThanOrEqual(1);
+    expect(change!.maxY).toBe(8);
   });
 });
 

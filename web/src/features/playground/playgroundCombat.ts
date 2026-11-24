@@ -12,6 +12,8 @@ export const MAX_HEALTH = 20;
 const REGEN_INTERVAL_MS = 4000;
 
 export type PlaygroundHit = Extract<PlaygroundServerMessage, { t: 'playground-hit' }>;
+/** what the service says about fighting */
+type CombatMessage = Extract<PlaygroundServerMessage, { t: 'playground-hit' | 'playground-health' | 'playground-xp' }>;
 
 /** The local player's health as the HUD shows it. */
 export interface Vitals {
@@ -30,9 +32,9 @@ export interface Vitals {
   xp: number;
 }
 
-/** Whether a punch now is a critical one, by the game's rule: in the air and on the way down. */
-export function isCriticalHit(body: { onGround: boolean }, fallDistance: number): boolean {
-  return !body.onGround && fallDistance > 0;
+/** Whether a punch now is a critical one, by the game's rule: in the air (not swimming) and on the way down. */
+export function isCriticalHit(body: { onGround: boolean; inWater?: boolean }, fallDistance: number): boolean {
+  return !body.onGround && !body.inWater && fallDistance > 0;
 }
 
 const FULL: Vitals = { health: MAX_HEALTH, previousHealth: MAX_HEALTH, lastChange: null, hurts: 0, heals: 0, killerId: null, xp: 0 };
@@ -79,7 +81,7 @@ export class PlaygroundCombat {
   }
 
   /** A message from the server about this call's fighting. */
-  receive(message: PlaygroundServerMessage, now = performance.now()): void {
+  receive(message: CombatMessage, now = performance.now()): void {
     if (message.t === 'playground-xp') {
       if (Number.isFinite(message.xp) && message.xp >= 0 && message.xp !== this.vitals.xp) {
         this.vitals = { ...this.vitals, xp: message.xp };

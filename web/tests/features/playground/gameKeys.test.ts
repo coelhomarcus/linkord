@@ -71,5 +71,10 @@ describe('gameKeyAction', () => {
     expect(gameKeyAction(key('Digit3'), inventory)).toBeNull();
     expect(gameKeyAction(key('Tab'), inventory)).toBe('swallow');
   });
-});
 
+  it('throws what the hand holds with Q, all of it with Ctrl+Q, never while typing', () => {
+    expect(gameKeyAction(key('KeyQ'), playing)).toBe('drop');
+    expect(gameKeyAction(key('KeyQ', { ctrlKey: true }), playing)).toBe('drop');
+    expect(gameKeyAction(key('KeyQ'), { ...playing, chatOpen: true, typing: true })).toBeNull();
+  });
+});

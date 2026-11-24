@@ -22,7 +22,9 @@ import { useVitals } from './playgroundCombat';
 import { PlaygroundHud } from './hud/PlaygroundHud';
 import { useGuiScale } from './hud/gui';
 import { InventoryScreen } from './inventory/InventoryScreen';
-import { putCursorBack, scrollSelection, selectSlot, useInventory } from './inventory/inventory';
+import { HOTBAR_SIZE } from '@game/inventory';
+import { useInventoryWindow } from './inventory/inventory';
+import { useWorldLoaded } from './worldState';
 import { defaultSkin } from './skins/defaultSkins';
 import { gameKeyAction, KEYBOARD_LOCK_KEYS } from './gameKeys';
 import { loadPixelFont, PIXEL_FONT, PIXEL_TEXT } from './pixelFont';
@@ -62,7 +64,9 @@ export default function PlaygroundStage({ allIds, onBack }: { allIds: string[]; 
   const session = usePlaygroundSession();
   const vitals = useVitals(session?.combat ?? null);
   const dead = vitals.health <= 0;
-  const inventory = useInventory(session?.inventory ?? null);
+  const inventoryWindow = useInventoryWindow(session?.inventory ?? null);
+  const inventory = inventoryWindow.inventory;
+  const worldLoaded = useWorldLoaded(session?.world ?? null);
   const scale = useGuiScale(callStageRef);
   const controls = useCallControls();
   const touchFirst = useMediaQuery(TOUCH_FIRST_QUERY);
@@ -119,7 +123,11 @@ export default function PlaygroundStage({ allIds, onBack }: { allIds: string[]; 
         localUserId: me.userId,
         screenLabels: { idle: '', idleHint: '' },
         onCameraModeChange: setCameraMode,
-        onHotbarScroll: (steps) => session.inventory.update((current) => scrollSelection(current, steps)),
+        onHotbarScroll: (steps) => {
+          // the wheel down moves right, wrapping around the hotbar
+          const selected = session.inventory.get().selected;
+          session.inventoryOp({ op: 'select', slot: (((selected + steps) % HOTBAR_SIZE) + HOTBAR_SIZE) % HOTBAR_SIZE });
+        },
       });
     } catch (err) {
       console.warn('[playground] could not start the 3D view', err);
@@ -180,7 +188,9 @@ export default function PlaygroundStage({ allIds, onBack }: { allIds: string[]; 
         setInventoryOpen(true);
       } else if (action === 'hotbar') {
         const slot = Number(event.code.slice('Digit'.length)) - 1;
-        getActivePlaygroundSession()?.inventory.update((current) => selectSlot(current, slot));
+        getActivePlaygroundSession()?.inventoryOp({ op: 'select', slot });
+      } else if (action === 'drop') {
+        getActivePlaygroundSession()?.inventoryOp({ op: 'drop-held', all: event.ctrlKey });
       } else if (action === 'release') {
         if (document.pointerLockElement) {
           releasedRef.current = true;
@@ -235,6 +245,21 @@ export default function PlaygroundStage({ allIds, onBack }: { allIds: string[]; 
   }, [hudHidden, session, fontReady]);
 
 
+  // a crafting table or furnace opened from the world shows its screen, as E shows the inventory's
+  // and closes again when the service refuses it (too far, or the block gone)
+  const containerOpen = !!inventory.open;
+  const openedByContainerRef = useRef(false);
+  useEffect(() => {
+    if (!containerOpen) {
+      if (openedByContainerRef.current) setInventoryOpen(false);
+      openedByContainerRef.current = false;
+      return;
+    }
+    if (inventoryOpenRef.current) return;
+    openedByContainerRef.current = true;
+    relockRef.current = !!document.pointerLockElement;
+    setInventoryOpen(true);
+  }, [containerOpen]);
   const showInventory = inventoryOpen && !dead && !menuOpen;
   const overlayOpen = menuOpen || chatOpen || dead || showInventory;
   useEffect(() => {
@@ -268,7 +293,7 @@ export default function PlaygroundStage({ allIds, onBack }: { allIds: string[]; 
   // the hearts and hotbar's height, which the chat lines and notices stay above
   const hudHeight = showHud ? 39 * scale + 4 : 0;
   function closeInventory() {
-    session?.inventory.update(putCursorBack);
+    session?.inventoryOp({ op: 'close' });
     setInventoryOpen(false);
   }
   const killerName = vitals.killerId ? players.find((player) => player.id === vitals.killerId)?.name ?? null : null;
@@ -307,6 +332,12 @@ export default function PlaygroundStage({ allIds, onBack }: { allIds: string[]; 
         <video ref={videoRef} autoPlay muted playsInline aria-hidden className="pointer-events-none absolute left-0 top-0 -z-10 h-[720px] w-[1280px] opacity-0" />
       </div>
 
+      {!failed && session && !worldLoaded && (
+        <div className="pointer-events-none absolute inset-0 z-10 grid place-items-center p-6 text-center">
+          <p role="status" className={`${PIXEL_TEXT.lg} leading-tight text-white/90 ${PIXEL_SHADOW}`}>{t('loadingWorld')}</p>
+        </div>
+      )}
+
       {failed && (
         <div className="absolute inset-0 grid place-items-center p-6 text-center">
           <p className={`max-w-sm ${PIXEL_TEXT.lg} leading-tight text-white/80`}>{t('unsupported')}</p>
@@ -340,7 +371,7 @@ export default function PlaygroundStage({ allIds, onBack }: { allIds: string[]; 
       )}
 
       {showHud && session && (
-        <PlaygroundHud vitals={vitals} inventory={inventory} scale={scale} onSelect={(slot) => session.inventory.update((current) => selectSlot(current, slot))} />
+        <PlaygroundHud vitals={vitals} inventory={inventory} scale={scale} onSelect={(slot) => session.inventoryOp({ op: 'select', slot })} />
       )}
 
       {!menuOpen && (!hudHidden || chatOpen) && activeCallConversationId && (
@@ -369,7 +400,8 @@ export default function PlaygroundStage({ allIds, onBack }: { allIds: string[]; 
       )}
 
       {showInventory && session && me.userId && (
-        <InventoryScreen store={session.inventory} inventory={inventory} skin={session.skinOf(me.userId) ?? defaultSkin(me.userId)} scale={scale} onClose={closeInventory} />
+        <InventoryScreen window={inventoryWindow} furnaceAt={session.inventory.furnaceAt} skin={session.skinOf(me.userId) ?? defaultSkin(me.userId)} scale={scale}
+          onOp={(op) => session.inventoryOp(op)} onClose={closeInventory} />
       )}
 
       {dead && !menuOpen && <PlaygroundDeathScreen key={vitals.hurts} killerName={killerName} onRespawn={respawn} />}

@@ -16,6 +16,8 @@ export interface BlockHit {
   x: number;
   y: number;
   z: number;
+  /** the face the ray came in through, as the direction it faces (all 0 when the ray starts inside) */
+  face: [number, number, number];
 }
 
 /** The first cell along the ray (unit `direction`) within `reach` that `isBlock` says holds a block,
@@ -36,13 +38,17 @@ export function targetBlock(
     const border = d > 0 ? cell[i]! + 1 - start[i]! : start[i]! - cell[i]!;
     return border * delta[i]!;
   });
-  if (isBlock(cell[0]!, cell[1]!, cell[2]!)) return { x: cell[0]!, y: cell[1]!, z: cell[2]! };
+  if (isBlock(cell[0]!, cell[1]!, cell[2]!)) return { x: cell[0]!, y: cell[1]!, z: cell[2]!, face: [0, 0, 0] };
   for (;;) {
     const axis = next[0]! < next[1]! ? (next[0]! < next[2]! ? 0 : 2) : next[1]! < next[2]! ? 1 : 2;
     if (next[axis]! > reach) return null;
     cell[axis]! += step[axis]!;
     next[axis]! += delta[axis]!;
-    if (isBlock(cell[0]!, cell[1]!, cell[2]!)) return { x: cell[0]!, y: cell[1]!, z: cell[2]! };
+    if (isBlock(cell[0]!, cell[1]!, cell[2]!)) {
+      const face: [number, number, number] = [0, 0, 0];
+      face[axis] = -step[axis]!;
+      return { x: cell[0]!, y: cell[1]!, z: cell[2]!, face };
+    }
   }
 }
 

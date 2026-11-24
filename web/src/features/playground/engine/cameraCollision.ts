@@ -13,7 +13,7 @@ const CAMERA_RADIUS = 0.25;
 const MIN_DISTANCE = 0.4;
 const STEP = 0.05;
 
-function solidAt(terrain: Terrain, x: number, y: number, z: number): boolean {
+function solidAt(terrain: Pick<Terrain, 'isSolid'>, x: number, y: number, z: number): boolean {
   for (const dx of [-CAMERA_RADIUS, CAMERA_RADIUS]) {
     for (const dy of [-CAMERA_RADIUS, CAMERA_RADIUS]) {
       for (const dz of [-CAMERA_RADIUS, CAMERA_RADIUS]) {
@@ -25,7 +25,7 @@ function solidAt(terrain: Terrain, x: number, y: number, z: number): boolean {
 }
 
 /** How far from `eye` along `direction` (a unit vector) the camera can go, up to `max`. */
-export function cameraDistance(terrain: Terrain, eye: { x: number; y: number; z: number }, direction: { x: number; y: number; z: number }, max: number): number {
+export function cameraDistance(terrain: Pick<Terrain, 'isSolid'>, eye: { x: number; y: number; z: number }, direction: { x: number; y: number; z: number }, max: number): number {
   for (let t = STEP; t <= max; t += STEP) {
     if (solidAt(terrain, eye.x + direction.x * t, eye.y + direction.y * t, eye.z + direction.z * t)) {
       return Math.max(MIN_DISTANCE, t - STEP);

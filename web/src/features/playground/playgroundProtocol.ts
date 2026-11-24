@@ -1,4 +1,4 @@
-import { MAX_HEIGHT, WORLD_RADIUS } from './playgroundWorld';
+import { HALF, HEIGHT } from '@game/layout';
 
 // What each client sends the others about its avatar, over LiveKit's data
 // channel (lossy: a lost packet is replaced by the next one a few dozen ms
@@ -57,7 +57,7 @@ export function decodeState(bytes: Uint8Array): PlayerState | null {
   if (!packet || typeof packet !== 'object') return null;
   const { v, p, r, h, m, t, c, s } = packet as Record<string, unknown>;
   if (v !== VERSION || !Array.isArray(p) || p.length !== 3 || !p.every(Number.isFinite) || !Number.isFinite(r)) return null;
-  const [x, y, z] = (p as number[]).map((n, i) => (i === 1 ? clamp(n, 0, MAX_HEIGHT) : clamp(n, -WORLD_RADIUS, WORLD_RADIUS)));
+  const [x, y, z] = (p as number[]).map((n, i) => (i === 1 ? clamp(n, 0, HEIGHT) : clamp(n, -HALF, HALF)));
   const motion = typeof m === 'number' && MOTIONS[m] ? MOTIONS[m] : 'idle';
   // the head's pitch came later in the same version; a packet without it looks straight ahead
   const pitch = Number.isFinite(h) ? clamp(h as number, -MAX_PITCH, MAX_PITCH) : 0;

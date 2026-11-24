@@ -8,6 +8,7 @@ import { FACE_SHADE } from './voxelWorld';
 import { angleDelta, bipedPose, LimbSwing } from './bipedPose';
 import { Nameplate } from './nameplate';
 import type { Bob } from './viewBob';
+import type { ItemModel } from './itemModels';
 
 // A person as six boxes painted from their skin, each with an outer layer one
 // half-pixel (head) or a quarter-pixel (the rest) larger, the way the skin
@@ -108,6 +109,24 @@ function partOffset(part: PartName, slim: boolean): [number, number, number] {
 }
 
 const PARTS: PartName[] = ['head', 'body', 'rightArm', 'leftArm', 'rightLeg', 'leftLeg'];
+
+/** An item held in the right hand of a third-person model, as the game holds it: a tool's picture side on,
+ * its tip forward and up, its handle in the fist; a block small, turned to show three faces. */
+function placeInHand(hand: THREE.Group, model: ItemModel, slim: boolean): void {
+  const arm = slim ? 0.5 : 1;
+  hand.position.set(-arm * PX, -10 * PX, 0);
+  const { object } = model;
+  if (model.shape === 'block') {
+    object.scale.setScalar(0.34);
+    object.position.set(0, -0.05, 0.08);
+    object.rotation.set(0.17, Math.PI / 4, 0);
+  } else {
+    object.scale.setScalar(0.75);
+    // the picture's right is forward, its handle (bottom left) in the fist
+    object.rotation.set(-0.6, -Math.PI / 2, 0, 'YXZ');
+    object.position.set(0, 0.12, 0.2);
+  }
+}
 const PUNCH_SECONDS = 0.3;
 /** a hit keeps someone red for the game's 10 ticks */
 const HURT_SECONDS = 0.5;
@@ -141,6 +160,9 @@ export class BlockAvatar {
   private hurtLeft = 0;
   /** seconds since dying, or null while alive */
   private dying: number | null = null;
+  /** what the right hand holds, and the group that keeps it there */
+  private readonly hand = new THREE.Group();
+  private held: ItemModel | null = null;
 
   constructor(skin: Skin, name: string) {
     this.nameplate = new Nameplate(name);
@@ -168,9 +190,11 @@ export class BlockAvatar {
       mesh.position.set(x * PX, y * PX, z * PX);
       mesh.traverse((node) => { node.castShadow = true; });
       pivot.add(mesh);
+      if (part === 'rightArm') pivot.add(this.hand);
       this.body.add(pivot);
       this.parts.set(part, pivot);
     }
+    if (this.held) placeInHand(this.hand, this.held, skin.slim);
     this.applyLight();
     this.pose({ speed: 0, headYaw: 0, headPitch: 0, crouching: false }, 0);
   }
@@ -185,6 +209,18 @@ export class BlockAvatar {
   private applyLight(): void {
     this.materials?.inner.color.setScalar(this.light);
     this.materials?.outer.color.setScalar(this.light);
+    this.held?.setLight(this.light);
+  }
+
+  /** What the right hand holds (an item's model, which the avatar then owns), or nothing. */
+  setHeld(model: ItemModel | null): void {
+    this.held?.dispose();
+    this.held = model;
+    if (!model) return;
+    model.object.traverse((node) => { node.castShadow = true; });
+    this.hand.add(model.object);
+    placeInHand(this.hand, model, this.slim);
+    model.setLight(this.light);
   }
 
   setLabel(name: string, speaking: boolean): void {
@@ -256,6 +292,8 @@ export class BlockAvatar {
   }
 
   dispose(): void {
+    this.held?.dispose();
+    this.held = null;
     this.root.removeFromParent();
     this.body.traverse((node) => { if ((node as THREE.Mesh).isMesh) (node as THREE.Mesh).geometry.dispose(); });
     if (this.materials) disposeSkinMaterials(this.materials);
@@ -350,15 +388,44 @@ function bareHandMatrix(swing: number, slim: boolean): THREE.Matrix4 {
   return matrix;
 }
 
+/** The hand's transforms while it holds an item (the game's applyItemArmTransform and
+ * applyItemArmAttackTransform for the right hand, after the swing's offset), then the item model's own
+ * first-person display: a tool or any other picture turned edge-on, its tip up and away; a block small and
+ * turned to show three faces. The model is one block across, centred on its origin. */
+function heldItemMatrix(swing: number, shape: ItemModel['shape']): THREE.Matrix4 {
+  const matrix = new THREE.Matrix4();
+  const root = Math.sqrt(swing);
+  matrix.multiply(scratch.makeTranslation(-0.4 * Math.sin(root * Math.PI), 0.2 * Math.sin(root * 2 * Math.PI), -0.2 * Math.sin(swing * Math.PI)));
+  matrix.multiply(scratch.makeTranslation(0.56, -0.52, -0.72));
+  matrix.multiply(scratch.makeRotationY((45 + Math.sin(swing * swing * Math.PI) * -20) * DEG));
+  matrix.multiply(scratch.makeRotationZ(Math.sin(root * Math.PI) * -20 * DEG));
+  matrix.multiply(scratch.makeRotationX(Math.sin(root * Math.PI) * -80 * DEG));
+  matrix.multiply(scratch.makeRotationY(-45 * DEG));
+  if (shape === 'block') {
+    matrix.multiply(scratch.makeRotationY(45 * DEG));
+    matrix.multiply(scratch.makeScale(0.4, 0.4, 0.4));
+  } else {
+    matrix.multiply(scratch.makeTranslation(1.13 / 16, 3.2 / 16, 1.13 / 16));
+    matrix.multiply(new THREE.Matrix4().makeRotationFromEuler(new THREE.Euler(0, -90 * DEG, 25 * DEG, 'XYZ')));
+    // the game's item model has its picture's right toward -x: ours is its mirror image
+    matrix.multiply(scratch.makeScale(-0.68, 0.68, 0.68));
+  }
+  return matrix;
+}
+
 /** The local player's right arm as seen in first person: it bobs with the
  * walk, lags a little behind the view when turning, and punches on a click.
- * Drawn in its own pass over the world, so it never sinks into a wall. */
+ * Holding an item, the item takes the arm's place, as in the game. Drawn in
+ * its own pass over the world, so it never sinks into a wall. */
 export class FirstPersonArm {
   readonly scene = new THREE.Scene();
   readonly camera = new THREE.PerspectiveCamera(70, 1, 0.05, 100);
   /** the view's frame: bob and turning lag move it */
   private readonly view = new THREE.Group();
   private readonly arm = new THREE.Group();
+  private readonly item = new THREE.Group();
+  private held: ItemModel | null = null;
+  private light = 1;
   private materials: SkinMaterials | null = null;
   private slim = false;
   private swingTime: number | null = null;
@@ -367,7 +434,8 @@ export class FirstPersonArm {
 
   constructor(skin: Skin) {
     this.arm.matrixAutoUpdate = false;
-    this.view.add(this.arm);
+    this.item.matrixAutoUpdate = false;
+    this.view.add(this.arm, this.item);
     this.scene.add(this.view);
     this.setSkin(skin);
   }
@@ -388,8 +456,21 @@ export class FirstPersonArm {
 
   /** The light where the player stands, as BlockAvatar.setLight. */
   setLight(brightness: number): void {
+    this.light = brightness;
     this.materials?.inner.color.setScalar(brightness);
     this.materials?.outer.color.setScalar(brightness);
+    this.held?.setLight(brightness);
+  }
+
+  /** What the hand holds (a model the arm then owns), or nothing: the bare arm. */
+  setHeld(model: ItemModel | null): void {
+    this.held?.dispose();
+    this.held = model;
+    this.arm.visible = !model;
+    if (model) {
+      this.item.add(model.object);
+      model.setLight(this.light);
+    }
   }
 
   /** A click: the punch starts over once it is past its middle. */
@@ -415,8 +496,13 @@ export class FirstPersonArm {
     }
     this.view.position.set(bob.x, bob.y, 0);
     this.view.rotation.set(bob.pitch + (pitch - this.lagPitch) * -0.05, angleDelta(this.lagYaw, yaw) * -0.035, bob.roll);
-    this.arm.matrix.copy(bareHandMatrix(progress, this.slim));
-    this.arm.matrixWorldNeedsUpdate = true;
+    if (this.held) {
+      this.item.matrix.copy(heldItemMatrix(progress, this.held.shape));
+      this.item.matrixWorldNeedsUpdate = true;
+    } else {
+      this.arm.matrix.copy(bareHandMatrix(progress, this.slim));
+      this.arm.matrixWorldNeedsUpdate = true;
+    }
   }
 
   setAspect(aspect: number): void {
@@ -425,6 +511,8 @@ export class FirstPersonArm {
   }
 
   dispose(): void {
+    this.held?.dispose();
+    this.held = null;
     this.arm.traverse((node) => { if ((node as THREE.Mesh).isMesh) (node as THREE.Mesh).geometry.dispose(); });
     if (this.materials) disposeSkinMaterials(this.materials);
   }

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { decodeState, encodeState } from '@/features/playground/playgroundProtocol';
-import { MAX_HEIGHT, WORLD_RADIUS } from '@/features/playground/playgroundWorld';
+import { HALF, HEIGHT } from '@game/layout';
 
 const bytes = (value: unknown) => new TextEncoder().encode(JSON.stringify(value));
 
@@ -15,10 +15,10 @@ describe('playgroundProtocol', () => {
   });
 
   it('keeps a peer inside the world, whatever it claims', () => {
-    const far = decodeState(bytes({ v: 1, p: [WORLD_RADIUS * 10, 99, -WORLD_RADIUS * 3], r: 0, h: 9, m: 0 }))!;
-    expect(far.x).toBe(WORLD_RADIUS);
-    expect(far.z).toBe(-WORLD_RADIUS);
-    expect(far.y).toBe(MAX_HEIGHT);
+    const far = decodeState(bytes({ v: 1, p: [HALF * 10, 99, -HALF * 3], r: 0, h: 9, m: 0 }))!;
+    expect(far.x).toBe(HALF);
+    expect(far.z).toBe(-HALF);
+    expect(far.y).toBe(HEIGHT);
     expect(far.pitch).toBeCloseTo(Math.PI / 2);
     expect(decodeState(bytes({ v: 1, p: [0, -5, 0], r: 0, m: 0 }))!.y).toBe(0);
   });

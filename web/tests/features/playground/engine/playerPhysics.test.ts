@@ -9,6 +9,7 @@ const groundAt = (x: number) => (x >= 6 ? 8 : x >= 3 ? 6 : 5);
  * and one block of leaves hanging at head height over x = -10 */
 const terrain: Terrain = {
   isSolid: (x, y, z) => z >= 8 || y < groundAt(x) || (x === -10 && y === 6 && z === 0),
+  isWater: () => false,
 };
 
 // yaw -π/2 looks toward +x
@@ -96,7 +97,7 @@ describe('playerPhysics', () => {
   });
 
   it('hits its head on a ceiling and falls back', () => {
-    const ceiling: Terrain = { isSolid: (_x, y) => y < 5 || y === 7 };
+    const ceiling: Terrain = { isSolid: (_x, y) => y < 5 || y === 7, isWater: () => false };
     const body = createBody(0.5, 5, 0.5);
     stepBody(ceiling, body, input({ forward: 0, jump: true }), MAX_HEIGHT);
     let peak = body.y;
@@ -144,5 +145,31 @@ describe('playerPhysics', () => {
     applyKnockback(sprinted, [0, 0.4], [0, 0.1, 0.5]);
     expect(sprinted.vy).toBeCloseTo(0.5);
     expect(sprinted.vz).toBeCloseTo(0.9);
+  });
+});
+
+describe('swimming', () => {
+  /** a pool: water from y = 2 to 7 over x < 4, its floor at 2, dry ground at 8 from x = 4 */
+  const pool: Terrain = {
+    isSolid: (x, y) => y < 2 || (x >= 4 && y < 8),
+    isWater: (x, y) => x < 4 && y >= 2 && y < 8,
+  };
+
+  it('sinks slowly, and Space swims up to the surface', () => {
+    const body = createBody(0.5, 5, 0.5);
+    for (let i = 0; i < 10; i++) stepBody(pool, body, input({ forward: 0 }), MAX_HEIGHT);
+    expect(body.inWater).toBe(true);
+    // far slower than a fall through air (which would cover about 2 blocks in 10 ticks)
+    expect(body.y).toBeGreaterThan(4);
+    expect(body.y).toBeLessThan(5);
+    for (let i = 0; i < 40; i++) stepBody(pool, body, input({ forward: 0, jump: true }), MAX_HEIGHT);
+    expect(body.y).toBeGreaterThan(6);
+  });
+
+  it('climbs out over the edge of the pool when walking into it', () => {
+    const body = createBody(3.2, 6.5, 0.5);
+    for (let i = 0; i < 40; i++) stepBody(pool, body, input({ jump: true }), MAX_HEIGHT);
+    expect(body.x).toBeGreaterThan(4);
+    expect(body.y).toBeGreaterThanOrEqual(8);
   });
 });

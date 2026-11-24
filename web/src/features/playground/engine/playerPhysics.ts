@@ -7,7 +7,8 @@
 // Ported from prismarine-physics (github.com/zardoy/prismarine-physics, MIT,
 // Copyright (c) 2020 PrismarineJS): the body is a 0.6 × 1.8 box that collides
 // with every solid block cell, one axis at a time, and stops flush against it.
-// Our world adds a sea nobody can walk into (Terrain.isSolid says so).
+// In water it swims the game's way: slow, sinking a little, Space swims up, and
+// walking into the edge of a pool climbs out of it.
 
 /** Seconds per physics tick. */
 export const TICK_SECONDS = 0.05;
@@ -30,6 +31,12 @@ const NEGLIGIBLE_VELOCITY = 0.003;
 const SNEAK_EDGE_DROP = 0.6;
 const SNEAK_EDGE_STEP = 0.05;
 const KNOCKBACK_UP = 0.4;
+const WATER_ACCELERATION = 0.02;
+const WATER_DRAG = 0.8;
+const WATER_GRAVITY = 0.02;
+const SWIM_UP = 0.04;
+/** walking into the side of a pool with room above lifts the body this fast, out of the water */
+const CLIMB_OUT = 0.3;
 
 export const HALF_WIDTH = 0.3;
 export const BODY_HEIGHT = 1.8;
@@ -40,6 +47,7 @@ const EPSILON = 1e-7;
 /** The world as the body collides with it: which block cells are solid (leaves too, as in the game). */
 export interface Terrain {
   isSolid(x: number, y: number, z: number): boolean;
+  isWater(x: number, y: number, z: number): boolean;
 }
 
 export interface PhysicsInput {
@@ -69,10 +77,12 @@ export interface PhysicsBody {
   jumpTicks: number;
   /** how far it has dropped since it last stood on something (a punch on the way down is a critical) */
   fallDistance: number;
+  /** in water this tick: it swims */
+  inWater: boolean;
 }
 
 export function createBody(x: number, y: number, z: number): PhysicsBody {
-  return { x, y, z, vx: 0, vy: 0, vz: 0, onGround: true, collidedHorizontally: false, jumpTicks: 0, fallDistance: 0 };
+  return { x, y, z, vx: 0, vy: 0, vz: 0, onGround: true, collidedHorizontally: false, jumpTicks: 0, fallDistance: 0, inWater: false };
 }
 
 /** A hit's knockback, the game's way: the speed halves, `push` is added across and 0.4 up (at most
@@ -100,6 +110,15 @@ function boxAt(x: number, y: number, z: number): Box {
 
 /** The cells a span covers along one axis, its faces exactly on a border not counting. */
 const cellsOf = (min: number, max: number): [number, number] => [Math.floor(min + EPSILON), Math.floor(max - EPSILON)];
+
+/** Whether the body is in water, as the game tells: its box less 0.4 at the top and the bottom. */
+function inWater(terrain: Terrain, body: PhysicsBody): boolean {
+  const [x0, x1] = cellsOf(body.x - HALF_WIDTH + 0.001, body.x + HALF_WIDTH - 0.001);
+  const [y0, y1] = cellsOf(body.y + 0.4, body.y + BODY_HEIGHT - 0.4);
+  const [z0, z1] = cellsOf(body.z - HALF_WIDTH + 0.001, body.z + HALF_WIDTH - 0.001);
+  for (let x = x0; x <= x1; x++) for (let y = y0; y <= y1; y++) for (let z = z0; z <= z1; z++) if (terrain.isWater(x, y, z)) return true;
+  return false;
+}
 
 /** Whether any solid cell overlaps the box. */
 function overlapsSolid(terrain: Terrain, box: Box): boolean {
@@ -205,11 +224,42 @@ function stepAhead(terrain: Terrain, body: PhysicsBody, input: PhysicsInput): bo
   return overlapsSolid(terrain, step) && !overlapsSolid(terrain, above);
 }
 
+/** One tick in water: Space swims up, the rest drifts slowly down. */
+function swim(terrain: Terrain, body: PhysicsBody, input: PhysicsInput, maxHeight: number): void {
+  body.fallDistance = 0;
+  body.jumpTicks = 0;
+  if (input.jump || input.autoJump) body.vy += SWIM_UP;
+  let strafe = input.right * INPUT_SCALE;
+  let forward = input.forward * INPUT_SCALE;
+  if (input.sneak) {
+    strafe *= SNEAK_MULTIPLIER;
+    forward *= SNEAK_MULTIPLIER;
+  }
+  applyHeading(body, input, strafe, forward, WATER_ACCELERATION);
+  const startY = body.y;
+  move(terrain, body, false, maxHeight);
+  body.vx *= WATER_DRAG;
+  body.vy *= WATER_DRAG;
+  body.vz *= WATER_DRAG;
+  body.vy -= WATER_GRAVITY;
+  // against the side of a pool, with room above: out of the water
+  if (body.collidedHorizontally) {
+    const lifted = boxAt(body.x + body.vx, body.y + body.vy + 0.6 - body.y + startY, body.z + body.vz);
+    if (!overlapsSolid(terrain, lifted)) body.vy = CLIMB_OUT;
+  }
+}
+
 /** One tick of movement. */
 export function stepBody(terrain: Terrain, body: PhysicsBody, input: PhysicsInput, maxHeight: number): void {
   if (Math.abs(body.vx) < NEGLIGIBLE_VELOCITY) body.vx = 0;
   if (Math.abs(body.vy) < NEGLIGIBLE_VELOCITY) body.vy = 0;
   if (Math.abs(body.vz) < NEGLIGIBLE_VELOCITY) body.vz = 0;
+
+  body.inWater = inWater(terrain, body);
+  if (body.inWater) {
+    swim(terrain, body, input, maxHeight);
+    return;
+  }
 
   const sprint = input.sprint && !input.sneak && input.forward > 0;
   const wantsJump = input.jump || (input.autoJump && body.onGround && body.collidedHorizontally && stepAhead(terrain, body, input));

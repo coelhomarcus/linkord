@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen } from '@testing-library/react';
 import { PlaygroundHud } from '@/features/playground/hud/PlaygroundHud';
 import { guiScale } from '@/features/playground/hud/gui';
-import { createInventory } from '@/features/playground/inventory/inventory';
+import { createInventory } from '@game/inventory';
 import type { Vitals } from '@/features/playground/playgroundCombat';
 
 const vitals = (health: number, xp = 0): Vitals => ({ health, previousHealth: 20, lastChange: 'hurt', hurts: 1, heals: 0, killerId: null, xp });

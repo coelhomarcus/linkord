@@ -1,46 +1,37 @@
 import type { ParseKeys } from 'i18next';
-import { BLOCK } from '../islandMap';
-import type { Block } from '../islandMap';
+import { itemDef } from '@game/items';
+import type { Block } from '@game/blocks';
 
-// Every item there can be, by id (the block game's names). An item is what a
-// slot holds: how many stack together, what it is called and how its icon is
-// drawn. For now there are the island's blocks, as items; a new item (a tool, a
-// weapon with its own damage) is one more entry here, and a new kind of icon
-// one more case in itemIcons.ts.
+// How this browser names and draws each item (the items themselves are the
+// game's, game/items.ts): a block as a little cube of its faces, anything else
+// as its picture from the pack (assets/pixel-perfection/item/).
 
 type ItemName = Extract<ParseKeys<'playground'>, `items.${string}`>;
 
-/** How an item looks in a slot. */
-export type ItemIcon = { kind: 'block'; block: Exclude<Block, 0> };
+/** How an item looks in a slot, in a hand and on the ground. */
+export type ItemIcon = { kind: 'block'; block: Exclude<Block, 0> } | { kind: 'sprite'; url: string };
 
-export interface ItemDef {
-  id: string;
-  /** its name in the playground namespace */
-  name: ItemName;
-  /** how many fit in one slot */
-  maxStack: number;
-  icon: ItemIcon;
+const SPRITES = import.meta.glob<string>('../assets/pixel-perfection/item/*.png', { eager: true, query: '?url', import: 'default' });
+
+const spriteUrl = (id: string): string | null => SPRITES[`../assets/pixel-perfection/item/${id}.png`] ?? null;
+const camel = (id: string) => id.replace(/_([a-z])/g, (_, letter: string) => letter.toUpperCase());
+
+/** An item's name in the playground namespace, or null for one this version does not know. */
+export function itemName(id: string): ItemName | null {
+  return itemDef(id) ? (`items.${camel(id)}` as ItemName) : null;
 }
 
-const blockItem = (id: string, name: ItemName, block: Exclude<Block, 0>): ItemDef => ({ id, name, maxStack: 64, icon: { kind: 'block', block } });
-
-const ITEMS: ReadonlyMap<string, ItemDef> = new Map([
-  blockItem('grass_block', 'items.grassBlock', BLOCK.grass),
-  blockItem('dirt', 'items.dirt', BLOCK.dirt),
-  blockItem('stone', 'items.stone', BLOCK.stone),
-  blockItem('sand', 'items.sand', BLOCK.sand),
-  blockItem('oak_log', 'items.oakLog', BLOCK.log),
-  blockItem('oak_leaves', 'items.oakLeaves', BLOCK.leaves),
-  blockItem('oak_planks', 'items.oakPlanks', BLOCK.planks),
-  blockItem('polished_blackstone', 'items.polishedBlackstone', BLOCK.frame),
-].map((item) => [item.id, item]));
-
-/** An item by id, or null for one this version does not know. */
-export function itemDef(id: string): ItemDef | null {
-  return ITEMS.get(id) ?? null;
+export function itemIcon(id: string): ItemIcon | null {
+  const def = itemDef(id);
+  if (!def) return null;
+  if (def.places !== undefined && def.places !== 0) return { kind: 'block', block: def.places };
+  const url = spriteUrl(id);
+  return url ? { kind: 'sprite', url } : null;
 }
 
-/** How many of `id` fit in one slot; 1 for an unknown item, so it never merges. */
-export function maxStackOf(id: string): number {
-  return itemDef(id)?.maxStack ?? 1;
+/** How worn a tool is, 0 (new) to 1 (about to break), or null for anything that does not wear. */
+export function wearOf(stack: { item: string; damage?: number } | null): number | null {
+  const durability = stack ? itemDef(stack.item)?.tool?.durability : undefined;
+  if (!stack || !durability || !stack.damage) return null;
+  return Math.min(1, stack.damage / durability);
 }

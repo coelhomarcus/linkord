@@ -47,13 +47,15 @@ const WHEEL_LINE_PX = 40;
 /** a press released this close to where it started, this soon, is a click or tap, not a drag */
 const TAP_SLOP_PX = 6;
 const TAP_MS = 300;
+/** a finger held still this long on the look side digs, as long as it stays */
+const HOLD_MS = 350;
 
 const MOVE_KEYS = new Set(['KeyW', 'KeyA', 'KeyS', 'KeyD', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'ShiftLeft', 'ShiftRight', 'Space']);
 const FORWARD_KEYS = new Set(['KeyW', 'ArrowUp']);
 /** held while moving forward, starts a sprint, as in the game */
 const SPRINT_KEYS = new Set(['ControlLeft', 'ControlRight']);
 
-interface Drag { pointerId: number; startX: number; startY: number; x: number; y: number; at: number; button: number }
+interface Drag { pointerId: number; startX: number; startY: number; x: number; y: number; at: number; button: number; moved?: boolean }
 
 function isTap(drag: Drag, event: PointerEvent): boolean {
   return event.timeStamp - drag.at <= TAP_MS && Math.hypot(event.clientX - drag.startX, event.clientY - drag.startY) <= TAP_SLOP_PX;
@@ -72,6 +74,13 @@ export class Controls {
   onAction: () => void = () => {};
   /** the wheel turned this many notches: the hotbar's selection moves (positive is down, to the right) */
   onHotbarScroll: (steps: number) => void = () => {};
+  /** a right click: place the held block, or open what the crosshair is on */
+  onUse: () => void = () => {};
+  /** a tap on a touch screen: the view decides between using, placing and punching */
+  onTap: () => void = () => this.onAction();
+  /** the left button held (digs); the right button held (places again and again) */
+  private primaryDown = false;
+  private secondaryDown = false;
 
   private readonly keys = new Set<string>();
   private jumpQueued = false;
@@ -113,7 +122,40 @@ export class Controls {
     canvas.addEventListener('pointercancel', this.onPointerUp);
     canvas.addEventListener('wheel', this.onWheel, { passive: false });
     canvas.addEventListener('contextmenu', this.onContextMenu);
+    // with the mouse locked, every button press and release comes as its own mouse event (a second button
+    // pressed while one is held never makes a pointerdown)
+    document.addEventListener('mousedown', this.onMouseDown);
+    document.addEventListener('mouseup', this.onMouseUp);
   }
+
+  /** Whether the player is digging: the left button held with the mouse locked (or dragging where it
+   * cannot be), or a finger held still on the look side. */
+  get digging(): boolean {
+    if (this.primaryDown) return true;
+    const look = this.look;
+    return !!look && !look.moved && performance.now() - look.at >= HOLD_MS;
+  }
+
+  /** Whether the right button is held (blocks go down one after another). */
+  get using(): boolean {
+    return this.secondaryDown;
+  }
+
+  private onMouseDown = (event: MouseEvent): void => {
+    if (!this.locked || !this.enabled) return;
+    if (event.button === 0) {
+      this.primaryDown = true;
+      this.onAction();
+    } else if (event.button === 2) {
+      this.secondaryDown = true;
+      this.onUse();
+    }
+  };
+
+  private onMouseUp = (event: MouseEvent): void => {
+    if (event.button === 0) this.primaryDown = false;
+    if (event.button === 2) this.secondaryDown = false;
+  };
 
   // a right click in the world is the game's, never the browser's menu
   private onContextMenu = (event: MouseEvent): void => {
@@ -133,6 +175,8 @@ export class Controls {
     this.canvas.removeEventListener('pointercancel', this.onPointerUp);
     this.canvas.removeEventListener('wheel', this.onWheel);
     this.canvas.removeEventListener('contextmenu', this.onContextMenu);
+    document.removeEventListener('mousedown', this.onMouseDown);
+    document.removeEventListener('mouseup', this.onMouseUp);
     if (this.locked) document.exitPointerLock();
     this.joystickBase.remove();
   }
@@ -238,6 +282,8 @@ export class Controls {
   private clear = (): void => {
     this.keys.clear();
     this.sprinting = false;
+    this.primaryDown = false;
+    this.secondaryDown = false;
     this.joystick = null;
     this.look = null;
     this.mouseLook = null;
@@ -248,6 +294,8 @@ export class Controls {
     if (this.locked) return;
     this.keys.clear();
     this.sprinting = false;
+    this.primaryDown = false;
+    this.secondaryDown = false;
   };
 
   private onPointerLockError = (): void => {
@@ -269,13 +317,13 @@ export class Controls {
     if (!this.enabled) return;
     this.container.focus({ preventScroll: true });
     if (event.pointerType === 'mouse') {
-      if (this.locked) {
-        if (event.button === 0) this.onAction();
-        return;
-      }
+      // locked, the mouse's buttons are onMouseDown's
+      if (this.locked) return;
       // dragging turns the view too, so the mouse still steers where the lock is
       // refused (an older desktop app, a browser setting, no user gesture)
       this.mouseLook = { pointerId: event.pointerId, startX: event.clientX, startY: event.clientY, x: event.clientX, y: event.clientY, at: event.timeStamp, button: event.button };
+      // where the mouse cannot be locked, holding the left button digs while it turns the view
+      if (event.button === 0 && this.lockRefused) this.primaryDown = true;
       this.canvas.setPointerCapture(event.pointerId);
       if (event.button === 0 && !this.lockRefused) this.requestLock();
       return;
@@ -316,14 +364,20 @@ export class Controls {
       this.turn(event.clientX - this.look.x, event.clientY - this.look.y, TOUCH_SENSITIVITY);
       this.look.x = event.clientX;
       this.look.y = event.clientY;
+      if (Math.hypot(event.clientX - this.look.startX, event.clientY - this.look.startY) > TAP_SLOP_PX) this.look.moved = true;
     }
   };
 
   private onPointerUp = (event: PointerEvent): void => {
     if (this.mouseLook?.pointerId === event.pointerId) {
-      const click = this.mouseLook.button === 0 && isTap(this.mouseLook, event);
+      const { button } = this.mouseLook;
+      const click = isTap(this.mouseLook, event);
       this.mouseLook = null;
-      if (click && this.lockRefused && !this.locked && event.type === 'pointerup') this.onAction();
+      if (button === 0) this.primaryDown = false;
+      if (click && this.lockRefused && !this.locked && event.type === 'pointerup') {
+        if (button === 0) this.onAction();
+        else if (button === 2) this.onUse();
+      }
       return;
     }
     if (this.joystick?.pointerId === event.pointerId) {
@@ -332,7 +386,7 @@ export class Controls {
     } else if (this.look?.pointerId === event.pointerId) {
       const tap = isTap(this.look, event);
       this.look = null;
-      if (tap && event.type === 'pointerup') this.onAction();
+      if (tap && event.type === 'pointerup') this.onTap();
     }
   };
 

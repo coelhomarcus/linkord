@@ -2,9 +2,9 @@ import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { Vitals } from '../playgroundCombat';
 import { MAX_HEALTH } from '../playgroundCombat';
-import { HOTBAR_SIZE, heldStack } from '../inventory/inventory';
-import type { Inventory } from '../inventory/inventory';
-import { itemDef } from '../inventory/items';
+import { HOTBAR_SIZE, heldStack } from '@game/inventory';
+import type { Inventory } from '@game/inventory';
+import { itemName } from '../inventory/items';
 import { experienceLevel } from '../experience';
 import { at, guiText } from './gui';
 import { GuiSprite, ItemStackView } from './GuiSprite';
@@ -108,11 +108,11 @@ function HeldItemName({ name, scale }: { name: string; scale: number }) {
 export function PlaygroundHud({ vitals, inventory, scale, onSelect }: { vitals: Vitals; inventory: Inventory; scale: number; onSelect: (slot: number) => void }) {
   const { t } = useTranslation('playground');
   const held = heldStack(inventory);
-  const heldDef = held ? itemDef(held.item) : null;
+  const heldName = held ? itemName(held.item) : null;
   const hotbarTop = HEARTS_ABOVE;
   return (
     <div className="pointer-events-none absolute bottom-0 left-1/2 z-20" style={{ width: HOTBAR_WIDTH * scale, height: (HEARTS_ABOVE + 22) * scale, transform: 'translateX(-50%)' }}>
-      {heldDef && <HeldItemName key={`${inventory.selected}:${held?.item}`} name={t(heldDef.name)} scale={scale} />}
+      {heldName && <HeldItemName key={`${inventory.selected}:${held?.item}`} name={t(heldName)} scale={scale} />}
       <div role="meter" aria-label={t('hud.health')} aria-valuemin={0} aria-valuemax={MAX_HEALTH} aria-valuenow={vitals.health} aria-valuetext={t('hud.hearts', { count: vitals.health / 2 })}>
         <Hearts key={`${vitals.hurts}:${vitals.heals}`} vitals={vitals} scale={scale} />
       </div>
@@ -122,8 +122,8 @@ export function PlaygroundHud({ vitals, inventory, scale, onSelect }: { vitals: 
       <div role="toolbar" aria-label={t('hud.hotbar')} className="absolute inset-0">
         {Array.from({ length: HOTBAR_SIZE }, (_, i) => {
           const slot = inventory.slots[i] ?? null;
-          const def = slot ? itemDef(slot.item) : null;
-          const label = def && slot ? t('inventory.slotItem', { name: t(def.name), count: slot.count }) : t('inventory.emptySlot');
+          const name = slot ? itemName(slot.item) : null;
+          const label = name && slot ? t('inventory.slotItem', { name: t(name), count: slot.count }) : t('inventory.emptySlot');
           return (
             // a tap picks the slot on a touch screen; with the mouse locked, clicks never reach here
             <button key={i} type="button" aria-label={label} aria-pressed={inventory.selected === i} onClick={() => onSelect(i)}
