@@ -1,8 +1,12 @@
-import { isCurrent, playerById, playersIn, send, sendToCall, type Player } from './roster.js';
+import { allPlayers, isCurrent, playerById, playersIn, send, sendToCall, type Player } from './roster.js';
 import { memoryExperienceStore, type ExperienceStore } from './experience.js';
 import { hitDamage, wearForHitting } from './game/mining.js';
-import { wearHeld } from './game/inventory.js';
-import { dropEverything, heldItemOf, inventoryOf, sendInventory, setInventory } from './inventories.js';
+import { heldStack, useHeld, wearHeld } from './game/inventory.js';
+import {
+  canEat, createHunger, DROWN_DAMAGE, eat, EAT_TICKS, exhaust, EXHAUSTION, fallDamage, headInWater, MAX_AIR, stepAir, stepHunger, type Hunger,
+} from './game/vitals.js';
+import { acknowledge, dropEverything, heldItemOf, inventoryOf, sendInventory, setInventory } from './inventories.js';
+import { loadedWorld } from './worlds.js';
 import { logger } from './logger.js';
 
 const log = logger.child({ component: 'combat' });
@@ -23,14 +27,27 @@ const log = logger.child({ component: 'combat' });
 // knockback halves the target's speed and pushes it 0.4 away from the attacker
 // and 0.4 up, plus 0.5 along the attacker's look and 0.1 up for a sprinting
 // attacker. What the attacker's own movement says (falling, sprinting) is its
-// client's word, like its position. Health comes back 1 every 4 s, as with a
-// full hunger bar.
+// client's word, like its position.
+//
+// The world hurts too (game/vitals.ts): a fall, a head under water too long,
+// an empty stomach. Health comes back a point every 4 s only with 18 food or
+// more, and hunger is used up by what each player does: sprinting and jumping
+// (its client counts them, with its reports), landing a hit or taking one,
+// breaking a block (building.ts), healing. A landing the client reports is
+// checked against the heights it reported before; drowning is decided here,
+// from where it last said its head is and the world's water. All of it runs on
+// the game's ticks (tickVitals), 20 a second. Eating is the client's right
+// button held for 32 ticks, timed here like a dig.
 //
 // A death drops everything its player carried where it fell (inventories.ts).
 //
-// Health is kept in memory by connection (the app's participant id), through a
-// reconnect to this service but not through its restart: the first report after
-// one starts each player again at full health. A restart of the app itself
+// Health, food and air are kept in memory by connection (the app's participant
+// id), through a reconnect to this service but not through its restart: the
+// first report after one starts each player again at full health and a full
+// stomach. Hunger lives with health rather than with the account (as experience
+// does) because the two are one state: regeneration spends food, and a death,
+// a respawn or a restart resets both together. Stored apart, a restart would
+// heal everyone while leaving them starving. A restart of the app itself
 // changes nothing here.
 //
 // A kill earns experience, which fills the bar under the hearts and counts up
@@ -45,7 +62,20 @@ export const MAX_HEALTH = 20;
 const CRIT_MULTIPLIER = 1.5;
 /** the half of the game's 20-tick invulnerableTime in which a new hit only counts what it adds */
 export const HURT_IMMUNITY_MS = 500;
-export const REGEN_INTERVAL_MS = 4000;
+/** a game tick */
+export const TICK_MS = 50;
+/** a service that fell behind (a long pause) catches up at most this many ticks, rather than all at once */
+const MAX_CATCH_UP_TICKS = 20;
+const EYE_HEIGHT = 1.62;
+/** a fall is checked against the heights reported this long before it */
+const FALL_WINDOW_MS = 10_000;
+/** what a fall may exceed the reported heights by: a report misses the top of a jump by a tick or two */
+const FALL_SLACK = 0.5;
+/** reports a jump is at least this far apart from the last (a jump takes 12 ticks in the air) */
+const MIN_JUMP_MS = 500;
+/** an eat may end this much sooner than its 32 ticks, for the lag between the two messages */
+const EAT_LENIENCY = 0.7;
+const EAT_SLACK_MS = 250;
 /** the game's server ignores an attack on an entity farther than this (its 36 squared) */
 export const MAX_ATTACK_DISTANCE = 6;
 const KNOCKBACK = 0.4;
@@ -58,11 +88,12 @@ const MAX_COORDINATE = 4096;
 /** how long the health of a connection that dropped is kept for it to come back */
 export const FIGHTER_KEEP_MS = 2 * 60 * 1000;
 
+/** What hurt someone when no one did: these, or a player (a hit with an attacker). */
+export type HurtCause = 'fall' | 'drown' | 'starve';
+
 interface Fighter {
   conversationId: string;
-  /** health at `healthAt`; regeneration since then is counted when read */
   health: number;
-  healthAt: number;
   /** when the last hit that hurt landed, and how much it dealt */
   hurtAt: number;
   hurtDamage: number;
@@ -74,16 +105,27 @@ interface Fighter {
   positionAt: number;
   /** when its connection left this service, or null while connected */
   leftAt: number | null;
+  hunger: Hunger;
+  /** ticks of air left with the head under water (game/vitals.ts) */
+  air: number;
+  /** the game ticks up to here are counted (tickVitals) */
+  tickedAt: number;
+  /** the heights it reported lately, oldest first, to check a fall against */
+  heights: { y: number; at: number }[];
+  /** the food and saturation its client was last told, or null before it was */
+  shownHunger: { food: number; saturation: number } | null;
 }
 
 export function createFighter(conversationId: string, now: number): Fighter {
-  return { conversationId, health: MAX_HEALTH, healthAt: now, hurtAt: -Infinity, hurtDamage: 0, x: 0, y: 0, z: 0, yaw: 0, positionAt: 0, leftAt: null };
+  return {
+    conversationId, health: MAX_HEALTH, hurtAt: -Infinity, hurtDamage: 0, x: 0, y: 0, z: 0, yaw: 0, positionAt: 0, leftAt: null,
+    hunger: createHunger(), air: MAX_AIR, tickedAt: now, heights: [], shownHunger: null,
+  };
 }
 
-/** Health now, with what came back since the last change. The dead stay at 0. */
-export function healthOf(fighter: Fighter, now: number): number {
-  if (fighter.health <= 0) return 0;
-  return Math.min(MAX_HEALTH, fighter.health + Math.floor(Math.max(0, now - fighter.healthAt) / REGEN_INTERVAL_MS));
+/** Health now; the dead are at 0. */
+export function healthOf(fighter: Fighter): number {
+  return fighter.health;
 }
 
 /** Points to go from `level` to the next (the game's xpBarCap). */
@@ -109,9 +151,8 @@ export function killReward(victimPoints: number): number {
   return Math.max(MIN_KILL_XP, Math.min(levelOf(victimPoints) * 7, MAX_KILL_XP));
 }
 
-function setHealth(fighter: Fighter, health: number, now: number): void {
+function setHealth(fighter: Fighter, health: number): void {
   fighter.health = Math.max(0, Math.min(MAX_HEALTH, health));
-  fighter.healthAt = now;
 }
 
 interface HitOutcome {
@@ -124,7 +165,7 @@ interface HitOutcome {
 
 /** Lands `damage` on a living target, or null when its immunity swallows it whole. */
 export function landHit(target: Fighter, damage: number, now: number): HitOutcome | null {
-  const health = healthOf(target, now);
+  const health = healthOf(target);
   if (health <= 0) return null;
   let dealt = damage;
   let hurt = true;
@@ -137,8 +178,31 @@ export function landHit(target: Fighter, damage: number, now: number): HitOutcom
     target.hurtAt = now;
     target.hurtDamage = damage;
   }
-  setHealth(target, health - dealt, now);
+  setHealth(target, health - dealt);
   return { dealt, hurt, health: target.health };
+}
+
+/** One game tick of a living fighter's air and hunger, in place: what it lost or got back. */
+export function stepVitals(fighter: Fighter, underwater: boolean): { drown: boolean; hunger: 'heal' | 'starve' | null } {
+  const air = stepAir(fighter.air, underwater);
+  fighter.air = air.air;
+  return { drown: air.drown, hunger: stepHunger(fighter.hunger, fighter.health, MAX_HEALTH) };
+}
+
+/** How far a reported fall of `claimed` blocks, landing at `y`, can have been: no more than the highest
+ * height reported in the last FALL_WINDOW_MS above where it landed. */
+export function checkedFall(fighter: Fighter, claimed: number, y: number, now: number): number {
+  let peak = y;
+  for (const height of fighter.heights) if (now - height.at <= FALL_WINDOW_MS && height.y > peak) peak = height.y;
+  return Math.max(0, Math.min(claimed, peak - y + FALL_SLACK));
+}
+
+function rememberHeight(fighter: Fighter, y: number, now: number): void {
+  const { heights } = fighter;
+  heights.push({ y, at: now });
+  let stale = 0;
+  while (stale < heights.length && now - heights[stale]!.at > FALL_WINDOW_MS) stale++;
+  if (stale) heights.splice(0, stale);
 }
 
 /** What a hit with the held item (null: a bare hand) deals. */
@@ -198,6 +262,8 @@ function place(fighter: Fighter, position: Position, now: number): void {
 
 /** by participant id; kept for FIGHTER_KEEP_MS after the connection leaves, so a reconnect is no free heal */
 const fighters = new Map<string, Fighter>();
+/** what each connection started eating, and when */
+const meals = new Map<string, { item: string; slot: number; at: number }>();
 /** experience points by playground and account (`conversationId:userId`), as last read or written */
 const experience = new Map<string, number>();
 const loadingExperience = new Map<string, Promise<void>>();
@@ -243,13 +309,18 @@ function sendXp(player: Player): void {
  * moments ago, in the same call) is still its own. */
 export function playerJoined(player: Player): void {
   const fighter = fighters.get(player.id);
-  if (fighter) fighter.leftAt = null;
+  if (fighter) {
+    fighter.leftAt = null;
+    // nothing happened to it while it was away
+    fighter.tickedAt = Date.now();
+  }
   void loadExperience(player.conversationId, player.userId);
 }
 
 export function playerLeft(player: Player, now: number): void {
   const fighter = fighters.get(player.id);
   if (fighter) fighter.leftAt = now;
+  meals.delete(player.id);
 }
 
 /** Forgets the health of connections gone for longer than FIGHTER_KEEP_MS. */
@@ -278,7 +349,13 @@ export function positionOf(playerId: string): { x: number; y: number; z: number;
 /** Whether a connection is alive (one that never reported counts as alive at full health). */
 export function isAlive(playerId: string): boolean {
   const fighter = fighters.get(playerId);
-  return !fighter || healthOf(fighter, Date.now()) > 0;
+  return !fighter || healthOf(fighter) > 0;
+}
+
+/** What breaking a block or the like costs a connection in hunger. */
+export function exhaustPlayer(playerId: string, amount: number): void {
+  const fighter = fighters.get(playerId);
+  if (fighter && fighter.health > 0) exhaust(fighter.hunger, amount);
 }
 
 /** Everyone connected in the call who has a fighter there, with it. */
@@ -291,22 +368,137 @@ function fightersIn(conversationId: string): [Player, Fighter][] {
   return found;
 }
 
-function healthEntry(player: Player, fighter: Fighter, now: number) {
-  return { id: player.id, health: healthOf(fighter, now) };
+function healthEntry(player: Player, fighter: Fighter) {
+  return { id: player.id, health: healthOf(fighter) };
 }
 
-/** `playground-pos`: where this connection's avatar stands. The first report of a connection (`first`)
- * is answered with everyone's health, its own included, and its experience. */
-export async function handlePosition(player: Player, msg: { x?: unknown; y?: unknown; z?: unknown; yaw?: unknown; first?: unknown }): Promise<void> {
+/** Tells a connection its food and saturation, when they changed since it was last told (or always). */
+function sendHunger(player: Player, fighter: Fighter, always = false): void {
+  const food = fighter.hunger.food;
+  const saturation = Math.round(fighter.hunger.saturation * 100) / 100;
+  const shown = fighter.shownHunger;
+  if (!always && shown?.food === food && shown.saturation === saturation) return;
+  fighter.shownHunger = { food, saturation };
+  send(player, { t: 'playground-vitals', conversationId: player.conversationId, food, saturation });
+}
+
+/** A positive count in a report, or 0. */
+const amount = (value: unknown): number => (typeof value === 'number' && Number.isFinite(value) && value > 0 ? value : 0);
+
+/** What a report says its player did since the last one, as hunger: the blocks sprinted (no more than it
+ * moved) and the jumps (no more than one per MIN_JUMP_MS). */
+function exhaustFromReport(fighter: Fighter, previous: { x: number; z: number; at: number } | null, position: Position, msg: Record<string, unknown>, now: number): void {
+  const moved = previous ? Math.hypot(position.x - previous.x, position.z - previous.z) : 0;
+  const sprinted = Math.min(amount(msg.sprinted), moved + 1);
+  const maxJumps = previous ? Math.floor((now - previous.at) / MIN_JUMP_MS) + 1 : 1;
+  const sprintJumps = Math.min(Math.floor(amount(msg.sprintJumps)), maxJumps);
+  const jumps = Math.min(Math.floor(amount(msg.jumps)), maxJumps - sprintJumps);
+  exhaust(fighter.hunger, sprinted * EXHAUSTION.sprint + jumps * EXHAUSTION.jump + sprintJumps * EXHAUSTION.sprintJump);
+}
+
+/** `playground-pos`: where this connection's avatar stands, what it did since its last report (`sprinted`,
+ * `jumps`, `sprintJumps`) and, on landing, how far it fell (`fall`). The first report of a connection
+ * (`first`) is answered with everyone's health, its own included, its hunger and its experience. */
+export async function handlePosition(player: Player, msg: { x?: unknown; y?: unknown; z?: unknown; yaw?: unknown; first?: unknown; [key: string]: unknown }): Promise<void> {
   const position = readPosition(msg);
   if (!position || !isCurrent(player)) return;
   const fighter = fighterOf(player);
   const now = Date.now();
+  const previous = fighter.positionAt > 0 ? { x: fighter.x, z: fighter.z, at: fighter.positionAt } : null;
   place(fighter, position, now);
+  if (fighter.health > 0) {
+    exhaustFromReport(fighter, previous, position, msg, now);
+    const fell = amount(msg.fall);
+    if (fell > 0) {
+      landed(player, fighter, checkedFall(fighter, fell, position.y, now), now);
+      fighter.heights = [];
+    }
+  }
+  rememberHeight(fighter, position.y, now);
   if (msg.first !== true) return;
-  send(player, { t: 'playground-health', conversationId: player.conversationId, players: fightersIn(player.conversationId).map(([p, f]) => healthEntry(p, f, now)) });
+  send(player, { t: 'playground-health', conversationId: player.conversationId, players: fightersIn(player.conversationId).map(([p, f]) => healthEntry(p, f)) });
+  sendHunger(player, fighter, true);
   await loadExperience(player.conversationId, player.userId);
   if (isCurrent(player)) sendXp(player);
+}
+
+/** A landing after a fall of `distance` blocks: what it deals, unless the feet are in water. */
+function landed(player: Player, fighter: Fighter, distance: number, now: number): void {
+  const world = loadedWorld(player.conversationId);
+  if (world?.grid.isWater(Math.floor(fighter.x), Math.floor(fighter.y), Math.floor(fighter.z))) return;
+  const damage = fallDamage(distance);
+  if (damage > 0) hurtByWorld(player, fighter, damage, 'fall', now);
+}
+
+/** Damage nobody dealt, shown to everyone in the call as a hit without an attacker, with its cause. */
+function hurtByWorld(player: Player, fighter: Fighter, damage: number, cause: HurtCause, now: number): void {
+  const outcome = landHit(fighter, damage, now);
+  if (!outcome) return;
+  sendToCall(player.conversationId, {
+    t: 'playground-hit', conversationId: player.conversationId, attackerId: null, targetId: player.id,
+    damage: outcome.dealt, health: outcome.health, crit: false, hurt: outcome.hurt, cause,
+  });
+  if (outcome.health <= 0) {
+    meals.delete(player.id);
+    dropEverything(player, fighter);
+  }
+}
+
+/** Runs everyone's air and hunger up to `now`, a game tick at a time. */
+export function tickVitals(now: number): void {
+  for (const player of allPlayers()) {
+    const fighter = fighters.get(player.id);
+    if (!fighter || fighter.conversationId !== player.conversationId) continue;
+    const due = Math.floor((now - fighter.tickedAt) / TICK_MS);
+    if (due <= 0) continue;
+    fighter.tickedAt = due > MAX_CATCH_UP_TICKS ? now : fighter.tickedAt + due * TICK_MS;
+    if (fighter.health <= 0) continue;
+    const world = loadedWorld(player.conversationId);
+    const underwater = !!world && fighter.positionAt > 0
+      && headInWater((x, y, z) => world.grid.isWater(x, y, z), fighter.x, fighter.y + EYE_HEIGHT, fighter.z);
+    let healed = false;
+    for (let i = 0; i < Math.min(due, MAX_CATCH_UP_TICKS) && fighter.health > 0; i++) {
+      const step = stepVitals(fighter, underwater);
+      if (step.drown) hurtByWorld(player, fighter, DROWN_DAMAGE, 'drown', now);
+      if (fighter.health <= 0) break;
+      if (step.hunger === 'heal') {
+        setHealth(fighter, fighter.health + 1);
+        healed = true;
+      } else if (step.hunger === 'starve') {
+        hurtByWorld(player, fighter, 1, 'starve', now);
+      }
+    }
+    if (healed) sendToCall(player.conversationId, { t: 'playground-health', conversationId: player.conversationId, players: [healthEntry(player, fighter)] });
+    sendHunger(player, fighter);
+  }
+}
+
+/** `eat-start`: the right button went down with food in the hand. */
+export async function handleEatStart(player: Player): Promise<void> {
+  const holder = await inventoryOf(player);
+  const stack = heldStack(holder.inventory);
+  if (stack && isCurrent(player)) meals.set(player.id, { item: stack.item, slot: holder.inventory.selected, at: Date.now() });
+  else meals.delete(player.id);
+}
+
+/** `eat {seq}`: the food in the hand eaten, after the button was held for 32 ticks on it. */
+export async function handleEat(player: Player, msg: Record<string, unknown>): Promise<void> {
+  const holder = await inventoryOf(player);
+  acknowledge(player, msg.seq);
+  const meal = meals.get(player.id);
+  meals.delete(player.id);
+  const fighter = fighters.get(player.id);
+  const stack = heldStack(holder.inventory);
+  const now = Date.now();
+  const ate = isCurrent(player) && !!fighter && fighter.conversationId === player.conversationId && fighter.health > 0
+    && !!meal && !!stack && stack.item === meal.item && holder.inventory.selected === meal.slot && canEat(fighter.hunger.food, stack.item)
+    && now - meal.at >= EAT_TICKS * TICK_MS * EAT_LENIENCY - EAT_SLACK_MS;
+  if (ate) {
+    eat(fighter.hunger, stack.item);
+    setInventory(holder, useHeld(holder.inventory));
+    sendHunger(player, fighter);
+  }
+  sendInventory(player);
 }
 
 /** `playground-attack`: a punch that landed on `targetId` as the attacker saw it, from where it stood. */
@@ -321,11 +513,13 @@ export async function handleAttack(player: Player, msg: { targetId?: unknown; x?
   if (!targetPlayer || !target || targetPlayer.conversationId !== player.conversationId || target.conversationId !== player.conversationId) return;
   // an old report still counts: a player whose tab is in the background (its timers slowed to once a
   // minute) stands still where it last said, for everyone
-  if (healthOf(attacker, now) <= 0 || target.positionAt === 0 || !withinReach(attacker, target)) return;
+  if (healthOf(attacker) <= 0 || target.positionAt === 0 || !withinReach(attacker, target)) return;
   const crit = msg.crit === true;
   const held = heldItemOf(player);
   const outcome = landHit(target, attackDamage(crit, held), now);
   if (!outcome) return;
+  exhaust(attacker.hunger, EXHAUSTION.attack);
+  exhaust(target.hunger, EXHAUSTION.attack);
   const wear = wearForHitting(held);
   if (wear > 0) {
     void inventoryOf(player).then((holder) => {
@@ -346,6 +540,7 @@ export async function handleAttack(player: Player, msg: { targetId?: unknown; x?
     ...(knockback ? { push: knockback.push, ...(knockback.extra ? { extra: knockback.extra } : {}) } : {}),
   });
   if (outcome.health > 0) return;
+  meals.delete(targetPlayer.id);
   dropEverything(targetPlayer, target);
   if (targetPlayer.userId === player.userId) return;
   await rewardKill(player, xpOf(player.conversationId, targetPlayer.userId));
@@ -366,21 +561,25 @@ async function rewardKill(player: Player, victimPoints: number): Promise<void> {
   if (isCurrent(player)) sendXp(player);
 }
 
-/** `playground-respawn`: back at full health after dying. Answered with the health either way, so a
- * client that thought it was dead (from before a restart) learns otherwise. */
+/** `playground-respawn`: back at full health, with a full stomach and air, after dying. Answered with the
+ * health either way, so a client that thought it was dead (from before a restart) learns otherwise. */
 export function handleRespawn(player: Player): void {
   if (!isCurrent(player)) return;
   const fighter = fighterOf(player);
-  const now = Date.now();
-  if (healthOf(fighter, now) <= 0) {
-    setHealth(fighter, MAX_HEALTH, now);
+  if (healthOf(fighter) <= 0) {
+    setHealth(fighter, MAX_HEALTH);
     fighter.hurtAt = -Infinity;
+    fighter.hunger = createHunger();
+    fighter.air = MAX_AIR;
+    fighter.heights = [];
   }
-  sendToCall(player.conversationId, { t: 'playground-health', conversationId: player.conversationId, players: [healthEntry(player, fighter, now)] });
+  sendToCall(player.conversationId, { t: 'playground-health', conversationId: player.conversationId, players: [healthEntry(player, fighter)] });
+  sendHunger(player, fighter);
 }
 
 /** Tests start from an empty arena. */
 export function clearCombat(): void {
   fighters.clear();
+  meals.clear();
   setExperienceStore(memoryExperienceStore());
 }

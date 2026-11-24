@@ -72,6 +72,7 @@ describe('mining', () => {
     assert.equal(dropOf(BLOCK.grass, null, 0.5), 'dirt');
     assert.equal(dropOf(BLOCK.leaves, null, 0.5), null);
     assert.equal(dropOf(BLOCK.leaves, null, 0.01), 'stick');
+    assert.equal(dropOf(BLOCK.leaves, null, 0.996), 'apple');
   });
 
   test('tools wear, swords twice as fast on blocks; damage by what is held', () => {
@@ -92,6 +93,15 @@ describe('smelting', () => {
     stepFurnace(furnace, COOK_TICKS * 8);
     assert.deepEqual(furnace.slots, [s('iron_ore', 1), null, s('iron_ingot', 8)]);
     assert.equal(furnace.burn, 0);
+  });
+
+  test('cooks raw meat', () => {
+    for (const raw of ['beef', 'porkchop', 'mutton', 'chicken']) {
+      const furnace = createFurnace();
+      furnace.slots = [s(raw, 1), s('coal', 1), null];
+      stepFurnace(furnace, COOK_TICKS);
+      assert.deepEqual(furnace.slots[2], s(`cooked_${raw}`, 1));
+    }
   });
 
   test('takes no fuel with nothing to cook, or no room for what it makes', () => {

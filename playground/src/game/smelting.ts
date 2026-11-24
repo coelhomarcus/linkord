@@ -15,6 +15,10 @@ const SMELTING: Readonly<Record<string, string>> = {
   sand: 'glass',
   cobblestone: 'stone',
   oak_log: 'charcoal',
+  beef: 'cooked_beef',
+  porkchop: 'cooked_porkchop',
+  mutton: 'cooked_mutton',
+  chicken: 'cooked_chicken',
 };
 
 interface FurnaceSlot { item: string; count: number; damage?: number }

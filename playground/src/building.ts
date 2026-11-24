@@ -7,7 +7,8 @@ import { canPlaceIn, stateForPlacing, unsupportedAround } from './game/support.j
 import {
   acknowledge, applyInventoryOp, connectionLeft, heldInCall, holdersLookingAt, inventoryOf, pickUp, sendInventory, setInventory, showFurnace, throwStacks,
 } from './inventories.js';
-import { isAlive, positionOf } from './combat.js';
+import { exhaustPlayer, isAlive, positionOf } from './combat.js';
+import { EXHAUSTION } from './game/vitals.js';
 import { allPlayers, isCurrent, playersIn, send, type Player } from './roster.js';
 import {
   addFurnace, brokenStart, chestAt, furnaceAt, furnaceLook, isCell, itemView, loadedWorld, loadedWorlds, maintainWorlds, packedBlocks, setBlocks, spawnItems,
@@ -138,6 +139,7 @@ export async function handleBreak(player: Player, msg: Record<string, unknown>):
     spawnItems(world, fallen.flatMap(([fx, fy, fz], i) => (dropped[i] ? [{ stack: { item: dropped[i]!, count: 1 }, start: brokenStart(fx, fy, fz) }] : [])), 'broken');
   }
   setInventory(holder, wearHeld(holder.inventory, wearForBreaking(held, block)));
+  exhaustPlayer(player.id, EXHAUSTION.dig);
   sendInventory(player);
 }
 

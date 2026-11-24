@@ -1,7 +1,7 @@
 import { BLOCK, COLORED_KINDS, COLORS, coloredBlock, type Block, type ToolKind } from './blocks.js';
 
 // Every item a slot can hold, by the block game's ids: the blocks one can carry
-// and place, what ores and furnaces give, and the four tools in five materials.
+// and place, what ores and furnaces give, food, and the four tools in five materials.
 // The browser names and draws them (web/src/features/playground/inventory).
 
 export type ToolTier = 'wooden' | 'stone' | 'iron' | 'golden' | 'diamond';
@@ -27,6 +27,8 @@ export interface ItemDef {
   tool?: ToolDef;
   /** ticks it burns in a furnace (200 smelt one item) */
   fuel?: number;
+  /** what eating it gives (game/vitals.ts) */
+  food?: { food: number; saturation: number };
 }
 
 const TIERS: Record<ToolTier, { level: number; speed: number; durability: number; bonus: number }> = {
@@ -43,6 +45,8 @@ const TOOL_KINDS: readonly ToolKind[] = ['sword', 'pickaxe', 'axe', 'shovel'];
 
 const block = (id: string, places: Block, fuel?: number): ItemDef => ({ id, maxStack: 64, places, ...(fuel ? { fuel } : {}) });
 const material = (id: string, fuel?: number): ItemDef => ({ id, maxStack: 64, ...(fuel ? { fuel } : {}) });
+/** the game's food points and saturation (its saturation modifier × food × 2) */
+const food = (id: string, points: number, saturation: number): ItemDef => ({ id, maxStack: 64, food: { food: points, saturation } });
 
 function tool(tier: ToolTier, kind: ToolKind): ItemDef {
   const { level, speed, durability, bonus } = TIERS[tier];
@@ -82,6 +86,16 @@ const ITEMS: ReadonlyMap<string, ItemDef> = new Map([
   material('iron_nugget'),
   material('gold_ingot'),
   material('diamond'),
+  food('apple', 4, 2.4),
+  // raw meat cooks into its cooked kind in a furnace (smelting.ts); the animals that drop it are still to come
+  food('beef', 3, 1.8),
+  food('cooked_beef', 8, 12.8),
+  food('porkchop', 3, 1.8),
+  food('cooked_porkchop', 8, 12.8),
+  food('mutton', 2, 1.2),
+  food('cooked_mutton', 6, 9.6),
+  food('chicken', 2, 1.2),
+  food('cooked_chicken', 6, 7.2),
   ...TOOL_TIERS.flatMap((tier) => TOOL_KINDS.map((kind) => tool(tier, kind))),
 ].map((item) => [item.id, item]));
 

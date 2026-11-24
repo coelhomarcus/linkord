@@ -2,7 +2,7 @@ import type { Server as HttpServer } from 'node:http';
 import { Server, type Socket } from 'socket.io';
 import { verifyPlaygroundToken } from './access.js';
 import { admit, allPlayers, isCurrent, playerFor, remove, type Player } from './roster.js';
-import { handleAttack, handlePosition, handleRespawn, playerJoined, playerLeft, sweepFighters } from './combat.js';
+import { handleAttack, handleEat, handleEatStart, handlePosition, handleRespawn, playerJoined, playerLeft, sweepFighters, tickVitals } from './combat.js';
 import { handleSkinGet, handleSkinSet } from './skins.js';
 import { buildingLeft, handleBreak, handleDigStart, handleInventoryOp, handlePlace, handleUse, handleWorldGet, maintainGame, tickGame } from './building.js';
 import { inventoryOf } from './inventories.js';
@@ -16,7 +16,7 @@ const SOCKET_PATH = '/playground/ws';
 // The world itself only goes out (`world-get`'s answer), which this does not limit.
 const MAX_MESSAGE_BYTES = 32 * 1024;
 const SWEEP_MS = 5000;
-/** the game's own clock: furnaces, items on the ground, pickups */
+/** the game's own clock: furnaces, items on the ground, pickups, air and hunger */
 const GAME_TICK_MS = 100;
 const MAINTAIN_MS = 1000;
 
@@ -27,6 +27,9 @@ const LIMITS: Record<string, Limit> = {
   'playground-pos': { windowMs: 10_000, max: 120 },
   'playground-attack': { windowMs: 10_000, max: 120 },
   'playground-respawn': { windowMs: 10_000, max: 10 },
+  // a meal takes 32 ticks: at most six in ten seconds, and the starts of a few given up
+  'eat-start': { windowMs: 10_000, max: 30 },
+  eat: { windowMs: 10_000, max: 15 },
   renew: { windowMs: 60_000, max: 10 },
   // one per person who shows up in the call, and its retries
   'skin-get': { windowMs: 10_000, max: 60 },
@@ -47,6 +50,8 @@ const HANDLERS: Record<string, Handler> = {
   'playground-pos': handlePosition,
   'playground-attack': handleAttack,
   'playground-respawn': (player) => handleRespawn(player),
+  'eat-start': (player) => handleEatStart(player),
+  eat: (player, msg) => handleEat(player, msg),
   'skin-get': handleSkinGet,
   'skin-set': handleSkinSet,
   'world-get': handleWorldGet,
@@ -144,7 +149,11 @@ export function createPlaygroundSocket(httpServer: HttpServer, secret: string): 
 
   const timer = setInterval(() => sweep(Date.now()), SWEEP_MS);
   timer.unref();
-  const game = setInterval(() => run('tick', () => tickGame(Date.now())), GAME_TICK_MS);
+  const game = setInterval(() => run('tick', () => {
+    const now = Date.now();
+    tickGame(now);
+    tickVitals(now);
+  }), GAME_TICK_MS);
   game.unref();
   let maintaining = false;
   const upkeep = setInterval(() => {

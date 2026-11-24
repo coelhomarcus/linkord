@@ -27,10 +27,13 @@ export function canHarvest(block: number, heldItem: string | null): boolean {
   return tool?.kind === 'pickaxe' && tool.level >= def.needs;
 }
 
-/** What breaking `block` drops (`roll` in [0, 1), the chance for leaves' stick), or null. */
+/** an oak's leaves drop a stick one time in 50 and an apple one in 200, as in the game */
+const LEAF_DROPS = { stick: 0.02, apple: 0.005 } as const;
+
+/** What breaking `block` drops (`roll` in [0, 1), the chance for what leaves drop), or null. */
 export function dropOf(block: number, heldItem: string | null, roll: number): string | null {
   if (!canHarvest(block, heldItem)) return null;
-  if (block === BLOCK.leaves) return roll < 0.02 ? 'stick' : null;
+  if (block === BLOCK.leaves) return roll < LEAF_DROPS.stick ? 'stick' : roll >= 1 - LEAF_DROPS.apple ? 'apple' : null;
   return blockDef(block).drop;
 }
 
