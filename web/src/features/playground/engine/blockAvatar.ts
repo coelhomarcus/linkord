@@ -186,7 +186,7 @@ export class FirstPersonArm {
   private phase = 0;
   private swingTime = 1;
   /** how far right the arm sits, so it stays in view on a narrow window too */
-  private offsetX = 0.3;
+  private offsetX = 0.45;
 
   constructor(skin: Skin) {
     this.scene.add(this.holder);
@@ -216,16 +216,16 @@ export class FirstPersonArm {
     const bobX = Math.sin(this.phase) * 0.025 * walking;
     const bobY = -Math.abs(Math.cos(this.phase)) * 0.03 * walking;
     const swing = Math.sin(this.swingTime * Math.PI);
-    this.holder.position.set(this.offsetX + bobX - swing * 0.15, -0.5 + bobY + swing * 0.12, -0.62 - swing * 0.05);
-    // The pose of first-person arms in blocky games: standing up from the bottom
-    // right corner, hand end up and leaning in toward the crosshair, its outer
-    // side to the viewer. Flipped hand-up first, then leaned, then turned a little
-    // ('YZX' applies the x tilt first).
-    this.holder.rotation.set(-3.3 - swing * 0.4, 0.15 - swing * 0.3, 0.5, 'YZX');
+    // The whole arm reaching forward from the bottom right corner, shoulder out of
+    // view and hand toward the crosshair, so the eye sees its top and inner side,
+    // never the hand's end. Tipped forward and up first, then turned in a little
+    // ('YXZ' applies the turn after the tilt); a click pushes it out and in.
+    this.holder.position.set(this.offsetX + bobX - swing * 0.12, -0.46 + bobY + swing * 0.06, -0.74 - swing * 0.12);
+    this.holder.rotation.set(2.05 + swing * 0.25, 0.12 + swing * 0.25, 0.3, 'YXZ');
   }
 
   setAspect(aspect: number): void {
-    this.offsetX = 0.3 * Math.min(aspect, 1.9);
+    this.offsetX = 0.25 * Math.min(aspect, 1.9);
     this.camera.aspect = aspect;
     this.camera.updateProjectionMatrix();
   }
