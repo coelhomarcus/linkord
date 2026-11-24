@@ -21,7 +21,7 @@ export interface BlockGrid {
 }
 
 /** Air lets light through, leaves take a step off it, everything else stops it. */
-export function opacity(block: Block): number {
+function opacity(block: Block): number {
   if (block === BLOCK.air) return 0;
   if (block === BLOCK.leaves) return 1;
   return MAX_LIGHT;

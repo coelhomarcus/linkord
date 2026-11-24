@@ -6,7 +6,7 @@
 /** First person, third person from behind, and third person from the front (V goes round them). */
 export type CameraMode = 'first' | 'third' | 'front';
 
-export const CAMERA_MODES: readonly CameraMode[] = ['first', 'third', 'front'];
+const CAMERA_MODES: readonly CameraMode[] = ['first', 'third', 'front'];
 
 /** the playground namespace's name for each mode */
 export const CAMERA_LABEL = { first: 'camera.first', third: 'camera.third', front: 'camera.front' } as const satisfies Record<CameraMode, string>;
@@ -36,7 +36,7 @@ const MAX_PITCH = Math.PI / 2 - 0.01;
 /** a second press of forward within this long starts a sprint (7 ticks) */
 const SPRINT_DOUBLE_TAP_MS = 350;
 /** the third-person camera's distance, and how far the wheel can take it */
-export const DEFAULT_CAMERA_DISTANCE = 4;
+const DEFAULT_CAMERA_DISTANCE = 4;
 const MIN_CAMERA_DISTANCE = 2;
 const MAX_CAMERA_DISTANCE = 8;
 

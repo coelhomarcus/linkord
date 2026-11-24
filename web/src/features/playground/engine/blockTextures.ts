@@ -21,15 +21,15 @@ import waterUrl from '../assets/pixel-perfection/water_still.png?url';
 // load, and if they ever fail to, the atlas shows tiles painted in code: a base
 // colour broken up with seeded noise, plus a little structure.
 
-export const TILE = 16;
+const TILE = 16;
 const COLUMNS = 4;
-export const ATLAS_SIZE = TILE * COLUMNS;
+const ATLAS_SIZE = TILE * COLUMNS;
 
 type Rgb = [number, number, number];
 const hex = (value: number): Rgb => [(value >> 16) & 255, (value >> 8) & 255, value & 255];
 const scale = ([r, g, b]: Rgb, f: number): Rgb => [r * f, g * f, b * f];
 
-export const TILES = {
+const TILES = {
   grassTop: 0, grassSide: 1, dirt: 2, stone: 3, sand: 4, logSide: 5, logTop: 6, leaves: 7, frame: 8, planks: 9,
 } as const;
 type TileName = keyof typeof TILES;

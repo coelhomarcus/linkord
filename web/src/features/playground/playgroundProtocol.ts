@@ -11,7 +11,7 @@ export const PLAYGROUND_TOPIC = 'linkord.playground';
 export const SKIN_TOPIC = 'linkord.playground.skin';
 const VERSION = 1;
 
-export const MOTIONS = ['idle', 'walk', 'run', 'jump'] as const;
+const MOTIONS = ['idle', 'walk', 'run', 'jump'] as const;
 export type Motion = (typeof MOTIONS)[number];
 
 export interface PlayerState {

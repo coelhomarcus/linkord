@@ -334,7 +334,7 @@ export function getActivePlaygroundSession(): PlaygroundSession | null {
   return active;
 }
 
-export function subscribeToPlaygroundSession(listener: () => void): () => void {
+function subscribeToPlaygroundSession(listener: () => void): () => void {
   listeners.add(listener);
   return () => { listeners.delete(listener); };
 }

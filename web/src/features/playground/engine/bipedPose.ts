@@ -8,9 +8,9 @@
 // sign, y and z rotations and z positions flip, and heights count from the feet.
 
 /** Pixels of the skin's 32-pixel-tall model; BlockAvatar scales them. */
-export type Vec3Px = [number, number, number];
+type Vec3Px = [number, number, number];
 
-export interface PartPose {
+interface PartPose {
   /** pivot, in pixels from the feet */
   position: Vec3Px;
   /** radians, applied z, then y, then x */

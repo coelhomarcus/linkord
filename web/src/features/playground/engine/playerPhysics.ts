@@ -30,8 +30,8 @@ const NEGLIGIBLE_VELOCITY = 0.003;
 const SNEAK_EDGE_DROP = 0.6;
 const SNEAK_EDGE_STEP = 0.05;
 
-export const HALF_WIDTH = 0.3;
-export const BODY_HEIGHT = 1.8;
+const HALF_WIDTH = 0.3;
+const BODY_HEIGHT = 1.8;
 export const STANDING_EYE_HEIGHT = 1.62;
 export const SNEAKING_EYE_HEIGHT = 1.27;
 const EPSILON = 1e-7;

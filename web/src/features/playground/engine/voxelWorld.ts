@@ -14,15 +14,15 @@ import { cornerBrightness, cornerOcclusion, MAX_LIGHT, sideShade, SkyLight } fro
 // reach, including faces turned away from it. No other lighting: the pixel
 // art's colours stay as painted.
 
-export const SKY_COLOR = 0x9fcfff;
-export const FOG = { near: 40, far: 115 } as const;
+const SKY_COLOR = 0x9fcfff;
+const FOG = { near: 40, far: 115 } as const;
 
 /** Light by face direction: +x, -x, +y, -y, +z, -z (the avatars' boxes use it too). */
 export const FACE_SHADE = [sideShade(1, 0, 0), sideShade(-1, 0, 0), sideShade(0, 1, 0), sideShade(0, -1, 0), sideShade(0, 0, 1), sideShade(0, 0, -1)] as const;
 
 /** Toward the sun: high in the east, a little to the north, so trees and people throw their shadows
  * sideways and toward someone facing the big screen (which stands at -z). */
-export const SUN_DIRECTION = new THREE.Vector3(0.6, 1, -0.2).normalize();
+const SUN_DIRECTION = new THREE.Vector3(0.6, 1, -0.2).normalize();
 /** What is left of the sky's light in the sun's shadow. */
 const SHADOWED_SKY_LIGHT = 0.6;
 

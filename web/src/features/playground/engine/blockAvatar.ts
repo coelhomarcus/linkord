@@ -16,8 +16,8 @@ import type { Bob } from './viewBob';
 // (bipedPose.ts), no animation files needed.
 
 /** World units per skin pixel: the 32-pixel model stands 1.8 blocks tall. */
-export const PX = 1.8 / 32;
-export const AVATAR_HEIGHT = 32 * PX;
+const PX = 1.8 / 32;
+const AVATAR_HEIGHT = 32 * PX;
 
 const OUTER_INFLATE: Record<PartName, number> = { head: 0.5, body: 0.25, rightArm: 0.25, leftArm: 0.25, rightLeg: 0.25, leftLeg: 0.25 };
 
@@ -52,7 +52,7 @@ export interface SkinMaterials {
   outer: THREE.MeshBasicMaterial;
 }
 
-export function skinMaterials(skin: Skin): SkinMaterials {
+function skinMaterials(skin: Skin): SkinMaterials {
   const texture = pixelTexture(skinCanvas(skin.pixels));
   return {
     texture,
@@ -63,14 +63,14 @@ export function skinMaterials(skin: Skin): SkinMaterials {
   };
 }
 
-export function disposeSkinMaterials(materials: SkinMaterials): void {
+function disposeSkinMaterials(materials: SkinMaterials): void {
   materials.texture.dispose();
   materials.inner.dispose();
   materials.outer.dispose();
 }
 
 /** One limb or the head: the inner box and its outer layer together. */
-export function partMesh(part: PartName, skin: Skin, materials: SkinMaterials): THREE.Group {
+function partMesh(part: PartName, skin: Skin, materials: SkinMaterials): THREE.Group {
   const group = new THREE.Group();
   group.add(new THREE.Mesh(partGeometry(part, skin.slim, false), materials.inner));
   group.add(new THREE.Mesh(partGeometry(part, skin.slim, true), materials.outer));
