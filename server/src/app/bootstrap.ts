@@ -8,6 +8,7 @@ import { restoreDmCalls, setDmCallStore } from '../modules/calls/dmCalls.js';
 import { startCallRoomSync } from '../modules/calls/callRoomSync.js';
 import { startPlaygroundSync } from '../modules/playground/playgroundSync.js';
 import { startEmbeddedPlayground } from './embeddedPlayground.js';
+import { proxyPlaygroundUpgrades } from './playgroundProxy.js';
 import { dmCallStore, loadActiveDmCalls } from '../modules/calls/dmCallRepository.js';
 import { createApp } from '../http/app.js';
 import { createWsServer } from '../realtime/socket.js';
@@ -111,6 +112,8 @@ export async function bootstrap(): Promise<void> {
   // same way it would to a plain http.Server, no change needed in
   // realtime/socket.ts.
   const io = createWsServer(fastify.server);
+  // the game's websocket reaches the service in this container through the app's own port too
+  if (config.PLAYGROUND_EMBEDDED) proxyPlaygroundUpgrades(fastify.server, config.PLAYGROUND_EMBEDDED_PORT, log);
 
   await fastify.listen({ port: config.PORT, host: config.HOST_BIND });
   // the playground service in this container, for a deploy that runs both as one (PLAYGROUND_EMBEDDED=1)
