@@ -97,4 +97,22 @@ describe('PlaygroundChat', () => {
     act(() => { vi.advanceTimersByTime(10_500); });
     expect(screen.queryByText(/nova/)).not.toBeInTheDocument();
   });
+
+  it('shows twenty lines and scrolls by lines with the wheel, staying put as new ones arrive', () => {
+    const servers = [server([playground('geral'), channel({ id: 'geral', name: 'chat-geral' })])];
+    const many = Array.from({ length: 30 }, (_, i) => message(i + 1, `linha ${i + 1}`));
+    const { rerender } = setup({ servers, messagesByConversation: new Map([['geral', many]]) });
+    const log = screen.getByRole('log');
+    expect(log.querySelectorAll('li')).toHaveLength(20);
+    expect(log).toHaveTextContent('linha 30');
+    expect(log).not.toHaveTextContent('linha 10 ');
+    fireEvent.wheel(log, { deltaY: -100 });
+    expect(log).toHaveTextContent('linha 4');
+    expect(log).not.toHaveTextContent('linha 30');
+    rerender({ messagesByConversation: new Map([['geral', [...many, message(31, 'linha 31')]]]) });
+    expect(screen.getByRole('log')).not.toHaveTextContent('linha 31');
+    fireEvent.wheel(screen.getByRole('log'), { deltaY: 100 });
+    fireEvent.wheel(screen.getByRole('log'), { deltaY: 100 });
+    expect(screen.getByRole('log')).toHaveTextContent('linha 31');
+  });
 });

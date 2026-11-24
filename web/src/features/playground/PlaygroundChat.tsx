@@ -23,6 +23,10 @@ import { PIXEL_SHADOW } from './pixelUi';
 const LINE_SECONDS = 10;
 /** Lines kept in the open chat; older ones are in the channel itself. */
 const HISTORY_LINES = 100;
+/** Lines the open chat shows at once; the wheel moves through the rest, as in the game. */
+const VISIBLE_LINES = 20;
+/** Lines a wheel notch moves (one with Shift held), as in the game. */
+const WHEEL_LINES = 7;
 const MAX_MESSAGE_LENGTH = 2000;
 
 interface Line {
@@ -75,12 +79,13 @@ export function PlaygroundChat({ callConversationId, open, lift, onClose }: { ca
 
   const [draft, setDraft] = useState('');
   const [recent, setRecent] = useState<Line[]>([]);
+  /** how many lines up from the newest the open chat is scrolled */
+  const [offset, setOffset] = useState(0);
   const seenRef = useRef<Set<number> | null>(null);
   const sentRef = useRef<string[]>([]);
   const historyIndexRef = useRef(-1);
   const timersRef = useRef(new Set<ReturnType<typeof setTimeout>>());
   const inputRef = useRef<HTMLInputElement | null>(null);
-  const listRef = useRef<HTMLOListElement | null>(null);
 
   // the channel's latest messages, unless the app already has them
   const loaded = messages !== undefined;
@@ -119,6 +124,12 @@ export function PlaygroundChat({ callConversationId, open, lift, onClose }: { ca
     historyIndexRef.current = -1;
     inputRef.current?.focus();
   }, [open]);
+  // opening the chat starts on its newest line
+  const [wasOpen, setWasOpen] = useState(open);
+  if (open !== wasOpen) {
+    setWasOpen(open);
+    if (open) setOffset(0);
+  }
 
   const history: Line[] = [
     ...(messages ?? []).slice(-HISTORY_LINES).map((message) => lineOf(message, allUsers, me.userId ?? null, servers, language)),
@@ -130,11 +141,18 @@ export function PlaygroundChat({ callConversationId, open, lift, onClose }: { ca
     })),
   ];
 
-  // the open chat sits on its newest line
-  const newest = history.at(-1)?.key;
-  useEffect(() => {
-    if (open && listRef.current) listRef.current.scrollTop = listRef.current.scrollHeight;
-  }, [open, newest]);
+  // reading older lines, new ones arriving do not pull the view down: it stays on the same lines
+  const total = history.length;
+  const [counted, setCounted] = useState(total);
+  if (total !== counted) {
+    setCounted(total);
+    if (total > counted && offset > 0) setOffset(offset + total - counted);
+  }
+
+  const maxOffset = Math.max(0, total - VISIBLE_LINES);
+  const shownOffset = Math.min(offset, maxOffset);
+  const shown = history.slice(Math.max(0, total - VISIBLE_LINES - shownOffset), total - shownOffset);
+  const scrollBy = (lines: number) => setOffset((current) => Math.min(Math.max(0, Math.min(current, maxOffset) + lines), maxOffset));
 
   const notice = !chatId ? t('chat.notLinked') : !channel ? t('chat.noAccess') : !canSend ? t('chat.cannotSend', { channel: channel.name }) : null;
 
@@ -158,6 +176,9 @@ export function PlaygroundChat({ callConversationId, open, lift, onClose }: { ca
     } else if (event.key === 'Enter') {
       event.preventDefault();
       send();
+    } else if (event.key === 'PageUp' || event.key === 'PageDown') {
+      event.preventDefault();
+      scrollBy((event.key === 'PageUp' ? 1 : -1) * (VISIBLE_LINES - 1));
     } else if (event.key === 'ArrowUp' || event.key === 'ArrowDown') {
       const sent = sentRef.current;
       if (!sent.length) return;
@@ -182,12 +203,19 @@ export function PlaygroundChat({ callConversationId, open, lift, onClose }: { ca
   }
 
   return (
-    <div className="absolute inset-x-3 bottom-[calc(0.75rem+env(safe-area-inset-bottom))] z-30 flex flex-col gap-1.5">
-      <ol ref={listRef} role="log" aria-label={t('chat.label', { channel: channel?.name ?? '' })}
-        className={cn('flex max-h-[45vh] w-[min(30rem,100%)] flex-col overflow-y-auto [scrollbar-width:thin]', text)}>
-        {notice && <li className="bg-black/45 px-2 py-0.5 text-white/75">{notice}</li>}
-        {history.map((line) => <ChatLine key={line.key} line={line} />)}
-      </ol>
+    <div className="absolute inset-x-3 bottom-[calc(0.75rem+env(safe-area-inset-bottom))] z-30 flex flex-col gap-1.5"
+      onWheel={(event) => { if (event.deltaY) scrollBy((event.deltaY < 0 ? 1 : -1) * (event.shiftKey ? 1 : WHEEL_LINES)); }}>
+      <div className="relative w-[min(30rem,100%)]">
+        {/* no browser scrollbar: the wheel moves by lines, and a thin bar says where you are */}
+        <ol role="log" aria-label={t('chat.label', { channel: channel?.name ?? '' })} className={cn('flex flex-col overflow-hidden', text)}>
+          {notice && <li className="bg-black/45 px-2 py-0.5 text-white/75">{notice}</li>}
+          {shown.map((line) => <ChatLine key={line.key} line={line} />)}
+        </ol>
+        {total > VISIBLE_LINES && (
+          <span aria-hidden className="absolute -left-1.5 w-1 bg-white/70"
+            style={{ height: `${(VISIBLE_LINES / total) * 100}%`, top: `${(1 - (shownOffset + VISIBLE_LINES) / total) * 100}%` }} />
+        )}
+      </div>
       <input
         ref={inputRef}
         value={draft}
