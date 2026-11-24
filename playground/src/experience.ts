@@ -1,4 +1,4 @@
-import { and, eq, sql } from 'drizzle-orm';
+import { and, eq, inArray, sql } from 'drizzle-orm';
 import type { PlaygroundDb } from './db/client.js';
 import { playgroundExperience } from './db/schema.js';
 
@@ -11,6 +11,8 @@ export interface ExperienceStore {
   load(conversationId: string, userId: string): Promise<number>;
   /** adds `points` and returns the new total */
   add(conversationId: string, userId: string, points: number): Promise<number>;
+  /** drops everything these accounts earned (they were deleted in the app) */
+  forget(userIds: string[]): Promise<void>;
 }
 
 export function databaseExperienceStore(db: PlaygroundDb): ExperienceStore {
@@ -29,6 +31,9 @@ export function databaseExperienceStore(db: PlaygroundDb): ExperienceStore {
         .returning({ points: playgroundExperience.points });
       return row?.points ?? points;
     },
+    async forget(userIds) {
+      if (userIds.length > 0) await db.delete(playgroundExperience).where(inArray(playgroundExperience.userId, userIds));
+    },
   };
 }
 
@@ -44,6 +49,9 @@ export function memoryExperienceStore(): ExperienceStore {
       const total = (points.get(key(conversationId, userId)) ?? 0) + added;
       points.set(key(conversationId, userId), total);
       return total;
+    },
+    async forget(userIds) {
+      for (const stored of [...points.keys()]) if (userIds.some((userId) => stored.endsWith(`:${userId}`))) points.delete(stored);
     },
   };
 }

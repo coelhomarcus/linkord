@@ -3,7 +3,7 @@ import type { Socket } from 'socket.io-client';
 import type { ServerMessage } from '@/shared/types/protocol';
 
 // The connection to the playground service (playground/ at the repo root), where
-// fighting is decided, apart from the app's own socket so either can restart
+// fighting is decided and skins are kept, apart from the app's own socket so either can restart
 // without the other. The service knows nobody: the app hands this connection a
 // short-lived pass (`playground-token` on the app's socket) naming who it is and
 // which call it is in, it is shown when connecting and renewed while you play.
@@ -28,16 +28,25 @@ export type PlaygroundClientMessage =
 
 export type PlaygroundTokenReply = Extract<ServerMessage, { t: 'playground-token' }>;
 
+/** Questions the service answers (playground/src/skins.ts): `skin-get {userId}` and `skin-set {skin}`,
+ * both answered with `{ skin }` (a base64 PNG, or null for the account's default). */
+export type PlaygroundRequest = { event: 'skin-get'; payload: { userId: string } } | { event: 'skin-set'; payload: { skin: string | null } };
+
+/** The service's refusal (`not-here`, `invalid`, `unavailable`, `rate-limited`), or no answer at all. */
+export class PlaygroundRequestError extends Error {}
+
 /** What the session needs of the link; tests stand in for it. */
-export interface CombatLink {
+export interface ServiceLink {
   start(): void;
   dispose(): void;
   /** false when not connected: the message is dropped and the caller tries again later */
   send(message: PlaygroundClientMessage): boolean;
   receiveToken(reply: PlaygroundTokenReply): void;
+  /** Asks the service, waiting a few seconds for the link to connect; throws PlaygroundRequestError. */
+  request(request: PlaygroundRequest): Promise<{ skin?: unknown }>;
 }
 
-export interface CombatLinkOptions {
+export interface ServiceLinkOptions {
   conversationId: string;
   /** asks the app for a pass; false when its socket is not connected */
   requestToken: () => boolean;
@@ -51,20 +60,24 @@ const SERVER_EVENTS = ['playground-hit', 'playground-health', 'playground-xp'] a
 // the app's pass lasts 90 s (server/src/modules/playground/playgroundAccess.ts): two chances to renew it
 const RENEW_MS = 30_000;
 const TOKEN_TIMEOUT_MS = 5000;
+// a question asked before the link is up (the first skins, as you arrive) waits for it this long
+const CONNECT_WAIT_MS = 10_000;
+const ANSWER_TIMEOUT_MS = 5000;
 const RETRY_MS = [1000, 2000, 5000, 10_000, 20_000];
 
 type Grant = { url: string; token: string } | 'refused' | 'unanswered';
 
-export class PlaygroundLink implements CombatLink {
-  private readonly options: CombatLinkOptions;
+export class PlaygroundLink implements ServiceLink {
+  private readonly options: ServiceLinkOptions;
   private socket: Socket | null = null;
   private waiting: { promise: Promise<Grant>; resolve: (grant: Grant) => void; timer: ReturnType<typeof setTimeout> } | null = null;
   private renewTimer: ReturnType<typeof setInterval> | null = null;
   private retryTimer: ReturnType<typeof setTimeout> | null = null;
   private attempts = 0;
   private stopped = false;
+  private readonly connectWaiters = new Set<(socket: Socket | null) => void>();
 
-  constructor(options: CombatLinkOptions) {
+  constructor(options: ServiceLinkOptions) {
     this.options = options;
   }
 
@@ -78,12 +91,41 @@ export class PlaygroundLink implements CombatLink {
     this.retryTimer = null;
     this.settle('unanswered');
     this.closeSocket();
+    for (const waiter of [...this.connectWaiters]) waiter(null);
   }
 
   send(message: PlaygroundClientMessage): boolean {
     if (!this.socket?.connected) return false;
     this.socket.emit(message.t, message);
     return true;
+  }
+
+  async request({ event, payload }: PlaygroundRequest): Promise<{ skin?: unknown }> {
+    const socket = await this.connectedSocket();
+    let answer: unknown;
+    try {
+      answer = await socket.timeout(ANSWER_TIMEOUT_MS).emitWithAck(event, payload);
+    } catch {
+      throw new PlaygroundRequestError('unanswered');
+    }
+    if (!answer || typeof answer !== 'object') throw new PlaygroundRequestError('unanswered');
+    if ('error' in answer) throw new PlaygroundRequestError(String(answer.error));
+    return answer;
+  }
+
+  private connectedSocket(): Promise<Socket> {
+    if (this.socket?.connected) return Promise.resolve(this.socket);
+    if (this.stopped) return Promise.reject(new PlaygroundRequestError('unavailable'));
+    return new Promise((resolve, reject) => {
+      const waiter = (socket: Socket | null) => {
+        clearTimeout(timer);
+        this.connectWaiters.delete(waiter);
+        if (socket) resolve(socket);
+        else reject(new PlaygroundRequestError('unavailable'));
+      };
+      const timer = setTimeout(() => waiter(null), CONNECT_WAIT_MS);
+      this.connectWaiters.add(waiter);
+    });
   }
 
   receiveToken(reply: PlaygroundTokenReply): void {
@@ -133,6 +175,7 @@ export class PlaygroundLink implements CombatLink {
     socket.on('connect', () => {
       this.attempts = 0;
       this.renewTimer = setInterval(() => void this.renew(), RENEW_MS);
+      for (const waiter of [...this.connectWaiters]) waiter(socket);
       this.options.onConnect();
     });
     // a pass that ran out, a restart of the service, a lost network: a fresh pass and a new socket

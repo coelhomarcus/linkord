@@ -11,3 +11,11 @@ export const playgroundExperience = pgTable('playground_experience', {
   points: integer('points').notNull().default(0),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 }, (t) => [primaryKey({ columns: [t.conversationId, t.userId] })]);
+
+/** The skin each account wears in playgrounds (skins.ts): a 64×64 or 64×32 PNG, base64, at most 14 kB.
+ * No row means the default skin, drawn by the client from the account's id. */
+export const playgroundSkins = pgTable('playground_skins', {
+  userId: text('user_id').primaryKey(),
+  png: text('png').notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+});

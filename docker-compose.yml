@@ -9,7 +9,7 @@
 # stack keeps its own database and volumes apart from development's (project `linkord-dev`). Without it only the
 # development services start.
 #
-# The playground service (fighting in playground channels, with its own database) is the `playground` profile:
+# The playground service (fighting and skins in playground channels, with its own database) is the `playground` profile:
 # add it to COMPOSE_PROFILES next to `full`. In development, `docker compose up -d playground-postgres` starts only
 # its database, for `npm run dev` on the host.
 #
@@ -112,6 +112,9 @@ services:
       # what browsers connect to; the server itself reaches LiveKit over the compose network
       LIVEKIT_URL: ${LIVEKIT_URL:-ws://localhost:7880}
       LIVEKIT_SERVER_URL: http://livekit:7880
+      # where the app itself calls the playground service (the `playground` profile), over this network;
+      # unused while PLAYGROUND_URL is unset
+      PLAYGROUND_INTERNAL_URL: http://playground:3000
     volumes:
       - uploads:/app/uploads
       - backups:/app/backups

@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { PlaygroundLink } from '@/features/playground/playgroundLink';
-import type { CombatLinkOptions } from '@/features/playground/playgroundLink';
+import { PlaygroundLink, PlaygroundRequestError } from '@/features/playground/playgroundLink';
+import type { ServiceLinkOptions } from '@/features/playground/playgroundLink';
 
 interface FakeSocket {
   url: string;
@@ -10,6 +10,8 @@ interface FakeSocket {
   handlers: Map<string, (...args: unknown[]) => void>;
   fire: (event: string, ...args: unknown[]) => void;
   disconnected: boolean;
+  /** what the next `emitWithAck` answers; undefined never answers */
+  answer: ((event: string, payload: unknown) => unknown) | undefined;
 }
 
 const sockets = vi.hoisted(() => [] as FakeSocket[]);
@@ -17,12 +19,19 @@ const sockets = vi.hoisted(() => [] as FakeSocket[]);
 vi.mock('socket.io-client', () => ({
   io: (url: string, options: FakeSocket['options']) => {
     const socket: FakeSocket & Record<string, unknown> = {
-      url, options, connected: false, emitted: [], handlers: new Map(), disconnected: false,
+      url, options, connected: false, emitted: [], handlers: new Map(), disconnected: false, answer: undefined,
       fire: (event, ...args) => { socket.handlers.get(event)?.(...args); },
       on: (event: string, fn: (...args: unknown[]) => void) => { socket.handlers.set(event, fn); return socket; },
       emit: (event: string, payload: unknown) => { socket.emitted.push([event, payload]); return socket; },
       removeAllListeners: () => { socket.handlers.clear(); return socket; },
       disconnect: () => { socket.disconnected = true; socket.connected = false; return socket; },
+      timeout: (ms: number) => ({
+        emitWithAck: (event: string, payload: unknown) => new Promise((resolve, reject) => {
+          socket.emitted.push([event, payload]);
+          if (socket.answer) resolve(socket.answer(event, payload));
+          else setTimeout(() => reject(new Error('operation has timed out')), ms);
+        }),
+      }),
     };
     sockets.push(socket);
     return socket;
@@ -33,7 +42,7 @@ function setup(requestToken: () => boolean = () => true) {
   const requests = vi.fn(requestToken);
   const onMessage = vi.fn();
   const onConnect = vi.fn();
-  const options: CombatLinkOptions = { conversationId: 'conv', requestToken: requests, onMessage, onConnect };
+  const options: ServiceLinkOptions = { conversationId: 'conv', requestToken: requests, onMessage, onConnect };
   const link = new PlaygroundLink(options);
   const grant = (token: string | null, url = 'https://chat.example.com') => link.receiveToken({ t: 'playground-token', conversationId: 'conv', ...(token ? { url } : {}), token });
   return { link, requests, onMessage, onConnect, grant };
@@ -121,6 +130,38 @@ describe('PlaygroundLink', () => {
     await vi.advanceTimersByTimeAsync(0);
     expect(sockets[1]!.options.auth.token).toBe('pass-2');
     link.dispose();
+  });
+
+  it('a question waits for the connection, and the service\'s refusal is an error', async () => {
+    const { link, grant } = setup();
+    link.start();
+    const asked = link.request({ event: 'skin-get', payload: { userId: 'bia' } });
+    grant('pass-1');
+    await vi.advanceTimersByTimeAsync(0);
+    sockets[0]!.answer = (_event, payload) => ((payload as { userId: string }).userId === 'bia' ? { skin: 'png' } : { error: 'not-here' });
+    connect(sockets[0]!);
+    await expect(asked).resolves.toEqual({ skin: 'png' });
+    expect(sockets[0]!.emitted).toEqual([['skin-get', { userId: 'bia' }]]);
+    await expect(link.request({ event: 'skin-get', payload: { userId: 'caio' } })).rejects.toEqual(new PlaygroundRequestError('not-here'));
+    link.dispose();
+  });
+
+  it('a question fails when the link never connects, or the answer never comes', async () => {
+    const { link, grant } = setup();
+    link.start();
+    const early = link.request({ event: 'skin-set', payload: { skin: null } });
+    const failed = expect(early).rejects.toBeInstanceOf(PlaygroundRequestError);
+    await vi.advanceTimersByTimeAsync(10_000);
+    await failed;
+    grant('pass-1');
+    await vi.advanceTimersByTimeAsync(0);
+    connect(sockets.at(-1)!);
+    const silent = link.request({ event: 'skin-set', payload: { skin: null } });
+    const unanswered = expect(silent).rejects.toEqual(new PlaygroundRequestError('unanswered'));
+    await vi.advanceTimersByTimeAsync(5000);
+    await unanswered;
+    link.dispose();
+    await expect(link.request({ event: 'skin-get', payload: { userId: 'bia' } })).rejects.toEqual(new PlaygroundRequestError('unavailable'));
   });
 
   it('ignores answers for another call', async () => {

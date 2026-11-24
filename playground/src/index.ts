@@ -4,16 +4,19 @@ import { openDatabase } from './db/client.js';
 import { runMigrations } from './db/migrate.js';
 import { databaseExperienceStore } from './experience.js';
 import { setExperienceStore } from './combat.js';
+import { databaseSkinStore, setSkinStore } from './skins.js';
+import { handleInternal, INTERNAL_PREFIX } from './internal.js';
 import { createPlaygroundSocket } from './socket.js';
 import { logger } from './logger.js';
 
 const log = logger.child({ component: 'process' });
 
-// The playground service: the game state of playground calls (fighting and
-// experience today), apart from the app so a restart of either leaves the other
-// running. The app hands each player a short-lived pass (PLAYGROUND_SECRET), and
-// the browser brings it here over Socket.IO. Deployed from the app's own image
-// with `node playground/dist/index.js`.
+// The playground service: the game state of playground calls (fighting,
+// experience and skins today), apart from the app so a restart of either leaves
+// the other running. The app hands each player a short-lived pass
+// (PLAYGROUND_SECRET), and the browser brings it here over Socket.IO; the app
+// itself talks to it under /playground/internal/ (internal.ts). Deployed from
+// the app's own image with `node playground/dist/index.js`.
 
 const READY_CACHE_MS = 5000;
 
@@ -29,6 +32,7 @@ async function main(): Promise<void> {
   const { pool, db } = openDatabase(config);
   await runMigrations(db);
   setExperienceStore(databaseExperienceStore(db));
+  setSkinStore(databaseSkinStore(db));
 
   let readyAt = 0;
   let ready = false;
@@ -54,6 +58,10 @@ async function main(): Promise<void> {
     if (route === '/healthz' || route === '/playground/healthz') return answer(200, { ok: true });
     if (route === '/readyz' || route === '/playground/readyz') {
       void isReady().then((ok) => answer(ok ? 200 : 503, { ok }));
+      return;
+    }
+    if (route.startsWith(INTERNAL_PREFIX)) {
+      void handleInternal(req, res, route, config.secret);
       return;
     }
     answer(404, { ok: false });

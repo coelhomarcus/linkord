@@ -13,7 +13,7 @@ import { proximityGain } from './proximity';
 import { spawnPoint } from './playgroundWorld';
 import { PlaygroundCombat } from './playgroundCombat';
 import { PlaygroundLink } from './playgroundLink';
-import type { CombatLink, CombatLinkOptions, PlaygroundServerMessage, PlaygroundTokenReply } from './playgroundLink';
+import type { ServiceLink, ServiceLinkOptions, PlaygroundServerMessage, PlaygroundTokenReply } from './playgroundLink';
 import { InventoryStore } from './inventory/inventory';
 
 // Everything a playground call needs while you are in it, whether or not its
@@ -24,8 +24,9 @@ import { InventoryStore } from './inventory/inventory';
 // you for the others nor turns everyone up to full volume.
 //
 // Skins are kept with each account (skins/accountSkin.ts) and read from the
-// server for everyone who shows up in the call, so a reload, a late join or a
-// packet that never arrived cannot leave anyone in someone else's default.
+// playground service for everyone who shows up in the call, so a reload, a late
+// join or a packet that never arrived cannot leave anyone in someone else's
+// default.
 // A change is also sent to the others as a reliable packet of at most
 // MAX_SKIN_BYTES (an empty one meaning "my account's default"), after it is
 // saved: that is only the fast path, and what older tabs still listen for.
@@ -77,7 +78,7 @@ export class PlaygroundSession {
   private lastReportedKey = '';
   /** the next report asks the service for everyone's health, until one goes out */
   private askHealth = true;
-  private readonly link: CombatLink;
+  private readonly link: ServiceLink;
   readonly combat: PlaygroundCombat;
   /** what you carry; kept in this browser for as long as you are in the call */
   readonly inventory = new InventoryStore();
@@ -92,7 +93,7 @@ export class PlaygroundSession {
   constructor(
     room: Room, conversationId: string, localId: string, localUserId: string, audio: { current: Map<string, AudioHandle> },
     sendWs: (msg: ClientMessage) => boolean = () => false,
-    createLink: (options: CombatLinkOptions) => CombatLink = (options) => new PlaygroundLink(options),
+    createLink: (options: ServiceLinkOptions) => ServiceLink = (options) => new PlaygroundLink(options),
   ) {
     this.room = room;
     this.conversationId = conversationId;
@@ -175,14 +176,14 @@ export class PlaygroundSession {
   }
 
   /** Wears a skin (a PNG already checked by decodeSkin/encodeSkin), or the default with null. It shows
-   * at once and is saved to the account; if the server refuses, the previous one comes back and this throws. */
+   * at once and is saved to the account; if the service refuses, the previous one comes back and this throws. */
   async setLocalSkin(bytes: Uint8Array<ArrayBuffer> | null, skin: Skin | null): Promise<void> {
     const previous = { bytes: this.localSkinBytes, skin: this.skins.get(this.localUserId) ?? null };
     const change = ++this.localSkinChange;
     this.bumpSkinVersion(this.localUserId);
     this.wearLocal(bytes, skin);
     try {
-      await saveAccountSkin(bytes);
+      await saveAccountSkin(bytes, this.link);
     } catch (err) {
       if (change === this.localSkinChange && !this.disposed) this.wearLocal(previous.bytes, previous.skin);
       throw err;
@@ -222,7 +223,7 @@ export class PlaygroundSession {
     const legacy = takeLegacySkin();
     let stored: Uint8Array<ArrayBuffer> | null;
     try {
-      stored = await fetchAccountSkin(userId);
+      stored = await fetchAccountSkin(userId, this.link);
     } catch {
       if (this.isCurrent(userId, version)) this.retry(() => void this.loadLocalSkin());
       return;
@@ -256,7 +257,7 @@ export class PlaygroundSession {
     this.skinRequested.add(userId);
     let stored: Uint8Array<ArrayBuffer> | null;
     try {
-      stored = await fetchAccountSkin(userId);
+      stored = await fetchAccountSkin(userId, this.link);
     } catch {
       if (!this.isCurrent(userId, version)) return;
       // asked for again by the next roster change, or by the retry if none comes

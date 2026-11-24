@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import { describe, it } from 'node:test';
-import { MAX_SKIN_BYTES, parseSkinPng } from '../../../src/modules/playground/skinPng.js';
+import { MAX_SKIN_BYTES, parseSkinPng } from '../src/skinPng.js';
 
 function pngHeader(width: number, height: number, extra = 0): Buffer {
   const bytes = Buffer.alloc(33 + extra);
@@ -14,7 +14,7 @@ function pngHeader(width: number, height: number, extra = 0): Buffer {
   return bytes;
 }
 
-const WEB_SKINS = path.resolve(import.meta.dirname, '../../../../web/src/features/playground/skins/skins.ts');
+const WEB_SKINS = path.resolve(import.meta.dirname, '../../web/src/features/playground/skins/skins.ts');
 
 describe('parseSkinPng', () => {
   it('allows the same size as the web app', () => {

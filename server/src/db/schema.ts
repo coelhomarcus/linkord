@@ -1116,10 +1116,18 @@ export const userPreferences = pgTable('user_preferences', {
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 });
 
-/** The skin an account wears in playground calls (modules/playground): a 64×64 or 64×32 PNG, base64,
- * at most 14 kB. No row means the default skin drawn from the account's id. */
+/** Skins saved before the playground service kept them (it does now: playground/src/skins.ts). Each row
+ * is handed to the service by modules/playground/playgroundSync.ts and deleted once it took it; nothing
+ * writes here any more, and the table goes once every instance has been through that. */
 export const playgroundSkins = pgTable('playground_skins', {
   userId: text('user_id').primaryKey().references(() => users.id, { onDelete: 'cascade' }),
   png: text('png').notNull(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+});
+
+/** Accounts deleted here whose skin and experience the playground service still has to drop
+ * (modules/playground/playgroundSync.ts). No foreign key: the account is gone. */
+export const playgroundForgottenAccounts = pgTable('playground_forgotten_accounts', {
+  userId: text('user_id').primaryKey(),
+  queuedAt: timestamp('queued_at', { withTimezone: true }).notNull().defaultNow(),
 });

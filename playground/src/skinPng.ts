@@ -1,6 +1,6 @@
 // A playground skin as the account stores it: the PNG the web app re-encodes
 // (web/src/features/playground/skins/skins.ts), sent and kept as base64. The
-// server never draws it; it only checks that it is a PNG of a skin's size, so
+// service never draws it; it only checks that it is a PNG of a skin's size, so
 // what peers download is as small and as harmless as what a peer could send.
 
 /** Same limit as the web app's MAX_SKIN_BYTES. */

@@ -31,3 +31,17 @@ export function verifyPlaygroundToken(token: unknown, secret: string, now: numbe
   if (!isId(pid) || !isId(uid) || !isId(cid) || typeof exp !== 'number' || !Number.isFinite(exp) || exp <= now) return null;
   return { pid, uid, cid, exp };
 }
+
+const INTERNAL_REQUEST_MAX_AGE_MS = 5 * 60 * 1000;
+
+/** Whether a request to /playground/internal/ came from the app: its `x-playground-signature` is an
+ * HMAC of its time and body (server/src/modules/playground/playgroundToken.ts), made recently. */
+export function verifyInternalRequest(signature: unknown, body: string, secret: string, now: number): boolean {
+  if (typeof signature !== 'string' || signature.length > 200) return false;
+  const dot = signature.indexOf('.');
+  const at = Number(signature.slice(0, dot));
+  if (dot <= 0 || !Number.isSafeInteger(at) || Math.abs(now - at) > INTERNAL_REQUEST_MAX_AGE_MS) return false;
+  const mac = Buffer.from(signature.slice(dot + 1), 'base64url');
+  const expected = crypto.createHmac('sha256', secret).update(`${at}.${body}`).digest();
+  return mac.length === expected.length && crypto.timingSafeEqual(mac, expected);
+}

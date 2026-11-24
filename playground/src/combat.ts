@@ -206,6 +206,13 @@ export function setExperienceStore(store: ExperienceStore): void {
   loadingExperience.clear();
 }
 
+/** Forgets deleted accounts, here and in the store. */
+export async function forgetExperience(userIds: string[]): Promise<void> {
+  const gone = new Set(userIds);
+  for (const key of [...experience.keys()]) if (gone.has(key.slice(key.indexOf(':') + 1))) experience.delete(key);
+  await experienceStore.forget(userIds);
+}
+
 /** Reads an account's experience once; a failed read is tried again on the next need. */
 function loadExperience(conversationId: string, userId: string): Promise<void> {
   const key = xpKey(conversationId, userId);

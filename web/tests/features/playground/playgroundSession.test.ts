@@ -5,7 +5,7 @@ import { PlaygroundSession } from '@/features/playground/playgroundSession';
 import { SKIN_TOPIC } from '@/features/playground/playgroundProtocol';
 import { LOCAL_STORAGE_KEYS } from '@/shared/lib/localStorage';
 import type { ClientMessage } from '@/shared/types/protocol';
-import type { CombatLinkOptions, PlaygroundClientMessage } from '@/features/playground/playgroundLink';
+import type { ServiceLinkOptions, PlaygroundClientMessage } from '@/features/playground/playgroundLink';
 
 const account = vi.hoisted(() => ({
   stored: new Map<string, Uint8Array | null>(),
@@ -78,7 +78,7 @@ describe('PlaygroundSession skins', () => {
     await flush();
     expect(worn(session, 'bia')).toEqual([3]);
     expect(worn(session, 'caio')).toBeNull();
-    expect(account.fetchAccountSkin).not.toHaveBeenCalledWith('conn-bia');
+    expect(account.fetchAccountSkin).not.toHaveBeenCalledWith('conn-bia', expect.anything());
   });
 
   it('keeps a skin when the same account comes back on a new connection (a reload)', async () => {
@@ -123,7 +123,7 @@ describe('PlaygroundSession skins', () => {
     const { session, skinPackets } = startSession();
     await flush();
     await session.setLocalSkin(png(5), { pixels: new Uint8ClampedArray([5]), slim: false });
-    expect(account.saveAccountSkin).toHaveBeenCalledWith(png(5));
+    expect(account.saveAccountSkin).toHaveBeenCalledWith(png(5), expect.anything());
     expect(worn(session, 'me')).toEqual([5]);
     expect(skinPackets().at(-1)).toEqual({ payload: [5], to: undefined });
   });
@@ -143,7 +143,7 @@ describe('PlaygroundSession skins', () => {
     const { session } = startSession();
     await flush();
     await flush();
-    expect(account.saveAccountSkin).toHaveBeenCalledWith(png(6));
+    expect(account.saveAccountSkin).toHaveBeenCalledWith(png(6), expect.anything());
     expect(worn(session, 'me')).toEqual([6]);
     expect(localStorage.getItem(LOCAL_STORAGE_KEYS.legacyPlaygroundSkin)).toBeNull();
   });
@@ -176,8 +176,8 @@ describe('PlaygroundSession fighting', () => {
   function sessionWithLink() {
     const fake = fakeRoom();
     const sendWs = vi.fn((_msg: ClientMessage) => true);
-    const link = { start: vi.fn(), dispose: vi.fn(), receiveToken: vi.fn(), send: vi.fn((_msg: PlaygroundClientMessage) => true) };
-    let options: CombatLinkOptions | null = null;
+    const link = { start: vi.fn(), dispose: vi.fn(), receiveToken: vi.fn(), request: vi.fn(async () => ({ skin: null })), send: vi.fn((_msg: PlaygroundClientMessage) => true) };
+    let options: ServiceLinkOptions | null = null;
     const session = new PlaygroundSession(fake.room, 'conv', 'conn-me', 'me', { current: new Map() }, sendWs, (given) => {
       options = given;
       return link;

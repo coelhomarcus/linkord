@@ -3,14 +3,15 @@ import { Server, type Socket } from 'socket.io';
 import { verifyPlaygroundToken } from './access.js';
 import { admit, allPlayers, isCurrent, playerFor, remove, type Player } from './roster.js';
 import { handleAttack, handlePosition, handleRespawn, playerJoined, playerLeft, sweepFighters } from './combat.js';
+import { handleSkinGet, handleSkinSet } from './skins.js';
 import { logger } from './logger.js';
 
 const log = logger.child({ component: 'socket' });
 
 /** Where browsers connect; a proxy on the app's own domain sends this path here. */
 const SOCKET_PATH = '/playground/ws';
-// game messages are a few numbers each
-const MAX_MESSAGE_BYTES = 4 * 1024;
+// game messages are a few numbers each; the largest is a skin (14 kB as PNG, a third more in base64)
+const MAX_MESSAGE_BYTES = 32 * 1024;
 const SWEEP_MS = 5000;
 
 // Per connection: a client reports its position at most ~7 times a second and punches once per click;
@@ -21,14 +22,21 @@ const LIMITS: Record<string, Limit> = {
   'playground-attack': { windowMs: 10_000, max: 120 },
   'playground-respawn': { windowMs: 10_000, max: 10 },
   renew: { windowMs: 60_000, max: 10 },
+  // one per person who shows up in the call, and its retries
+  'skin-get': { windowMs: 10_000, max: 60 },
+  'skin-set': { windowMs: 60_000, max: 10 },
 };
 
-type Handler = (player: Player, payload: Record<string, unknown>) => unknown;
+type Ack = (answer: Record<string, unknown>) => void;
+type Handler = (player: Player, payload: Record<string, unknown>, ack: Ack) => unknown;
 const HANDLERS: Record<string, Handler> = {
   'playground-pos': handlePosition,
   'playground-attack': handleAttack,
   'playground-respawn': (player) => handleRespawn(player),
+  'skin-get': handleSkinGet,
+  'skin-set': handleSkinSet,
 };
+const noAck: Ack = () => {};
 
 interface Window { start: number; count: number }
 
@@ -94,12 +102,14 @@ export function createPlaygroundSocket(httpServer: HttpServer, secret: string): 
     log.debug('joined', { participantId: player.id, conversationId: player.conversationId });
     const windows = new Map<string, Window>();
 
-    socket.onAny((event: string, payload: unknown) => {
-      if (!isCurrent(player) || !allow(windows, event, Date.now())) return;
+    socket.onAny((event: string, payload: unknown, maybeAck?: unknown) => {
+      const ack = typeof maybeAck === 'function' ? (maybeAck as Ack) : noAck;
+      if (!isCurrent(player)) return;
+      if (!allow(windows, event, Date.now())) return ack({ error: 'rate-limited' });
       const msg = (payload && typeof payload === 'object' ? payload : {}) as Record<string, unknown>;
       if (event === 'renew') return run(event, () => renew(player, msg.token, secret));
       const handler = HANDLERS[event];
-      if (handler) run(event, () => handler(player, msg));
+      if (handler) run(event, () => handler(player, msg, ack));
     });
 
     socket.on('disconnect', (reason) => {
