@@ -330,8 +330,10 @@ function Shell() {
   }, [tabTitle]);
 
   useEffect(() => {
+    // holds the page open while it would cost something to lose: a stream, or a
+    // playground, where Ctrl+W is one key away from walking forward
     function onBeforeUnload(e: BeforeUnloadEvent) {
-      if (publishing) { e.preventDefault(); e.returnValue = ''; }
+      if (publishing || callIsPlayground) { e.preventDefault(); e.returnValue = ''; }
     }
     function onPageHide() {
       sendWs({ t: 'leave' });
@@ -350,7 +352,7 @@ function Shell() {
       window.removeEventListener('pagehide', onPageHide);
       document.removeEventListener('keydown', onKeyDown);
     };
-  }, [publishing, livekitRoom, closeTileMenu, state.focusedId, dispatch, sendWs]);
+  }, [publishing, callIsPlayground, livekitRoom, closeTileMenu, state.focusedId, dispatch, sendWs]);
 
   if (state.clientOutdated) return <OutdatedClientScreen />;
   if (roomError) return <RoomErrorScreen message={roomError} />;
