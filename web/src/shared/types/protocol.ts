@@ -28,9 +28,9 @@ export type ReactionEmoji = string;
 
 /** Wire protocol version this build speaks; the server refuses older ones
  * (client_outdated). Keep in sync with server/src/realtime/protocolVersion.ts
- * — version 35 moves a playground's fighting to the playground service: `playground-token` asks for a
- * pass into it (features/playground/playgroundLink.ts). */
-export const PROTOCOL_VERSION = 35;
+ * — version 36 moves a playground's skins to the playground service too, after its fighting (35): both
+ * travel on its own socket, which `playground-token` opens (features/playground/playgroundLink.ts). */
+export const PROTOCOL_VERSION = 36;
 
 export interface LiveNotice {
   kind: 'friend_request' | 'friend_accepted' | 'server_invitation';

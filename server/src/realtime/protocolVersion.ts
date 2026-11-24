@@ -103,9 +103,13 @@
 // `token: null`); `playground-pos`, `-attack` and `-respawn` and the `-hit`, `-health` and `-xp` answers
 // now travel on the service's own socket. This server ignores them, so an old tab plays on without
 // fighting until it reloads, and the minimum stays at 7.
+// Version 36 moves skins to the playground service too: `skin-get` and `skin-set` on its socket replace
+// `GET /api/users/:userId/playground-skin` and `PUT`/`DELETE /api/me/playground-skin`, which are gone. An
+// old tab shows everyone in their default skin and cannot change its own until it reloads (the LiveKit
+// packet still carries a change between tabs), so the minimum stays at 7.
 // Raising MIN_PROTOCOL_VERSION also drops open tabs out of their calls (they are refused and
 // disconnect), so keep it for changes an old client cannot tolerate.
-export const PROTOCOL_VERSION = 35;
+export const PROTOCOL_VERSION = 36;
 export const MIN_PROTOCOL_VERSION = 7;
 export const MIC_STARTING_PROTOCOL_VERSION = 18;
 export const CALL_ELSEWHERE_PROTOCOL_VERSION = 20;

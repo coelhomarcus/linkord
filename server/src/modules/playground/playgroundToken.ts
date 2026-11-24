@@ -25,3 +25,11 @@ export function signPlaygroundToken(claims: PlaygroundClaims, secret: string): s
   const mac = crypto.createHmac('sha256', secret).update(body).digest('base64url');
   return `${body}.${mac}`;
 }
+
+/** The `x-playground-signature` header of a request this server makes to the service's
+ * /playground/internal/ routes: when it was signed and an HMAC of that time and the body. Verified
+ * by verifyInternalRequest in playground/src/access.ts, which takes it for five minutes either way. */
+export function signInternalRequest(body: string, secret: string, now: number): string {
+  const mac = crypto.createHmac('sha256', secret).update(`${now}.${body}`).digest('base64url');
+  return `${now}.${mac}`;
+}
