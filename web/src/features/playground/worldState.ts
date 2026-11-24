@@ -13,7 +13,7 @@ import type { Facing } from '@game/worldGen';
 // The 3D view listens for changes to redraw what they touch. The world's clock
 // arrives with it and runs on here at the game's 20 ticks a second.
 
-export interface BlockChange { x: number; y: number; z: number; before: Block; after: Block }
+interface BlockChange { x: number; y: number; z: number; before: Block; after: Block }
 
 export interface FurnaceLook { x: number; y: number; z: number; facing: Facing; lit: boolean }
 

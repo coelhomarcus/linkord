@@ -132,7 +132,7 @@ export const isReplaceable = (block: number): boolean => block === BLOCK.air || 
 export type Facing = 0 | 1 | 2 | 3;
 
 /** Blocks whose state is where their front faces. */
-export const isFacing = (block: number): boolean => block === BLOCK.chest || block === BLOCK.creativeChest;
+const isFacing = (block: number): boolean => block === BLOCK.chest || block === BLOCK.creativeChest;
 
 /** The way from the cell (x, z) toward a point: where a block placed there by someone standing at the
  * point faces. */

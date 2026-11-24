@@ -17,7 +17,7 @@ import { BLOCK } from '@game/blocks';
 interface ChestBox { min: [number, number, number]; max: [number, number, number]; u: number; v: number }
 
 /** the game's single chest: the body, the lid on it, the latch on the lid's front */
-export const CHEST_BOXES: readonly ChestBox[] = [
+const CHEST_BOXES: readonly ChestBox[] = [
   { min: [1, 0, 1], max: [15, 10, 15], u: 0, v: 19 },
   { min: [1, 9, 1], max: [15, 14, 15], u: 0, v: 0 },
   { min: [7, 7, 15], max: [9, 11, 16], u: 0, v: 0 },

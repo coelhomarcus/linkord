@@ -21,9 +21,9 @@ export const MAX_AIR = 300;
 /** ticks the right button is held to eat something */
 export const EAT_TICKS = 32;
 /** a fall shorter than this hurts nobody */
-export const SAFE_FALL = 3;
+const SAFE_FALL = 3;
 /** heals at or above this much food */
-export const REGEN_FOOD = 18;
+const REGEN_FOOD = 18;
 /** ticks between two points healed, or two lost to starvation */
 export const FOOD_TICKS = 80;
 /** after air runs out, a head under water loses this much every DROWN_TICKS */

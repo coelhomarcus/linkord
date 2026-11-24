@@ -427,7 +427,7 @@ async function packPixels(tile: PackTile): Promise<ImageData> {
 
 /** Where each chest's whole 64×64 texture sits in the atlas (pixels), for its model (chestModel.ts). */
 const CHEST_TEXTURES = { [BLOCK.chest]: { x: 0, y: 128, url: chestUrl, paint: CHEST_WOOD }, [BLOCK.creativeChest]: { x: 64, y: 128, url: creativeChestUrl, paint: CREATIVE_STONE } } as const;
-export const CHEST_TEXTURE_SIZE = 64;
+const CHEST_TEXTURE_SIZE = 64;
 
 /** The atlas's (u, v) of a pixel of a chest's texture. */
 export function chestUv(block: typeof BLOCK.chest | typeof BLOCK.creativeChest, px: number, py: number): [number, number] {

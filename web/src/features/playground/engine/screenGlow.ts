@@ -17,8 +17,8 @@ export type Rgb = [number, number, number];
 /** left, centre and right */
 export const GLOW_ZONES = 3;
 /** the size the picture is drawn at to be averaged: a few hundred pixels, read in microseconds */
-export const SAMPLE_WIDTH = 16;
-export const SAMPLE_HEIGHT = 9;
+const SAMPLE_WIDTH = 16;
+const SAMPLE_HEIGHT = 9;
 /** how often the picture is read (s): 10 times a second */
 export const SAMPLE_INTERVAL = 0.1;
 

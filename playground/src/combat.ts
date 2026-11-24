@@ -89,7 +89,7 @@ const MAX_COORDINATE = 4096;
 export const FIGHTER_KEEP_MS = 2 * 60 * 1000;
 
 /** What hurt someone when no one did: these, or a player (a hit with an attacker). */
-export type HurtCause = 'fall' | 'drown' | 'starve';
+type HurtCause = 'fall' | 'drown' | 'starve';
 
 interface Fighter {
   conversationId: string;

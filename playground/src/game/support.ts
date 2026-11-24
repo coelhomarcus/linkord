@@ -14,10 +14,10 @@ const FACING_OFFSETS: readonly Offset[] = [[0, 0, 1], [-1, 0, 0], [0, 0, -1], [1
 const BELOW: Offset = [0, -1, 0];
 const ABOVE: Offset = [0, 1, 0];
 
-export const isAttached = (block: number): boolean => block === BLOCK.torch || block === BLOCK.lantern;
+const isAttached = (block: number): boolean => block === BLOCK.torch || block === BLOCK.lantern;
 
 /** The neighbour (as an offset) that holds an attached block up in that state, or null for any other block. */
-export function supportOffset(block: number, state: number): Offset | null {
+function supportOffset(block: number, state: number): Offset | null {
   if (block === BLOCK.torch) {
     if (state === TORCH_ON_FLOOR) return BELOW;
     // a torch on a wall points away from it
@@ -29,12 +29,12 @@ export function supportOffset(block: number, state: number): Offset | null {
 }
 
 /** Whether a block can hold a torch or lantern up: a whole solid block (not a chest, a little smaller). */
-export function holdsUp(block: number): boolean {
+function holdsUp(block: number): boolean {
   return blockDef(block).solid && block !== BLOCK.chest && block !== BLOCK.creativeChest;
 }
 
 /** Whether the attached block at (x, y, z), in its state, has what holds it up (true for any other block). */
-export function isSupported(grid: BlockGrid, x: number, y: number, z: number): boolean {
+function isSupported(grid: BlockGrid, x: number, y: number, z: number): boolean {
   const offset = supportOffset(grid.get(x, y, z), grid.stateAt(x, y, z));
   return !offset || holdsUp(grid.get(x + offset[0], y + offset[1], z + offset[2]));
 }

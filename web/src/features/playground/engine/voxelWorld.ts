@@ -65,7 +65,7 @@ const SCREEN_GLOW_GAIN = 2.5;
 
 /** How bright light of `level` (0..15) is with the sky darkened by `darken` steps: the sky light a
  * block face or a person gets now. */
-export function darkenedLight(level: number, darken: number): number {
+function darkenedLight(level: number, darken: number): number {
   return lightmap(Math.max(0, level - darken) / MAX_LIGHT);
 }
 
