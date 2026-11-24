@@ -96,6 +96,7 @@ export class PlaygroundEngine {
   private readonly remotes = new Map<string, RemoteAvatar>();
   private readonly outline = new BlockOutline();
   private outlineShown = true;
+  private armShown = true;
   private readonly unsubscribeSkins: () => void;
   private frame = 0;
   private disposed = false;
@@ -132,7 +133,6 @@ export class PlaygroundEngine {
     this.controls = new Controls(canvas, container);
     // start behind the avatar, looking the way it faces
     this.controls.yaw = this.facing + Math.PI;
-    this.controls.onToggleMode = () => this.setCameraMode(nextCameraMode(this.controls.mode));
     this.controls.onAction = () => this.swingArm();
 
     this.unsubscribeSkins = session.onSkinsChange(() => this.refreshSkins());
@@ -248,7 +248,16 @@ export class PlaygroundEngine {
     this.outline.setResolution(width, height, this.renderer.getPixelRatio());
   }
 
+  /** F1, as in the game: the block outline and the first-person arm go away with the HUD. */
+  setHudShown(shown: boolean): void {
+    this.outlineShown = shown;
+    this.armShown = shown;
+  }
 
+  /** V or F5: first person, third from behind, third from the front, and round again. */
+  cycleCamera(): void {
+    this.setCameraMode(nextCameraMode(this.controls.mode));
+  }
 
   private swingArm(): void {
     this.arm.swing();
@@ -283,7 +292,7 @@ export class PlaygroundEngine {
     this.aimOutline();
     this.screen.update();
     this.renderer.render(this.scene, this.camera);
-    if (this.controls.mode === 'first') {
+    if (this.controls.mode === 'first' && this.armShown) {
       // the arm in its own pass, over everything: it never sinks into a wall
       this.arm.update(dt, this.controls.pitch, this.controls.yaw, computeBob(this.bob, partial));
       this.renderer.autoClear = false;

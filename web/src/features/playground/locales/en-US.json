@@ -35,7 +35,8 @@
     "players_one": "Players ({{count}})...",
     "players_other": "Players ({{count}})...",
     "devices": "Devices",
-    "done": "Done"
+    "done": "Done",
+    "autoFullscreen": "Fullscreen when playing"
   },
   "skin": {
     "title": "Your skin",

@@ -92,10 +92,13 @@ interface MenuProps {
   presenterId: string | null;
   cameraMode: CameraMode;
   onToggleView: () => void;
+  /** whether the click that starts playing goes fullscreen (playgroundSettings.ts) */
+  autoFullscreen: boolean;
+  onToggleAutoFullscreen: () => void;
   onResume: () => void;
 }
 
-export function PlaygroundMenu({ session, localId, localUserId, players, presenterId, cameraMode, onToggleView, onResume }: MenuProps) {
+export function PlaygroundMenu({ session, localId, localUserId, players, presenterId, cameraMode, onToggleView, autoFullscreen, onToggleAutoFullscreen, onResume }: MenuProps) {
   const { t } = useTranslation('playground');
   const controls = useCallControls();
   const panelRef = useRef<HTMLDivElement | null>(null);
@@ -170,6 +173,9 @@ export function PlaygroundMenu({ session, localId, localUserId, players, present
             </MenuButton>
             <MenuButton onClick={controls.fullscreen.toggle}>
               <Setting label={t('menu.fullscreen')} state={onOff(controls.fullscreen.on)} />
+            </MenuButton>
+            <MenuButton wide onClick={onToggleAutoFullscreen}>
+              <Setting label={t('menu.autoFullscreen')} state={onOff(autoFullscreen)} />
             </MenuButton>
             <MenuButton wide onClick={controls.share.toggle} aria-disabled={controls.share.locked || undefined} aria-label={controls.share.label}>
               <Setting label={t('menu.share')} state={controls.share.locked ? controls.share.label : onOff(controls.share.on)} />

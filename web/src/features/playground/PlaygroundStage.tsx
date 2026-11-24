@@ -15,6 +15,8 @@ import { nextCameraMode } from './engine/controls';
 import type { CameraMode } from './engine/controls';
 import { PlaygroundMenu } from './PlaygroundMenu';
 import { PlaygroundChat } from './PlaygroundChat';
+import { gameKeyAction, KEYBOARD_LOCK_KEYS } from './gameKeys';
+import { loadAutoFullscreen, saveAutoFullscreen } from './playgroundSettings';
 import { loadPixelFont, PIXEL_FONT, PIXEL_TEXT } from './pixelFont';
 import { HUD_BUTTON, HUD_CHIP as CHIP, PIXEL_PANEL, PIXEL_SHADOW } from './pixelUi';
 
@@ -32,9 +34,8 @@ function canUseWebGL(): boolean {
   }
 }
 
-/** Keys a fullscreen playground keeps from the browser: Ctrl+W, T, N and Q
- * would otherwise close or leave the tab mid-call (Keyboard Lock API). */
-const LOCKED_KEYS = ['KeyW', 'KeyT', 'KeyN', 'KeyQ', 'Tab'];
+/** The Keyboard Lock API (Chromium): in fullscreen, keys like Esc and Ctrl+W reach the page instead
+ * of the browser (gameKeys.ts lists them). */
 type KeyboardLock = { lock?: (codes?: string[]) => Promise<void>; unlock?: () => void };
 const keyboardLock = () => (navigator as Navigator & { keyboard?: KeyboardLock }).keyboard;
 
@@ -57,8 +58,14 @@ export default function PlaygroundStage({ allIds, onBack }: { allIds: string[]; 
   const [cameraMode, setCameraMode] = useState<CameraMode>('third');
   const [menuOpen, setMenuOpen] = useState(false);
   const [chatOpen, setChatOpen] = useState(false);
+  const [hudHidden, setHudHidden] = useState(false);
+  const [autoFullscreen, setAutoFullscreen] = useState(loadAutoFullscreen);
+  // read by the key and pointer-lock listeners; written before the effects below that act on them
   const menuOpenRef = useRef(false);
+  const chatOpenRef = useRef(false);
   useEffect(() => { menuOpenRef.current = menuOpen; }, [menuOpen]);
+  useEffect(() => { chatOpenRef.current = chatOpen; }, [chatOpen]);
+  const toggleFullscreen = controls.fullscreen.toggle;
   const [fontReady, setFontReady] = useState(false);
   // no WebGL (turned off, or a GPU the browser refuses): the call itself still works
   const [failed] = useState(() => !canUseWebGL());
@@ -118,43 +125,77 @@ export default function PlaygroundStage({ allIds, onBack }: { allIds: string[]; 
     engineRef.current?.setScreenVideo(screenTrack ? videoRef.current : null);
   }, [screenTrack, session, fontReady]);
 
-  // Tab opens and closes the menu, from anywhere in the playground
+  // Every key the game answers, in one place (gameKeys.ts), ahead of the browser and the page: in
+  // the capture phase, so a key the game takes never reaches anything else
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
-      if (event.code !== 'Tab' || event.ctrlKey || event.metaKey || event.altKey) return;
       const stage = callStageRef.current;
       const inside = !!document.pointerLockElement || (!!stage && stage.contains(document.activeElement));
       if (!inside) return;
-      event.preventDefault();
-      // a held Tab repeats its key press: only the first one opens or closes the menu
-      if (event.repeat) return;
-      setChatOpen(false);
-      setMenuOpen((open) => {
-        if (!open) relockRef.current = !!document.pointerLockElement;
-        return !open;
-      });
-    }
-    window.addEventListener('keydown', onKeyDown);
-    return () => window.removeEventListener('keydown', onKeyDown);
-  }, [callStageRef]);
-
-  // T or Enter opens the game chat, as in the game
-  useEffect(() => {
-    function onKeyDown(event: KeyboardEvent) {
-      if ((event.code !== 'KeyT' && event.code !== 'Enter') || event.repeat || event.ctrlKey || event.metaKey || event.altKey) return;
-      const stage = callStageRef.current;
       const target = event.target instanceof HTMLElement ? event.target : null;
-      // Enter on a focused HUD button presses it instead
-      if (target?.closest('button, input, textarea, select, [contenteditable="true"]')) return;
-      const inside = !!document.pointerLockElement || (!!stage && stage.contains(document.activeElement));
-      if (!inside || menuOpenRef.current) return;
+      const action = gameKeyAction(event, {
+        menuOpen: menuOpenRef.current,
+        chatOpen: chatOpenRef.current,
+        typing: !!target?.closest('input, textarea, select, [contenteditable="true"]'),
+        onControl: !!target?.closest('button, a, [role="button"]'),
+      });
+      if (!action) return;
       event.preventDefault();
-      relockRef.current = !!document.pointerLockElement;
-      setChatOpen(true);
+      if (action === 'menu') {
+        if (menuOpenRef.current) {
+          setMenuOpen(false);
+        } else {
+          relockRef.current = !!document.pointerLockElement;
+          setChatOpen(false);
+          setMenuOpen(true);
+        }
+      } else if (action === 'chat') {
+        relockRef.current = !!document.pointerLockElement;
+        setChatOpen(true);
+      } else if (action === 'camera') {
+        engineRef.current?.cycleCamera();
+      } else if (action === 'hud') {
+        setHudHidden((hidden) => !hidden);
+      } else if (action === 'fullscreen') {
+        void toggleFullscreen();
+      }
     }
-    window.addEventListener('keydown', onKeyDown);
-    return () => window.removeEventListener('keydown', onKeyDown);
-  }, [callStageRef]);
+    window.addEventListener('keydown', onKeyDown, true);
+    return () => window.removeEventListener('keydown', onKeyDown, true);
+  }, [callStageRef, toggleFullscreen]);
+
+  // Losing the mouse with nothing open (the browser's own Esc, another window taking focus) pauses
+  // into the menu, as the block game does; back from it, the mouse is taken again
+  useEffect(() => {
+    let wasLocked = !!document.pointerLockElement;
+    function onChange() {
+      const locked = !!document.pointerLockElement;
+      const lost = wasLocked && !locked;
+      wasLocked = locked;
+      if (!lost || menuOpenRef.current || chatOpenRef.current) return;
+      relockRef.current = true;
+      setMenuOpen(true);
+    }
+    document.addEventListener('pointerlockchange', onChange);
+    return () => document.removeEventListener('pointerlockchange', onChange);
+  }, []);
+
+  // A click that takes the mouse also takes the screen when the player wants it (the default): in
+  // fullscreen the Keyboard Lock API keeps Esc, Tab and Ctrl+W in the game, which no page can otherwise
+  function onStagePointerDown(event: React.PointerEvent) {
+    if (event.pointerType !== 'mouse' || event.button !== 0 || !autoFullscreen || controls.fullscreen.on || menuOpen || chatOpen) return;
+    void toggleFullscreen();
+  }
+
+  useEffect(() => {
+    engineRef.current?.setHudShown(!hudHidden);
+  }, [hudHidden, session, fontReady]);
+
+  function changeAutoFullscreen() {
+    const next = !autoFullscreen;
+    setAutoFullscreen(next);
+    saveAutoFullscreen(next);
+  }
 
   const overlayOpen = menuOpen || chatOpen;
   useEffect(() => {
@@ -172,7 +213,7 @@ export default function PlaygroundStage({ allIds, onBack }: { allIds: string[]; 
   useEffect(() => {
     function sync() {
       const stage = callStageRef.current;
-      if (stage && document.fullscreenElement && stage.contains(document.fullscreenElement)) keyboardLock()?.lock?.(LOCKED_KEYS).catch(() => {});
+      if (stage && document.fullscreenElement && stage.contains(document.fullscreenElement)) keyboardLock()?.lock?.(KEYBOARD_LOCK_KEYS).catch(() => {});
       else keyboardLock()?.unlock?.();
     }
     sync();
@@ -205,6 +246,7 @@ export default function PlaygroundStage({ allIds, onBack }: { allIds: string[]; 
         role="application"
         aria-label={t('sceneLabel')}
         inert={menuOpen}
+        onPointerDownCapture={onStagePointerDown}
         className="absolute inset-0 outline-none"
       >
         {/* The shared screen plays here, invisible: the 3D screen draws its frames. It
@@ -220,14 +262,14 @@ export default function PlaygroundStage({ allIds, onBack }: { allIds: string[]; 
       )}
 
       {/* a crosshair to aim the first-person view */}
-      {cameraMode === 'first' && !menuOpen && !failed && (
+      {cameraMode === 'first' && !menuOpen && !hudHidden && !failed && (
         <div aria-hidden className="pointer-events-none absolute left-1/2 top-1/2 z-10 mix-blend-difference">
           <span className="absolute h-0.5 w-5 -translate-x-1/2 -translate-y-1/2 bg-white" />
           <span className="absolute h-5 w-0.5 -translate-x-1/2 -translate-y-1/2 bg-white" />
         </div>
       )}
 
-      {!menuOpen && (
+      {!menuOpen && !hudHidden && (
         <div className="pointer-events-none absolute inset-x-2 top-2 z-20 flex items-start justify-between gap-2 md:inset-x-4 md:top-4">
           <button type="button" aria-label={t('back')} onClick={onBack} className={cn(HUD_BUTTON, 'md:invisible')}>
             <ArrowLeftIcon size={18} />
@@ -238,13 +280,13 @@ export default function PlaygroundStage({ allIds, onBack }: { allIds: string[]; 
         </div>
       )}
 
-      {!menuOpen && !chatOpen && (
+      {!menuOpen && !chatOpen && !hudHidden && (
         <div className="pointer-events-none absolute bottom-[calc(0.75rem+env(safe-area-inset-bottom))] left-3 z-20 flex flex-col items-start gap-1.5">
           {chips}
         </div>
       )}
 
-      {!menuOpen && activeCallConversationId && (
+      {!menuOpen && (!hudHidden || chatOpen) && activeCallConversationId && (
         <PlaygroundChat callConversationId={activeCallConversationId} open={chatOpen} lift={chips.length} onClose={() => setChatOpen(false)} />
       )}
 
@@ -275,6 +317,8 @@ export default function PlaygroundStage({ allIds, onBack }: { allIds: string[]; 
           presenterId={presenterId}
           cameraMode={cameraMode}
           onToggleView={toggleView}
+          autoFullscreen={autoFullscreen}
+          onToggleAutoFullscreen={changeAutoFullscreen}
           onResume={resume}
         />
       )}

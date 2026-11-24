@@ -35,7 +35,8 @@
     "players_one": "Jogadores ({{count}})...",
     "players_other": "Jogadores ({{count}})...",
     "devices": "Dispositivos",
-    "done": "Concluído"
+    "done": "Concluído",
+    "autoFullscreen": "Tela cheia ao jogar"
   },
   "skin": {
     "title": "Sua skin",

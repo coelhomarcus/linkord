@@ -20,6 +20,8 @@ function renderMenu(onResume = vi.fn(), overrides = {}) {
       presenterId="conn-bia"
       cameraMode="third"
       onToggleView={() => {}}
+      autoFullscreen
+      onToggleAutoFullscreen={() => {}}
       onResume={onResume}
     />,
     overrides,

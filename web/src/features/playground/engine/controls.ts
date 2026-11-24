@@ -55,7 +55,6 @@ export class Controls {
   /** third-person camera distance */
   distance = DEFAULT_CAMERA_DISTANCE;
   mode: CameraMode = 'third';
-  onToggleMode: () => void = () => {};
   /** a click while the mouse is locked: the arm swings */
   onAction: () => void = () => {};
 
@@ -93,7 +92,13 @@ export class Controls {
     canvas.addEventListener('pointerup', this.onPointerUp);
     canvas.addEventListener('pointercancel', this.onPointerUp);
     canvas.addEventListener('wheel', this.onWheel, { passive: false });
+    canvas.addEventListener('contextmenu', this.onContextMenu);
   }
+
+  // a right click in the world is the game's, never the browser's menu
+  private onContextMenu = (event: MouseEvent): void => {
+    event.preventDefault();
+  };
 
   dispose(): void {
     window.removeEventListener('keydown', this.onKeyDown);
@@ -106,6 +111,7 @@ export class Controls {
     this.canvas.removeEventListener('pointerup', this.onPointerUp);
     this.canvas.removeEventListener('pointercancel', this.onPointerUp);
     this.canvas.removeEventListener('wheel', this.onWheel);
+    this.canvas.removeEventListener('contextmenu', this.onContextMenu);
     if (this.locked) document.exitPointerLock();
     this.joystickBase.remove();
   }
@@ -189,20 +195,10 @@ export class Controls {
       this.keys.add(event.code);
       return;
     }
-    // Ctrl is the sprint key, so movement goes on with it held
-    const sprintHeld = event.ctrlKey && !event.metaKey && !event.altKey && MOVE_KEYS.has(event.code);
-    if ((event.ctrlKey || event.metaKey) && !sprintHeld) {
-      // a finger on Ctrl beside WASD must not reload, save or bookmark the page
-      // (or reload the desktop app, which would drop the call). Ctrl+W, T and N
-      // only a fullscreen keyboard lock can hold (PlaygroundStage).
-      if (/^(Key[A-Z]|Digit\d)$/.test(event.code) && !['KeyC', 'KeyV', 'KeyX'].includes(event.code)) event.preventDefault();
-      return;
-    }
-    if (event.altKey) return;
-    if (event.code === 'KeyV' && !event.repeat) {
-      this.onToggleMode();
-      return;
-    }
+    // Ctrl is the sprint key, so walking goes on with it held; every other shortcut, and the
+    // game's own keys (V, Tab, T...), are the stage's (gameKeys.ts)
+    const sprintHeld = event.ctrlKey && !event.metaKey && !event.altKey;
+    if ((event.ctrlKey || event.metaKey || event.altKey) && !sprintHeld) return;
     if (!MOVE_KEYS.has(event.code)) return;
     // Space and the arrows would scroll or press the focused button otherwise
     event.preventDefault();
@@ -312,6 +308,11 @@ export class Controls {
   };
 
   private onWheel = (event: WheelEvent): void => {
+    // Ctrl with the wheel would zoom the page
+    if (event.ctrlKey) {
+      event.preventDefault();
+      return;
+    }
     if (this.mode === 'first' || !this.enabled) return;
     event.preventDefault();
     this.distance = Math.min(Math.max(this.distance + event.deltaY * 0.004, MIN_CAMERA_DISTANCE), MAX_CAMERA_DISTANCE);

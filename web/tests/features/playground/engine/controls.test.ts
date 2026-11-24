@@ -43,13 +43,12 @@ describe('Controls', () => {
     controls.dispose();
   });
 
-  it('does not sprint sneaking, and still keeps Ctrl shortcuts from the browser', () => {
+  it('does not sprint sneaking', () => {
     const { controls } = setup();
     press('ControlLeft', { ctrlKey: true });
     press('ShiftLeft', { ctrlKey: true, shiftKey: true });
     press('KeyW', { ctrlKey: true, shiftKey: true });
     expect(controls.intent()).toMatchObject({ forward: 1, sneak: true, sprint: false });
-    expect(press('KeyR', { ctrlKey: true }).defaultPrevented).toBe(true);
     controls.dispose();
   });
 });
