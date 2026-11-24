@@ -191,10 +191,13 @@ export default function PlaygroundStage({ allIds, onBack }: { allIds: string[]; 
         getActivePlaygroundSession()?.inventoryOp({ op: 'select', slot });
       } else if (action === 'drop') {
         getActivePlaygroundSession()?.inventoryOp({ op: 'drop-held', all: event.ctrlKey });
-      } else if (action === 'release') {
+      } else if (action === 'mouse') {
         if (document.pointerLockElement) {
           releasedRef.current = true;
           document.exitPointerLock();
+        } else {
+          // where the browser does not take Alt as a gesture, the next walking key or click does it
+          engineRef.current?.lockPointer();
         }
       } else if (action === 'camera') {
         engineRef.current?.cycleCamera();

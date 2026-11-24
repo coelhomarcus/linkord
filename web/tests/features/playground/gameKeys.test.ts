@@ -54,8 +54,9 @@ describe('gameKeyAction', () => {
     expect(gameKeyAction(key('Tab'), typing)).toBe('swallow');
   });
 
-  it('lets go of the mouse with Alt (never the menu bar), and swallows Backspace and quick find while playing', () => {
-    expect(gameKeyAction(key('AltLeft'), playing)).toBe('release');
+  it('lets go of the mouse and takes it back with Alt (never the menu bar), and swallows Backspace and quick find while playing', () => {
+    expect(gameKeyAction(key('AltLeft'), playing)).toBe('mouse');
+    expect(gameKeyAction(key('AltRight'), playing)).toBe('mouse');
     expect(gameKeyAction(key('AltRight', { repeat: true }), playing)).toBe('swallow');
     expect(gameKeyAction(key('Backspace'), playing)).toBe('swallow');
     expect(gameKeyAction(key('Quote'), playing)).toBe('swallow');

@@ -7,7 +7,8 @@
 // chat, E the inventory, 1 to 9 pick a hotbar slot, Q throws what the hand
 // holds (Ctrl+Q all of it), F1 hides the HUD, F5
 // changes the camera (V too), F11 and F are fullscreen. Alt lets go of the mouse
-// without pausing, to use another window or monitor while the game goes on.
+// without pausing, to use another window or monitor while the game goes on, and
+// takes it back when pressed again.
 // Anything else the browser would act on is swallowed: reload (F5, Ctrl+R),
 // find (F3, /, '), the address bar (F6), page zoom, saving, printing, Alt's
 // menu bar... What no page can stop (Ctrl+W, T, N outside fullscreen) is held
@@ -23,8 +24,8 @@ export type GameKeyAction =
   | 'hotbar'
   /** throw one of what the hand holds, or all of it with Ctrl */
   | 'drop'
-  /** let go of the mouse, nothing else */
-  | 'release'
+  /** let go of the mouse, or take it back, nothing else */
+  | 'mouse'
   | 'camera'
   | 'hud'
   | 'fullscreen'
@@ -94,7 +95,7 @@ export function gameKeyAction(key: GameKey, state: GameKeyState): GameKeyAction 
   if (state.typing) return null;
   if (state.menuOpen || state.chatOpen || state.inventoryOpen) return null;
 
-  if (code === 'AltLeft' || code === 'AltRight') return key.repeat ? 'swallow' : 'release';
+  if (code === 'AltLeft' || code === 'AltRight') return key.repeat ? 'swallow' : 'mouse';
   if (key.altKey) return 'swallow';
   if (code === 'Enter' && state.onControl) return null;
   if (code === 'KeyT' || code === 'Enter' || code === 'NumpadEnter' || code === 'Slash') return key.repeat ? 'swallow' : 'chat';
