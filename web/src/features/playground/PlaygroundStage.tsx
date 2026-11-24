@@ -44,6 +44,9 @@ function canUseWebGL(): boolean {
 /** The Keyboard Lock API (Chromium): in fullscreen, keys like Esc and Ctrl+W reach the page instead
  * of the browser (gameKeys.ts lists them). */
 type KeyboardLock = { lock?: (codes?: string[]) => Promise<void>; unlock?: () => void };
+/** how long after losing the mouse to look whether the window lost focus too */
+const FOCUS_SETTLE_MS = 150;
+
 const keyboardLock = () => (navigator as Navigator & { keyboard?: KeyboardLock }).keyboard;
 
 
@@ -66,6 +69,8 @@ export default function PlaygroundStage({ allIds, onBack }: { allIds: string[]; 
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const engineRef = useRef<PlaygroundEngine | null>(null);
   const relockRef = useRef(false);
+  /** the mouse was let go on purpose (Alt): no pause for it */
+  const releasedRef = useRef(false);
   const [cameraMode, setCameraMode] = useState<CameraMode>('third');
   const [menuOpen, setMenuOpen] = useState(false);
   const [chatOpen, setChatOpen] = useState(false);
@@ -176,6 +181,11 @@ export default function PlaygroundStage({ allIds, onBack }: { allIds: string[]; 
       } else if (action === 'hotbar') {
         const slot = Number(event.code.slice('Digit'.length)) - 1;
         getActivePlaygroundSession()?.inventory.update((current) => selectSlot(current, slot));
+      } else if (action === 'release') {
+        if (document.pointerLockElement) {
+          releasedRef.current = true;
+          document.exitPointerLock();
+        }
       } else if (action === 'camera') {
         engineRef.current?.cycleCamera();
       } else if (action === 'hud') {
@@ -188,21 +198,36 @@ export default function PlaygroundStage({ allIds, onBack }: { allIds: string[]; 
     return () => window.removeEventListener('keydown', onKeyDown, true);
   }, [callStageRef, toggleFullscreen]);
 
-  // Losing the mouse with nothing open (the browser's own Esc, another window taking focus) pauses
-  // into the menu, as the block game does; back from it, the mouse is taken again
+  // The browser's own Esc lets go of the mouse with nothing open: that pauses into the menu, as the
+  // block game does, and back from it the mouse is taken again. Letting go with Alt, or the window
+  // losing focus (another window, a second monitor), leaves the game running as it is.
   useEffect(() => {
     let wasLocked = !!document.pointerLockElement;
+    let timer: ReturnType<typeof setTimeout> | null = null;
     function onChange() {
       const locked = !!document.pointerLockElement;
       const lost = wasLocked && !locked;
       wasLocked = locked;
-      // dead, the death screen takes the mouse on purpose
-      if (!lost || menuOpenRef.current || chatOpenRef.current || inventoryOpenRef.current || deadRef.current) return;
-      relockRef.current = true;
-      setMenuOpen(true);
+      if (!lost) return;
+      if (releasedRef.current) {
+        releasedRef.current = false;
+        return;
+      }
+      // the window's blur can come just after the lock goes
+      if (timer) clearTimeout(timer);
+      timer = setTimeout(() => {
+        timer = null;
+        // dead, the death screen takes the mouse on purpose
+        if (!document.hasFocus() || document.pointerLockElement || menuOpenRef.current || chatOpenRef.current || inventoryOpenRef.current || deadRef.current) return;
+        relockRef.current = true;
+        setMenuOpen(true);
+      }, FOCUS_SETTLE_MS);
     }
     document.addEventListener('pointerlockchange', onChange);
-    return () => document.removeEventListener('pointerlockchange', onChange);
+    return () => {
+      document.removeEventListener('pointerlockchange', onChange);
+      if (timer) clearTimeout(timer);
+    };
   }, []);
 
   // A click that takes the mouse also takes the screen when the player wants it (the default): in
@@ -265,9 +290,10 @@ export default function PlaygroundStage({ allIds, onBack }: { allIds: string[]; 
     if (!touchFirst) engineRef.current?.lockPointer();
   }
   const resume = () => setMenuOpen(false);
+  // a blocked or missing microphone already shows as muted in the corner: its long explanation would
+  // cover the game, so only the screen's refusals are told here
   const notices = [
     controls.shareError ? { text: controls.shareError, dismiss: controls.dismissShareError } : null,
-    controls.micNotice ? { text: controls.micNotice, dismiss: controls.dismissMicNotice } : null,
   ].filter((notice) => notice !== null);
 
   const chips = [
@@ -308,14 +334,21 @@ export default function PlaygroundStage({ allIds, onBack }: { allIds: string[]; 
         </div>
       )}
 
+      {/* the back arrow on narrow screens, and in the other corner what is off (mic, sound) or on (the
+          big screen); a touch screen, with no Tab key, also gets the menu's button there */}
       {!menuOpen && !hudHidden && (
         <div className="pointer-events-none absolute inset-x-2 top-2 z-20 flex items-start justify-between gap-2 md:inset-x-4 md:top-4">
           <button type="button" aria-label={t('back')} onClick={onBack} className={cn(HUD_BUTTON, 'md:invisible')}>
             <ArrowLeftIcon size={18} />
           </button>
-          <button type="button" onClick={() => { relockRef.current = false; setMenuOpen(true); }} aria-label={t('menu.open')} className={HUD_BUTTON}>
-            {t('menu.title')}{touchFirst ? '' : ' (Tab)'}
-          </button>
+          <div className="flex flex-col items-end gap-1.5">
+            {touchFirst && (
+              <button type="button" onClick={() => { relockRef.current = false; setMenuOpen(true); }} aria-label={t('menu.open')} className={HUD_BUTTON}>
+                {t('menu.title')}
+              </button>
+            )}
+            {!chatOpen && chips}
+          </div>
         </div>
       )}
 
@@ -323,14 +356,8 @@ export default function PlaygroundStage({ allIds, onBack }: { allIds: string[]; 
         <PlaygroundHud vitals={vitals} inventory={inventory} scale={scale} onSelect={(slot) => session.inventory.update((current) => selectSlot(current, slot))} />
       )}
 
-      {!menuOpen && !chatOpen && !hudHidden && (
-        <div style={{ bottom: `calc(0.75rem + ${hudHeight}px + env(safe-area-inset-bottom))` }} className="pointer-events-none absolute left-3 z-20 flex flex-col items-start gap-1.5">
-          {chips}
-        </div>
-      )}
-
       {!menuOpen && (!hudHidden || chatOpen) && activeCallConversationId && (
-        <PlaygroundChat callConversationId={activeCallConversationId} open={chatOpen} lift={chips.length} hudHeight={hudHeight} onClose={() => setChatOpen(false)} />
+        <PlaygroundChat callConversationId={activeCallConversationId} open={chatOpen} hudHeight={hudHeight} onClose={() => setChatOpen(false)} />
       )}
 
       {notices.length > 0 && (

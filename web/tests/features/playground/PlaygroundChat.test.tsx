@@ -25,7 +25,7 @@ const playground = (chatId: string | null) => channel({ id: 'pg', type: 'voice',
 function setup(overrides: Partial<RoomContextValue>, open = true) {
   const onClose = vi.fn();
   const ui = (value: RoomContextValue, isOpen: boolean) => (
-    <RoomStoreProvider value={value}><PlaygroundChat callConversationId="pg" open={isOpen} lift={0} onClose={onClose} /></RoomStoreProvider>
+    <RoomStoreProvider value={value}><PlaygroundChat callConversationId="pg" open={isOpen} onClose={onClose} /></RoomStoreProvider>
   );
   const value = createFakeRoomContextValue(overrides);
   const view = render(ui(value, open));
