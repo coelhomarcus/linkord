@@ -10,8 +10,8 @@ import { useAttachTrack, useParticipantMedia } from '@/features/calls/useLiveKit
 import { getActivePlaygroundSession, useLoading, usePlaygroundSession } from './playgroundSession';
 import { PlaygroundLoadingScreen } from './PlaygroundLoadingScreen';
 import { screenPresenterId } from './screenPresenter';
+import { playgroundPlayers, samePlayers } from './playgroundPlayers';
 import { PlaygroundEngine } from './engine/PlaygroundEngine';
-import type { PlaygroundPlayer } from './engine/PlaygroundEngine';
 import { nextCameraMode } from './engine/controls';
 import type { CameraMode } from './engine/controls';
 import { PlaygroundMenu } from './PlaygroundMenu';
@@ -29,12 +29,6 @@ import { defaultSkin } from './skins/defaultSkins';
 import { gameKeyAction, KEYBOARD_LOCK_KEYS } from './gameKeys';
 import { loadPixelFont, PIXEL_FONT, PIXEL_TEXT } from './pixelFont';
 import { HUD_BUTTON, HUD_CHIP as CHIP, PIXEL_PANEL, PIXEL_SHADOW } from './pixelUi';
-
-const samePlayers = (a: PlaygroundPlayer[], b: PlaygroundPlayer[]) =>
-  a.length === b.length && a.every((p, i) => {
-    const q = b[i]!;
-    return p.id === q.id && p.userId === q.userId && p.name === q.name && p.speaking === q.speaking;
-  });
 
 function canUseWebGL(): boolean {
   try {
@@ -99,13 +93,8 @@ export default function PlaygroundStage({ allIds, onBack }: { allIds: string[]; 
   // no WebGL (turned off, or a GPU the browser refuses): the call itself still works
   const [failed] = useState(() => !canUseWebGL());
 
-  const players = useRoomSelector((room) => allIds.flatMap((id) => {
-    const p = room.state.participants.get(id);
-    if (p) return [{ id, userId: p.userId, name: p.displayName || p.name, speaking: p.speaking && !p.micMuted }];
-    // yourself, before (or without) the server's echo of you
-    const { me: self } = room.state;
-    return id === self.id && self.userId ? [{ id, userId: self.userId, name: self.displayName || self.name, speaking: false }] : [];
-  }), samePlayers);
+  const ownMicMuted = controls.mic.muted;
+  const players = useRoomSelector((room) => playgroundPlayers(room, allIds, activeCallConversationId, ownMicMuted), samePlayers);
   const presenterId = useRoomSelector((room) => (activeCallConversationId ? screenPresenterId(room, activeCallConversationId) : null));
   const { screenTrack } = useParticipantMedia(presenterId ?? '');
   useAttachTrack(screenTrack, videoRef);

@@ -28,6 +28,7 @@ import type { PhysicsBody } from './playerPhysics';
 import { computeBob, createBobState, tickBob } from './viewBob';
 import { ScreenDisplay } from './screen';
 import type { ScreenLabels } from './screen';
+import type { NameplateStatus } from './nameplate';
 import { buildWorld } from './voxelWorld';
 import { Footsteps, GameSounds, materialOf } from './sounds';
 import type { Place, SoundName } from './sounds';
@@ -46,11 +47,11 @@ import type { World } from './voxelWorld';
 // down it places one every 4 ticks; on a touch screen a finger held still
 // digs and a tap places or opens.
 
-export interface PlaygroundPlayer {
+/** Someone in the playground call, with what their nameplate shows. */
+export interface PlaygroundPlayer extends NameplateStatus {
   id: string;
   userId: string;
   name: string;
-  speaking: boolean;
 }
 
 export interface EngineOptions {
@@ -248,8 +249,14 @@ export class PlaygroundEngine {
 
   setPlayers(players: PlaygroundPlayer[]): void {
     const present = new Set<string>();
+    let localShown = false;
     for (const player of players) {
-      if (player.id === this.options.localId) continue;
+      if (player.id === this.options.localId) {
+        // seen only in third person: the whole avatar is hidden in first
+        this.local.setLabel(player.name, player);
+        localShown = true;
+        continue;
+      }
       present.add(player.id);
       let remote = this.remotes.get(player.id);
       if (!remote) {
@@ -259,8 +266,9 @@ export class PlaygroundEngine {
         remote = { userId: player.userId, avatar, position: new THREE.Vector3(), yaw: 0, headYaw: 0, swings: 0, placed: false, vanished: false, held: null, steps: new Footsteps() };
         this.remotes.set(player.id, remote);
       }
-      remote.avatar.setLabel(player.name, player.speaking);
+      remote.avatar.setLabel(player.name, player);
     }
+    this.local.showLabel(localShown);
     for (const [id, remote] of this.remotes) {
       if (present.has(id)) continue;
       remote.avatar.dispose();

@@ -2,6 +2,7 @@ import { fireEvent, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { renderWithRoom } from '@tests/fixtures/roomContextFixture';
 import { PlaygroundMenu } from '@/features/playground/PlaygroundMenu';
+import { QUIET } from '@/features/playground/engine/nameplate';
 import type { PlaygroundSession } from '@/features/playground/playgroundSession';
 
 const session = {
@@ -16,7 +17,7 @@ function renderMenu(onResume = vi.fn(), overrides = {}) {
       session={session}
       localId="conn-me"
       localUserId="me"
-      players={[{ id: 'conn-me', userId: 'me', name: 'Eu', speaking: false }, { id: 'conn-bia', userId: 'bia', name: 'Bia', speaking: true }]}
+      players={[{ ...QUIET, id: 'conn-me', userId: 'me', name: 'Eu' }, { ...QUIET, id: 'conn-bia', userId: 'bia', name: 'Bia', speaking: true, presenting: true }]}
       presenterId="conn-bia"
       cameraMode="third"
       onToggleView={() => {}}

@@ -7,6 +7,7 @@ import { pixelTexture } from './blockTextures';
 import { FACE_SHADE } from './voxelWorld';
 import { angleDelta, bipedPose, LimbSwing } from './bipedPose';
 import { Nameplate } from './nameplate';
+import type { NameplateStatus } from './nameplate';
 import type { Bob } from './viewBob';
 import type { ItemModel } from './itemModels';
 
@@ -223,8 +224,8 @@ export class BlockAvatar {
     model.setLight(this.light);
   }
 
-  setLabel(name: string, speaking: boolean): void {
-    this.nameplate.set(name, speaking);
+  setLabel(name: string, status: NameplateStatus): void {
+    this.nameplate.set(name, status);
   }
 
   showLabel(visible: boolean): void {
