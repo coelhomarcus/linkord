@@ -7,7 +7,7 @@ import { cn } from '@/shared/lib/utils';
 import { useRoom, useRoomSelector, useRoomState } from '@/state/RoomContext';
 import { useCallControls } from '@/features/calls/useCallControls';
 import { useAttachTrack, useParticipantMedia } from '@/features/calls/useLiveKitTrack';
-import { usePlaygroundSession } from './playgroundSession';
+import { getActivePlaygroundSession, usePlaygroundSession } from './playgroundSession';
 import { screenPresenterId } from './screenPresenter';
 import { PlaygroundEngine } from './engine/PlaygroundEngine';
 import type { PlaygroundPlayer } from './engine/PlaygroundEngine';
@@ -17,6 +17,11 @@ import { PlaygroundMenu } from './PlaygroundMenu';
 import { PlaygroundChat } from './PlaygroundChat';
 import { PlaygroundDeathScreen } from './PlaygroundDeathScreen';
 import { useVitals } from './playgroundCombat';
+import { PlaygroundHud } from './hud/PlaygroundHud';
+import { useGuiScale } from './hud/gui';
+import { InventoryScreen } from './inventory/InventoryScreen';
+import { putCursorBack, scrollSelection, selectSlot, useInventory } from './inventory/inventory';
+import { defaultSkin } from './skins/defaultSkins';
 import { gameKeyAction, KEYBOARD_LOCK_KEYS } from './gameKeys';
 import { loadAutoFullscreen, saveAutoFullscreen } from './playgroundSettings';
 import { loadPixelFont, PIXEL_FONT, PIXEL_TEXT } from './pixelFont';
@@ -53,6 +58,8 @@ export default function PlaygroundStage({ allIds, onBack }: { allIds: string[]; 
   const session = usePlaygroundSession();
   const vitals = useVitals(session?.combat ?? null);
   const dead = vitals.health <= 0;
+  const inventory = useInventory(session?.inventory ?? null);
+  const scale = useGuiScale(callStageRef);
   const controls = useCallControls();
   const touchFirst = useMediaQuery(TOUCH_FIRST_QUERY);
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -62,15 +69,18 @@ export default function PlaygroundStage({ allIds, onBack }: { allIds: string[]; 
   const [cameraMode, setCameraMode] = useState<CameraMode>('third');
   const [menuOpen, setMenuOpen] = useState(false);
   const [chatOpen, setChatOpen] = useState(false);
+  const [inventoryOpen, setInventoryOpen] = useState(false);
   const [hudHidden, setHudHidden] = useState(false);
   const [autoFullscreen, setAutoFullscreen] = useState(loadAutoFullscreen);
   // read by the key and pointer-lock listeners; written before the effects below that act on them
   const menuOpenRef = useRef(false);
   const chatOpenRef = useRef(false);
   const deadRef = useRef(false);
+  const inventoryOpenRef = useRef(false);
   useEffect(() => { menuOpenRef.current = menuOpen; }, [menuOpen]);
   useEffect(() => { chatOpenRef.current = chatOpen; }, [chatOpen]);
   useEffect(() => { deadRef.current = dead; }, [dead]);
+  useEffect(() => { inventoryOpenRef.current = inventoryOpen; }, [inventoryOpen]);
   const toggleFullscreen = controls.fullscreen.toggle;
   const [fontReady, setFontReady] = useState(false);
   // no WebGL (turned off, or a GPU the browser refuses): the call itself still works
@@ -104,6 +114,7 @@ export default function PlaygroundStage({ allIds, onBack }: { allIds: string[]; 
         localUserId: me.userId,
         screenLabels: { idle: '', idleHint: '' },
         onCameraModeChange: setCameraMode,
+        onHotbarScroll: (steps) => session.inventory.update((current) => scrollSelection(current, steps)),
       });
     } catch (err) {
       console.warn('[playground] could not start the 3D view', err);
@@ -142,6 +153,7 @@ export default function PlaygroundStage({ allIds, onBack }: { allIds: string[]; 
       const action = gameKeyAction(event, {
         menuOpen: menuOpenRef.current,
         chatOpen: chatOpenRef.current,
+        inventoryOpen: inventoryOpenRef.current,
         typing: !!target?.closest('input, textarea, select, [contenteditable="true"]'),
         onControl: !!target?.closest('button, a, [role="button"]'),
       });
@@ -158,6 +170,12 @@ export default function PlaygroundStage({ allIds, onBack }: { allIds: string[]; 
       } else if (action === 'chat') {
         relockRef.current = !!document.pointerLockElement;
         setChatOpen(true);
+      } else if (action === 'inventory') {
+        relockRef.current = !!document.pointerLockElement;
+        setInventoryOpen(true);
+      } else if (action === 'hotbar') {
+        const slot = Number(event.code.slice('Digit'.length)) - 1;
+        getActivePlaygroundSession()?.inventory.update((current) => selectSlot(current, slot));
       } else if (action === 'camera') {
         engineRef.current?.cycleCamera();
       } else if (action === 'hud') {
@@ -179,7 +197,7 @@ export default function PlaygroundStage({ allIds, onBack }: { allIds: string[]; 
       const lost = wasLocked && !locked;
       wasLocked = locked;
       // dead, the death screen takes the mouse on purpose
-      if (!lost || menuOpenRef.current || chatOpenRef.current || deadRef.current) return;
+      if (!lost || menuOpenRef.current || chatOpenRef.current || inventoryOpenRef.current || deadRef.current) return;
       relockRef.current = true;
       setMenuOpen(true);
     }
@@ -204,7 +222,8 @@ export default function PlaygroundStage({ allIds, onBack }: { allIds: string[]; 
     saveAutoFullscreen(next);
   }
 
-  const overlayOpen = menuOpen || chatOpen || dead;
+  const showInventory = inventoryOpen && !dead && !menuOpen;
+  const overlayOpen = menuOpen || chatOpen || dead || showInventory;
   useEffect(() => {
     const engine = engineRef.current;
     if (!engine) return;
@@ -232,6 +251,13 @@ export default function PlaygroundStage({ allIds, onBack }: { allIds: string[]; 
   }, [callStageRef]);
 
   const toggleView = () => engineRef.current?.setCameraMode(nextCameraMode(cameraMode));
+  const showHud = !menuOpen && !hudHidden && !failed && !!session;
+  // the hearts and hotbar's height, which the chat lines and notices stay above
+  const hudHeight = showHud ? 39 * scale + 4 : 0;
+  function closeInventory() {
+    session?.inventory.update(putCursorBack);
+    setInventoryOpen(false);
+  }
   const killerName = vitals.killerId ? players.find((player) => player.id === vitals.killerId)?.name ?? null : null;
   function respawn() {
     session?.respawn();
@@ -293,18 +319,22 @@ export default function PlaygroundStage({ allIds, onBack }: { allIds: string[]; 
         </div>
       )}
 
+      {showHud && session && (
+        <PlaygroundHud vitals={vitals} inventory={inventory} scale={scale} onSelect={(slot) => session.inventory.update((current) => selectSlot(current, slot))} />
+      )}
+
       {!menuOpen && !chatOpen && !hudHidden && (
-        <div className="pointer-events-none absolute bottom-[calc(0.75rem+env(safe-area-inset-bottom))] left-3 z-20 flex flex-col items-start gap-1.5">
+        <div style={{ bottom: `calc(0.75rem + ${hudHeight}px + env(safe-area-inset-bottom))` }} className="pointer-events-none absolute left-3 z-20 flex flex-col items-start gap-1.5">
           {chips}
         </div>
       )}
 
       {!menuOpen && (!hudHidden || chatOpen) && activeCallConversationId && (
-        <PlaygroundChat callConversationId={activeCallConversationId} open={chatOpen} lift={chips.length} onClose={() => setChatOpen(false)} />
+        <PlaygroundChat callConversationId={activeCallConversationId} open={chatOpen} lift={chips.length} hudHeight={hudHeight} onClose={() => setChatOpen(false)} />
       )}
 
       {notices.length > 0 && (
-        <div className="pointer-events-none absolute bottom-[calc(0.75rem+env(safe-area-inset-bottom))] left-1/2 z-40 flex w-[min(28rem,calc(100%-2rem))] -translate-x-1/2 flex-col items-center gap-1.5">
+        <div style={{ bottom: `calc(0.75rem + ${hudHeight}px + env(safe-area-inset-bottom))` }} className="pointer-events-none absolute left-1/2 z-40 flex w-[min(28rem,calc(100%-2rem))] -translate-x-1/2 flex-col items-center gap-1.5">
           {notices.map((notice) => (
             <button key={notice.text} type="button" onClick={notice.dismiss} role="status" aria-label={`${notice.text} · ${tc('controls.dismissNotice')}`}
               className={cn(`pointer-events-auto w-full px-3 py-1.5 text-left ${PIXEL_TEXT.sm} leading-tight text-white/90 ${PIXEL_SHADOW} hover:border-white/80`, PIXEL_PANEL)}>
@@ -319,6 +349,10 @@ export default function PlaygroundStage({ allIds, onBack }: { allIds: string[]; 
           className={cn(HUD_BUTTON, 'absolute bottom-1/3 right-4 z-20 size-14 justify-center px-0')}>
           <CaretUpIcon size={26} />
         </button>
+      )}
+
+      {showInventory && session && me.userId && (
+        <InventoryScreen store={session.inventory} inventory={inventory} skin={session.skinOf(me.userId) ?? defaultSkin(me.userId)} scale={scale} onClose={closeInventory} />
       )}
 
       {dead && !menuOpen && <PlaygroundDeathScreen key={vitals.hurts} killerName={killerName} onRespawn={respawn} />}

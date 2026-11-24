@@ -98,4 +98,20 @@ describe('Controls', () => {
     expect(onAction).toHaveBeenCalledTimes(1);
     controls.dispose();
   });
+
+  it('moves the hotbar one slot per wheel notch, and adds up a trackpad\'s small steps', () => {
+    const { controls, canvas } = setupPointer();
+    const steps: number[] = [];
+    controls.onHotbarScroll = (n) => steps.push(n);
+    const wheel = (deltaY: number, init: WheelEventInit = {}) => canvas.dispatchEvent(new WheelEvent('wheel', { deltaY, bubbles: true, cancelable: true, ...init }));
+    wheel(100);
+    wheel(-120);
+    for (let i = 0; i < 5; i++) wheel(20);
+    expect(steps).toEqual([1, -1, 1]);
+    // with Ctrl it moves the camera instead
+    wheel(100, { ctrlKey: true });
+    expect(steps).toHaveLength(3);
+    controls.dispose();
+  });
 });
+

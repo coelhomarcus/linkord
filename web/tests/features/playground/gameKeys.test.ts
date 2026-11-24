@@ -53,4 +53,22 @@ describe('gameKeyAction', () => {
     expect(gameKeyAction(key('Quote'), playing)).toBe('swallow');
     expect(gameKeyAction(key('KeyW'), playing)).toBeNull();
   });
+
+  it('opens the inventory with E and picks a hotbar slot with 1 to 9', () => {
+    expect(gameKeyAction(key('KeyE'), playing)).toBe('inventory');
+    expect(gameKeyAction(key('KeyE', { repeat: true }), playing)).toBe('swallow');
+    expect(gameKeyAction(key('Digit1'), playing)).toBe('hotbar');
+    expect(gameKeyAction(key('Digit9'), playing)).toBe('hotbar');
+    expect(gameKeyAction(key('Digit0'), playing)).toBeNull();
+    expect(gameKeyAction(key('KeyE'), { ...playing, typing: true, chatOpen: true })).toBeNull();
+  });
+
+  it('leaves the open inventory its own keys, and keeps Tab from opening the menu over it', () => {
+    const inventory = { ...playing, inventoryOpen: true };
+    expect(gameKeyAction(key('KeyE'), inventory)).toBeNull();
+    expect(gameKeyAction(key('Escape'), inventory)).toBeNull();
+    expect(gameKeyAction(key('Digit3'), inventory)).toBeNull();
+    expect(gameKeyAction(key('Tab'), inventory)).toBe('swallow');
+  });
 });
+

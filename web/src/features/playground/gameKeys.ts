@@ -4,7 +4,8 @@
 // themselves are the controls' (engine/controls.ts), which this lets through.
 //
 // The block game's keys: Esc and Tab open the menu, T, Enter and / open the
-// chat, F1 hides the HUD, F5 changes the camera (V too), F11 is fullscreen.
+// chat, E the inventory, 1 to 9 pick a hotbar slot, F1 hides the HUD, F5
+// changes the camera (V too), F11 is fullscreen.
 // Anything else the browser would act on is swallowed: reload (F5, Ctrl+R),
 // find (F3, /, '), the address bar (F6), page zoom, saving, printing, Alt's
 // menu bar... What no page can stop (Ctrl+W, T, N outside fullscreen) is held
@@ -14,6 +15,10 @@ export type GameKeyAction =
   /** open the menu, or close it from Tab */
   | 'menu'
   | 'chat'
+  /** open the inventory */
+  | 'inventory'
+  /** pick the hotbar slot of the digit pressed */
+  | 'hotbar'
   | 'camera'
   | 'hud'
   | 'fullscreen'
@@ -34,6 +39,8 @@ export interface GameKey {
 export interface GameKeyState {
   menuOpen: boolean;
   chatOpen: boolean;
+  /** the inventory screen answers its own keys (E and Esc close it, digits swap) */
+  inventoryOpen?: boolean;
   /** the key goes into a text field (the chat line, a menu field) */
   typing: boolean;
   /** a button or link has focus: Enter and Space press it */
@@ -71,20 +78,22 @@ export function gameKeyAction(key: GameKey, state: GameKeyState): GameKeyAction 
     return /^(Key[A-Z]|Digit\d|Equal|Minus|NumpadAdd|NumpadSubtract|Numpad0|Comma|Period|Slash|BracketLeft|BracketRight|Backquote)$/.test(code) ? 'swallow' : null;
   }
 
-  if (code === 'Tab') return key.repeat || state.chatOpen ? 'swallow' : 'menu';
+  if (code === 'Tab') return key.repeat || state.chatOpen || state.inventoryOpen ? 'swallow' : 'menu';
   if (code === 'Escape') {
-    // the menu and the chat line answer Esc themselves (back a page, close)
-    if (state.menuOpen || state.chatOpen) return null;
+    // the menu, the chat line and the inventory answer Esc themselves (back a page, close)
+    if (state.menuOpen || state.chatOpen || state.inventoryOpen) return null;
     return key.repeat ? 'swallow' : 'menu';
   }
   if (state.typing) return null;
-  if (state.menuOpen || state.chatOpen) return null;
+  if (state.menuOpen || state.chatOpen || state.inventoryOpen) return null;
 
   if (code === 'AltLeft' || code === 'AltRight') return 'swallow';
   if (key.altKey) return 'swallow';
   if (code === 'Enter' && state.onControl) return null;
   if (code === 'KeyT' || code === 'Enter' || code === 'NumpadEnter' || code === 'Slash') return key.repeat ? 'swallow' : 'chat';
   if (code === 'KeyV') return key.repeat ? 'swallow' : 'camera';
+  if (code === 'KeyE') return key.repeat ? 'swallow' : 'inventory';
+  if (/^Digit[1-9]$/.test(code)) return 'hotbar';
   // Firefox's quick find, and the browser going back
   if (code === 'Quote' || code === 'Backspace') return 'swallow';
   return null;

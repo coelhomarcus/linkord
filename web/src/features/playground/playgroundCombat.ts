@@ -17,6 +17,10 @@ type PlaygroundHealth = Extract<ServerMessage, { t: 'playground-health' }>;
 /** The local player's health as the HUD shows it. */
 export interface Vitals {
   health: number;
+  /** the health before the last change, which the hearts blink */
+  previousHealth: number;
+  /** what the last change was: the hearts blink longer for a hurt than for a heal */
+  lastChange: 'hurt' | 'heal' | null;
   /** bumped by every hit that hurt you, so the hearts blink */
   hurts: number;
   /** bumped whenever the health goes up, a smaller blink */
@@ -30,7 +34,7 @@ export function isCriticalHit(body: { onGround: boolean }, fallDistance: number)
   return !body.onGround && fallDistance > 0;
 }
 
-const FULL: Vitals = { health: MAX_HEALTH, hurts: 0, heals: 0, killerId: null };
+const FULL: Vitals = { health: MAX_HEALTH, previousHealth: MAX_HEALTH, lastChange: null, hurts: 0, heals: 0, killerId: null };
 const noSubscription = () => () => {};
 const fullHealth = () => FULL;
 
@@ -94,16 +98,19 @@ export class PlaygroundCombat {
     const previous = this.vitals.health;
     this.baseHealth = Math.max(0, Math.min(MAX_HEALTH, health));
     this.baseAt = now;
+    const healed = this.baseHealth > previous;
     this.update({
       health: this.baseHealth,
+      previousHealth: previous,
+      lastChange: hurt ? 'hurt' : healed ? 'heal' : this.vitals.lastChange,
       hurts: this.vitals.hurts + (hurt ? 1 : 0),
-      heals: this.vitals.heals + (this.baseHealth > previous ? 1 : 0),
+      heals: this.vitals.heals + (healed ? 1 : 0),
       killerId: this.baseHealth <= 0 ? attackerId : null,
     });
   }
 
   private update(vitals: Vitals): void {
-    const changed = vitals.health !== this.vitals.health || vitals.hurts !== this.vitals.hurts || vitals.heals !== this.vitals.heals || vitals.killerId !== this.vitals.killerId;
+    const changed = vitals.health !== this.vitals.health || vitals.hurts !== this.vitals.hurts || vitals.heals !== this.vitals.heals || vitals.killerId !== this.vitals.killerId || vitals.previousHealth !== this.vitals.previousHealth;
     if (changed) {
       this.vitals = vitals;
       for (const listener of this.listeners) listener();
@@ -121,7 +128,8 @@ export class PlaygroundCombat {
     this.regenTimer = setTimeout(() => {
       this.regenTimer = null;
       const healed = Math.min(MAX_HEALTH, this.baseHealth + Math.floor((performance.now() - this.baseAt) / REGEN_INTERVAL_MS));
-      this.update({ ...this.vitals, health: healed, heals: this.vitals.heals + (healed > this.vitals.health ? 1 : 0) });
+      if (healed > this.vitals.health) this.update({ ...this.vitals, health: healed, previousHealth: this.vitals.health, lastChange: 'heal', heals: this.vitals.heals + 1 });
+      else this.scheduleRegen();
     }, Math.max(0, due - performance.now()));
   }
 

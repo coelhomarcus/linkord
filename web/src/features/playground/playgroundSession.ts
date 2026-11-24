@@ -12,6 +12,7 @@ import type { PlayerState } from './playgroundProtocol';
 import { proximityGain } from './proximity';
 import { spawnPoint } from './playgroundWorld';
 import { PlaygroundCombat } from './playgroundCombat';
+import { InventoryStore } from './inventory/inventory';
 
 // Everything a playground call needs while you are in it, whether or not its
 // 3D view is on screen: where you stand, where everyone else last said they
@@ -75,6 +76,8 @@ export class PlaygroundSession {
   /** the next report asks the server for everyone's health, until one goes out */
   private askHealth = true;
   readonly combat: PlaygroundCombat;
+  /** what you carry; kept in this browser for as long as you are in the call */
+  readonly inventory = new InventoryStore();
   private timer: ReturnType<typeof setInterval> | null = null;
 
   private readonly room: Room;

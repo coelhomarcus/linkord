@@ -226,6 +226,14 @@ function overlay(base: ImageData, top: ImageData): ImageData {
   return base;
 }
 
+/** The pack's tile a block shows on its top or its sides, tinted as the island draws it (an item's icon). */
+export async function blockFacePixels(block: Exclude<Block, 0>, face: 'top' | 'side'): Promise<ImageData> {
+  const tile = PACK_TILES[BLOCK_TILES[block][face === 'top' ? 0 : 1]];
+  const [base, top] = await Promise.all([loadImage(tile.url), tile.overlay ? loadImage(tile.overlay.url) : null]);
+  const pixels = pixelsOf(base, tile.tint);
+  return top && tile.overlay ? overlay(pixels, pixelsOf(top, tile.overlay.tint)) : pixels;
+}
+
 /** Replaces the painted tiles with the pack's once they load. A tile that fails keeps its painting. */
 export async function applyPackTiles(atlas: THREE.CanvasTexture): Promise<void> {
   const ctx = (atlas.image as HTMLCanvasElement).getContext('2d');

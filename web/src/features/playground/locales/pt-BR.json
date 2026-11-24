@@ -58,7 +58,11 @@
   "hud": {
     "muted": "Microfone mudo",
     "deafened": "Som desligado",
-    "sharing": "Você está no telão"
+    "sharing": "Você está no telão",
+    "health": "Vida",
+    "hearts_one": "{{count}} coração",
+    "hearts_other": "{{count}} corações",
+    "hotbar": "Barra de itens"
   },
   "chat": {
     "notLinked": "Este playground não tem chat. Quem gerencia o canal escolhe um em Configurações do canal → Chat do jogo.",
@@ -73,5 +77,22 @@
     "title": "Você morreu!",
     "killedBy": "{{name}} te derrotou",
     "respawn": "Renascer"
+  },
+  "inventory": {
+    "title": "Inventário",
+    "crafting": "Fabricação",
+    "slotItem": "{{name}} ({{count}})",
+    "emptySlot": "Espaço vazio",
+    "you": "Você"
+  },
+  "items": {
+    "grassBlock": "Bloco de grama",
+    "dirt": "Terra",
+    "stone": "Pedra",
+    "sand": "Areia",
+    "oakLog": "Tronco de carvalho",
+    "oakLeaves": "Folhas de carvalho",
+    "oakPlanks": "Tábuas de carvalho",
+    "polishedBlackstone": "Pedra-negra polida"
   }
 }

@@ -41,6 +41,8 @@ export interface EngineOptions {
   localUserId: string;
   screenLabels: ScreenLabels;
   onCameraModeChange: (mode: CameraMode) => void;
+  /** the wheel moved the hotbar's selection this many slots */
+  onHotbarScroll: (steps: number) => void;
 }
 
 const MAX_FRAME_SECONDS = 0.1;
@@ -155,6 +157,7 @@ export class PlaygroundEngine {
     // start behind the avatar, looking the way it faces
     this.controls.yaw = this.facing + Math.PI;
     this.controls.onAction = () => this.swingArm();
+    this.controls.onHotbarScroll = (steps) => this.options.onHotbarScroll(steps);
 
     this.unsubscribeSkins = session.onSkinsChange(() => this.refreshSkins());
 

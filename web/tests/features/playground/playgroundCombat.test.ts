@@ -24,7 +24,7 @@ describe('PlaygroundCombat', () => {
     combat.subscribe(listener);
     combat.receive(hit());
     combat.receive(hit({ targetId: 'other', health: 12 }));
-    expect(combat.getVitals()).toEqual({ health: 19, hurts: 1, heals: 0, killerId: null });
+    expect(combat.getVitals()).toEqual({ health: 19, previousHealth: 20, lastChange: 'hurt', hurts: 1, heals: 0, killerId: null });
     expect(listener).toHaveBeenCalledTimes(1);
     expect(combat.takeHits().map((h) => h.targetId)).toEqual(['me', 'other']);
     expect(combat.takeHits()).toEqual([]);
@@ -36,7 +36,7 @@ describe('PlaygroundCombat', () => {
     vi.advanceTimersByTime(3999);
     expect(combat.getVitals().health).toBe(17);
     vi.advanceTimersByTime(1);
-    expect(combat.getVitals()).toMatchObject({ health: 18, heals: 1 });
+    expect(combat.getVitals()).toMatchObject({ health: 18, previousHealth: 17, lastChange: 'heal', heals: 1 });
     vi.advanceTimersByTime(4000 * 10);
     expect(combat.getVitals().health).toBe(MAX_HEALTH);
     combat.dispose();

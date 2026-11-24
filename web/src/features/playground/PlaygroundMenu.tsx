@@ -11,12 +11,11 @@ import type { PlaygroundPlayer } from './engine/PlaygroundEngine';
 import { CAMERA_LABEL } from './engine/controls';
 import type { CameraMode } from './engine/controls';
 import { defaultSkin } from './skins/defaultSkins';
-import { decodeSkin, encodeSkin, SkinError, skinCanvas } from './skins/skins';
+import { decodeSkin, encodeSkin, SkinError } from './skins/skins';
+import { SkinPreview } from './skins/SkinPreview';
 import type { Skin } from './skins/skins';
-import { boxFaces, partLayout } from './skins/skinFormat';
 import { PIXEL_TEXT } from './pixelFont';
 import { PIXEL_BUTTON, PIXEL_BUTTON_DANGER, PIXEL_PANEL, PIXEL_SHADOW } from './pixelUi';
-import type { PartName } from './skins/skinFormat';
 
 // The playground's game menu, opened with Tab (or its button): a column of
 // chunky buttons over the dimmed world, the way a block game pauses (the world
@@ -55,33 +54,6 @@ function DeviceSlab({ icon, children }: { icon: ReactNode; children: ReactNode }
       {children}
     </span>
   );
-}
-
-/** A skin's front, drawn at its own pixel size and scaled up crisp. */
-function SkinPreview({ skin, label }: { skin: Skin; label: string }) {
-  const ref = useRef<HTMLCanvasElement | null>(null);
-  useEffect(() => {
-    const ctx = ref.current?.getContext('2d');
-    if (!ctx) return;
-    const source = skinCanvas(skin.pixels);
-    const arm = skin.slim ? 3 : 4;
-    ctx.imageSmoothingEnabled = false;
-    ctx.clearRect(0, 0, 16, 32);
-    const draw = (part: PartName, x: number, y: number) => {
-      const layout = partLayout(part, skin.slim);
-      for (const [u, v] of [layout.inner, layout.outer]) {
-        const front = boxFaces(u, v, layout.size)[4]!;
-        ctx.drawImage(source, front.x, front.y, front.w, front.h, x, y, front.w, front.h);
-      }
-    };
-    draw('rightLeg', 4, 20);
-    draw('leftLeg', 8, 20);
-    draw('body', 4, 8);
-    draw('rightArm', 4 - arm, 8);
-    draw('leftArm', 12, 8);
-    draw('head', 4, 0);
-  }, [skin]);
-  return <canvas ref={ref} width={16} height={32} role="img" aria-label={label} className="h-56 w-28 flex-none [image-rendering:pixelated]" />;
 }
 
 interface MenuProps {
@@ -204,7 +176,7 @@ export function PlaygroundMenu({ session, localId, localUserId, players, present
         {page === 'skin' && (
           <div className="flex flex-col gap-3">
             <div className={cn('flex items-center gap-4 p-4', PIXEL_PANEL)}>
-              <SkinPreview skin={skin} label={t('skin.preview')} />
+              <SkinPreview skin={skin} label={t('skin.preview')} className="h-56 w-28" />
               <div className={`flex min-w-0 flex-col gap-1.5 ${PIXEL_TEXT.md} leading-tight ${PIXEL_SHADOW}`}>
                 <span>{customSkin ? t('skin.custom') : t('skin.default')}</span>
                 <span className="text-white/65">{skin.slim ? t('skin.slim') : t('skin.classic')}</span>

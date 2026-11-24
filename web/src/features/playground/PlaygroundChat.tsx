@@ -58,8 +58,9 @@ function ChatLine({ line, fading }: { line: Line; fading?: boolean }) {
   );
 }
 
-/** `lift`: how many HUD status lines sit in the bottom-left corner, under the new lines. */
-export function PlaygroundChat({ callConversationId, open, lift, onClose }: { callConversationId: string; open: boolean; lift: number; onClose: () => void }) {
+/** `lift`: how many HUD status lines sit in the bottom-left corner, under the new lines; `hudHeight`: the
+ * hearts and hotbar's height in pixels, which the new lines stay above. */
+export function PlaygroundChat({ callConversationId, open, lift, hudHeight = 0, onClose }: { callConversationId: string; open: boolean; lift: number; hudHeight?: number; onClose: () => void }) {
   const { t } = useTranslation('playground');
   const language = useLanguage();
   const { sendChatMessage, sendWs, servers, allUsers } = useRoom('sendChatMessage', 'sendWs', 'servers', 'allUsers');
@@ -195,7 +196,7 @@ export function PlaygroundChat({ callConversationId, open, lift, onClose }: { ca
   if (!open) {
     if (!recent.length) return null;
     return (
-      <ol aria-hidden style={{ bottom: `calc(0.75rem + ${lift * 2.25}rem + env(safe-area-inset-bottom))` }}
+      <ol aria-hidden style={{ bottom: `calc(0.75rem + ${hudHeight}px + ${lift * 2.25}rem + env(safe-area-inset-bottom))` }}
         className={cn('pointer-events-none absolute left-3 z-20 flex w-[min(30rem,calc(100%-1.5rem))] flex-col', text)}>
         {recent.slice(-10).map((line) => <ChatLine key={line.key} line={line} fading />)}
       </ol>

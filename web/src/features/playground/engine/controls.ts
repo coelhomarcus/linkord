@@ -39,6 +39,11 @@ const SPRINT_DOUBLE_TAP_MS = 350;
 const DEFAULT_CAMERA_DISTANCE = 4;
 const MIN_CAMERA_DISTANCE = 2;
 const MAX_CAMERA_DISTANCE = 8;
+/** a wheel event at least this long is a mouse's notch, one hotbar slot; a trackpad's smaller steps add up
+ * to a slot every WHEEL_TRAVEL_PX. A line (Firefox) counts as this many pixels. */
+const WHEEL_NOTCH_PX = 50;
+const WHEEL_TRAVEL_PX = 100;
+const WHEEL_LINE_PX = 40;
 /** a press released this close to where it started, this soon, is a click or tap, not a drag */
 const TAP_SLOP_PX = 6;
 const TAP_MS = 300;
@@ -65,6 +70,8 @@ export class Controls {
   /** a click while the mouse is locked (or a plain click where the lock is refused, a tap on a touch
    * screen): the arm swings */
   onAction: () => void = () => {};
+  /** the wheel turned this many notches: the hotbar's selection moves (positive is down, to the right) */
+  onHotbarScroll: (steps: number) => void = () => {};
 
   private readonly keys = new Set<string>();
   private jumpQueued = false;
@@ -72,6 +79,8 @@ export class Controls {
   private lastForwardPress = -Infinity;
   /** the browser said no to locking the mouse: clicks punch without it */
   private lockRefused = false;
+  /** the wheel's travel not yet counted as a notch (a trackpad scrolls in small steps) */
+  private wheelTravel = 0;
   private joystick: Drag | null = null;
   private look: Drag | null = null;
   /** a held mouse button turning the view where the pointer cannot be locked */
@@ -327,14 +336,25 @@ export class Controls {
     }
   };
 
+  // The wheel picks the hotbar slot, as in the game. Ctrl with the wheel (a trackpad's pinch too), which
+  // would zoom the page, moves the third-person camera in and out instead.
   private onWheel = (event: WheelEvent): void => {
-    // Ctrl with the wheel would zoom the page
+    event.preventDefault();
+    if (!this.enabled) return;
+    const delta = event.deltaMode === 1 /* lines */ ? event.deltaY * WHEEL_LINE_PX : event.deltaY;
     if (event.ctrlKey) {
-      event.preventDefault();
+      if (this.mode !== 'first') this.distance = Math.min(Math.max(this.distance + delta * 0.004, MIN_CAMERA_DISTANCE), MAX_CAMERA_DISTANCE);
       return;
     }
-    if (this.mode === 'first' || !this.enabled) return;
-    event.preventDefault();
-    this.distance = Math.min(Math.max(this.distance + event.deltaY * 0.004, MIN_CAMERA_DISTANCE), MAX_CAMERA_DISTANCE);
+    if (Math.abs(delta) >= WHEEL_NOTCH_PX) {
+      this.wheelTravel = 0;
+      this.onHotbarScroll(Math.sign(delta));
+      return;
+    }
+    this.wheelTravel += delta;
+    const steps = Math.trunc(this.wheelTravel / WHEEL_TRAVEL_PX);
+    if (!steps) return;
+    this.wheelTravel -= steps * WHEEL_TRAVEL_PX;
+    this.onHotbarScroll(steps);
   };
 }
