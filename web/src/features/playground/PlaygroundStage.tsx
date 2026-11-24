@@ -76,6 +76,9 @@ export default function PlaygroundStage({ allIds, onBack }: { allIds: string[]; 
   const relockRef = useRef(false);
   /** the mouse was let go on purpose (Alt): no pause for it */
   const releasedRef = useRef(false);
+  const escapeHeldRef = useRef(false);
+  /** a screen closed with Esc: the mouse is taken back once the key is up */
+  const relockOnEscapeUpRef = useRef(false);
   const [cameraMode, setCameraMode] = useState<CameraMode>('first');
   const [menuOpen, setMenuOpen] = useState(false);
   const [chatOpen, setChatOpen] = useState(false);
@@ -159,6 +162,7 @@ export default function PlaygroundStage({ allIds, onBack }: { allIds: string[]; 
   // the capture phase, so a key the game takes never reaches anything else
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
+      if (event.code === 'Escape') escapeHeldRef.current = true;
       const stage = callStageRef.current;
       const inside = !!document.pointerLockElement || (!!stage && stage.contains(document.activeElement));
       if (!inside) return;
@@ -210,6 +214,30 @@ export default function PlaygroundStage({ allIds, onBack }: { allIds: string[]; 
     window.addEventListener('keydown', onKeyDown, true);
     return () => window.removeEventListener('keydown', onKeyDown, true);
   }, [callStageRef, toggleFullscreen]);
+
+  // Outside fullscreen the browser also takes Esc as its own "let go of the mouse", on the key's
+  // release too: a mouse taken back while the Esc that closed a screen is still down is let go
+  // again at once, and that would pause into the menu. So it is taken back once the key is up.
+  useEffect(() => {
+    function onKeyUp(event: KeyboardEvent) {
+      if (event.code !== 'Escape') return;
+      escapeHeldRef.current = false;
+      if (!relockOnEscapeUpRef.current) return;
+      relockOnEscapeUpRef.current = false;
+      if (!menuOpenRef.current && !chatOpenRef.current && !inventoryOpenRef.current && !deadRef.current) engineRef.current?.lockPointer();
+    }
+    // the key's release is lost with the focus: the next click or walking key takes the mouse instead
+    function onBlur() {
+      escapeHeldRef.current = false;
+      relockOnEscapeUpRef.current = false;
+    }
+    window.addEventListener('keyup', onKeyUp, true);
+    window.addEventListener('blur', onBlur);
+    return () => {
+      window.removeEventListener('keyup', onKeyUp, true);
+      window.removeEventListener('blur', onBlur);
+    };
+  }, []);
 
   // The browser's own Esc lets go of the mouse with nothing open: that pauses into the menu, as the
   // block game does, and back from it the mouse is taken again. Letting go with Alt, or the window
@@ -272,7 +300,8 @@ export default function PlaygroundStage({ allIds, onBack }: { allIds: string[]; 
     // back from the menu with Tab, or from the chat with Enter: the key press lets the mouse be taken again
     if (!overlayOpen && relockRef.current) {
       relockRef.current = false;
-      engine.lockPointer();
+      if (escapeHeldRef.current) relockOnEscapeUpRef.current = true;
+      else engine.lockPointer();
     }
   }, [overlayOpen]);
 
