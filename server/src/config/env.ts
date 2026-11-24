@@ -177,6 +177,26 @@ const LIVEKIT_ROOM_NAME = process.env.LIVEKIT_ROOM_NAME || 'linkord-room';
 // modules/calls/callRoomSync.ts removes whoever does).
 const LIVEKIT_TOKEN_TTL_SECONDS = Number(process.env.LIVEKIT_TOKEN_TTL_SECONDS || 60);
 
+// The playground service (playground/ at the repo root, its own process and database), where the
+// fighting of playground calls is decided. PLAYGROUND_URL is the origin browsers reach it at; it serves
+// /playground/ws there (on the app's own domain, a proxy route sends that path to it). Both set turn it on;
+// the app then hands players passes signed with PLAYGROUND_SECRET, which the service must share.
+export function parsePlaygroundUrl(raw: string | undefined): string {
+  const text = (raw ?? '').trim();
+  if (text === '') return '';
+  let url: URL;
+  try { url = new URL(text); } catch { throw new Error('PLAYGROUND_URL must be an http(s) origin such as https://chat.example.com (see .env.example).'); }
+  if ((url.protocol !== 'https:' && url.protocol !== 'http:') || (url.pathname !== '/' && url.pathname !== '')) {
+    throw new Error('PLAYGROUND_URL must be an http(s) origin, with no path (see .env.example).');
+  }
+  return url.origin;
+}
+const PLAYGROUND_URL = parsePlaygroundUrl(process.env.PLAYGROUND_URL);
+const PLAYGROUND_SECRET = (process.env.PLAYGROUND_SECRET || '').trim();
+if (PLAYGROUND_URL && PLAYGROUND_SECRET.length < 32) {
+  throw new Error('PLAYGROUND_SECRET must be set, at least 32 characters, whenever PLAYGROUND_URL is (openssl rand -hex 32).');
+}
+
 // KLIPY (GIFs). Their terms want API calls made from the user's browser, so
 // this key is handed to signed-in clients (modules/gifs) rather than used here;
 // empty turns the GIF picker off.
@@ -279,6 +299,7 @@ export const config = {
   RESEND_API_KEY, RESEND_FROM_EMAIL, RESEND_API_URL, APP_URL, AUTH_CODE_TTL_MS, AUTH_CODE_MAX_ATTEMPTS, LOGIN_CODE_TTL_MS,
   PUSH_VAPID_PUBLIC_KEY, PUSH_VAPID_PRIVATE_KEY, PUSH_VAPID_SUBJECT,
   LIVEKIT_URL, LIVEKIT_SERVER_URL, LIVEKIT_API_KEY, LIVEKIT_API_SECRET, LIVEKIT_ROOM_NAME, LIVEKIT_TOKEN_TTL_SECONDS,
+  PLAYGROUND_URL, PLAYGROUND_SECRET,
   UPLOADS_REMOTE_URL, KLIPY_API_KEY, MAL_CLIENT_ID, IGDB_CLIENT_ID, IGDB_CLIENT_SECRET, STEAM_WEB_API_KEY, STEAMGRIDDB_API_KEY, MEDIA_PROXY_ENABLED, DESKTOP_RELEASES_REPO,
   REGISTRATIONS_PER_IP_PER_HOUR, MAX_NEW_ACCOUNTS_PER_HOUR, MAX_CONNECTIONS_PER_USER, MAX_CONNECTIONS_PER_IP,
   MAX_OWNED_SERVERS_PER_USER, MAX_SERVER_MEMBERSHIPS_PER_USER, MAX_FRIENDS, MAX_PENDING_OUTGOING_REQUESTS,

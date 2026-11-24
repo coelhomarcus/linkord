@@ -9,6 +9,10 @@
 # stack keeps its own database and volumes apart from development's (project `linkord-dev`). Without it only the
 # development services start.
 #
+# The playground service (fighting in playground channels, with its own database) is the `playground` profile:
+# add it to COMPOSE_PROFILES next to `full`. In development, `docker compose up -d playground-postgres` starts only
+# its database, for `npm run dev` on the host.
+#
 # Every port is published on 127.0.0.1 only: the image trusts X-Forwarded-For (TRUST_PROXY=1), which is safe only
 # when nothing but a proxy or this machine can reach it. To serve other machines, use the `https` profile (Caddy)
 # as docs/DEPLOY.md describes.
@@ -55,6 +59,26 @@ services:
       test: ["CMD", "wget", "-qO-", "http://127.0.0.1:7880"]
       interval: 5s
       timeout: 3s
+      retries: 20
+
+  # The playground service's own database, apart from the app's. Published on 5433 for `npm run dev`.
+  playground-postgres:
+    profiles: ["playground"]
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: linkord
+      # read only when the volume is created
+      POSTGRES_PASSWORD: ${PLAYGROUND_POSTGRES_PASSWORD:-linkord}
+      POSTGRES_DB: linkord_playground
+    ports:
+      - "127.0.0.1:5433:5432"
+    volumes:
+      - playground_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U linkord -d linkord_playground"]
+      interval: 5s
+      timeout: 5s
       retries: 20
 
   # Prints the emails the app would send (recovery, two-step login codes) to its log. Unused once
@@ -114,6 +138,32 @@ services:
     cap_drop:
       - ALL
 
+  # The playground service: the app's own image running its other process. Browsers reach it at PLAYGROUND_URL
+  # (http://localhost:3100 here; behind Caddy, the app's domain, which routes /playground/ to it).
+  playground:
+    profiles: ["playground"]
+    build: .
+    restart: unless-stopped
+    command: ["node", "playground/dist/index.js"]
+    environment:
+      PLAYGROUND_DATABASE_URL: postgres://linkord:${PLAYGROUND_POSTGRES_PASSWORD:-linkord}@playground-postgres:5432/linkord_playground
+      PLAYGROUND_SECRET: ${PLAYGROUND_SECRET:-}
+    ports:
+      - "127.0.0.1:3100:3000"
+    depends_on:
+      playground-postgres:
+        condition: service_healthy
+    mem_reservation: 128m
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: "5"
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+
   # TLS in front of the app and LiveKit, for an install other machines reach: add `https` to COMPOSE_PROFILES.
   # Needs APP_DOMAIN and LIVEKIT_DOMAIN pointing at this machine, and ports 80 and 443 open.
   caddy:
@@ -165,6 +215,7 @@ services:
 
 volumes:
   postgres_data:
+  playground_postgres_data:
   uploads:
   backups:
   caddy_data:

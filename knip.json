@@ -4,11 +4,15 @@
       "entry": [
         "server/src/scripts/*.ts",
         "server/tests/**/*.test.ts",
-        "server/tests/**/*.itest.ts"
+        "server/tests/**/*.itest.ts",
+        "playground/drizzle.config.ts",
+        "playground/tests/**/*.test.ts"
       ],
       "project": [
         "server/src/**/*.ts",
-        "server/tests/**/*.ts"
+        "server/tests/**/*.ts",
+        "playground/src/**/*.ts",
+        "playground/tests/**/*.ts"
       ]
     },
     "web": {
