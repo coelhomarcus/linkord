@@ -7,6 +7,8 @@ import { MAX_HEIGHT, WORLD_RADIUS } from './playgroundWorld';
 // misplace its own avatar inside the world.
 
 export const PLAYGROUND_TOPIC = 'linkord.playground';
+/** reliable packets carrying a skin PNG (playgroundSession.ts) */
+export const SKIN_TOPIC = 'linkord.playground.skin';
 const VERSION = 1;
 
 export const MOTIONS = ['idle', 'walk', 'run', 'jump'] as const;
@@ -18,13 +20,17 @@ export interface PlayerState {
   z: number;
   /** where the avatar faces, radians around +y */
   yaw: number;
+  /** how far up (positive) or down the head looks, radians */
+  pitch: number;
   motion: Motion;
 }
 
 const round = (n: number) => Math.round(n * 100) / 100;
+const clamp = (n: number, min: number, max: number) => Math.min(Math.max(n, min), max);
+const MAX_PITCH = Math.PI / 2;
 
 export function encodeState(state: PlayerState): Uint8Array<ArrayBuffer> {
-  const packet = { v: VERSION, p: [round(state.x), round(state.y), round(state.z)], r: round(state.yaw), m: MOTIONS.indexOf(state.motion) };
+  const packet = { v: VERSION, p: [round(state.x), round(state.y), round(state.z)], r: round(state.yaw), h: round(state.pitch), m: MOTIONS.indexOf(state.motion) };
   return new TextEncoder().encode(JSON.stringify(packet));
 }
 
@@ -40,15 +46,11 @@ export function decodeState(bytes: Uint8Array): PlayerState | null {
     return null;
   }
   if (!packet || typeof packet !== 'object') return null;
-  const { v, p, r, m } = packet as Record<string, unknown>;
+  const { v, p, r, h, m } = packet as Record<string, unknown>;
   if (v !== VERSION || !Array.isArray(p) || p.length !== 3 || !p.every(Number.isFinite) || !Number.isFinite(r)) return null;
-  let [x, y, z] = p as number[];
-  const distance = Math.hypot(x, z);
-  if (distance > WORLD_RADIUS) {
-    x = (x / distance) * WORLD_RADIUS;
-    z = (z / distance) * WORLD_RADIUS;
-  }
-  y = Math.min(Math.max(y, 0), MAX_HEIGHT);
+  const [x, y, z] = (p as number[]).map((n, i) => (i === 1 ? clamp(n, 0, MAX_HEIGHT) : clamp(n, -WORLD_RADIUS, WORLD_RADIUS)));
   const motion = typeof m === 'number' && MOTIONS[m] ? MOTIONS[m] : 'idle';
-  return { x, y, z, yaw: r as number, motion };
+  // the head's pitch came later in the same version; a packet without it looks straight ahead
+  const pitch = Number.isFinite(h) ? clamp(h as number, -MAX_PITCH, MAX_PITCH) : 0;
+  return { x: x!, y: y!, z: z!, yaw: r as number, pitch, motion };
 }

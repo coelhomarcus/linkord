@@ -4,7 +4,7 @@
   "unsupported": "Este navegador não conseguiu abrir o mundo 3D (WebGL desligado ou indisponível). Você continua na chamada e ouve todo mundo normalmente.",
   "jump": "Pular",
   "hint": {
-    "desktop": "Clique ou arraste na cena para olhar · WASD ou setas · Shift corre · Espaço pula · V troca a câmera · Esc solta o mouse",
+    "desktop": "Clique ou arraste na cena para olhar / WASD anda / Shift corre / Espaço pula / V troca a câmera / Tab abre o menu",
     "touch": "Arraste à esquerda para andar e à direita para olhar em volta"
   },
   "camera": {
@@ -17,5 +17,44 @@
     "idle": "Nenhuma transmissão no telão",
     "idleHint": "Compartilhe sua tela para todo mundo assistir aqui",
     "taken": "Outra pessoa já está no telão. Espere ela parar de compartilhar para transmitir."
+  },
+  "menu": {
+    "title": "Menu",
+    "open": "Abrir menu",
+    "resume": "Voltar ao jogo",
+    "hint": "Tab ou Esc volta ao jogo / setas escolhem / Enter confirma",
+    "people": "Na ilha",
+    "you": "você",
+    "onScreen": "no telão",
+    "muted": "mudo",
+    "on": "ligado",
+    "off": "desligado",
+    "mic": "Microfone",
+    "sound": "Som da chamada",
+    "share": "Telão",
+    "view": "Câmera",
+    "fullscreen": "Tela cheia",
+    "tools": "Dispositivos e sons",
+    "leave": "Sair da chamada"
+  },
+  "skin": {
+    "title": "Sua skin",
+    "custom": "Skin personalizada",
+    "default": "Skin padrão da sua conta",
+    "slim": "braços finos",
+    "classic": "braços clássicos",
+    "choose": "Escolher arquivo .png",
+    "reset": "Voltar à padrão",
+    "preview": "Prévia da sua skin, de frente",
+    "errors": {
+      "dimensions": "A skin precisa ser um PNG de 64×64 (ou 64×32).",
+      "size": "Esse arquivo é grande demais para uma skin.",
+      "unreadable": "Não deu para ler esse arquivo como imagem."
+    }
+  },
+  "hud": {
+    "muted": "Microfone mudo",
+    "deafened": "Som desligado",
+    "sharing": "Você está no telão"
   }
 }

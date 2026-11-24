@@ -6,15 +6,21 @@ const bytes = (value: unknown) => new TextEncoder().encode(JSON.stringify(value)
 
 describe('playgroundProtocol', () => {
   it('round-trips a state, to the centimetre', () => {
-    const decoded = decodeState(encodeState({ x: 1.234, y: 0.5, z: -7.891, yaw: 3.14159, motion: 'run' }));
-    expect(decoded).toEqual({ x: 1.23, y: 0.5, z: -7.89, yaw: 3.14, motion: 'run' });
+    const decoded = decodeState(encodeState({ x: 1.234, y: 0.5, z: -7.891, yaw: 3.14159, pitch: -0.456, motion: 'run' }));
+    expect(decoded).toEqual({ x: 1.23, y: 0.5, z: -7.89, yaw: 3.14, pitch: -0.46, motion: 'run' });
   });
 
   it('keeps a peer inside the world, whatever it claims', () => {
-    const far = decodeState(bytes({ v: 1, p: [WORLD_RADIUS * 10, 99, 0], r: 0, m: 0 }))!;
-    expect(Math.hypot(far.x, far.z)).toBeCloseTo(WORLD_RADIUS);
+    const far = decodeState(bytes({ v: 1, p: [WORLD_RADIUS * 10, 99, -WORLD_RADIUS * 3], r: 0, h: 9, m: 0 }))!;
+    expect(far.x).toBe(WORLD_RADIUS);
+    expect(far.z).toBe(-WORLD_RADIUS);
     expect(far.y).toBe(MAX_HEIGHT);
+    expect(far.pitch).toBeCloseTo(Math.PI / 2);
     expect(decodeState(bytes({ v: 1, p: [0, -5, 0], r: 0, m: 0 }))!.y).toBe(0);
+  });
+
+  it('reads a packet without a head pitch as looking straight ahead', () => {
+    expect(decodeState(bytes({ v: 1, p: [0, 0, 0], r: 0, m: 1 }))!.pitch).toBe(0);
   });
 
   it('reads an unknown motion as standing still', () => {

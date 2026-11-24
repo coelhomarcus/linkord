@@ -4,7 +4,7 @@
   "unsupported": "This browser could not open the 3D world (WebGL is off or unavailable). You are still in the call and hear everyone as usual.",
   "jump": "Jump",
   "hint": {
-    "desktop": "Click or drag the scene to look around · WASD or arrows · Shift runs · Space jumps · V switches camera · Esc frees the mouse",
+    "desktop": "Click or drag the scene to look around / WASD walks / Shift runs / Space jumps / V switches camera / Tab opens the menu",
     "touch": "Drag on the left to walk and on the right to look around"
   },
   "camera": {
@@ -17,5 +17,44 @@
     "idle": "Nothing on the big screen",
     "idleHint": "Share your screen for everyone to watch here",
     "taken": "Someone else is already on the big screen. Wait until they stop sharing to stream."
+  },
+  "menu": {
+    "title": "Menu",
+    "open": "Open the menu",
+    "resume": "Back to the game",
+    "hint": "Tab or Esc returns to the game / arrows choose / Enter confirms",
+    "people": "On the island",
+    "you": "you",
+    "onScreen": "on the big screen",
+    "muted": "muted",
+    "on": "on",
+    "off": "off",
+    "mic": "Microphone",
+    "sound": "Call sound",
+    "share": "Big screen",
+    "view": "Camera",
+    "fullscreen": "Fullscreen",
+    "tools": "Devices and sounds",
+    "leave": "Leave the call"
+  },
+  "skin": {
+    "title": "Your skin",
+    "custom": "Custom skin",
+    "default": "Your account's default skin",
+    "slim": "slim arms",
+    "classic": "classic arms",
+    "choose": "Choose a .png file",
+    "reset": "Back to the default",
+    "preview": "Front view of your skin",
+    "errors": {
+      "dimensions": "A skin must be a 64×64 (or 64×32) PNG.",
+      "size": "That file is too large for a skin.",
+      "unreadable": "That file could not be read as an image."
+    }
+  },
+  "hud": {
+    "muted": "Microphone muted",
+    "deafened": "Sound off",
+    "sharing": "You are on the big screen"
   }
 }

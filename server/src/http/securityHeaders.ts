@@ -101,9 +101,7 @@ export function buildContentSecurityPolicy(input: PolicyInput): string {
     ['img-src', ["'self'", 'data:', 'blob:', ...remoteImages]],
     ['media-src', ["'self'", 'data:', 'blob:', ...remoteMedia]],
     ['font-src', ["'self'", 'data:']],
-    // blob: lets the playground's model loader read the textures packed inside
-    // its .glb files (three.js fetches them from an object URL it made itself)
-    ['connect-src', ["'self'", 'blob:', ...socketSources(input.appUrl), ...livekitSources(input.livekitUrl), ...(input.klipyEnabled ? [KLIPY_API] : [])]],
+    ['connect-src', ["'self'", ...socketSources(input.appUrl), ...livekitSources(input.livekitUrl), ...(input.klipyEnabled ? [KLIPY_API] : [])]],
     ['frame-src', EMBED_FRAMES],
     ['worker-src', ["'self'", 'blob:']],
     ['manifest-src', ["'self'"]],

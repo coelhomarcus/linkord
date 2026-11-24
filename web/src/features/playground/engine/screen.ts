@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { SCREEN } from '../playgroundWorld';
+import { PIXEL_FONT } from '../pixelFont';
 
 // The big screen: one shared stream fitted inside its frame, or a resting
 // card saying how to put something on it.
@@ -75,15 +76,16 @@ export class ScreenDisplay {
     const gradient = ctx.createLinearGradient(0, 0, 0, height);
     gradient.addColorStop(0, '#1c1d22');
     gradient.addColorStop(1, '#0f1013');
+    ctx.imageSmoothingEnabled = false;
     ctx.fillStyle = gradient;
     ctx.fillRect(0, 0, width, height);
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillStyle = '#f2f3f5';
-    ctx.font = '700 64px "Figtree Variable", system-ui, sans-serif';
+    ctx.font = `96px ${PIXEL_FONT}, monospace`;
     ctx.fillText(labels.idle, width / 2, height / 2 - 36, width - 160);
     ctx.fillStyle = '#949ba4';
-    ctx.font = '500 36px "Figtree Variable", system-ui, sans-serif';
+    ctx.font = `48px ${PIXEL_FONT}, monospace`;
     ctx.fillText(labels.idleHint, width / 2, height / 2 + 40, width - 160);
   }
 

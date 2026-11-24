@@ -40,6 +40,8 @@ export class Controls {
   onLockChange: (locked: boolean) => void = () => {};
   /** the first key, drag or mouse lock that moves anything */
   onFirstInput: () => void = () => {};
+  /** a click while the mouse is locked: the arm swings */
+  onAction: () => void = () => {};
   private engaged = false;
 
   private readonly keys = new Set<string>();
@@ -204,19 +206,26 @@ export class Controls {
     if (this.locked) this.turn(event.movementX, event.movementY, MOUSE_SENSITIVITY);
   };
 
+  /** Asks for the mouse; browsers grant it only during a click or key press. */
+  requestLock(): void {
+    if (this.locked) return;
+    const request = this.canvas.requestPointerLock() as unknown;
+    if (request instanceof Promise) request.catch(() => {});
+  }
+
   private onPointerDown = (event: PointerEvent): void => {
     if (!this.enabled) return;
     this.container.focus({ preventScroll: true });
     if (event.pointerType === 'mouse') {
-      if (this.locked) return;
+      if (this.locked) {
+        if (event.button === 0) this.onAction();
+        return;
+      }
       // dragging turns the view too, so the mouse still steers where the lock is
       // refused (an older desktop app, a browser setting, no user gesture)
       this.mouseLook = { pointerId: event.pointerId, startX: event.clientX, startY: event.clientY, x: event.clientX, y: event.clientY };
       this.canvas.setPointerCapture(event.pointerId);
-      if (event.button === 0) {
-        const request = this.canvas.requestPointerLock() as unknown;
-        if (request instanceof Promise) request.catch(() => {});
-      }
+      if (event.button === 0) this.requestLock();
       return;
     }
     this.engage();
