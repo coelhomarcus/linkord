@@ -1,5 +1,5 @@
 // Every environment variable the playground service reads. It runs as its own
-// process (and, deployed, its own container from the same image as the app),
+// process (and, deployed, its own container from playground/Dockerfile),
 // so it shares no configuration with server/: only PLAYGROUND_SECRET has to
 // match the app's.
 

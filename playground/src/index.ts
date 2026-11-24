@@ -19,7 +19,7 @@ const log = logger.child({ component: 'process' });
 // the other running. The app hands each player a short-lived pass
 // (PLAYGROUND_SECRET), and the browser brings it here over Socket.IO; the app
 // itself talks to it under /playground/internal/ (internal.ts). Deployed from
-// the app's own image with `node playground/dist/index.js`.
+// its own image (playground/Dockerfile).
 
 const READY_CACHE_MS = 5000;
 
@@ -90,8 +90,6 @@ async function main(): Promise<void> {
   };
   process.on('SIGTERM', () => shutdown('SIGTERM'));
   process.on('SIGINT', () => shutdown('SIGINT'));
-  // started by the app in its own container (server/src/app/embeddedPlayground.ts): leave with it
-  if (process.send) process.on('disconnect', () => shutdown('app gone'));
 }
 
 main().catch((err: unknown) => {
