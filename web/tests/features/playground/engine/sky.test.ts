@@ -1,26 +1,21 @@
 import { describe, expect, it } from 'vitest';
-import { LAYERS, layerFade, skyColors, sunDirection } from '@/features/playground/engine/sky';
-
-const [day, night, stars] = LAYERS;
+import { skyColors, starBrightness, sunDirection, sunriseGlow } from '@/features/playground/engine/sky';
 
 describe('sky', () => {
-  it('shows the day box by day and the night boxes at night, as the pack times them', () => {
-    expect(layerFade(day!, 6000)).toBe(1);
-    expect(layerFade(night!, 6000)).toBe(0);
-    expect(layerFade(stars!, 6000)).toBe(0);
-    expect(layerFade(day!, 18_000)).toBe(0);
-    expect(layerFade(night!, 18_000)).toBe(1);
-    expect(layerFade(stars!, 18_000)).toBe(1);
+  it('shows the stars only as it gets dark, brightest at midnight', () => {
+    expect(starBrightness(6000)).toBe(0);
+    expect(starBrightness(18_000)).toBeCloseTo(0.5);
+    const dusk = starBrightness(13_000);
+    expect(dusk).toBeGreaterThan(0);
+    expect(dusk).toBeLessThan(0.5);
   });
 
-  it('fades a box in and out over half an hour on each side of its hours', () => {
-    // the day box: in from 5:00 to 5:30 (23000..23500), out from 17:30 to 18:00 (11500..12000)
-    expect(layerFade(day!, 23_250)).toBeCloseTo(0.5);
-    expect(layerFade(day!, 11_750)).toBeCloseTo(0.5);
-    expect(layerFade(day!, 22_900)).toBe(0);
-    // the stars wrap past midnight: out from 5:00 (23000), gone at 5:30
-    expect(layerFade(stars!, 23_250)).toBeCloseTo(0.5);
-    expect(layerFade(stars!, 23_600)).toBe(0);
+  it('glows orange at sunrise and sunset, not by day or night', () => {
+    expect(sunriseGlow(6000)).toBeNull();
+    expect(sunriseGlow(18_000)).toBeNull();
+    const sunset = sunriseGlow(12_200);
+    expect(sunset?.strength).toBeGreaterThan(0.5);
+    expect(sunset?.color[0]).toBeGreaterThan(sunset!.color[2]);
   });
 
   it('crosses the sky from east to west, overhead at noon', () => {

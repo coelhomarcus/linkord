@@ -7,6 +7,4 @@ the files are unchanged copies of the pack's files of the same name:
 
 - `item/coal.png` and `item/charcoal.png`, from `assets/minecraft/textures/item/` (`inventory/items.ts`);
 - `particle/`, from `assets/minecraft/textures/particle/`: the stars of a critical hit, the damage heart and
-  the puff a dead player leaves (`engine/particles.ts`);
-- `sky/`, from `assets/fabricskyboxes/sky/`: the pack's three skyboxes, day, night and stars, six faces
-  each (`engine/sky.ts`).
+  the puff a dead player leaves (`engine/particles.ts`).
