@@ -62,9 +62,9 @@ describe('buildContentSecurityPolicy', () => {
   });
 
   it('connects to the socket, LiveKit and KLIPY only when they are configured', () => {
-    assert.deepEqual(directives(buildContentSecurityPolicy(base)).get('connect-src'), ["'self'", 'blob:', 'wss://chat.example.com']);
+    assert.deepEqual(directives(buildContentSecurityPolicy(base)).get('connect-src'), ["'self'", 'wss://chat.example.com']);
     const connect = directives(buildContentSecurityPolicy({ ...base, livekitUrl: 'wss://lk.example.com', klipyEnabled: true })).get('connect-src');
-    assert.deepEqual(connect, ["'self'", 'blob:', 'wss://chat.example.com', 'wss://lk.example.com', 'https://lk.example.com', 'https://api.klipy.com']);
+    assert.deepEqual(connect, ["'self'", 'wss://chat.example.com', 'wss://lk.example.com', 'https://lk.example.com', 'https://api.klipy.com']);
   });
 
   it('loads pictures only from the app and KLIPY while the media proxy is on', () => {
@@ -84,12 +84,12 @@ describe('buildContentSecurityPolicy', () => {
     const local = directives(buildContentSecurityPolicy({ ...base, appUrl: 'http://localhost:8080' }));
     assert.ok(local.get('media-src')!.includes('http:'));
     assert.ok(directives(buildContentSecurityPolicy({ ...base, appUrl: 'http://localhost:8080', mediaProxyEnabled: false })).get('img-src')!.includes('http:'));
-    assert.deepEqual(local.get('connect-src'), ["'self'", 'blob:', 'ws://localhost:8080']);
+    assert.deepEqual(local.get('connect-src'), ["'self'", 'ws://localhost:8080']);
   });
 
   it('survives an empty or broken APP_URL', () => {
     const policy = directives(buildContentSecurityPolicy({ ...base, appUrl: '' }));
-    assert.deepEqual(policy.get('connect-src'), ["'self'", 'blob:']);
+    assert.deepEqual(policy.get('connect-src'), ["'self'"]);
     assert.ok(!policy.get('img-src')!.includes('http:'));
   });
 

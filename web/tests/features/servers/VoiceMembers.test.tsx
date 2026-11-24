@@ -111,6 +111,12 @@ describe('VoiceMembers — what everyone in the server sees', () => {
     expect(bea.querySelector('[data-speaking]')).toHaveStyle({ color: 'var(--color-avatar-green)' });
   });
 
+  it('keeps the ring in their colour while it fades out after they stop talking', () => {
+    renderList({ participants: [person({ id: 'p-bea', userId: 'u-bea', displayName: 'Bea', speaking: false })] });
+    const ring = row('Bea').querySelector('.ring-transparent');
+    expect(ring).toHaveStyle({ color: 'var(--color-avatar-green)' });
+  });
+
   it('a member with no mic published reads as muted', () => {
     renderList({ participants: [person({ id: 'p-bea', userId: 'u-bea', displayName: 'Bea', micActivated: false })] });
     expect(within(row('Bea')).getByRole('img', { name: 'Microfone desativado' })).toBeInTheDocument();
