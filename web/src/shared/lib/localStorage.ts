@@ -28,6 +28,8 @@ export const LOCAL_STORAGE_KEYS = {
   dmCallHeight: 'ss-dm-call-height',
   legacyNoiseSuppression: 'ss-noise-suppression',
   autoIdleMinutes: 'ss-auto-idle-minutes',
+  /** '0' when the playground should not go fullscreen on the click that starts playing */
+  playgroundAutoFullscreen: 'ss-playground-auto-fullscreen',
   /** the playground skin as base64 PNG, from before it was kept with the account; read once to move it there */
   legacyPlaygroundSkin: 'ss-playground-skin',
   /** the recent searches of one server, or of one DM */
