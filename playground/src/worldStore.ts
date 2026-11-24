@@ -11,6 +11,8 @@ export interface StoredWorld {
   generator: number;
   /** one byte a cell, as game/grid.ts lays them out */
   blocks: Uint8Array;
+  /** the cells' states, laid out the same; null for a world saved before there were any */
+  states: Uint8Array | null;
   furnaces: unknown;
   items: unknown;
   /** its clock, in ticks (game/dayTime.ts) */
@@ -34,10 +36,12 @@ export function databaseWorldStore(db: PlaygroundDb): WorldStore {
     async load(conversationId) {
       const [row] = await db.select().from(playgroundWorlds).where(eq(playgroundWorlds.conversationId, conversationId)).limit(1);
       if (!row) return null;
-      return { generator: row.generator, blocks: new Uint8Array(inflateRawSync(row.blocks)), furnaces: row.furnaces, items: row.items, clock: row.clock };
+      return {
+        generator: row.generator, blocks: new Uint8Array(inflateRawSync(row.blocks)),
+        states: row.states ? new Uint8Array(inflateRawSync(row.states)) : null, furnaces: row.furnaces, items: row.items, clock: row.clock };
     },
     async save(conversationId, world) {
-      const values = { generator: world.generator, blocks: deflateRawSync(world.blocks), furnaces: world.furnaces, items: world.items, clock: world.clock, updatedAt: new Date() };
+      const values = { generator: world.generator, blocks: deflateRawSync(world.blocks), states: world.states ? deflateRawSync(world.states) : null, furnaces: world.furnaces, items: world.items, clock: world.clock, updatedAt: new Date() };
       await db.insert(playgroundWorlds).values({ conversationId, ...values })
         .onConflictDoUpdate({ target: playgroundWorlds.conversationId, set: values });
     },
@@ -69,9 +73,9 @@ export function memoryWorldStore(): WorldStore & { rows: Map<string, StoredWorld
     rows,
     async load(conversationId) {
       const row = rows.get(conversationId);
-      return row ? { ...row, blocks: new Uint8Array(row.blocks) } : null;
+      return row ? { ...row, blocks: new Uint8Array(row.blocks), states: row.states ? new Uint8Array(row.states) : null } : null;
     },
-    async save(conversationId, world) { rows.set(conversationId, { ...world, blocks: new Uint8Array(world.blocks) }); },
+    async save(conversationId, world) { rows.set(conversationId, { ...world, blocks: new Uint8Array(world.blocks), states: world.states ? new Uint8Array(world.states) : null }); },
   };
 }
 

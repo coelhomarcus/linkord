@@ -1,4 +1,4 @@
-import { BLOCK, blockDef, isReplaceable, isUsable, type Block } from './game/blocks.js';
+import { BLOCK, blockDef, isReplaceable, isUsable, placedState, type Block } from './game/blocks.js';
 import { withinPickup } from './game/drops.js';
 import { heldBlock, heldStack, openContainer, readOp, useHeld, wearHeld } from './game/inventory.js';
 import { HEIGHT } from './game/layout.js';
@@ -40,6 +40,12 @@ type Cell = [number, number, number];
 /** where each connection started digging, and when */
 const digs = new Map<string, { x: number; y: number; z: number; at: number }>();
 
+/** The face a block was placed against (0..5: +x, -x, +y, -y, +z, -z), or -1 when not said (an older
+ * tab) or nonsense. */
+function readFace(value: unknown): number {
+  return typeof value === 'number' && Number.isInteger(value) && value >= 0 && value < 6 ? value : -1;
+}
+
 function readCell(msg: Record<string, unknown>): Cell | null {
   return isCell(msg.x, msg.y, msg.z) ? [msg.x as number, msg.y as number, msg.z as number] : null;
 }
@@ -53,7 +59,10 @@ function canReach(player: Player, [x, y, z]: Cell): boolean {
 
 /** The block as it really is, to a client whose guess was refused. */
 function correct(player: Player, world: World | null, [x, y, z]: Cell): void {
-  if (world) send(player, { t: 'playground-blocks', conversationId: player.conversationId, changes: [[x, y, z, world.grid.get(x, y, z)]] });
+  if (!world) return;
+  const state = world.grid.stateAt(x, y, z);
+  const block = world.grid.get(x, y, z);
+  send(player, { t: 'playground-blocks', conversationId: player.conversationId, changes: [state ? [x, y, z, block, state] : [x, y, z, block]] });
 }
 
 /** `world-get`: the world as it is now, the blocks deflated; and the player's inventory after it. */
@@ -68,8 +77,10 @@ export async function handleWorldGet(player: Player, _msg: Record<string, unknow
   await inventoryOf(player);
   if (!isCurrent(player)) return ack({ error: 'not-here' });
   const now = Date.now();
+  const packed = packedBlocks(world);
   ack({
-    blocks: packedBlocks(world),
+    blocks: packed.blocks,
+    states: packed.states,
     furnaces: [...world.furnaces.values()].map(furnaceLook),
     items: [...world.items.values()].map((item) => itemView(item, now)),
     held: heldInCall(player.conversationId),
@@ -146,7 +157,7 @@ function occupied(conversationId: string, [x, y, z]: Cell): boolean {
   return false;
 }
 
-/** `block-place {seq, x, y, z}`: the held block put in that cell. */
+/** `block-place {seq, x, y, z, face?}`: the held block put in that cell. */
 export async function handlePlace(player: Player, msg: Record<string, unknown>): Promise<void> {
   const holder = await inventoryOf(player);
   const world = loadedWorld(player.conversationId);
@@ -161,7 +172,7 @@ export async function handlePlace(player: Player, msg: Record<string, unknown>):
     correct(player, world, cell);
     return sendInventory(player);
   }
-  setBlocks(world, [[x, y, z, block as Block]]);
+  setBlocks(world, [[x, y, z, block as Block, placedState(block, readFace(msg.face))]]);
   if (block === BLOCK.furnace) addFurnace(world, x, y, z, facingToward(positionOf(player.id)!, x, z));
   setInventory(holder, useHeld(holder.inventory));
   sendInventory(player);

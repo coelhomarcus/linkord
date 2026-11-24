@@ -29,6 +29,13 @@
       "when": 1795541672465,
       "tag": "0003_clock",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1795542910500,
+      "tag": "0004_block_states",
+      "breakpoints": true
     }
   ]
 }

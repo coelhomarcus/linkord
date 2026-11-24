@@ -44,7 +44,8 @@ export type PlaygroundClientMessage =
   /** you finished digging it; `seq` numbers every request that may change your inventory */
   | { t: 'block-break'; seq: number; x: number; y: number; z: number }
   /** the held block, put there */
-  | { t: 'block-place'; seq: number; x: number; y: number; z: number }
+  /** `face`: the face of the block it was put against (0..5: +x, -x, +y, -y, +z, -z), for its state */
+  | { t: 'block-place'; seq: number; x: number; y: number; z: number; face: number }
   /** a right click on a crafting table or a furnace */
   | { t: 'block-use'; seq: number; x: number; y: number; z: number }
   | { t: 'inv-op'; seq: number; op: InventoryOp };

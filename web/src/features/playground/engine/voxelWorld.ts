@@ -4,7 +4,7 @@ import type { Block } from '@game/blocks';
 import type { BlockGrid } from '@game/grid';
 import { HALF, HEIGHT, SEA_LEVEL, SIZE } from '@game/layout';
 import type { WorldState } from '../worldState';
-import { applyPackTiles, blockAtlas, faceTile, packWater, tileUv, waterTexture } from './blockTextures';
+import { applyPackTiles, blockAtlas, faceTile, faceTurned, packWater, tileUv, waterTexture } from './blockTextures';
 import { Clouds } from './clouds';
 import { cornerBrightness, cornerOcclusion, lightmap, MAX_LIGHT, sideShade, SkyLight } from './lighting';
 import type { LightChange } from './lighting';
@@ -110,10 +110,12 @@ function chunkGeometry(grid: BlockGrid, sky: SkyLight, world: WorldState, cx: nu
           continue;
         }
         const furnace = block === BLOCK.furnace ? world.furnaceAt(x, y, z) ?? undefined : undefined;
+        const state = grid.stateAt(x, y, z);
         FACES.forEach((face, faceIndex) => {
           const [dx, dy, dz] = face.dir;
           if (!faceShown(block, grid.get(x + dx, y + dy, z + dz))) return;
-          const tile = tileUv(faceTile(block, faceIndex, furnace));
+          const tile = tileUv(faceTile(block, faceIndex, furnace, state));
+          const turned = faceTurned(block, faceIndex, state);
           const start = blocks.positions.length / 3;
           // the cell in front of the face, where its light comes from
           const fx = x + dx;
@@ -123,7 +125,9 @@ function chunkGeometry(grid: BlockGrid, sky: SkyLight, world: WorldState, cx: nu
           for (const [cx2, cy, cz2, cu, cv] of face.corners) {
             blocks.positions.push(x + cx2, y + cy, z + cz2);
             blocks.normals.push(dx, dy, dz);
-            blocks.uvs.push(cu ? tile.u1 : tile.u0, cv ? tile.v1 : tile.v0);
+            // a quarter turn: what ran along u runs along v
+            const [tu, tv] = turned ? [cv, 1 - cu] : [cu, cv];
+            blocks.uvs.push(tu ? tile.u1 : tile.u0, tv ? tile.v1 : tile.v0);
             // the corner's two neighbours along the face, and the one diagonal between them
             const sx = dx === 0 ? cx2 * 2 - 1 : 0;
             const sy = dy === 0 ? cy * 2 - 1 : 0;

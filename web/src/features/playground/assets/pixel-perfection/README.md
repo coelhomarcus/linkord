@@ -3,7 +3,7 @@
 Textures from [Pixel Perfection Community Edition](https://github.com/Athemis/PixelPerfectionCE)
 (commit 28e38cab), originally by XSSheep and updated by the community, licensed under
 [CC BY-SA 4.0](LICENSE.md). The files here are unchanged copies of the pack's files of the same name:
-the blocks at the top and `destroy/` (the ten stages of a block being dug, `engine/breakOverlay.ts`) from
+the blocks at the top (among them the sixteen colours of wool, concrete and terracotta) and `destroy/` (the ten stages of a block being dug, `engine/breakOverlay.ts`) from
 `assets/minecraft/textures/block/`, `item/` (the pictures of tools and materials) from `assets/minecraft/textures/item/`, `particle/` from
 `assets/minecraft/textures/particle/` (the stars of a critical hit, the damage heart and the puff a
 dead player leaves, drawn by `engine/particles.ts`), `environment/` from

@@ -1,4 +1,4 @@
-import { BLOCK, type Block, type ToolKind } from './blocks.js';
+import { BLOCK, COLORED_KINDS, COLORS, coloredBlock, type Block, type ToolKind } from './blocks.js';
 
 // Every item a slot can hold, by the block game's ids: the blocks one can carry
 // and place, what ores and furnaces give, and the four tools in five materials.
@@ -69,6 +69,8 @@ const ITEMS: ReadonlyMap<string, ItemDef> = new Map([
   block('iron_ore', BLOCK.ironOre),
   block('gold_ore', BLOCK.goldOre),
   block('glass', BLOCK.glass),
+  block('terracotta', BLOCK.terracotta),
+  ...COLORED_KINDS.flatMap((kind) => COLORS.map((color) => block(`${color}_${kind}`, coloredBlock(kind, color)))),
   material('stick', 100),
   material('coal', 1600),
   material('charcoal', 1600),

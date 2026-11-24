@@ -307,6 +307,28 @@ describe('PlaygroundSession loading', () => {
     session.dispose();
   });
 
+  it('takes the cells\' states with the world, and a placed log lies along the face it was put against', async () => {
+    const { deflateRawSync } = await import('node:zlib');
+    const { BlockGrid, CELL_COUNT } = await import('@game/grid');
+    const { BLOCK, LOG_AXIS } = await import('@game/blocks');
+    const states = new Uint8Array(CELL_COUNT);
+    const blocks = new Uint8Array(CELL_COUNT);
+    blocks[BlockGrid.index(0, 1, 0)] = BLOCK.log;
+    states[BlockGrid.index(0, 1, 0)] = LOG_AXIS.z;
+    const { session, options } = sessionWithWorld(async () => ({
+      blocks: new Uint8Array(deflateRawSync(blocks)), states: new Uint8Array(deflateRawSync(states)), furnaces: [], items: [], held: [], clock: 6000,
+    }));
+    session.start();
+    options().onStatus?.('connected');
+    options().onConnect();
+    await vi.waitFor(() => expect(session.world.loaded).toBe(true));
+    expect(session.world.grid!.stateAt(0, 1, 0)).toBe(LOG_AXIS.z);
+    session.receive({ t: 'playground-blocks', conversationId: 'conv', changes: [[0, 1, 0, BLOCK.log, LOG_AXIS.x], [1, 1, 0, BLOCK.redWool]] });
+    expect(session.world.grid!.stateAt(0, 1, 0)).toBe(LOG_AXIS.x);
+    expect(session.world.grid!.get(1, 1, 0)).toBe(BLOCK.redWool);
+    session.dispose();
+  });
+
   it('says when the service cannot be reached or cannot open the world', async () => {
     const { session, options } = sessionWithWorld(async () => { throw new Error('unavailable'); });
     session.start();

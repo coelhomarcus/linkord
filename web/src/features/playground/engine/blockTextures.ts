@@ -1,6 +1,6 @@
 import * as THREE from 'three';
-import { BLOCK } from '@game/blocks';
-import type { Block } from '@game/blocks';
+import { BLOCK, COLORED_KINDS, COLORS, coloredBlock, LOG_AXIS } from '@game/blocks';
+import type { Block, Color, ColoredKind } from '@game/blocks';
 import bedrockUrl from '../assets/pixel-perfection/bedrock.png?url';
 import coalOreUrl from '../assets/pixel-perfection/coal_ore.png?url';
 import cobblestoneUrl from '../assets/pixel-perfection/cobblestone.png?url';
@@ -29,7 +29,7 @@ import sandUrl from '../assets/pixel-perfection/sand.png?url';
 import stoneUrl from '../assets/pixel-perfection/stone.png?url';
 import waterUrl from '../assets/pixel-perfection/water_still.png?url';
 
-// The world's pixel art: 16×16 tiles on one 128×128 atlas, read with nearest
+// The world's pixel art: 16×16 tiles on one 256×256 atlas, read with nearest
 // filtering so every texel stays a crisp square. The tiles are Pixel
 // Perfection's (assets/pixel-perfection, CC BY-SA 4.0), tinted where the pack
 // leaves them grey for the game to colour (grass, leaves, water). Until they
@@ -37,25 +37,41 @@ import waterUrl from '../assets/pixel-perfection/water_still.png?url';
 // colour broken up with seeded noise, plus a little structure.
 
 const TILE = 16;
-const COLUMNS = 8;
+const COLUMNS = 16;
 const ATLAS_SIZE = TILE * COLUMNS;
 
 type Rgb = [number, number, number];
 const hex = (value: number): Rgb => [(value >> 16) & 255, (value >> 8) & 255, value & 255];
 const scale = ([r, g, b]: Rgb, f: number): Rgb => [r * f, g * f, b * f];
 
-const TILES = {
+const BASE_TILES = {
   grassTop: 0, grassSide: 1, dirt: 2, stone: 3, sand: 4, logSide: 5, logTop: 6, leaves: 7, frame: 8, planks: 9,
   cobblestone: 10, coalOre: 11, ironOre: 12, goldOre: 13, diamondOre: 14, bedrock: 15, gravel: 16, glass: 17,
   tableTop: 18, tableSide: 19, tableFront: 20, furnaceTop: 21, furnaceSide: 22, furnaceFront: 23, furnaceFrontOn: 24,
+  terracotta: 25,
 } as const;
-export type TileName = keyof typeof TILES;
+/** a coloured block's tile, by the pack's name for it */
+type ColoredTile = `${Color}_${ColoredKind}`;
+export type TileName = keyof typeof BASE_TILES | ColoredTile;
+
+const COLORED_TILES = COLORED_KINDS.flatMap((kind) => COLORS.map((color): ColoredTile => `${color}_${kind}`));
+/** The coloured tiles follow the others, 16 to a family. */
+const TILES = {
+  ...BASE_TILES,
+  ...Object.fromEntries(COLORED_TILES.map((name, i) => [name, 32 + i])),
+} as Record<TileName, number>;
 
 type FaceTiles = [top: TileName, side: TileName, bottom: TileName, front?: TileName];
+const same = (tile: TileName): FaceTiles => [tile, tile, tile];
+
+/** Every coloured block shows its own tile all round. */
+function coloredFaces(): Record<number, FaceTiles> {
+  return Object.fromEntries(COLORED_KINDS.flatMap((kind) => COLORS.map((color) => [coloredBlock(kind, color), same(`${color}_${kind}`)])));
+}
 
 /** Which tile a block shows on its top, sides and bottom, and on its front where it has one. Water is
  * drawn apart (voxelWorld.ts). */
-const BLOCK_TILES: Record<Exclude<Block, 0 | 15>, FaceTiles> = {
+const BLOCK_TILES: Record<number, FaceTiles | undefined> = {
   [BLOCK.grass]: ['grassTop', 'grassSide', 'dirt'],
   [BLOCK.dirt]: ['dirt', 'dirt', 'dirt'],
   [BLOCK.stone]: ['stone', 'stone', 'stone'],
@@ -74,7 +90,12 @@ const BLOCK_TILES: Record<Exclude<Block, 0 | 15>, FaceTiles> = {
   [BLOCK.glass]: ['glass', 'glass', 'glass'],
   [BLOCK.craftingTable]: ['tableTop', 'tableSide', 'planks', 'tableFront'],
   [BLOCK.furnace]: ['furnaceTop', 'furnaceSide', 'furnaceTop', 'furnaceFront'],
+  [BLOCK.terracotta]: same('terracotta'),
+  ...coloredFaces(),
 };
+
+/** A block's tiles; a block with none (a newer one this table missed) shows stone. */
+const tilesOf = (block: number): FaceTiles => BLOCK_TILES[block] ?? same('stone');
 
 /** Face directions as voxelWorld.ts lists them: +x, -x, +y, -y, +z, -z. */
 const FACE_SIDE = ['side', 'side', 'top', 'bottom', 'side', 'side'] as const;
@@ -83,12 +104,25 @@ const FACING_FACE = [4, 1, 5, 0] as const;
 
 /** The tile on face `face` (voxelWorld.ts's order) of `block`; a furnace's front by where it faces and
  * whether it burns, a crafting table's front on its north and west faces, as the game draws it. */
-export function faceTile(block: Exclude<Block, 0 | 15>, face: number, furnace?: { facing: number; lit: boolean }): TileName {
-  const [top, side, bottom, front] = BLOCK_TILES[block];
+export function faceTile(block: Exclude<Block, 0 | 15>, face: number, furnace?: { facing: number; lit: boolean }, state = 0): TileName {
+  const [top, side, bottom, front] = tilesOf(block);
+  if (block === BLOCK.log && state !== LOG_AXIS.y) {
+    // a log on its side shows its rings at its ends
+    const end = state === LOG_AXIS.x ? face < 2 : face >= 4;
+    return end ? top : side;
+  }
   if (block === BLOCK.furnace && face === FACING_FACE[furnace?.facing ?? 0]) return furnace?.lit ? 'furnaceFrontOn' : front!;
   if (block === BLOCK.craftingTable && (face === 1 || face === 5)) return front!;
   const kind = FACE_SIDE[face]!;
   return kind === 'top' ? top : kind === 'bottom' ? bottom : side;
+}
+
+/** Whether a face's tile is turned a quarter: the bark of a log lying across it runs along the face. */
+export function faceTurned(block: number, face: number, state: number): boolean {
+  if (block !== BLOCK.log || state === LOG_AXIS.y) return false;
+  // the faces' u runs along z on ±x, along x on ±y and ±z (voxelWorld.ts's corners)
+  if (state === LOG_AXIS.x) return face >= 2;
+  return face < 2;
 }
 
 function random(seed: number): () => number {
@@ -105,7 +139,25 @@ const DIRT = hex(0x8b5d3b);
 const GRASS = hex(0x5ea83c);
 const noisy = (base: Rgb, spread: number): Paint => (_x, _y, rand) => scale(base, 1 - spread / 2 + rand() * spread);
 
+/** the dyes' colours, for the coloured blocks painted until the pack's load */
+const DYE: Record<Color, number> = {
+  white: 0xf9fffe, orange: 0xf9801d, magenta: 0xc74ebd, light_blue: 0x3ab3da, yellow: 0xfed83d, lime: 0x80c71f,
+  pink: 0xf38baa, gray: 0x474f52, light_gray: 0x9d9d97, cyan: 0x169c9c, purple: 0x8932b8, blue: 0x3c44aa,
+  brown: 0x835432, green: 0x5e7c16, red: 0xb02e26, black: 0x1d1d21,
+};
+const TERRACOTTA = hex(0x985e43);
+const mix = (a: Rgb, b: Rgb, f: number): Rgb => [a[0] + (b[0] - a[0]) * f, a[1] + (b[1] - a[1]) * f, a[2] + (b[2] - a[2]) * f];
+
+function coloredPainter(color: Color, kind: ColoredKind): Paint {
+  const dye = hex(DYE[color]);
+  if (kind === 'wool') return noisy(dye, 0.18);
+  if (kind === 'concrete') return noisy(dye, 0.04);
+  return noisy(mix(dye, TERRACOTTA, 0.55), 0.1);
+}
+
 const PAINTERS: Record<TileName, Paint> = {
+  ...Object.fromEntries(COLORED_KINDS.flatMap((kind) => COLORS.map((color) => [`${color}_${kind}`, coloredPainter(color, kind)]))) as Record<ColoredTile, Paint>,
+  terracotta: noisy(TERRACOTTA, 0.1),
   grassTop: (_x, _y, rand) => scale(GRASS, rand() < 0.12 ? 1.18 : rand() < 0.15 ? 0.82 : 0.92 + rand() * 0.14),
   dirt: (_x, _y, rand) => scale(DIRT, rand() < 0.1 ? 0.7 : rand() < 0.08 ? 1.2 : 0.92 + rand() * 0.14),
   grassSide: (x, y, rand) => {
@@ -236,7 +288,12 @@ interface PackTile {
   overlay?: { url: string; tint: Rgb };
 }
 
+const BLOCK_URLS = import.meta.glob<string>('../assets/pixel-perfection/*.png', { eager: true, query: '?url', import: 'default' });
+const blockUrl = (name: string): string => BLOCK_URLS[`../assets/pixel-perfection/${name}.png`] ?? '';
+
 const PACK_TILES: Record<TileName, PackTile> = {
+  ...Object.fromEntries(COLORED_TILES.map((name) => [name, { url: blockUrl(name) }])) as Record<ColoredTile, PackTile>,
+  terracotta: { url: blockUrl('terracotta') },
   grassTop: { url: grassTopUrl, tint: GRASS_TINT },
   grassSide: { url: grassSideUrl, overlay: { url: grassSideOverlayUrl, tint: GRASS_TINT } },
   dirt: { url: dirtUrl },
@@ -304,7 +361,7 @@ function overlay(base: ImageData, top: ImageData): ImageData {
 /** The pack's tile a block shows on its top, its sides or its front (the side for a block without one),
  * tinted as the world draws it (an item's icon). */
 export async function blockFacePixels(block: Exclude<Block, 0 | 15>, face: 'top' | 'side' | 'front'): Promise<ImageData> {
-  const tiles = BLOCK_TILES[block];
+  const tiles = tilesOf(block);
   const tile = PACK_TILES[face === 'top' ? tiles[0] : face === 'front' ? tiles[3] ?? tiles[1] : tiles[1]];
   const [base, top] = await Promise.all([loadImage(tile.url), tile.overlay ? loadImage(tile.overlay.url) : null]);
   const pixels = pixelsOf(base, tile.tint);

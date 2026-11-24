@@ -415,7 +415,9 @@ export class PlaygroundEngine {
     const x = hit.x + dx;
     const y = hit.y + dy;
     const z = hit.z + dz;
-    if (this.cellTaken(x, y, z) || !this.session.placeBlock(x, y, z)) return false;
+    // the face's index in the +x, -x, +y, -y, +z, -z order
+    const face = dx !== 0 ? (dx > 0 ? 0 : 1) : dy !== 0 ? (dy > 0 ? 2 : 3) : dz > 0 ? 4 : 5;
+    if (this.cellTaken(x, y, z) || !this.session.placeBlock(x, y, z, face)) return false;
     this.swingOnly();
     this.useTicks = USE_REPEAT_TICKS;
     return true;

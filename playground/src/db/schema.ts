@@ -23,13 +23,15 @@ export const playgroundSkins = pgTable('playground_skins', {
 const bytea = customType<{ data: Buffer; driverData: Buffer }>({ dataType: () => 'bytea' });
 
 /** Each playground's world (worlds.ts), saved as its players change it: the blocks, one byte a cell
- * (game/grid.ts), deflated; the furnaces with what is in them; the items lying on the ground; its clock in
+ * (game/grid.ts), deflated, and their states the same way (null for a world saved before states, all
+ * zeros); the furnaces with what is in them; the items lying on the ground; its clock in
  * ticks (game/dayTime.ts: the time of day and the moon's phase). `generator`
  * is the version of game/worldGen.ts that first made it. */
 export const playgroundWorlds = pgTable('playground_worlds', {
   conversationId: text('conversation_id').primaryKey(),
   generator: integer('generator').notNull(),
   blocks: bytea('blocks').notNull(),
+  states: bytea('states'),
   furnaces: jsonb('furnaces').notNull().default([]),
   items: jsonb('items').notNull().default([]),
   clock: integer('clock').notNull().default(1000),

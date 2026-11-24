@@ -1,7 +1,7 @@
 import { test, describe, beforeEach, afterEach } from 'node:test';
 import assert from 'node:assert/strict';
 import { inflateRawSync } from 'node:zlib';
-import { BLOCK } from '../src/game/blocks.js';
+import { BLOCK, LOG_AXIS } from '../src/game/blocks.js';
 import { BlockGrid } from '../src/game/grid.js';
 import { GENERATOR_VERSION } from '../src/game/worldGen.js';
 import { handleBreak, handleDigStart, handleInventoryOp, handlePlace, handleUse, handleWorldGet, clearBuilding, tickGame } from '../src/building.js';
@@ -26,7 +26,7 @@ function flatWorld() {
   }
   grid.set(3, GROUND, 0, BLOCK.craftingTable);
   grid.set(-3, GROUND, 0, BLOCK.furnace);
-  return { generator: GENERATOR_VERSION, blocks: grid.blocks, furnaces: [{ x: -3, y: GROUND, z: 0, facing: 0 }], items: [], clock: 30_000 };
+  return { generator: GENERATOR_VERSION, blocks: grid.blocks, furnaces: [{ x: -3, y: GROUND, z: 0, facing: 0 }], items: [], clock: 30_000, states: null };
 }
 
 const sent = new Map<string, ServerMessage[]>();
@@ -74,8 +74,10 @@ describe('building', () => {
     const player = connect('a');
     let answer: Record<string, unknown> = {};
     await handleWorldGet(player, {}, (reply) => { answer = reply; });
-    const blocks = new BlockGrid(new Uint8Array(inflateRawSync(answer.blocks as Buffer)));
+    const blocks = new BlockGrid(new Uint8Array(inflateRawSync(answer.blocks as Buffer)), new Uint8Array(inflateRawSync(answer.states as Buffer)));
     assert.equal(blocks.get(0, GROUND - 1, 0), BLOCK.dirt);
+    // a world saved before states has them all 0
+    assert.ok(blocks.states.every((state) => state === 0));
     assert.deepEqual(answer.furnaces, [{ x: -3, y: GROUND, z: 0, facing: 0, lit: false }]);
     assert.equal(answer.clock, 30_000);
     assert.equal(lastInventory(player).ack, 0);
@@ -163,6 +165,37 @@ describe('building', () => {
     await handlePlace(builder, { seq: 4, x: 0, y: GROUND + 5, z: 0 });
     assert.equal(world.grid.get(0, GROUND + 5, 0), BLOCK.air, 'against nothing');
     assert.equal(lastInventory(builder).ack, 4);
+  });
+
+  test('a log placed against a side lies along it, and everyone hears its state', async () => {
+    const builder = connect('a');
+    const watcher = connect('b');
+    await stand(builder, 0.5, 0.5);
+    await give(builder, { 0: { item: 'oak_log', count: 3 } });
+    const world = loadedWorld(CALL)!;
+    // on the ground, against its top: it stands up, and a state of 0 goes unsaid
+    await handlePlace(builder, { seq: 1, x: 1, y: GROUND, z: 1, face: 2 });
+    assert.equal(world.grid.stateAt(1, GROUND, 1), LOG_AXIS.y);
+    assert.deepEqual(messages(watcher, 'playground-blocks').at(-1)?.changes, [[1, GROUND, 1, BLOCK.log]]);
+    await handlePlace(builder, { seq: 2, x: 2, y: GROUND, z: 1, face: 0 });
+    assert.equal(world.grid.stateAt(2, GROUND, 1), LOG_AXIS.x);
+    assert.deepEqual(messages(watcher, 'playground-blocks').at(-1)?.changes, [[2, GROUND, 1, BLOCK.log, LOG_AXIS.x]]);
+    // a tab from before states says no face: it stands up
+    await handlePlace(builder, { seq: 3, x: 1, y: GROUND, z: 2 });
+    assert.equal(world.grid.stateAt(1, GROUND, 2), LOG_AXIS.y);
+    // broken, the cell forgets the state
+    world.grid.set(2, GROUND, 1, BLOCK.air);
+    assert.equal(world.grid.stateAt(2, GROUND, 1), 0);
+  });
+
+  test('a world keeps its states through a save', async () => {
+    const world = loadedWorld(CALL)!;
+    world.grid.set(4, GROUND, 4, BLOCK.log, LOG_AXIS.z);
+    const store = memoryWorldStore();
+    setWorldStore(store);
+    await store.save(CALL, { generator: GENERATOR_VERSION, blocks: world.grid.blocks, states: world.grid.states, furnaces: [], items: [], clock: 0 });
+    const loaded = await worldFor(CALL);
+    assert.equal(loaded.grid.stateAt(4, GROUND, 4), LOG_AXIS.z);
   });
 
   test('a furnace opens, takes ore and coal, and smelts on its own', async () => {

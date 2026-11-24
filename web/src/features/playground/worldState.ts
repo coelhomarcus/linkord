@@ -86,10 +86,10 @@ export class WorldState {
   }
 
   /** The world as the service sent it (`world-get`'s answer, the blocks already inflated). */
-  load(blocks: Uint8Array, answer: { furnaces?: unknown; items?: unknown; held?: unknown; clock?: unknown }): void {
+  load(blocks: Uint8Array, states: Uint8Array | null, answer: { furnaces?: unknown; items?: unknown; held?: unknown; clock?: unknown }): void {
     if (blocks.length !== CELL_COUNT) return;
     this.applyClock(answer.clock);
-    this.grid = BlockGrid.from(blocks);
+    this.grid = BlockGrid.from(blocks, states);
     this.furnaces.clear();
     for (const entry of Array.isArray(answer.furnaces) ? answer.furnaces : []) {
       const look = readLook(entry);
@@ -125,21 +125,22 @@ export class WorldState {
   }
 
   /** A change this player asked for, shown before the service answers. */
-  predict(x: number, y: number, z: number, block: Block): void {
+  predict(x: number, y: number, z: number, block: Block, state = 0): void {
     if (!this.grid || !BlockGrid.inside(x, y, z)) return;
-    this.grid.set(x, y, z, block);
+    this.grid.set(x, y, z, block, state);
     this.emit({ kind: 'blocks', cells: [[x, y, z]] });
   }
 
-  /** `playground-blocks`: blocks that changed (or, to this player alone, the truth about one it guessed). */
+  /** `playground-blocks`: blocks that changed (or, to this player alone, the truth about one it guessed),
+   * `[x, y, z, block, state?]` each. */
   applyBlocks(changes: unknown): void {
     if (!this.grid || !Array.isArray(changes)) return;
     const cells: [number, number, number][] = [];
     for (const change of changes) {
       if (!Array.isArray(change)) continue;
-      const [x, y, z, block] = change as unknown[];
+      const [x, y, z, block, state] = change as unknown[];
       if (!isInt(x) || !isInt(y) || !isInt(z) || !isInt(block) || !isBlock(block) || !BlockGrid.inside(x, y, z)) continue;
-      this.grid.set(x, y, z, block);
+      this.grid.set(x, y, z, block, isInt(state) ? state : 0);
       if (block !== BLOCK.furnace) this.furnaces.delete(furnaceKey(x, y, z));
       cells.push([x, y, z]);
     }

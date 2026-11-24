@@ -13,7 +13,7 @@ import { proximityGain } from './proximity';
 import { spawnPoint } from '@game/layout';
 import { heldBlock, openContainer, useHeld, wearHeld } from '@game/inventory';
 import type { InventoryOp } from '@game/inventory';
-import { BLOCK, isReplaceable } from '@game/blocks';
+import { BLOCK, isReplaceable, placedState } from '@game/blocks';
 import type { Block } from '@game/blocks';
 import { brokenInto, wearForBreaking } from '@game/mining';
 import { inflateBlocks, WorldState } from './worldState';
@@ -204,11 +204,15 @@ export class PlaygroundSession {
   private async loadWorld(generation: number): Promise<void> {
     let answer: Record<string, unknown>;
     let blocks: Uint8Array;
+    let states: Uint8Array | null;
     try {
       answer = await this.link.request({ event: 'world-get', payload: {} });
       const packed = answer.blocks;
       if (!(packed instanceof ArrayBuffer) && !(packed instanceof Uint8Array)) throw new Error('no blocks');
       blocks = await inflateBlocks(packed);
+      // a service from before states sends none: every cell's is 0
+      const packedStates = answer.states;
+      states = packedStates instanceof ArrayBuffer || packedStates instanceof Uint8Array ? await inflateBlocks(packedStates) : null;
     } catch {
       if (generation !== this.linkGeneration) return;
       if (!this.world.loaded) this.setLoading('worldFailed');
@@ -216,7 +220,7 @@ export class PlaygroundSession {
       return;
     }
     if (this.disposed || generation !== this.linkGeneration) return;
-    this.world.load(blocks, answer);
+    this.world.load(blocks, states, answer);
     this.setLoading('building');
   }
 
@@ -245,16 +249,17 @@ export class PlaygroundSession {
     if (sent) this.world.predict(x, y, z, into);
   }
 
-  /** The held block put in a cell; false when the hand holds no block or the cell is taken. */
-  placeBlock(x: number, y: number, z: number): boolean {
+  /** The held block put in a cell against `face` of the block clicked (0..5: +x, -x, +y, -y, +z, -z);
+   * false when the hand holds no block or the cell is taken. */
+  placeBlock(x: number, y: number, z: number, face: number): boolean {
     const grid = this.world.grid;
     const block = heldBlock(this.inventory.get());
     if (!grid || block === null || !isReplaceable(grid.get(x, y, z))) return false;
     const sent = this.inventory.predict(
       (window) => ({ ...window, inventory: useHeld(window.inventory) }),
-      (seq) => this.link.send({ t: 'block-place', seq, x, y, z }),
+      (seq) => this.link.send({ t: 'block-place', seq, x, y, z, face }),
     );
-    if (sent) this.world.predict(x, y, z, block as Block);
+    if (sent) this.world.predict(x, y, z, block as Block, placedState(block, face));
     return sent;
   }
 

@@ -70,7 +70,7 @@ export interface World {
   dirtySince: number | null;
   /** bumped by every block change, so the compressed copy for newcomers is made again */
   version: number;
-  packed: { version: number; bytes: Buffer } | null;
+  packed: { version: number; blocks: Buffer; states: Buffer } | null;
   /** when its last player left, or null while someone is in */
   emptySince: number | null;
   /** the time of its last game tick */
@@ -138,7 +138,7 @@ async function load(conversationId: string): Promise<World> {
   const now = Date.now();
   const stored = await store.load(conversationId);
   if (stored) {
-    return newWorld(conversationId, BlockGrid.from(stored.blocks), readFurnaces(stored.furnaces), readItems(stored.items, now), readClock(stored.clock), now);
+    return newWorld(conversationId, BlockGrid.from(stored.blocks, stored.states), readFurnaces(stored.furnaces), readItems(stored.items, now), readClock(stored.clock), now);
   }
   const started = performance.now();
   const generated = generateWorld();
@@ -171,6 +171,7 @@ function snapshot(world: World, now: number) {
   return {
     generator: GENERATOR_VERSION,
     blocks: world.grid.blocks,
+    states: world.grid.states,
     furnaces: [...world.furnaces.values()].map(({ x, y, z, facing, state }) => ({ x, y, z, facing, state })),
     items: [...world.items.values()].map((item) => ({ stack: item.stack, x: item.x, y: item.y, z: item.z, age: now - item.spawnedAt })),
     clock: world.clock,
@@ -194,11 +195,16 @@ function changed(world: World, now = Date.now()): void {
   if (world.dirtySince === null) world.dirtySince = now;
 }
 
-/** The blocks as newcomers get them: deflated, made again only after a change. */
-export function packedBlocks(world: World): Buffer {
-  if (world.packed?.version !== world.version) world.packed = { version: world.version, bytes: deflateRawSync(world.grid.blocks) };
-  return world.packed.bytes;
+/** The blocks and their states as newcomers get them: deflated, made again only after a change. */
+export function packedBlocks(world: World): { blocks: Buffer; states: Buffer } {
+  if (world.packed?.version !== world.version) {
+    world.packed = { version: world.version, blocks: deflateRawSync(world.grid.blocks), states: deflateRawSync(world.grid.states) };
+  }
+  return world.packed;
 }
+
+/** A block change as everyone hears it: the cell, the block and its state. */
+export type BlockChange = [x: number, y: number, z: number, block: Block, state?: number];
 
 export function itemView(item: DroppedItem, now: number) {
   return { id: item.id, item: item.stack.item, count: item.stack.count, start: item.start, age: Math.max(0, now - item.spawnedAt) };
@@ -209,21 +215,26 @@ export function furnaceLook(furnace: Furnace) {
 }
 
 /** Changes blocks and tells everyone in the call; items lying on a cell that changed fall again. */
-export function setBlocks(world: World, changes: [number, number, number, Block][]): void {
+export function setBlocks(world: World, changes: BlockChange[]): void {
   if (changes.length === 0) return;
-  for (const [x, y, z, block] of changes) {
-    world.grid.set(x, y, z, block);
+  for (const [x, y, z, block, state] of changes) {
+    world.grid.set(x, y, z, block, state);
     if (block !== BLOCK.furnace) world.furnaces.delete(furnaceKey(x, y, z));
   }
   world.version++;
   changed(world);
-  sendToCall(world.conversationId, { t: 'playground-blocks', conversationId: world.conversationId, changes });
+  // a state of 0 goes unsaid, as tabs from before states expect four numbers
+  const told = changes.map(([x, y, z, block]): BlockChange => {
+    const state = world.grid.stateAt(x, y, z);
+    return state ? [x, y, z, block, state] : [x, y, z, block];
+  });
+  sendToCall(world.conversationId, { t: 'playground-blocks', conversationId: world.conversationId, changes: told });
   resettleItems(world, changes);
 }
 
 /** Items that rested on a cell now gone fall from where they are; items inside a cell now filled are
  * pushed up onto it. */
-function resettleItems(world: World, changes: [number, number, number, Block][]): void {
+function resettleItems(world: World, changes: BlockChange[]): void {
   const moved: DroppedItem[] = [];
   const now = Date.now();
   for (const item of world.items.values()) {
