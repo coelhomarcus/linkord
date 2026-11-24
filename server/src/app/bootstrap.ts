@@ -6,6 +6,8 @@ import { broadcast, restoreCallParticipants, setCallPresenceStore } from '../mod
 import { callPresenceStore, loadCallPresence } from '../modules/presence/callPresenceRepository.js';
 import { restoreDmCalls, setDmCallStore } from '../modules/calls/dmCalls.js';
 import { startCallRoomSync } from '../modules/calls/callRoomSync.js';
+import { startPlaygroundSync } from '../modules/playground/playgroundSync.js';
+import { startEmbeddedPlayground } from './embeddedPlayground.js';
 import { dmCallStore, loadActiveDmCalls } from '../modules/calls/dmCallRepository.js';
 import { createApp } from '../http/app.js';
 import { createWsServer } from '../realtime/socket.js';
@@ -100,6 +102,8 @@ export async function bootstrap(): Promise<void> {
   const activityCheckpointTimer = setInterval(checkpointActivitySessions, ACTIVITY_CHECKPOINT_MS).unref();
   // LiveKit rooms follow the server's call membership from here on: anyone else is removed
   const callRoomSyncTimer = startCallRoomSync();
+  // what the playground service still has to hear: deleted accounts, skins from before it kept them
+  const playgroundSyncTimer = startPlaygroundSync();
 
   const fastify = createApp();
   // fastify.server (the underlying http.Server) already exists once
@@ -109,6 +113,8 @@ export async function bootstrap(): Promise<void> {
   const io = createWsServer(fastify.server);
 
   await fastify.listen({ port: config.PORT, host: config.HOST_BIND });
+  // the playground service in this container, for a deploy that runs both as one (PLAYGROUND_EMBEDDED=1)
+  const embeddedPlayground = config.PLAYGROUND_EMBEDDED ? startEmbeddedPlayground({ port: config.PLAYGROUND_EMBEDDED_PORT, log }) : null;
   log.info('listening', { host: config.HOST_BIND, port: config.PORT });
   if (!config.LIVEKIT_URL || !config.LIVEKIT_API_KEY || !config.LIVEKIT_API_SECRET) {
     log.warn('LiveKit is not configured: calls, camera and screen sharing will fail');
@@ -202,6 +208,7 @@ export async function bootstrap(): Promise<void> {
       clearInterval(activityPruneTimer);
       clearInterval(activityCheckpointTimer);
       if (callRoomSyncTimer) clearInterval(callRoomSyncTimer);
+      if (playgroundSyncTimer) clearInterval(playgroundSyncTimer);
       broadcast({ t: 'server-restart' });
       // Not removeParticipant: leaving the call for everyone is exactly what a
       // deploy must not do. The persisted rows are what the next process restores.
@@ -212,6 +219,9 @@ export async function bootstrap(): Promise<void> {
       // included) treats as a network drop and reconnects from.
       io.close();
     },
-    closeHttp: async () => { await fastify.close(); await activitySessionsWritten(); },
+    closeHttp: async () => {
+      await Promise.all([fastify.close(), embeddedPlayground?.stop()]);
+      await activitySessionsWritten();
+    },
   });
 }

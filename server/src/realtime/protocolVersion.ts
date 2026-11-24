@@ -98,9 +98,22 @@
 // messages, so the minimum stays at 7.
 // Version 34 adds experience in a playground: `playground-xp` (your total points there) after a kill and
 // in answer to a session's first position report. An old tab ignores it, so the minimum stays at 7.
+// Version 35 moves fighting and experience to the playground service (playground/): the client asks for
+// a pass with `playground-token` and the server answers `playground-token` (its `url` and `token`, or
+// `token: null`); `playground-pos`, `-attack` and `-respawn` and the `-hit`, `-health` and `-xp` answers
+// now travel on the service's own socket. This server ignores them, so an old tab plays on without
+// fighting until it reloads, and the minimum stays at 7.
+// Version 36 moves skins to the playground service too: `skin-get` and `skin-set` on its socket replace
+// `GET /api/users/:userId/playground-skin` and `PUT`/`DELETE /api/me/playground-skin`, which are gone. An
+// old tab shows everyone in their default skin and cannot change its own until it reloads (the LiveKit
+// packet still carries a change between tabs), so the minimum stays at 7.
+// Version 37 adds `welcome.playgroundEnabled`: whether this server has the playground service on. While it
+// is off, playground channels arrive as plain voice channels (`voiceMode: 'standard'`, no `playgroundChatId`)
+// and creating one is refused. An old tab ignores the flag and still offers to create one, which fails, so
+// the minimum stays at 7.
 // Raising MIN_PROTOCOL_VERSION also drops open tabs out of their calls (they are refused and
 // disconnect), so keep it for changes an old client cannot tolerate.
-export const PROTOCOL_VERSION = 34;
+export const PROTOCOL_VERSION = 37;
 export const MIN_PROTOCOL_VERSION = 7;
 export const MIC_STARTING_PROTOCOL_VERSION = 18;
 export const CALL_ELSEWHERE_PROTOCOL_VERSION = 20;

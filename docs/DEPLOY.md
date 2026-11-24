@@ -4,7 +4,7 @@ How to run Linkord in production, what the container expects from the host, and 
 
 ## What gets deployed
 
-One Docker image, built by the [`Dockerfile`](../Dockerfile), holds everything: the web app (`web/dist`), the API, the realtime server (Socket.IO on the `/ws` path) and the backup scripts with the PostgreSQL client tools. A single Node process serves all of it on port **3000**, so the reverse proxy needs one route to one port, websockets included.
+One Docker image, built by the [`Dockerfile`](../Dockerfile), holds everything: the web app (`web/dist`), the API, the realtime server (Socket.IO on the `/ws` path) and the backup scripts with the PostgreSQL client tools. A single Node process serves all of it on port **3000**, so the reverse proxy needs one route to one port, websockets included. The same image also holds the optional [playground service](#playground-service), a second process you run as its own container.
 
 - **Health checks:** both public, both answer only `{ ok: … }`.
   - `GET /healthz` (liveness): `200` while the process serves HTTP. The image's `HEALTHCHECK`, Dokploy and the end-to-end stack use it.
@@ -59,7 +59,7 @@ LIVEKIT_RTC_BIND=0.0.0.0
 docker compose --env-file .env.full up -d --build
 ```
 
-4. **Firewall:** open `80/tcp` and `443/tcp` (Caddy; `443/udp` too for HTTP/3), `7881/tcp` and `7882/udp` (LiveKit media). Keep `3000`, `5432`, `7880` and `8025` closed; the file publishes them on `127.0.0.1` only.
+4. **Firewall:** open `80/tcp` and `443/tcp` (Caddy; `443/udp` too for HTTP/3), `7881/tcp` and `7882/udp` (LiveKit media). Keep `3000`, `3100`, `5432`, `5433`, `7880` and `8025` closed; the file publishes them on `127.0.0.1` only.
 
 Why this shape:
 
@@ -112,6 +112,24 @@ Dokploy runs the app as a Swarm service, so the container's name changes with ev
 docker ps --format '{{.Names}}' | grep <app-name>
 ```
 
+## Playground service
+
+Fighting, experience and skins in playground channels run in a service of their own, so restarting or losing it never touches the chat or anyone's call, and deploying the app no longer resets the game. It is optional, and `PLAYGROUND_URL` on the app is its switch: unset, nobody can create a playground channel, and the ones that exist open as ordinary voice channels (tiles, no 3D world or game chat) until it is set again, since each channel keeps its mode. How it fits with the app is in [DEVELOPMENT.md](DEVELOPMENT.md#playground-channels).
+
+- **One service or two.** The service is its own process either way, from the app's own image:
+  - **Inside the app's container** (`PLAYGROUND_EMBEDDED=1` on the app): the app starts it next to itself on `PLAYGROUND_EMBEDDED_PORT` (default `3100`) and reaches it there. If it crashes, the app logs it and starts it again (after 1 s, then up to 30 s), and never goes down with it; a deploy of the app restarts both, which resets health but keeps experience and skins. One service to run, one set of variables.
+  - **In a container of its own:** run the image a second time with `node playground/dist/index.js`. It listens on `3000` there (`PLAYGROUND_PORT`), and restarts and deploys apart from the app.
+
+  Either way it answers `GET /healthz` and `GET /readyz` (with its database) and migrates its database when it starts.
+- **Its own PostgreSQL database**, never the app's: `PLAYGROUND_DATABASE_URL` (`PLAYGROUND_DATABASE_SSL=1` over TLS). It needs only `CREATE` on it. It holds experience and skins (health is kept in memory), and the app's [backups](#backups) leave it out: `pg_dump` it yourself if that matters.
+- **A shared secret:** set the same `PLAYGROUND_SECRET` (at least 32 characters, `openssl rand -hex 32`) on the app and on the service (in one container, that is one variable). The app signs a short-lived pass with it for each player; the service accepts no one without one. Changing it makes every player reconnect once.
+- **Where browsers reach it:** `PLAYGROUND_URL` on the app, an origin. The service answers on `/playground/ws` there, as a websocket. On the app's own domain (recommended: no extra name, certificate or CSP change), route the path `/playground/` to the service's container and everything else to the app. On a name of its own, set that origin; the app adds it to its Content-Security-Policy.
+- **The app calls it too,** at `PLAYGROUND_INTERNAL_URL` (default `PLAYGROUND_URL`) under `/playground/internal/`, each request signed with the secret: to tell it which accounts were deleted, so their skin and experience go, and to hand it the skins saved in the app before the service kept them. Both wait in the app's database until the service took them, so a service that is down only delays them (the log says `could not reach the playground service`). In one container it is the local port; with two, point `PLAYGROUND_INTERNAL_URL` at the service's container when the app can reach it directly (through the public address it works too).
+- **Turning it on:** in its own container, deploy the service first; then set `PLAYGROUND_URL` and `PLAYGROUND_SECRET` (and, for one container, `PLAYGROUND_EMBEDDED=1` and `PLAYGROUND_DATABASE_URL`) on the app and redeploy it. Within a minute the app hands the service the skins it had kept; until then people wear their default. Turning it off is removing `PLAYGROUND_URL` from the app and redeploying it: playground channels become voice channels for everyone at once (open tabs too, on their reconnect); the service's database stays as it is, and accounts deleted meanwhile are not forgotten there.
+- **Compose:** the `playground` profile runs it next to its own `playground-postgres` ([DEVELOPMENT.md](DEVELOPMENT.md#the-whole-stack-in-docker)); with `https`, Caddy already routes `/playground/` to it, so set `PLAYGROUND_URL` to the app's address.
+- **Dokploy, in the app's container:** on the existing application, add `PLAYGROUND_EMBEDDED=1`, `PLAYGROUND_URL` (the same as `APP_URL`), `PLAYGROUND_SECRET` and `PLAYGROUND_DATABASE_URL` (a second database, on the same PostgreSQL service or another), and a second domain on the same host name with the path `/playground` (not stripped) on container port `3100`. Traefik sends the longer path there and the rest to port `3000`. Redeploy.
+- **Dokploy, in a container of its own:** a second application from the same repository and `Dockerfile`, with the run command `node playground/dist/index.js`, `PLAYGROUND_DATABASE_URL`, `PLAYGROUND_SECRET`, no mounts, and a domain on the app's host name with the path `/playground` (not stripped) on container port `3000`; then the app's variables as above, without `PLAYGROUND_EMBEDDED`.
+
 ## Folders and permissions
 
 The app writes to two places and nothing else:
@@ -154,7 +172,7 @@ What keeps this working, and the rules for changing it, is in [`AGENTS.md`](../A
 
 The server sets its own security headers, so the proxy needs to add none (and must not add a second `Content-Security-Policy`, which browsers would enforce on top):
 
-- `Content-Security-Policy`, built at startup from `APP_URL`, `LIVEKIT_URL`, `KLIPY_API_KEY`, `MEDIA_PROXY` and the frontend build. A wrong `LIVEKIT_URL` blocks calls in the browser even when the server reaches LiveKit. How it is built and how to allow a new host: [DEVELOPMENT.md](DEVELOPMENT.md#content-security-policy).
+- `Content-Security-Policy`, built at startup from `APP_URL`, `LIVEKIT_URL`, `PLAYGROUND_URL`, `KLIPY_API_KEY`, `MEDIA_PROXY` and the frontend build. A wrong `LIVEKIT_URL` blocks calls in the browser even when the server reaches LiveKit. How it is built and how to allow a new host: [DEVELOPMENT.md](DEVELOPMENT.md#content-security-policy).
 - `X-Frame-Options: DENY` and `frame-ancestors 'none'`: no other site can frame Linkord.
 - `Strict-Transport-Security` (one year, without `includeSubDomains`) on HTTPS requests.
 

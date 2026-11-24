@@ -8,6 +8,7 @@ import { Label } from '@/shared/ui/primitives/label';
 import { describeApiError } from '@/shared/api/errorText';
 import { ROUTES } from '@/shared/lib/routes';
 import { cn } from '@/shared/lib/utils';
+import { useOptionalRoomSelector } from '@/state/RoomContext';
 import type { ServerSummary } from '@/shared/types/protocol';
 import { createCategory, createChannel } from './serversApi';
 
@@ -26,6 +27,8 @@ export function CreateChannelDialog({ server, target, onClose }: { server: Serve
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const category = target?.kind === 'channel' && target.categoryId ? server.categories.find((c) => c.id === target.categoryId) : null;
+  // a playground needs the server's playground service; outside RoomProvider it is offered
+  const kinds: ChannelKind[] = useOptionalRoomSelector((room) => room.playgroundEnabled) === false ? ['text', 'voice'] : ['text', 'voice', 'playground'];
   const isCategory = target?.kind === 'category';
 
   function close() {
@@ -66,7 +69,7 @@ export function CreateChannelDialog({ server, target, onClose }: { server: Serve
           {!isCategory && (
             <div role="radiogroup" aria-label={t('channel.type')} className="flex flex-col gap-3">
               <span className="text-body font-medium text-text-primary">{t('channel.type')}</span>
-              {(['text', 'voice', 'playground'] as const).map((option) => {
+              {kinds.map((option) => {
                 const checked = type === option;
                 const Icon = KIND_ICON[option];
                 return (
