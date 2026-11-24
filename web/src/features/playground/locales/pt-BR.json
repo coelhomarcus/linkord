@@ -68,5 +68,10 @@
     "label": "Chat do jogo, #{{channel}}",
     "input": "Mensagem em #{{channel}}",
     "inputNoChannel": "Mensagem"
+  },
+  "death": {
+    "title": "Você morreu!",
+    "killedBy": "{{name}} te derrotou",
+    "respawn": "Renascer"
   }
 }

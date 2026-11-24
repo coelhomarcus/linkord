@@ -1,3 +1,4 @@
+import { useSyncExternalStore } from 'react';
 import type { ServerMessage } from '@/shared/types/protocol';
 
 // What this client knows of the fighting in a playground. The server decides
@@ -29,9 +30,18 @@ export function isCriticalHit(body: { onGround: boolean }, fallDistance: number)
   return !body.onGround && fallDistance > 0;
 }
 
+const FULL: Vitals = { health: MAX_HEALTH, hurts: 0, heals: 0, killerId: null };
+const noSubscription = () => () => {};
+const fullHealth = () => FULL;
+
+/** Your health in a playground (full outside one). */
+export function useVitals(combat: PlaygroundCombat | null): Vitals {
+  return useSyncExternalStore(combat?.subscribe ?? noSubscription, combat?.getVitals ?? fullHealth);
+}
+
 export class PlaygroundCombat {
   private readonly localId: string;
-  private vitals: Vitals = { health: MAX_HEALTH, hurts: 0, heals: 0, killerId: null };
+  private vitals: Vitals = FULL;
   /** health the server last said, and when (performance.now()) */
   private baseHealth = MAX_HEALTH;
   private baseAt = 0;

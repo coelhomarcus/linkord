@@ -68,5 +68,10 @@
     "label": "Game chat, #{{channel}}",
     "input": "Message #{{channel}}",
     "inputNoChannel": "Message"
+  },
+  "death": {
+    "title": "You died!",
+    "killedBy": "Slain by {{name}}",
+    "respawn": "Respawn"
   }
 }

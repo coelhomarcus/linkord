@@ -16,6 +16,7 @@ export const PIXEL_TEXT = {
   lg: 'text-[22px]', // off-scale: a pixel-font size, see above
   xl: 'text-[24px]', // off-scale: a pixel-font size, see above
   title: 'text-[32px]', // off-scale: a pixel-font size, see above
+  huge: 'text-[48px]', // off-scale: a pixel-font size, see above
 } as const;
 
 let loading: Promise<void> | null = null;

@@ -39,13 +39,20 @@ const SPRINT_DOUBLE_TAP_MS = 350;
 const DEFAULT_CAMERA_DISTANCE = 4;
 const MIN_CAMERA_DISTANCE = 2;
 const MAX_CAMERA_DISTANCE = 8;
+/** a press released this close to where it started, this soon, is a click or tap, not a drag */
+const TAP_SLOP_PX = 6;
+const TAP_MS = 300;
 
 const MOVE_KEYS = new Set(['KeyW', 'KeyA', 'KeyS', 'KeyD', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'ShiftLeft', 'ShiftRight', 'Space']);
 const FORWARD_KEYS = new Set(['KeyW', 'ArrowUp']);
 /** held while moving forward, starts a sprint, as in the game */
 const SPRINT_KEYS = new Set(['ControlLeft', 'ControlRight']);
 
-interface Drag { pointerId: number; startX: number; startY: number; x: number; y: number }
+interface Drag { pointerId: number; startX: number; startY: number; x: number; y: number; at: number; button: number }
+
+function isTap(drag: Drag, event: PointerEvent): boolean {
+  return event.timeStamp - drag.at <= TAP_MS && Math.hypot(event.clientX - drag.startX, event.clientY - drag.startY) <= TAP_SLOP_PX;
+}
 
 export class Controls {
   /** camera heading, radians around +y; 0 looks toward -z (the screen) */
@@ -55,13 +62,16 @@ export class Controls {
   /** third-person camera distance */
   distance = DEFAULT_CAMERA_DISTANCE;
   mode: CameraMode = 'third';
-  /** a click while the mouse is locked: the arm swings */
+  /** a click while the mouse is locked (or a plain click where the lock is refused, a tap on a touch
+   * screen): the arm swings */
   onAction: () => void = () => {};
 
   private readonly keys = new Set<string>();
   private jumpQueued = false;
   private sprinting = false;
   private lastForwardPress = -Infinity;
+  /** the browser said no to locking the mouse: clicks punch without it */
+  private lockRefused = false;
   private joystick: Drag | null = null;
   private look: Drag | null = null;
   /** a held mouse button turning the view where the pointer cannot be locked */
@@ -86,6 +96,7 @@ export class Controls {
     window.addEventListener('keyup', this.onKeyUp);
     window.addEventListener('blur', this.clear);
     document.addEventListener('pointerlockchange', this.onPointerLockChange);
+    document.addEventListener('pointerlockerror', this.onPointerLockError);
     document.addEventListener('mousemove', this.onMouseMove);
     canvas.addEventListener('pointerdown', this.onPointerDown);
     canvas.addEventListener('pointermove', this.onPointerMove);
@@ -105,6 +116,7 @@ export class Controls {
     window.removeEventListener('keyup', this.onKeyUp);
     window.removeEventListener('blur', this.clear);
     document.removeEventListener('pointerlockchange', this.onPointerLockChange);
+    document.removeEventListener('pointerlockerror', this.onPointerLockError);
     document.removeEventListener('mousemove', this.onMouseMove);
     this.canvas.removeEventListener('pointerdown', this.onPointerDown);
     this.canvas.removeEventListener('pointermove', this.onPointerMove);
@@ -229,6 +241,10 @@ export class Controls {
     this.sprinting = false;
   };
 
+  private onPointerLockError = (): void => {
+    this.lockRefused = true;
+  };
+
   private onMouseMove = (event: MouseEvent): void => {
     if (this.locked) this.turn(event.movementX, event.movementY, MOUSE_SENSITIVITY);
   };
@@ -237,7 +253,7 @@ export class Controls {
   requestLock(): void {
     if (this.locked) return;
     const request = this.canvas.requestPointerLock() as unknown;
-    if (request instanceof Promise) request.catch(() => {});
+    if (request instanceof Promise) request.catch(() => { this.lockRefused = true; });
   }
 
   private onPointerDown = (event: PointerEvent): void => {
@@ -250,13 +266,13 @@ export class Controls {
       }
       // dragging turns the view too, so the mouse still steers where the lock is
       // refused (an older desktop app, a browser setting, no user gesture)
-      this.mouseLook = { pointerId: event.pointerId, startX: event.clientX, startY: event.clientY, x: event.clientX, y: event.clientY };
+      this.mouseLook = { pointerId: event.pointerId, startX: event.clientX, startY: event.clientY, x: event.clientX, y: event.clientY, at: event.timeStamp, button: event.button };
       this.canvas.setPointerCapture(event.pointerId);
-      if (event.button === 0) this.requestLock();
+      if (event.button === 0 && !this.lockRefused) this.requestLock();
       return;
     }
     const rect = this.canvas.getBoundingClientRect();
-    const drag: Drag = { pointerId: event.pointerId, startX: event.clientX, startY: event.clientY, x: event.clientX, y: event.clientY };
+    const drag: Drag = { pointerId: event.pointerId, startX: event.clientX, startY: event.clientY, x: event.clientX, y: event.clientY, at: event.timeStamp, button: 0 };
     if (event.clientX - rect.left < rect.width / 2 && !this.joystick) {
       this.joystick = drag;
       this.joystickBase.style.left = `${event.clientX - rect.left}px`;
@@ -296,14 +312,18 @@ export class Controls {
 
   private onPointerUp = (event: PointerEvent): void => {
     if (this.mouseLook?.pointerId === event.pointerId) {
+      const click = this.mouseLook.button === 0 && isTap(this.mouseLook, event);
       this.mouseLook = null;
+      if (click && this.lockRefused && !this.locked && event.type === 'pointerup') this.onAction();
       return;
     }
     if (this.joystick?.pointerId === event.pointerId) {
       this.joystick = null;
       this.joystickBase.classList.add('hidden');
     } else if (this.look?.pointerId === event.pointerId) {
+      const tap = isTap(this.look, event);
       this.look = null;
+      if (tap && event.type === 'pointerup') this.onAction();
     }
   };
 

@@ -50,16 +50,34 @@ export interface SkinMaterials {
   texture: THREE.CanvasTexture;
   inner: THREE.MeshBasicMaterial;
   outer: THREE.MeshBasicMaterial;
+  /** how far toward red the skin is drawn (0 normally, HURT_TINT while hurt or dying) */
+  hurt: { value: number };
+}
+
+/** The game draws someone hurt or dying 30% red, before the light and the face shade. */
+const HURT_TINT = 0.3;
+
+function tintable(material: THREE.MeshBasicMaterial, hurt: { value: number }): THREE.MeshBasicMaterial {
+  material.onBeforeCompile = (shader) => {
+    shader.uniforms.hurtTint = hurt;
+    shader.fragmentShader = shader.fragmentShader
+      .replace('#include <common>', '#include <common>\nuniform float hurtTint;')
+      .replace('#include <map_fragment>', '#include <map_fragment>\n\tdiffuseColor.rgb = mix(diffuseColor.rgb, vec3(diffuse.r, 0.0, 0.0), hurtTint);');
+  };
+  material.customProgramCacheKey = () => 'hurt-tint';
+  return material;
 }
 
 function skinMaterials(skin: Skin): SkinMaterials {
   const texture = pixelTexture(skinCanvas(skin.pixels));
+  const hurt = { value: 0 };
   return {
     texture,
     // the base layer is opaque by definition: transparent pixels there show their colour
-    inner: new THREE.MeshBasicMaterial({ map: texture, vertexColors: true }),
+    inner: tintable(new THREE.MeshBasicMaterial({ map: texture, vertexColors: true }), hurt),
     // the outer layer is see-through wherever the skin leaves it empty, inside too (a hat's brim)
-    outer: new THREE.MeshBasicMaterial({ map: texture, vertexColors: true, alphaTest: 0.1, side: THREE.DoubleSide }),
+    outer: tintable(new THREE.MeshBasicMaterial({ map: texture, vertexColors: true, alphaTest: 0.1, side: THREE.DoubleSide }), hurt),
+    hurt,
   };
 }
 
@@ -91,6 +109,11 @@ function partOffset(part: PartName, slim: boolean): [number, number, number] {
 
 const PARTS: PartName[] = ['head', 'body', 'rightArm', 'leftArm', 'rightLeg', 'leftLeg'];
 const PUNCH_SECONDS = 0.3;
+/** a hit keeps someone red for the game's 10 ticks */
+const HURT_SECONDS = 0.5;
+const TICKS_PER_SECOND = 20;
+/** the dead fall onto their side over a second, as the game's corpses do */
+export const DEATH_TICKS = 20;
 
 /** What the avatar is doing this frame, besides where it stands. */
 export interface AvatarMotion {
@@ -115,6 +138,9 @@ export class BlockAvatar {
   /** seconds into a punch, or null */
   private punch: number | null = null;
   private light = 1;
+  private hurtLeft = 0;
+  /** seconds since dying, or null while alive */
+  private dying: number | null = null;
 
   constructor(skin: Skin, name: string) {
     this.nameplate = new Nameplate(name);
@@ -132,6 +158,7 @@ export class BlockAvatar {
     const materials = skinMaterials(skin);
     this.materials = materials;
     this.slim = skin.slim;
+    materials.hurt.value = this.hurtLeft > 0 || this.dying !== null ? HURT_TINT : 0;
     this.parts.clear();
     for (const part of PARTS) {
       const pivot = new THREE.Group();
@@ -173,8 +200,33 @@ export class BlockAvatar {
     if (this.punch === null || this.punch >= PUNCH_SECONDS / 2) this.punch = 0;
   }
 
+  /** A hit that hurt: red for a moment. */
+  hurt(): void {
+    this.hurtLeft = HURT_SECONDS;
+  }
+
+  /** Dead (it falls over, red) or alive again. */
+  setDead(dead: boolean): void {
+    if (dead === (this.dying !== null)) return;
+    this.dying = dead ? 0 : null;
+    if (!dead) this.body.rotation.z = 0;
+  }
+
+  /** Ticks since it died, 0 while alive. */
+  get deathTicks(): number {
+    return this.dying === null ? 0 : this.dying * TICKS_PER_SECOND;
+  }
+
   update(dt: number, motion: AvatarMotion): void {
     this.age += dt;
+    this.hurtLeft = Math.max(0, this.hurtLeft - dt);
+    if (this.dying !== null) {
+      this.dying += dt;
+      // the game's curve: quick at first, flat on the ground at the end
+      const fall = Math.min(1, Math.sqrt(Math.max(0, ((this.deathTicks - 1) / DEATH_TICKS) * 1.6)));
+      this.body.rotation.z = fall * (Math.PI / 2);
+    }
+    if (this.materials) this.materials.hurt.value = this.hurtLeft > 0 || this.dying !== null ? HURT_TINT : 0;
     this.limbs.update(motion.speed, dt);
     if (this.punch !== null) {
       this.punch += dt;

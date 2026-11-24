@@ -2,18 +2,19 @@ import * as THREE from 'three';
 import { BLOCK, IslandMap } from '../islandMap';
 import type { Motion, PlayerState } from '../playgroundProtocol';
 import type { PlaygroundSession } from '../playgroundSession';
-import { MAX_HEIGHT } from '../playgroundWorld';
+import { MAX_HEIGHT, spawnPoint } from '../playgroundWorld';
 import { defaultSkin } from '../skins/defaultSkins';
 import type { Skin } from '../skins/skins';
-import { BlockAvatar, FirstPersonArm } from './blockAvatar';
+import { BlockAvatar, DEATH_TICKS, FirstPersonArm } from './blockAvatar';
 import { angleDelta, turnBody } from './bipedPose';
 import { BlockOutline, targetBlock } from './blockTarget';
 import { cameraDistance } from './cameraCollision';
 import { lightmap, MAX_LIGHT } from './lighting';
 import { Controls, nextCameraMode } from './controls';
-import type { CameraMode } from './controls';
+import type { CameraMode, MoveIntent } from './controls';
 import { applyKnockback, createBody, SNEAKING_EYE_HEIGHT, STANDING_EYE_HEIGHT, stepBody, TICK_SECONDS } from './playerPhysics';
 import { cellBox, rayBoxDistance, targetPlayer } from './playerTarget';
+import { Particles } from './particles';
 import { isCriticalHit } from '../playgroundCombat';
 import type { PlaygroundHit } from '../playgroundCombat';
 import type { PhysicsBody } from './playerPhysics';
@@ -51,6 +52,10 @@ const ATTACK_TICKS = 6;
 const STILL_SPEED = 0.3;
 /** a sprinting punch that lands slows the attacker to this much and ends the sprint, as in the game */
 const SPRINT_HIT_SLOWDOWN = 0.6;
+/** a hit tilts your view for the game's 10 ticks, at most this far */
+const HURT_TICKS = 10;
+const HURT_TILT = (14 * Math.PI) / 180;
+const STILL: MoveIntent = { forward: 0, right: 0, sprint: false, sneak: false, jump: false, autoJump: false };
 
 interface RemoteAvatar {
   userId: string;
@@ -60,6 +65,8 @@ interface RemoteAvatar {
   headYaw: number;
   swings: number;
   placed: boolean;
+  /** dead long enough to have gone up in a puff */
+  vanished: boolean;
 }
 
 /** Frame-rate independent smoothing toward a target. */
@@ -100,6 +107,13 @@ export class PlaygroundEngine {
   private motion: Motion = 'idle';
   private readonly remotes = new Map<string, RemoteAvatar>();
   private readonly outline = new BlockOutline();
+  private readonly particles: Particles;
+  /** ticks left of the view's tilt from a hit, and where the hit came from (a direction in the world) */
+  private hurtTicks = 0;
+  private readonly hurtFrom = new THREE.Vector3();
+  /** ticks since you died, 0 while alive */
+  private deathTicks = 0;
+  private wasDead = false;
   private outlineShown = true;
   private armShown = true;
   private readonly unsubscribeSkins: () => void;
@@ -120,6 +134,8 @@ export class PlaygroundEngine {
 
     this.world = buildWorld(this.scene, this.island);
     this.scene.add(this.outline.object);
+    this.particles = new Particles(this.island, (x, y, z) => lightmap(this.world.skyLightAt(x, y, z) / MAX_LIGHT));
+    this.scene.add(this.particles.group);
     this.screen = new ScreenDisplay(options.screenLabels);
     this.scene.add(this.screen.group);
 
@@ -159,7 +175,7 @@ export class PlaygroundEngine {
         const avatar = new BlockAvatar(this.skinOf(player.userId), player.name);
         avatar.root.visible = false;
         this.scene.add(avatar.root);
-        remote = { userId: player.userId, avatar, position: new THREE.Vector3(), yaw: 0, headYaw: 0, swings: 0, placed: false };
+        remote = { userId: player.userId, avatar, position: new THREE.Vector3(), yaw: 0, headYaw: 0, swings: 0, placed: false, vanished: false };
         this.remotes.set(player.id, remote);
       }
       remote.avatar.setLabel(player.name, player.speaking);
@@ -215,6 +231,7 @@ export class PlaygroundEngine {
     this.local.dispose();
     this.arm.dispose();
     this.outline.dispose();
+    this.particles.dispose();
     for (const remote of this.remotes.values()) remote.avatar.dispose();
     this.remotes.clear();
     this.screen.dispose();
@@ -297,7 +314,39 @@ export class PlaygroundEngine {
   }
 
   private playHit(hit: PlaygroundHit): void {
-    if (hit.targetId === this.options.localId && hit.push) applyKnockback(this.body, hit.push, hit.extra);
+    const onYou = hit.targetId === this.options.localId;
+    const remote = this.remotes.get(hit.targetId);
+    const at = onYou ? this.position : remote?.placed ? remote.position : null;
+    if (onYou && hit.push) {
+      applyKnockback(this.body, hit.push, hit.extra);
+      // the attacker is where the push comes from
+      this.hurtFrom.set(-hit.push[0], 0, -hit.push[1]);
+    }
+    if (hit.hurt) {
+      (onYou ? this.local : remote?.avatar)?.hurt();
+      if (onYou) this.hurtTicks = HURT_TICKS;
+    }
+    // your own, in first person, would burst inside the camera
+    if (!at || (onYou && this.controls.mode === 'first')) return;
+    if (hit.crit) this.particles.critical(at.x, at.y, at.z);
+    if (hit.hurt) this.particles.damageIndicator(at.x, at.y, at.z, hit.damage);
+  }
+
+  /** Dead: the body falls over and the controls do nothing. Alive again: back at the spawn point. */
+  private followDeath(): void {
+    const dead = this.session.combat.isDead;
+    if (dead === this.wasDead) return;
+    this.wasDead = dead;
+    this.local.setDead(dead);
+    this.deathTicks = 0;
+    if (dead) return;
+    const spawn = spawnPoint(this.options.localId);
+    Object.assign(this.body, { x: spawn.x, y: Math.max(spawn.y, this.island.groundAt(spawn.x, spawn.z)), z: spawn.z, vx: 0, vy: 0, vz: 0, fallDistance: 0 });
+    this.previous.set(this.body.x, this.body.y, this.body.z);
+    this.position.copy(this.previous);
+    this.controls.yaw = spawn.yaw + Math.PI;
+    this.controls.pitch = 0;
+    this.hurtTicks = 0;
   }
 
   private tick = (time: number): void => {
@@ -306,6 +355,7 @@ export class PlaygroundEngine {
     this.timer.update(time);
     const dt = Math.min(this.timer.getDelta(), MAX_FRAME_SECONDS);
     this.world.update(dt);
+    this.followDeath();
     this.playHits();
 
     this.tickTime += dt;
@@ -323,6 +373,7 @@ export class PlaygroundEngine {
 
     this.drawLocal(dt, partial);
     this.moveRemotes(dt);
+    this.particles.update(partial);
     this.placeCamera(partial);
     this.aimOutline();
     this.screen.update();
@@ -339,8 +390,12 @@ export class PlaygroundEngine {
 
   /** One step of the game's 20 a second: movement, the body's turn, the eyes and the bob. */
   private physicsTick(): void {
-    const intent = this.controls.intent();
-    const jump = this.controls.consumeJump() || intent.jump;
+    const dead = this.session.combat.isDead;
+    const intent = dead ? STILL : this.controls.intent();
+    const jump = (this.controls.consumeJump() && !dead) || intent.jump;
+    this.particles.tick();
+    if (this.hurtTicks > 0) this.hurtTicks--;
+    if (dead) this.deathTicks++;
     this.previous.set(this.body.x, this.body.y, this.body.z);
     this.previousEyeHeight = this.eyeHeight;
     stepBody(this.island, this.body, { ...intent, jump, yaw: this.controls.yaw }, MAX_HEIGHT);
@@ -419,6 +474,15 @@ export class PlaygroundEngine {
         remote.swings = state.swings;
         remote.avatar.swingArm();
       }
+      const dead = this.session.combat.dead.has(id);
+      remote.avatar.setDead(dead);
+      if (dead && !remote.vanished && remote.avatar.deathTicks >= DEATH_TICKS) {
+        remote.vanished = true;
+        this.particles.vanish(remote.position.x, remote.position.y, remote.position.z);
+      } else if (!dead) {
+        remote.vanished = false;
+      }
+      remote.avatar.root.visible = !remote.vanished;
       remote.avatar.root.position.copy(remote.position);
       remote.avatar.root.rotation.y = remote.yaw;
       remote.avatar.setLight(this.lightAt(remote.position));
@@ -444,6 +508,31 @@ export class PlaygroundEngine {
   private readonly bobEuler = new THREE.Euler(0, 0, 0, 'ZXY');
   private readonly eye = new THREE.Vector3();
   private readonly lookDirection = new THREE.Vector3();
+  private readonly hurtQuaternion = new THREE.Quaternion();
+  private readonly hurtAxis = new THREE.Vector3();
+  private readonly deathRoll = new THREE.Quaternion();
+  private static readonly UP = new THREE.Vector3(0, 1, 0);
+  private static readonly BACK = new THREE.Vector3(0, 0, 1);
+
+  /** The game's tilt of the view from a hit: up to 14 degrees away from where it came from, quick to
+   * come and slower to go (sin(t⁴·π) over 10 ticks); dead, the view keeps rolling slowly to one side. */
+  private hurtTilt(partial: number): THREE.Quaternion {
+    this.hurtQuaternion.identity();
+    if (this.wasDead) {
+      const degrees = 40 - 8000 / (this.deathTicks + partial + 200);
+      this.hurtQuaternion.setFromAxisAngle(PlaygroundEngine.BACK, (-degrees * Math.PI) / 180);
+    }
+    const left = this.hurtTicks - partial;
+    if (left <= 0) return this.hurtQuaternion;
+    const t = left / HURT_TICKS;
+    const angle = Math.sin(t * t * t * t * Math.PI) * HURT_TILT;
+    // where the hit came from, in the view's own frame, and tilted away from it
+    this.hurtAxis.copy(this.hurtFrom).applyQuaternion(this.deathRoll.copy(this.viewQuaternion).invert());
+    this.hurtAxis.y = 0;
+    if (this.hurtAxis.lengthSq() < 1e-6) this.hurtAxis.set(1, 0, 0);
+    this.hurtAxis.normalize().cross(PlaygroundEngine.UP);
+    return this.hurtQuaternion.multiply(this.deathRoll.setFromAxisAngle(this.hurtAxis, angle));
+  }
 
   private placeCamera(partial: number): void {
     const { yaw, pitch } = this.controls;
@@ -459,6 +548,7 @@ export class PlaygroundEngine {
       this.bobQuaternion.setFromEuler(this.bobEuler);
       this.camera.quaternion.copy(this.viewQuaternion).multiply(this.bobQuaternion);
       this.camera.position.set(bob.x, bob.y, 0).applyQuaternion(this.camera.quaternion).add(this.eye);
+      this.camera.quaternion.multiply(this.hurtTilt(partial));
       return;
     }
 
@@ -473,5 +563,6 @@ export class PlaygroundEngine {
     } else {
       this.camera.lookAt(this.eye);
     }
+    this.camera.quaternion.multiply(this.hurtTilt(partial));
   }
 }

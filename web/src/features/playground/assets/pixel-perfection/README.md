@@ -1,9 +1,11 @@
 # Pixel Perfection textures
 
-Block textures from [Pixel Perfection Community Edition](https://github.com/Athemis/PixelPerfectionCE)
+Textures from [Pixel Perfection Community Edition](https://github.com/Athemis/PixelPerfectionCE)
 (commit 28e38cab), originally by XSSheep and updated by the community, licensed under
-[CC BY-SA 4.0](LICENSE.md). The files here are unchanged copies of the pack's
-`assets/minecraft/textures/block/` files of the same name.
+[CC BY-SA 4.0](LICENSE.md). The files here are unchanged copies of the pack's files of the same name:
+the blocks at the top from `assets/minecraft/textures/block/`, and `particle/` from
+`assets/minecraft/textures/particle/` (the stars of a critical hit, the damage heart and the puff a
+dead player leaves, drawn by `engine/particles.ts`).
 
 The playground tints the grey ones when it builds its atlas (`engine/blockTextures.ts`): the grass top
 and the grass side's overlay take a grass green, the leaves a foliage green and the water a sea blue,

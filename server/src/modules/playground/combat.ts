@@ -36,8 +36,6 @@ export const HURT_IMMUNITY_MS = 500;
 export const REGEN_INTERVAL_MS = 4000;
 /** the game's server ignores an attack on an entity farther than this (its 36 squared) */
 export const MAX_ATTACK_DISTANCE = 6;
-/** a target whose position is older than this is not where anyone thinks it is */
-const POSITION_STALE_MS = 3000;
 const KNOCKBACK = 0.4;
 const SPRINT_KNOCKBACK = 0.5;
 const SPRINT_KNOCKBACK_UP = 0.1;
@@ -253,7 +251,9 @@ async function handleAttack(socket: AppSocket, msg: { targetId?: unknown; x?: un
   const targetP = participants.get(String(msg.targetId ?? ''));
   const target = targetP && targetP !== p ? fighters.get(targetP) : undefined;
   if (!targetP || !target || target.conversationId !== attacker.conversationId || targetP.callConversationId !== attacker.conversationId) return;
-  if (healthOf(attacker, now) <= 0 || now - target.positionAt > POSITION_STALE_MS || !withinReach(attacker, target)) return;
+  // an old report still counts: a player whose tab is in the background (its timers slowed to once a
+  // minute) stands still where it last said, for everyone
+  if (healthOf(attacker, now) <= 0 || target.positionAt === 0 || !withinReach(attacker, target)) return;
   const crit = msg.crit === true;
   const outcome = landHit(target, attackDamage(crit), now);
   if (!outcome) return;

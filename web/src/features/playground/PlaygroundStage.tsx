@@ -15,6 +15,8 @@ import { nextCameraMode } from './engine/controls';
 import type { CameraMode } from './engine/controls';
 import { PlaygroundMenu } from './PlaygroundMenu';
 import { PlaygroundChat } from './PlaygroundChat';
+import { PlaygroundDeathScreen } from './PlaygroundDeathScreen';
+import { useVitals } from './playgroundCombat';
 import { gameKeyAction, KEYBOARD_LOCK_KEYS } from './gameKeys';
 import { loadAutoFullscreen, saveAutoFullscreen } from './playgroundSettings';
 import { loadPixelFont, PIXEL_FONT, PIXEL_TEXT } from './pixelFont';
@@ -49,6 +51,8 @@ export default function PlaygroundStage({ allIds, onBack }: { allIds: string[]; 
   const { callStageRef, activeCallConversationId } = useRoom('callStageRef', 'activeCallConversationId');
   const { me } = useRoomState('me');
   const session = usePlaygroundSession();
+  const vitals = useVitals(session?.combat ?? null);
+  const dead = vitals.health <= 0;
   const controls = useCallControls();
   const touchFirst = useMediaQuery(TOUCH_FIRST_QUERY);
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -63,8 +67,10 @@ export default function PlaygroundStage({ allIds, onBack }: { allIds: string[]; 
   // read by the key and pointer-lock listeners; written before the effects below that act on them
   const menuOpenRef = useRef(false);
   const chatOpenRef = useRef(false);
+  const deadRef = useRef(false);
   useEffect(() => { menuOpenRef.current = menuOpen; }, [menuOpen]);
   useEffect(() => { chatOpenRef.current = chatOpen; }, [chatOpen]);
+  useEffect(() => { deadRef.current = dead; }, [dead]);
   const toggleFullscreen = controls.fullscreen.toggle;
   const [fontReady, setFontReady] = useState(false);
   // no WebGL (turned off, or a GPU the browser refuses): the call itself still works
@@ -172,7 +178,8 @@ export default function PlaygroundStage({ allIds, onBack }: { allIds: string[]; 
       const locked = !!document.pointerLockElement;
       const lost = wasLocked && !locked;
       wasLocked = locked;
-      if (!lost || menuOpenRef.current || chatOpenRef.current) return;
+      // dead, the death screen takes the mouse on purpose
+      if (!lost || menuOpenRef.current || chatOpenRef.current || deadRef.current) return;
       relockRef.current = true;
       setMenuOpen(true);
     }
@@ -197,7 +204,7 @@ export default function PlaygroundStage({ allIds, onBack }: { allIds: string[]; 
     saveAutoFullscreen(next);
   }
 
-  const overlayOpen = menuOpen || chatOpen;
+  const overlayOpen = menuOpen || chatOpen || dead;
   useEffect(() => {
     const engine = engineRef.current;
     if (!engine) return;
@@ -225,6 +232,12 @@ export default function PlaygroundStage({ allIds, onBack }: { allIds: string[]; 
   }, [callStageRef]);
 
   const toggleView = () => engineRef.current?.setCameraMode(nextCameraMode(cameraMode));
+  const killerName = vitals.killerId ? players.find((player) => player.id === vitals.killerId)?.name ?? null : null;
+  function respawn() {
+    session?.respawn();
+    // the click lets the mouse be taken again, ready for when the server answers
+    if (!touchFirst) engineRef.current?.lockPointer();
+  }
   const resume = () => setMenuOpen(false);
   const notices = [
     controls.shareError ? { text: controls.shareError, dismiss: controls.dismissShareError } : null,
@@ -262,7 +275,7 @@ export default function PlaygroundStage({ allIds, onBack }: { allIds: string[]; 
       )}
 
       {/* a crosshair to aim the first-person view */}
-      {cameraMode === 'first' && !menuOpen && !hudHidden && !failed && (
+      {cameraMode === 'first' && !menuOpen && !hudHidden && !failed && !dead && (
         <div aria-hidden className="pointer-events-none absolute left-1/2 top-1/2 z-10 mix-blend-difference">
           <span className="absolute h-0.5 w-5 -translate-x-1/2 -translate-y-1/2 bg-white" />
           <span className="absolute h-5 w-0.5 -translate-x-1/2 -translate-y-1/2 bg-white" />
@@ -307,6 +320,8 @@ export default function PlaygroundStage({ allIds, onBack }: { allIds: string[]; 
           <CaretUpIcon size={26} />
         </button>
       )}
+
+      {dead && !menuOpen && <PlaygroundDeathScreen key={vitals.hurts} killerName={killerName} onRespawn={respawn} />}
 
       {menuOpen && session && me.id && me.userId && (
         <PlaygroundMenu
