@@ -1,8 +1,9 @@
-import { BLOCK, blockDef, facingToward, isReplaceable, isUsable, placedState, type Block } from './game/blocks.js';
+import { BLOCK, blockDef, facingToward, isReplaceable, isUsable, type Block } from './game/blocks.js';
 import { withinPickup } from './game/drops.js';
 import { heldBlock, heldStack, openContainer, readOp, useHeld, wearHeld } from './game/inventory.js';
 import { HEIGHT } from './game/layout.js';
 import { breakTicks, brokenInto, dropOf, wearForBreaking } from './game/mining.js';
+import { canPlaceIn, stateForPlacing, unsupportedAround } from './game/support.js';
 import {
   acknowledge, applyInventoryOp, connectionLeft, heldInCall, holdersLookingAt, inventoryOf, pickUp, sendInventory, setInventory, showFurnace, throwStacks,
 } from './inventories.js';
@@ -129,6 +130,13 @@ export async function handleBreak(player: Player, msg: Record<string, unknown>):
   setBlocks(world, [[x, y, z, brokenInto(world.grid, x, y, z)]]);
   const drop = dropOf(block, held, Math.random());
   if (drop) spawnItems(world, [{ stack: { item: drop, count: 1 }, start: brokenStart(x, y, z) }], 'broken');
+  // a torch or lantern it held up comes off with it, and drops itself
+  const fallen = unsupportedAround(world.grid, x, y, z);
+  if (fallen.length) {
+    const dropped = fallen.map(([fx, fy, fz]) => blockDef(world.grid.get(fx, fy, fz)).drop);
+    setBlocks(world, fallen.map(([fx, fy, fz]) => [fx, fy, fz, brokenInto(world.grid, fx, fy, fz)]));
+    spawnItems(world, fallen.flatMap(([fx, fy, fz], i) => (dropped[i] ? [{ stack: { item: dropped[i]!, count: 1 }, start: brokenStart(fx, fy, fz) }] : [])), 'broken');
+  }
   setInventory(holder, wearHeld(holder.inventory, wearForBreaking(held, block)));
   sendInventory(player);
 }
@@ -158,14 +166,16 @@ export async function handlePlace(player: Player, msg: Record<string, unknown>):
   const [x, y, z] = cell;
   const block = heldBlock(holder.inventory);
   const against = [[1, 0, 0], [-1, 0, 0], [0, 1, 0], [0, -1, 0], [0, 0, 1], [0, 0, -1]].some(([dx, dy, dz]) => world && !isReplaceable(world.grid.get(x + dx!, y + dy!, z + dz!)));
-  const fits = !!world && y < HEIGHT - 1 && isReplaceable(world.grid.get(x, y, z)) && against && !(blockDef(block ?? 0).solid && occupied(player.conversationId, cell));
-  if (block === null || !world || !fits || !canReach(player, cell)) {
+  const fits = !!world && block !== null && y < HEIGHT - 1 && canPlaceIn(block, world.grid.get(x, y, z)) && against && !(blockDef(block).solid && occupied(player.conversationId, cell));
+  // a furnace or chest faces whoever placed it; a torch or lantern needs something to hang on
+  const at = positionOf(player.id);
+  const state = fits && at ? stateForPlacing(world.grid, block as Block, x, y, z, readFace(msg.face), facingToward(at, x, z)) : null;
+  if (block === null || !world || state === null || !canReach(player, cell)) {
     correct(player, world, cell);
     return sendInventory(player);
   }
-  // a furnace or chest faces whoever placed it
-  const facing = facingToward(positionOf(player.id)!, x, z);
-  setBlocks(world, [[x, y, z, block as Block, placedState(block, readFace(msg.face), facing)]]);
+  const facing = facingToward(at!, x, z);
+  setBlocks(world, [[x, y, z, block as Block, state]]);
   if (block === BLOCK.furnace) addFurnace(world, x, y, z, facing);
   setInventory(holder, useHeld(holder.inventory));
   sendInventory(player);

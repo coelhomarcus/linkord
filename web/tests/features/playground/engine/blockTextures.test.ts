@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { BLOCK, BLOCK_COUNT, LOG_AXIS } from '@game/blocks';
 import type { Block } from '@game/blocks';
-import { faceTile, faceTurned } from '@/features/playground/engine/blockTextures';
+import { faceTile, faceTurned, frameSeconds } from '@/features/playground/engine/blockTextures';
 
 type Drawn = Exclude<Block, 0 | 15>;
 
@@ -29,5 +29,13 @@ describe('block tiles', () => {
     expect(faceTurned(BLOCK.log, 0, LOG_AXIS.z)).toBe(true);
     expect(faceTurned(BLOCK.log, 2, LOG_AXIS.z)).toBe(false);
     expect(faceTurned(BLOCK.stone, 0, 0)).toBe(false);
+  });
+});
+
+describe('animated textures', () => {
+  it('reads a frame\'s time from its .mcmeta, in ticks of a twentieth of a second', () => {
+    expect(frameSeconds('{"animation":{"frametime":8}}')).toBeCloseTo(0.4);
+    expect(frameSeconds('{"animation":{}}')).toBeCloseTo(0.05);
+    expect(frameSeconds('not json')).toBeCloseTo(0.05);
   });
 });

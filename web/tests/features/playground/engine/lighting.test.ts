@@ -2,7 +2,9 @@ import { describe, expect, it } from 'vitest';
 import { BLOCK } from '@game/blocks';
 import type { Block } from '@game/blocks';
 import { HEIGHT } from '@game/layout';
-import { cornerBrightness, cornerOcclusion, lightmap, MAX_LIGHT, sideShade, SkyLight } from '@/features/playground/engine/lighting';
+import { BlockGrid } from '@game/grid';
+import { BlockLight, MAX_LIGHT, SkyLight } from '@game/light';
+import { cornerBrightness, cornerOcclusion, lightmap, sideShade } from '@/features/playground/engine/lighting';
 
 /** flat stone up to y = 4, a stone roof over x 0..2 at y = 8 (but where `holes` says), a leaf block over
  * x = 10 at y = 8 */
@@ -46,6 +48,68 @@ describe('SkyLight', () => {
     expect(change).not.toBeNull();
     expect(change!.minX).toBeLessThanOrEqual(1);
     expect(change!.maxY).toBe(8);
+  });
+});
+
+describe('BlockLight', () => {
+  /** a stone floor up to y = 4 and a closed stone room over x, z -3..3 (walls at ±4), y 5..7 */
+  function cave(): BlockGrid {
+    const world = new BlockGrid();
+    for (let x = -20; x <= 20; x++) {
+      for (let z = -20; z <= 20; z++) {
+        for (let y = 0; y < 5; y++) world.set(x, y, z, BLOCK.stone);
+        const wall = Math.abs(x) === 4 || Math.abs(z) === 4;
+        if (Math.abs(x) <= 4 && Math.abs(z) <= 4) for (let y = 5; y <= 8; y++) if (wall || y === 8) world.set(x, y, z, BLOCK.stone);
+      }
+    }
+    return world;
+  }
+
+  it('is dark where nothing gives off light', () => {
+    const light = new BlockLight(cave());
+    expect(light.at(0, 5, 0)).toBe(0);
+  });
+
+  it('starts at a torch and loses a step per block, through air but not stone', () => {
+    const world = cave();
+    world.set(0, 5, 0, BLOCK.torch);
+    const light = new BlockLight(world);
+    expect(light.at(0, 5, 0)).toBe(14);
+    expect(light.at(1, 5, 0)).toBe(13);
+    expect(light.at(3, 6, 3)).toBe(14 - 7);
+    // the walls and roof are stone, and none of it gets out
+    expect(light.at(4, 5, 0)).toBe(0);
+    expect(light.at(5, 5, 0)).toBe(0);
+  });
+
+  it('gives glowstone its full 15 to the cells around it', () => {
+    const world = cave();
+    world.set(0, 5, 0, BLOCK.glowstone);
+    const light = new BlockLight(world);
+    expect(light.at(1, 5, 0)).toBe(14);
+    expect(light.at(0, 6, 0)).toBe(14);
+  });
+
+  it('relights only around a torch placed or broken, the same as working it all out again', () => {
+    const world = cave();
+    const light = new BlockLight(world);
+    world.set(2, 6, -1, BLOCK.torch);
+    const placed = light.update(2, 6, -1);
+    expect(placed).toMatchObject({ minX: -3, maxX: 3, minY: 5, maxY: 7, minZ: -3, maxZ: 3 });
+    const fresh = new BlockLight(world);
+    for (let x = -5; x <= 5; x++) for (let y = 5; y <= 9; y++) for (let z = -5; z <= 5; z++) expect(light.at(x, y, z)).toBe(fresh.at(x, y, z));
+
+    world.set(2, 6, -1, BLOCK.air);
+    const broken = light.update(2, 6, -1);
+    expect(broken).not.toBeNull();
+    for (let x = -5; x <= 5; x++) for (let y = 5; y <= 9; y++) for (let z = -5; z <= 5; z++) expect(light.at(x, y, z)).toBe(0);
+  });
+
+  it('says nothing changed when a block changes out of every light', () => {
+    const world = cave();
+    const light = new BlockLight(world);
+    world.set(15, 5, 15, BLOCK.stone);
+    expect(light.update(15, 5, 15)).toBeNull();
   });
 });
 

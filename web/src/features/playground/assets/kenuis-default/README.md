@@ -5,6 +5,9 @@ under the [MIT License](LICENSE.md). The files here are unchanged copies of the 
 
 - the blocks at the top (among them the sixteen colours of wool, concrete and terracotta) and `destroy/`
   (the ten stages of a block being dug, `engine/breakOverlay.ts`), from `assets/minecraft/textures/block/`;
+  `torch.png` and `lantern.png` (with its `lantern.png.mcmeta`, three frames) are the textures of their
+  models (`engine/blockModels.ts`, after the pack's `models/block/template_torch.json` and
+  `template_torch_wall.json`), and `torch.png` is the torch item's picture too;
 - `item/` (the pictures of tools and materials), from `assets/minecraft/textures/item/`;
 - `entity/chest/`, from `assets/minecraft/textures/entity/chest/`: `normal.png` for a chest and `ender.png`
   for the creative chest, drawn as the chest model by `engine/chestModel.ts`;

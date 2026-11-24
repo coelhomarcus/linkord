@@ -1,7 +1,7 @@
 import { test, describe, beforeEach, afterEach } from 'node:test';
 import assert from 'node:assert/strict';
 import { inflateRawSync } from 'node:zlib';
-import { BLOCK, LOG_AXIS } from '../src/game/blocks.js';
+import { BLOCK, LANTERN, LOG_AXIS, TORCH_ON_FLOOR, TORCH_ON_WALL } from '../src/game/blocks.js';
 import { BlockGrid } from '../src/game/grid.js';
 import { GENERATOR_VERSION } from '../src/game/worldGen.js';
 import { handleBreak, handleDigStart, handleInventoryOp, handlePlace, handleUse, handleWorldGet, clearBuilding, tickGame } from '../src/building.js';
@@ -187,6 +187,66 @@ describe('building', () => {
     // broken, the cell forgets the state
     world.grid.set(2, GROUND, 1, BLOCK.air);
     assert.equal(world.grid.stateAt(2, GROUND, 1), 0);
+  });
+
+  test('a torch stands on a floor or sticks out of a wall, and never hangs on nothing', async () => {
+    const builder = connect('a');
+    const watcher = connect('b');
+    await stand(builder, 0.5, 0.5);
+    await give(builder, { 0: { item: 'torch', count: 4 } });
+    const world = loadedWorld(CALL)!;
+    // on the ground, against its top
+    await handlePlace(builder, { seq: 1, x: 1, y: GROUND, z: 1, face: 2 });
+    assert.equal(world.grid.get(1, GROUND, 1), BLOCK.torch);
+    assert.equal(world.grid.stateAt(1, GROUND, 1), TORCH_ON_FLOOR);
+    // on the crafting table's -x side (3, GROUND, 0): it points -x, away from it
+    await handlePlace(builder, { seq: 2, x: 2, y: GROUND, z: 0, face: 1 });
+    assert.equal(world.grid.stateAt(2, GROUND, 0), TORCH_ON_WALL + 1);
+    assert.deepEqual(messages(watcher, 'playground-blocks').at(-1)?.changes, [[2, GROUND, 0, BLOCK.torch, TORCH_ON_WALL + 1]]);
+    // against the torch itself (it holds nothing up), with no floor or wall round the cell: refused
+    await handlePlace(builder, { seq: 3, x: 1, y: GROUND + 1, z: 1, face: 2 });
+    assert.equal(world.grid.get(1, GROUND + 1, 1), BLOCK.air);
+    assert.deepEqual(messages(builder, 'playground-blocks').at(-1)?.changes, [[1, GROUND + 1, 1, BLOCK.air]]);
+    assert.deepEqual(lastInventory(builder).inventory.slots[0], { item: 'torch', count: 2 });
+  });
+
+  test('breaking what holds a torch or lantern up breaks it too, dropping both', async () => {
+    const builder = connect('a');
+    const watcher = connect('b');
+    await stand(builder, 0.5, 0.5);
+    await give(builder, { 0: { item: 'torch', count: 1 }, 1: { item: 'lantern', count: 1 }, 2: { item: 'cobblestone', count: 1 } });
+    const world = loadedWorld(CALL)!;
+    // a torch on a cobblestone's +z side, and a lantern under a block it hangs from
+    world.grid.set(0, GROUND, 2, BLOCK.cobblestone);
+    world.grid.set(-1, GROUND + 2, 0, BLOCK.cobblestone);
+    await handlePlace(builder, { seq: 1, x: 0, y: GROUND, z: 3, face: 4 });
+    assert.equal(world.grid.stateAt(0, GROUND, 3), TORCH_ON_WALL + 0);
+    await handleInventoryOp(builder, { seq: 2, op: { op: 'select', slot: 1 } });
+    await handlePlace(builder, { seq: 3, x: -1, y: GROUND + 1, z: 0, face: 3 });
+    assert.equal(world.grid.get(-1, GROUND + 1, 0), BLOCK.lantern);
+    assert.equal(world.grid.stateAt(-1, GROUND + 1, 0), LANTERN.hanging);
+
+    // the cobblestone goes: so does the torch on it
+    handleDigStart(builder, { x: 0, y: GROUND, z: 2 });
+    const dig = Date.now();
+    const realNow = Date.now;
+    Date.now = () => dig + 20_000;
+    try {
+      await handleBreak(builder, { seq: 4, x: 0, y: GROUND, z: 2 });
+      handleDigStart(builder, { x: -1, y: GROUND + 2, z: 0 });
+      Date.now = () => dig + 40_000;
+      await handleBreak(builder, { seq: 5, x: -1, y: GROUND + 2, z: 0 });
+    } finally {
+      Date.now = realNow;
+    }
+    assert.equal(world.grid.get(0, GROUND, 3), BLOCK.air);
+    assert.equal(world.grid.get(-1, GROUND + 1, 0), BLOCK.air);
+    const blocks = messages(watcher, 'playground-blocks').map((m) => m.changes);
+    assert.ok(blocks.some((changes) => JSON.stringify(changes) === JSON.stringify([[0, GROUND, 3, BLOCK.air]])));
+    assert.ok(blocks.some((changes) => JSON.stringify(changes) === JSON.stringify([[-1, GROUND + 1, 0, BLOCK.air]])));
+    // the cobblestones, dug by hand, drop nothing; what fell off them drops itself, whatever is held
+    const drops = [...world.items.values()].map((item) => item.stack.item).sort();
+    assert.deepEqual(drops, ['lantern', 'torch']);
   });
 
   test('a world keeps its states through a save', async () => {

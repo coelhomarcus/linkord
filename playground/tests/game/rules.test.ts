@@ -33,6 +33,15 @@ describe('crafting', () => {
     assert.equal(matchRecipe(grid3('CCC', 'CCC', 'CCC'), 3), null);
   });
 
+  test('coal or charcoal over a stick makes four torches; nuggets round a torch a lantern', () => {
+    assert.deepEqual(matchRecipe([s('coal'), null, s('stick'), null], 2), s('torch', 4));
+    assert.deepEqual(matchRecipe([null, s('charcoal'), null, s('stick')], 2), s('torch', 4));
+    assert.deepEqual(matchRecipe([null, null, null, s('iron_ingot')], 2), s('iron_nugget', 9));
+    const nuggets = (middle: Stack) => Array.from({ length: 9 }, (_, i) => (i === 4 ? middle : s('iron_nugget')));
+    assert.deepEqual(matchRecipe(nuggets(s('torch')), 3), s('lantern'));
+    assert.deepEqual(matchRecipe(nuggets(s('iron_nugget')), 3), s('iron_ingot'));
+  });
+
   test('tools take their shape, mirrored too, but not any other', () => {
     assert.deepEqual(matchRecipe(grid3('III', ' S ', ' S '), 3), s('iron_pickaxe'));
     assert.deepEqual(matchRecipe(grid3('PP ', 'PS ', ' S '), 3), s('wooden_axe'));

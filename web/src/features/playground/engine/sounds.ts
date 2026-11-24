@@ -41,8 +41,10 @@ export function materialOf(block: number): Material | null {
     case BLOCK.planks:
     case BLOCK.craftingTable:
     case BLOCK.chest:
+    case BLOCK.torch:
       return 'wood';
     case BLOCK.glass:
+    case BLOCK.glowstone:
       return 'glass';
     default:
       return block >= WOOL_FIRST && block <= WOOL_LAST ? 'cloth' : 'stone';

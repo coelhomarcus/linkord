@@ -13,9 +13,12 @@ import furnaceFrontOnUrl from '../assets/kenuis-default/furnace_front_on.png?url
 import furnaceSideUrl from '../assets/kenuis-default/furnace_side.png?url';
 import furnaceTopUrl from '../assets/kenuis-default/furnace_top.png?url';
 import glassUrl from '../assets/kenuis-default/glass.png?url';
+import glowstoneUrl from '../assets/kenuis-default/glowstone.png?url';
 import goldOreUrl from '../assets/kenuis-default/gold_ore.png?url';
 import gravelUrl from '../assets/kenuis-default/gravel.png?url';
 import ironOreUrl from '../assets/kenuis-default/iron_ore.png?url';
+import lanternUrl from '../assets/kenuis-default/lantern.png?url';
+import lanternMeta from '../assets/kenuis-default/lantern.png.mcmeta?raw';
 import dirtUrl from '../assets/kenuis-default/dirt.png?url';
 import grassSideUrl from '../assets/kenuis-default/grass_block_side.png?url';
 import grassSideOverlayUrl from '../assets/kenuis-default/grass_block_side_overlay.png?url';
@@ -27,6 +30,7 @@ import planksUrl from '../assets/kenuis-default/oak_planks.png?url';
 import frameUrl from '../assets/kenuis-default/polished_blackstone.png?url';
 import sandUrl from '../assets/kenuis-default/sand.png?url';
 import stoneUrl from '../assets/kenuis-default/stone.png?url';
+import torchUrl from '../assets/kenuis-default/torch.png?url';
 import waterUrl from '../assets/kenuis-default/water_still.png?url';
 import chestUrl from '../assets/kenuis-default/entity/chest/normal.png?url';
 import creativeChestUrl from '../assets/kenuis-default/entity/chest/ender.png?url';
@@ -57,13 +61,19 @@ const BASE_TILES = {
 } as const;
 /** a coloured block's tile, by the pack's name for it */
 type ColoredTile = `${Color}_${ColoredKind}`;
-export type TileName = keyof typeof BASE_TILES | ColoredTile;
 
 const COLORED_TILES = COLORED_KINDS.flatMap((kind) => COLORS.map((color): ColoredTile => `${color}_${kind}`));
+/** The light sources' tiles, after the coloured ones: a torch's and a lantern's are their models' textures
+ * (blockModels.ts), the lantern's the first of its frames. */
+const LIGHT_TILES = { torch: 80, lantern: 81, glowstone: 82 } as const;
+/** a coloured block's tile, by the pack's name for it */
+export type TileName = keyof typeof BASE_TILES | ColoredTile | keyof typeof LIGHT_TILES;
+
 /** The coloured tiles follow the others, 16 to a family. */
 const TILES = {
   ...BASE_TILES,
   ...Object.fromEntries(COLORED_TILES.map((name, i) => [name, 32 + i])),
+  ...LIGHT_TILES,
 } as Record<TileName, number>;
 
 type FaceTiles = [top: TileName, side: TileName, bottom: TileName, front?: TileName];
@@ -98,6 +108,9 @@ const BLOCK_TILES: Record<number, FaceTiles | undefined> = {
   [BLOCK.terracotta]: same('terracotta'),
   [BLOCK.chest]: ['chestTop', 'chestSide', 'chestTop', 'chestFront'],
   [BLOCK.creativeChest]: ['creativeChestTop', 'creativeChestSide', 'creativeChestTop', 'creativeChestFront'],
+  [BLOCK.torch]: same('torch'),
+  [BLOCK.lantern]: same('lantern'),
+  [BLOCK.glowstone]: same('glowstone'),
   ...coloredFaces(),
 };
 
@@ -166,7 +179,13 @@ function coloredPainter(color: Color, kind: ColoredKind): Paint {
 const CHEST_WOOD = hex(0x9c6b30);
 const CREATIVE_STONE = hex(0x1f2a2c);
 
+const FLAME = hex(0xffb43a);
+
 const PAINTERS: Record<TileName, Paint> = {
+  // only the parts the models show: a stick under a flame, a dark body round a glow
+  torch: (_x, y, rand) => (y < 9 ? scale(FLAME, 0.9 + rand() * 0.2) : scale(hex(0x6f4b2c), 0.9 + rand() * 0.15)),
+  lantern: (x, y, rand) => (x >= 1 && x <= 4 && y >= 3 && y <= 7 ? scale(FLAME, 0.9 + rand() * 0.2) : noisy(hex(0x3a3f4a), 0.2)(x, y, rand)),
+  glowstone: (_x, _y, rand) => scale(hex(0xd9a54f), rand() < 0.2 ? 1.2 : 0.8 + rand() * 0.2),
   chestTop: noisy(CHEST_WOOD, 0.15),
   chestFront: (x, y, rand) => (x >= 7 && x <= 8 && y >= 5 && y <= 8 ? hex(0xc8c8c8) : PAINTERS.chestTop(x, y, rand)),
   chestSide: noisy(CHEST_WOOD, 0.15),
@@ -314,6 +333,9 @@ const BLOCK_URLS = import.meta.glob<string>('../assets/kenuis-default/*.png', { 
 const blockUrl = (name: string): string => BLOCK_URLS[`../assets/kenuis-default/${name}.png`] ?? '';
 
 const PACK_TILES: Record<TileName, PackTile> = {
+  torch: { url: torchUrl },
+  lantern: { url: lanternUrl },
+  glowstone: { url: glowstoneUrl },
   chestTop: { url: chestUrl, chest: 'top' },
   chestFront: { url: chestUrl, chest: 'front' },
   chestSide: { url: chestUrl, chest: 'side' },
@@ -393,11 +415,13 @@ export async function blockFacePixels(block: Exclude<Block, 0 | 15>, face: 'top'
   return packPixels(PACK_TILES[face === 'top' ? tiles[0] : face === 'front' ? tiles[3] ?? tiles[1] : tiles[1]]);
 }
 
-/** A tile's pixels from the pack: tinted, overlaid, or cut from a chest's texture. */
+/** A tile's pixels from the pack: tinted, overlaid, or cut from a chest's texture; of a strip of frames
+ * (the lantern's), the first. */
 async function packPixels(tile: PackTile): Promise<ImageData> {
   const [base, top] = await Promise.all([loadImage(tile.url), tile.overlay ? loadImage(tile.overlay.url) : null]);
   const pixels = pixelsOf(base, tile.tint);
   if (tile.chest) return chestSidePixels(pixels, tile.chest);
+  if (pixels.height > pixels.width) return new ImageData(pixels.data.slice(0, pixels.width * pixels.width * 4), pixels.width, pixels.width);
   return top && tile.overlay ? overlay(pixels, pixelsOf(top, tile.overlay.tint)) : pixels;
 }
 
@@ -443,6 +467,44 @@ export async function applyPackTiles(atlas: THREE.CanvasTexture): Promise<void> 
     }
   }));
   atlas.needsUpdate = true;
+}
+
+/** Seconds a frame of an animated texture shows, from its `.mcmeta` (`frametime` in ticks, 1 if unsaid). */
+export function frameSeconds(mcmeta: string): number {
+  try {
+    const frametime = (JSON.parse(mcmeta) as { animation?: { frametime?: unknown } }).animation?.frametime;
+    return (typeof frametime === 'number' && frametime > 0 ? frametime : 1) / 20;
+  } catch {
+    return 1 / 20;
+  }
+}
+
+/** Plays the pack's lantern in its atlas tile, frame by frame (lantern.png.mcmeta). Resolves to the step
+ * to call every frame with the time passed; until then, and if the strip fails to load, its first frame
+ * (or the painted tile) stays. */
+export async function packLantern(atlas: THREE.CanvasTexture): Promise<(dt: number) => void> {
+  const ctx = (atlas.image as HTMLCanvasElement).getContext('2d');
+  if (!ctx) return () => {};
+  let strip: ImageData;
+  try {
+    strip = pixelsOf(await loadImage(lanternUrl));
+  } catch {
+    return () => {};
+  }
+  const index = TILES.lantern;
+  const frames = Math.max(1, Math.floor(strip.height / TILE));
+  const seconds = frameSeconds(lanternMeta);
+  const frameSize = TILE * TILE * 4;
+  let time = 0;
+  let shown = 0;
+  return (dt) => {
+    time += dt;
+    const frame = Math.floor(time / seconds) % frames;
+    if (frame === shown) return;
+    shown = frame;
+    ctx.putImageData(new ImageData(strip.data.slice(frame * frameSize, (frame + 1) * frameSize), TILE, TILE), (index % COLUMNS) * TILE, Math.floor(index / COLUMNS) * TILE);
+    atlas.needsUpdate = true;
+  };
 }
 
 /** Plays the pack's water on `water` (waterTexture's canvas), frame by frame. Resolves to the step to

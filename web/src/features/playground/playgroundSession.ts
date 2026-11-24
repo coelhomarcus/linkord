@@ -13,7 +13,8 @@ import { proximityGain } from './proximity';
 import { spawnPoint } from '@game/layout';
 import { heldBlock, openContainer, useHeld, wearHeld } from '@game/inventory';
 import type { InventoryOp } from '@game/inventory';
-import { BLOCK, facingToward, isReplaceable, isUsable, placedState } from '@game/blocks';
+import { BLOCK, facingToward, isUsable } from '@game/blocks';
+import { canPlaceIn, stateForPlacing, unsupportedAround } from '@game/support';
 import type { Block } from '@game/blocks';
 import { brokenInto, wearForBreaking } from '@game/mining';
 import { inflateBlocks, WorldState } from './worldState';
@@ -246,7 +247,10 @@ export class PlaygroundSession {
       (window) => ({ ...window, inventory: wearHeld(window.inventory, wearForBreaking(window.inventory.slots[window.inventory.selected]?.item ?? null, block)) }),
       (seq) => this.link.send({ t: 'block-break', seq, x, y, z }),
     );
-    if (sent) this.world.predict(x, y, z, into);
+    if (!sent) return;
+    this.world.predict(x, y, z, into);
+    // a torch or lantern it held up comes off too (the service drops it)
+    for (const [fx, fy, fz] of unsupportedAround(grid, x, y, z)) this.world.predict(fx, fy, fz, brokenInto(grid, fx, fy, fz));
   }
 
   /** The held block put in a cell against `face` of the block clicked (0..5: +x, -x, +y, -y, +z, -z);
@@ -254,12 +258,15 @@ export class PlaygroundSession {
   placeBlock(x: number, y: number, z: number, face: number): boolean {
     const grid = this.world.grid;
     const block = heldBlock(this.inventory.get());
-    if (!grid || block === null || !isReplaceable(grid.get(x, y, z))) return false;
+    if (!grid || block === null || !canPlaceIn(block, grid.get(x, y, z))) return false;
+    // a torch or lantern with nothing to hang on is not placed
+    const state = stateForPlacing(grid, block as Block, x, y, z, face, facingToward(this.local, x, z));
+    if (state === null) return false;
     const sent = this.inventory.predict(
       (window) => ({ ...window, inventory: useHeld(window.inventory) }),
       (seq) => this.link.send({ t: 'block-place', seq, x, y, z, face }),
     );
-    if (sent) this.world.predict(x, y, z, block as Block, placedState(block, face, facingToward(this.local, x, z)));
+    if (sent) this.world.predict(x, y, z, block as Block, state);
     return sent;
   }
 

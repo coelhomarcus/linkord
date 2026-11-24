@@ -4,21 +4,25 @@ import type { Block } from '@game/blocks';
 import type { BlockGrid } from '@game/grid';
 import { HALF, HEIGHT, SEA_LEVEL, SIZE } from '@game/layout';
 import type { WorldState } from '../worldState';
-import { applyPackTiles, blockAtlas, chestUv, faceTile, faceTurned, packWater, tileUv, waterTexture } from './blockTextures';
+import { BlockLight, MAX_LIGHT, SkyLight } from '@game/light';
+import type { LightChange } from '@game/light';
+import { applyPackTiles, blockAtlas, chestUv, faceTile, faceTurned, packLantern, packWater, tileUv, waterTexture } from './blockTextures';
+import { hasModel, modelFaces } from './blockModels';
 import { CHEST_FACES, isChest, turnInCell, turnVector } from './chestModel';
 import { Clouds } from './clouds';
-import { cornerBrightness, cornerOcclusion, lightmap, MAX_LIGHT, sideShade, SkyLight } from './lighting';
-import type { LightChange } from './lighting';
+import { cornerBrightness, cornerOcclusion, lightmap, sideShade } from './lighting';
 import { Sky, sunDirection } from './sky';
 import { daylight, MAX_SKY_DARKEN, skyDarken } from '@game/dayTime';
 
 // The world as meshes of 16×16-column chunks: only faces that touch something
 // see-through are built (the three.js manual's voxel geometry), and a change
 // rebuilds only the chunks whose blocks or light it touched. Each corner
-// carries its shade and ambient occlusion and the sky light averaged around it
-// (lighting.ts); the shader darkens that light with the time of day
-// (game/dayTime.ts: 15 by day is 4 at night, a little blue), so a sunset needs
-// no rebuilding. The sun, moving across the sky (sky.ts), casts shadows on top: a
+// carries its shade and ambient occlusion and the sky light and block light
+// averaged around it (game/light.ts, lighting.ts); the shader darkens the sky
+// light with the time of day (game/dayTime.ts: 15 by day is 4 at night, a
+// little blue), so a sunset needs no rebuilding, and takes the brighter of it
+// and the block light, warm as torchlight is. Torches and lanterns are their
+// models (blockModels.ts), lit by their own cell. The sun, moving across the sky (sky.ts), casts shadows on top: a
 // shadow map, as minecraft-renderer's sun shadows (github.com/zardoy/
 // minecraft-web-client, MIT, Copyright (c) 2020 PrismarineJS) do it, taking sky
 // light down to 60% where the sun does not reach, including faces turned away
@@ -79,24 +83,29 @@ function faceShown(block: Block, neighbour: Block): boolean {
   return true;
 }
 
-/** `colors` is a corner's shade and occlusion, `light` the sky light around it (0..1) */
-interface Arrays { positions: number[]; normals: number[]; uvs: number[]; colors: number[]; light: number[]; indices: number[] }
-const arrays = (): Arrays => ({ positions: [], normals: [], uvs: [], colors: [], light: [], indices: [] });
+/** `colors` is a corner's shade and occlusion, `light` and `blockLight` the sky and block light around it (0..1) */
+interface Arrays { positions: number[]; normals: number[]; uvs: number[]; colors: number[]; light: number[]; blockLight: number[]; indices: number[] }
+const arrays = (): Arrays => ({ positions: [], normals: [], uvs: [], colors: [], light: [], blockLight: [], indices: [] });
 
-function toGeometry({ positions, normals, uvs, colors, light, indices }: Arrays): THREE.BufferGeometry {
+/** Both channels of the world's light. */
+interface Light { sky: SkyLight; block: BlockLight }
+
+function toGeometry({ positions, normals, uvs, colors, light, blockLight, indices }: Arrays): THREE.BufferGeometry {
   const geometry = new THREE.BufferGeometry();
   geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
   geometry.setAttribute('normal', new THREE.Float32BufferAttribute(normals, 3));
   geometry.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));
   geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
   geometry.setAttribute('skyLight', new THREE.Float32BufferAttribute(light, 1));
+  geometry.setAttribute('blockLight', new THREE.Float32BufferAttribute(blockLight, 1));
   geometry.setIndex(indices);
   geometry.computeBoundingSphere();
   return geometry;
 }
 
 /** The faces of one chunk: its blocks, and its water apart. */
-function chunkGeometry(grid: BlockGrid, sky: SkyLight, world: WorldState, cx: number, cz: number): { blocks: Arrays; water: Arrays } {
+function chunkGeometry(grid: BlockGrid, light: Light, world: WorldState, cx: number, cz: number): { blocks: Arrays; water: Arrays } {
+  const { sky } = light;
   const blocks = arrays();
   const water = arrays();
   const x0 = -HALF + cx * CHUNK;
@@ -107,13 +116,17 @@ function chunkGeometry(grid: BlockGrid, sky: SkyLight, world: WorldState, cx: nu
         const block = grid.get(x, y, z);
         if (block === BLOCK.air) continue;
         if (block === BLOCK.water) {
-          waterFaces(grid, sky, water, x, y, z);
+          waterFaces(grid, light, water, x, y, z);
           continue;
         }
         const furnace = block === BLOCK.furnace ? world.furnaceAt(x, y, z) ?? undefined : undefined;
         const state = grid.stateAt(x, y, z);
         if (isChest(block)) {
-          chestFaces(blocks, block, state, sky.at(x, y, z), x, y, z);
+          chestFaces(blocks, block, state, sky.at(x, y, z), light.block.at(x, y, z), x, y, z);
+          continue;
+        }
+        if (hasModel(block)) {
+          modelFacesInto(blocks, block as typeof BLOCK.torch | typeof BLOCK.lantern, state, sky.at(x, y, z), light.block.at(x, y, z), x, y, z);
           continue;
         }
         FACES.forEach((face, faceIndex) => {
@@ -142,18 +155,22 @@ function chunkGeometry(grid: BlockGrid, sky: SkyLight, world: WorldState, cx: nu
             const [, side1, side2, corner] = cells.map(([bx, by, bz]) => grid.get(bx, by, bz));
             const occlusion = cornerOcclusion(occludes(side1!), occludes(side2!), occludes(corner!));
             // smooth light: the cells around the corner that light can be in
-            let light = 0;
+            let skyLight = 0;
+            let blockLight = 0;
             let lit = 0;
             cells.forEach(([bx, by, bz], index) => {
               if (index > 0 && opaque(grid.get(bx, by, bz))) return;
-              light += sky.at(bx, by, bz);
+              skyLight += sky.at(bx, by, bz);
+              blockLight += light.block.at(bx, by, bz);
               lit++;
             });
-            const level = lit ? light / lit : MAX_LIGHT;
-            brightness.push(cornerBrightness(face.shade, occlusion, level));
+            const level = lit ? skyLight / lit : MAX_LIGHT;
+            const blockLevel = lit ? blockLight / lit : 0;
+            brightness.push(cornerBrightness(face.shade, occlusion, Math.max(level, blockLevel)));
             const shade = cornerBrightness(face.shade, occlusion, MAX_LIGHT);
             blocks.colors.push(shade, shade, shade);
             blocks.light.push(level / MAX_LIGHT);
+            blocks.blockLight.push(blockLevel / MAX_LIGHT);
           }
           // split the quad along its brighter diagonal, or the occlusion shows a seam across it
           if (brightness[0]! + brightness[3]! > brightness[1]! + brightness[2]!) {
@@ -168,14 +185,56 @@ function chunkGeometry(grid: BlockGrid, sky: SkyLight, world: WorldState, cx: nu
   return { blocks, water };
 }
 
-/** A chest's three boxes (chestModel.ts), turned to face where its state says, lit by the sky light of its
- * own cell; each face gets the fixed shade of the way it now points. */
-function chestFaces(out: Arrays, block: typeof BLOCK.chest | typeof BLOCK.creativeChest, state: number, light: number, x: number, y: number, z: number): void {
+/** The face direction (FACES' index) nearest a normal. */
+function nearestDirection([nx, ny, nz]: readonly [number, number, number]): number {
+  const [ax, ay, az] = [Math.abs(nx), Math.abs(ny), Math.abs(nz)];
+  if (ax >= ay && ax >= az) return nx > 0 ? 0 : 1;
+  if (ay >= az) return ny > 0 ? 2 : 3;
+  return nz > 0 ? 4 : 5;
+}
+
+/** Two triangles over a face's four corners, the way round whose front is outside. */
+function pushQuad(out: Arrays, start: number, corners: readonly (readonly [number, number, number])[], [nx, ny, nz]: readonly [number, number, number]): void {
+  const [a, b, c] = corners;
+  const e1 = [b![0] - a![0], b![1] - a![1], b![2] - a![2]];
+  const e2 = [c![0] - a![0], c![1] - a![1], c![2] - a![2]];
+  const outward = (e1[1]! * e2[2]! - e1[2]! * e2[1]!) * nx + (e1[2]! * e2[0]! - e1[0]! * e2[2]!) * ny + (e1[0]! * e2[1]! - e1[1]! * e2[0]!) * nz > 0;
+  if (outward) out.indices.push(start, start + 1, start + 2, start, start + 2, start + 3);
+  else out.indices.push(start, start + 2, start + 1, start, start + 3, start + 2);
+}
+
+/** A torch's or lantern's model (blockModels.ts) in its state, lit by the light of its own cell; a
+ * lantern's faces get the fixed shade of the way they point, a torch's none, as in the game. */
+function modelFacesInto(out: Arrays, block: typeof BLOCK.torch | typeof BLOCK.lantern, state: number, light: number, blockLight: number, x: number, y: number, z: number): void {
+  const tile = tileUv(faceTile(block, 0, undefined, state));
+  for (const face of modelFaces(block, state)) {
+    const start = out.positions.length / 3;
+    const shade = face.shade ? FACES[nearestDirection(face.normal)]!.shade : 1;
+    // a hair in from the texel's edge, so the nearest one is always the face's own
+    const [cu, cv] = face.uvs.reduce(([su, sv], [u, v]) => [su + u / 4, sv + v / 4], [0, 0]);
+    face.corners.forEach(([cx, cy, cz], i) => {
+      out.positions.push(x + cx, y + cy, z + cz);
+      out.normals.push(...face.normal);
+      const [pu, pv] = face.uvs[i]!;
+      const u = (pu + Math.sign(cu - pu) * 0.01) / 16;
+      const v = (pv + Math.sign(cv - pv) * 0.01) / 16;
+      out.uvs.push(tile.u0 + u * (tile.u1 - tile.u0), tile.v1 - v * (tile.v1 - tile.v0));
+      out.colors.push(shade, shade, shade);
+      out.light.push(light / MAX_LIGHT);
+      out.blockLight.push(blockLight / MAX_LIGHT);
+    });
+    pushQuad(out, start, face.corners, face.normal);
+  }
+}
+
+/** A chest's three boxes (chestModel.ts), turned to face where its state says, lit by the light of its own
+ * cell; each face gets the fixed shade of the way it now points. */
+function chestFaces(out: Arrays, block: typeof BLOCK.chest | typeof BLOCK.creativeChest, state: number, light: number, blockLight: number, x: number, y: number, z: number): void {
   for (const face of CHEST_FACES) {
     const start = out.positions.length / 3;
-    const [nx, ny, nz] = turnVector(face.normal, state);
-    const direction = nx > 0.5 ? 0 : nx < -0.5 ? 1 : ny > 0.5 ? 2 : ny < -0.5 ? 3 : nz > 0.5 ? 4 : 5;
-    const shade = FACES[direction]!.shade;
+    const normal = turnVector(face.normal, state);
+    const [nx, ny, nz] = normal;
+    const shade = FACES[nearestDirection(normal)]!.shade;
     const corners = face.corners.map(([cx, cy, cz]) => turnInCell([cx / 16, cy / 16, cz / 16], state));
     corners.forEach(([cx, cy, cz], i) => {
       out.positions.push(x + cx, y + cy, z + cz);
@@ -186,26 +245,23 @@ function chestFaces(out: Arrays, block: typeof BLOCK.chest | typeof BLOCK.creati
       out.uvs.push(...chestUv(block, tu + Math.sign(cu - tu) * 0.01, tv + Math.sign(cv - tv) * 0.01));
       out.colors.push(shade, shade, shade);
       out.light.push(light / MAX_LIGHT);
+      out.blockLight.push(blockLight / MAX_LIGHT);
     });
     // the game's polygons go round either way: keep the one whose front is outside
-    const [a, b, c] = corners;
-    const e1 = [b![0] - a![0], b![1] - a![1], b![2] - a![2]];
-    const e2 = [c![0] - a![0], c![1] - a![1], c![2] - a![2]];
-    const outward = (e1[1]! * e2[2]! - e1[2]! * e2[1]!) * nx + (e1[2]! * e2[0]! - e1[0]! * e2[2]!) * ny + (e1[0]! * e2[1]! - e1[1]! * e2[0]!) * nz > 0;
-    if (outward) out.indices.push(start, start + 1, start + 2, start, start + 2, start + 3);
-    else out.indices.push(start, start + 2, start + 1, start, start + 3, start + 2);
+    pushQuad(out, start, corners, normal);
   }
 }
 
 /** A water cell's faces toward air, leaves or glass: its top a little low when open to the sky, so the
  * surface sits under the shore's grass, each face tiled with the water texture in world units. */
-function waterFaces(grid: BlockGrid, sky: SkyLight, out: Arrays, x: number, y: number, z: number): void {
+function waterFaces(grid: BlockGrid, light: Light, out: Arrays, x: number, y: number, z: number): void {
   const top = grid.get(x, y + 1, z) === BLOCK.water ? 1 : WATER_TOP;
   FACES.forEach((face) => {
     const [dx, dy, dz] = face.dir;
     if (!faceShown(BLOCK.water, grid.get(x + dx, y + dy, z + dz))) return;
     const start = out.positions.length / 3;
-    const level = sky.at(x + dx, y + dy, z + dz) / MAX_LIGHT;
+    const level = light.sky.at(x + dx, y + dy, z + dz) / MAX_LIGHT;
+    const blockLevel = light.block.at(x + dx, y + dy, z + dz) / MAX_LIGHT;
     for (const [cx, cy, cz] of face.corners) {
       const py = y + (cy ? top : 0);
       out.positions.push(x + cx, py, z + cz);
@@ -214,6 +270,7 @@ function waterFaces(grid: BlockGrid, sky: SkyLight, out: Arrays, x: number, y: n
       out.uvs.push(dy !== 0 ? x + cx : dx !== 0 ? z + cz : x + cx, dy !== 0 ? z + cz : py);
       out.colors.push(face.shade, face.shade, face.shade);
       out.light.push(level);
+      out.blockLight.push(blockLevel);
     }
     out.indices.push(start, start + 1, start + 2, start + 2, start + 1, start + 3);
   });
@@ -237,13 +294,19 @@ const dayUniforms = (): DayUniforms => ({
   sunDirection: { value: new THREE.Vector3(0, 1, 0) },
 });
 
-/** The light a corner gets now, from its baked sky light (lighting.ts's lightmap, darkened). */
+/** The light a corner gets now: its baked sky light (lighting.ts's lightmap, darkened, in `sun` of its
+ * strength where the sun's shadow falls) or its block light, whichever is brighter. Block light is warm:
+ * white at full, its green and blue falling off faster than its red as it dims, the game's lightmap's
+ * torchlight. */
 const LIGHT_GLSL = /* glsl */ `
   uniform float skyDarken;
   uniform vec3 skyTint;
-  vec3 skyBrightness(float skyLight) {
+  vec3 cornerLight(float skyLight, float blockLight, float sun) {
     float level = max(0.0, skyLight * ${MAX_LIGHT.toFixed(1)} - skyDarken) / ${MAX_LIGHT.toFixed(1)};
-    return vec3(${lightmap(0).toFixed(4)} + level * ${(1 - lightmap(0)).toFixed(4)}) * skyTint;
+    vec3 sky = vec3(${lightmap(0).toFixed(4)} + level * ${(1 - lightmap(0)).toFixed(4)}) * skyTint * sun;
+    float b = ${lightmap(0).toFixed(4)} + blockLight * ${(1 - lightmap(0)).toFixed(4)};
+    vec3 torch = vec3(b, b * ((b * 0.6 + 0.4) * 0.6 + 0.4), b * (b * b * 0.6 + 0.4));
+    return max(sky, torch);
   }
 `;
 
@@ -268,14 +331,17 @@ function blockMaterial(map: THREE.Texture, uniforms: DayUniforms, water = false)
       #include <shadowmap_pars_vertex>
       uniform mat3 mapTransform;
       attribute float skyLight;
+      attribute float blockLight;
       varying vec2 vUv;
       varying vec3 vShade;
       varying float vSkyLight;
+      varying float vBlockLight;
       varying vec3 vWorldNormal;
       void main() {
         vUv = (mapTransform * vec3(uv, 1.0)).xy;
         vShade = color;
         vSkyLight = skyLight;
+        vBlockLight = blockLight;
         #include <beginnormal_vertex>
         #include <defaultnormal_vertex>
         #include <begin_vertex>
@@ -305,19 +371,22 @@ function blockMaterial(map: THREE.Texture, uniforms: DayUniforms, water = false)
       varying vec2 vUv;
       varying vec3 vShade;
       varying float vSkyLight;
+      varying float vBlockLight;
       varying vec3 vWorldNormal;
       void main() {
         vec4 texel = texture2D(map, vUv);
-        vec3 light = vShade * skyBrightness(vSkyLight);
         #ifdef WATER
+        vec3 light = vShade * cornerLight(vSkyLight, vBlockLight, 1.0);
         gl_FragColor = vec4(texel.rgb * light, texel.a * ${WATER_OPACITY.toFixed(2)});
         #else
         // the holes in the leaves and the glass
         if (texel.a < 0.5) discard;
-        // a face turned away from the sun is in its own shadow; one side-on to it, half
+        // a face turned away from the sun is in its own shadow; one side-on to it, half (the sky's light
+        // only: a torch lights a shadow as well as anywhere)
         float facing = smoothstep(-0.15, 0.15, dot(vWorldNormal, sunDirection));
         float sunlit = facing * getShadowMask();
-        gl_FragColor = vec4(texel.rgb * light * mix(1.0, mix(SHADOWED_SKY_LIGHT, 1.0, sunlit), sunStrength), texel.a);
+        vec3 light = vShade * cornerLight(vSkyLight, vBlockLight, mix(1.0, mix(SHADOWED_SKY_LIGHT, 1.0, sunlit), sunStrength));
+        gl_FragColor = vec4(texel.rgb * light, texel.a);
         #endif
         #include <tonemapping_fragment>
         #include <colorspace_fragment>
@@ -360,8 +429,8 @@ export interface World {
   /** advances what moves on its own: water, clouds, the sky and the sun at the world's `clock` around
    * the `eye`; rebuilds chunks that changed, as time allows */
   update(dt: number, clock: number, eye: THREE.Vector3): void;
-  /** how lit a point is now (0..1, lighting.ts's lightmap of its sky light, darkened at night), to
-   * light the people and items there */
+  /** how lit a point is now (0..1, lighting.ts's lightmap of its sky light, darkened at night, or of its
+   * block light, whichever is brighter), to light the people and items there */
   brightnessAt(x: number, y: number, z: number): number;
   /** blocks that changed: their light is worked out again and the chunks they touch rebuilt */
   blocksChanged(cells: readonly [number, number, number][]): void;
@@ -396,6 +465,9 @@ export function buildWorld(scene: THREE.Scene, state: WorldState): World {
   const sun = sunLight();
   scene.add(sun, sun.target);
 
+  let stepLantern = (_dt: number) => {};
+  void packLantern(atlas).then((step) => { stepLantern = step; });
+
   const water = waterTexture();
   let stepWater = (_dt: number) => {};
   void packWater(water).then((step) => { stepWater = step; });
@@ -421,7 +493,7 @@ export function buildWorld(scene: THREE.Scene, state: WorldState): World {
     clouds.setDaylight(daylight(clock), day.skyTint.value);
   }
 
-  let sky: SkyLight | null = null;
+  let light: Light | null = null;
   const chunks: Chunk[] = Array.from({ length: CHUNKS * CHUNKS }, () => ({ blocks: null, water: null }));
   const dirty = new Set<number>();
 
@@ -437,12 +509,12 @@ export function buildWorld(scene: THREE.Scene, state: WorldState): World {
 
   function buildChunk(index: number): void {
     const grid = state.grid;
-    if (!grid || !sky) return;
+    if (!grid || !light) return;
     const cx = Math.floor(index / CHUNKS);
     const cz = index % CHUNKS;
     const chunk = chunks[index]!;
     disposeChunk(chunk);
-    const built = chunkGeometry(grid, sky, state, cx, cz);
+    const built = chunkGeometry(grid, light, state, cx, cz);
     if (built.blocks.indices.length) {
       const mesh = new THREE.Mesh(toGeometry(built.blocks), material);
       mesh.castShadow = true;
@@ -472,7 +544,7 @@ export function buildWorld(scene: THREE.Scene, state: WorldState): World {
   let firstBuild = new Set<number>();
   function reload(): void {
     if (!state.grid) return;
-    sky = new SkyLight(state.grid);
+    light = { sky: new SkyLight(state.grid), block: new BlockLight(state.grid) };
     for (let i = 0; i < chunks.length; i++) dirty.add(i);
     firstBuild = new Set(dirty);
   }
@@ -480,20 +552,24 @@ export function buildWorld(scene: THREE.Scene, state: WorldState): World {
 
   return {
     atlas,
-    brightnessAt: (x, y, z) => darkenedLight(sky ? sky.at(Math.floor(x), Math.floor(y), Math.floor(z)) : MAX_LIGHT, day.skyDarken.value),
+    brightnessAt(x, y, z) {
+      if (!light) return darkenedLight(MAX_LIGHT, day.skyDarken.value);
+      const [bx, by, bz] = [Math.floor(x), Math.floor(y), Math.floor(z)];
+      return Math.max(darkenedLight(light.sky.at(bx, by, bz), day.skyDarken.value), lightmap(light.block.at(bx, by, bz) / MAX_LIGHT));
+    },
     blocksChanged(cells) {
-      if (!sky) return;
-      for (const [x, , z] of cells) {
+      if (!light) return;
+      for (const [x, y, z] of cells) {
         markBox(x, x, z, z);
-        const change: LightChange | null = sky.update(x, z);
-        if (change) markBox(change.minX, change.maxX, change.minZ, change.maxZ);
+        const changes: (LightChange | null)[] = [light.sky.update(x, z), light.block.update(x, y, z)];
+        for (const change of changes) if (change) markBox(change.minX, change.maxX, change.minZ, change.maxZ);
       }
     },
     furnaceChanged(x, z) {
       markBox(x, x, z, z);
     },
     reload,
-    buildProgress: () => (sky ? 1 - firstBuild.size / chunks.length : 0),
+    buildProgress: () => (light ? 1 - firstBuild.size / chunks.length : 0),
     setUnderwater(inWater) {
       scene.fog = inWater ? waterFog : skyFog;
       scene.background = inWater ? waterColor : null;
@@ -502,6 +578,7 @@ export function buildWorld(scene: THREE.Scene, state: WorldState): World {
     update(dt, clock, eye) {
       followClock(clock, eye);
       stepWater(dt);
+      stepLantern(dt);
       water.offset.x = (water.offset.x + dt * 0.04) % 1;
       water.offset.y = (water.offset.y + dt * 0.015) % 1;
       water.updateMatrix();

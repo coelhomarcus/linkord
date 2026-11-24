@@ -26,10 +26,12 @@ export const BLOCK = {
   chest: 69,
   /** opens a screen with every item; nobody breaks it (game/worldGen.ts puts one by the plaza) */
   creativeChest: 70,
+  // the light sources (light.ts): a torch and a lantern hang on the block beside, under or over them (support.ts)
+  torch: 71, lantern: 72, glowstone: 73,
 } as const;
 export type Block = (typeof BLOCK)[keyof typeof BLOCK];
 /** one past the largest block number */
-export const BLOCK_COUNT = 71;
+export const BLOCK_COUNT = 74;
 
 /** The game's sixteen colours, in its order: the coloured blocks are numbered by it. */
 export const COLORS = [
@@ -66,10 +68,12 @@ export interface BlockDef {
   opaque: boolean;
   /** light lost passing through a cell of it (0..15) */
   lightOpacity: number;
+  /** the block light it gives off (0..15, light.ts) */
+  light: number;
 }
 
 const solid = (hardness: number, tool: ToolKind | null, drop: string | null, needs: number | null = null): BlockDef =>
-  ({ hardness, tool, needs, drop, solid: true, opaque: true, lightOpacity: 15 });
+  ({ hardness, tool, needs, drop, solid: true, opaque: true, lightOpacity: 15, light: 0 });
 
 /** A family's sixteen blocks, each dropping itself (`white_wool`...). */
 function coloredDefs(kind: ColoredKind, def: BlockDef): Record<number, BlockDef> {
@@ -77,7 +81,7 @@ function coloredDefs(kind: ColoredKind, def: BlockDef): Record<number, BlockDef>
 }
 
 const BLOCK_DEFS = {
-  [BLOCK.air]: { hardness: 0, tool: null, needs: null, drop: null, solid: false, opaque: false, lightOpacity: 0 },
+  [BLOCK.air]: { hardness: 0, tool: null, needs: null, drop: null, solid: false, opaque: false, lightOpacity: 0, light: 0 },
   [BLOCK.grass]: solid(0.6, 'shovel', 'dirt'),
   [BLOCK.dirt]: solid(0.5, 'shovel', 'dirt'),
   [BLOCK.stone]: solid(1.5, 'pickaxe', 'cobblestone', 0),
@@ -93,7 +97,7 @@ const BLOCK_DEFS = {
   [BLOCK.goldOre]: solid(3, 'pickaxe', 'gold_ore', 2),
   [BLOCK.diamondOre]: solid(3, 'pickaxe', 'diamond', 2),
   [BLOCK.bedrock]: solid(-1, null, null),
-  [BLOCK.water]: { hardness: -1, tool: null, needs: null, drop: null, solid: false, opaque: false, lightOpacity: 2 },
+  [BLOCK.water]: { hardness: -1, tool: null, needs: null, drop: null, solid: false, opaque: false, lightOpacity: 2, light: 0 },
   [BLOCK.craftingTable]: solid(2.5, 'axe', 'crafting_table'),
   [BLOCK.furnace]: solid(3.5, 'pickaxe', 'furnace', 0),
   [BLOCK.gravel]: solid(0.6, 'shovel', 'gravel'),
@@ -107,6 +111,11 @@ const BLOCK_DEFS = {
   // a chest is drawn as a model (its latch stands out of the cell) and lets the light through
   [BLOCK.chest]: { ...solid(2.5, 'axe', 'chest'), opaque: false, lightOpacity: 0 },
   [BLOCK.creativeChest]: { ...solid(-1, null, null), opaque: false, lightOpacity: 0 },
+  // the game's light levels; nothing bumps into a torch, and here nor into a lantern (a body's box is whole
+  // cells). Glowstone drops itself: there is no dust to drop yet
+  [BLOCK.torch]: { hardness: 0, tool: null, needs: null, drop: 'torch', solid: false, opaque: false, lightOpacity: 0, light: 14 },
+  [BLOCK.lantern]: { hardness: 3.5, tool: 'pickaxe', needs: 0, drop: 'lantern', solid: false, opaque: false, lightOpacity: 0, light: 15 },
+  [BLOCK.glowstone]: { ...solid(0.3, null, 'glowstone'), light: 15 },
 } as Record<Block, BlockDef>;
 
 export function isBlock(value: number): value is Block {
@@ -137,9 +146,17 @@ export function facingToward(at: { x: number; z: number }, x: number, z: number)
 /** Which way a log lies: its state. */
 export const LOG_AXIS = { y: 0, x: 1, z: 2 } as const;
 
+/** A torch's state: on the floor, or on a wall pointing away from it (`TORCH_ON_WALL` + the way it faces). */
+export const TORCH_ON_FLOOR = 0;
+export const TORCH_ON_WALL = 1;
+/** A lantern's state: standing on the block under it, or hanging from the one over it. */
+export const LANTERN = { standing: 0, hanging: 1 } as const;
+
 /** How many states a block has (state numbers below this are its own; 0 always is). */
 function stateCount(block: number): number {
   if (block === BLOCK.log) return 3;
+  if (block === BLOCK.torch) return 5;
+  if (block === BLOCK.lantern) return 2;
   return isFacing(block) ? 4 : 1;
 }
 
@@ -148,11 +165,20 @@ export function validState(block: number, state: number): number {
   return Number.isInteger(state) && state >= 0 && state < stateCount(block) ? state : 0;
 }
 
+/** The way each face (+x, -x, +y, -y, +z, -z) points, as a Facing; null for up and down. */
+const FACE_FACING: readonly (Facing | null)[] = [3, 1, null, null, 0, 2];
+
 /** The state a block takes as it is placed against `face` (+x, -x, +y, -y, +z, -z, of the block it was
  * placed on; -1 unknown) by someone it would face (`facing`): a log lies along the way it was put, a chest
- * faces whoever put it, as in the game. */
+ * faces whoever put it, a torch stands on a floor or sticks out of a wall, a lantern put under a block hangs
+ * from it, as in the game. Whether a torch or lantern has anything to hang on there is support.ts's. */
 export function placedState(block: number, face: number, facing: Facing = 0): number {
   if (block === BLOCK.log && face >= 0 && face < 6) return face < 2 ? LOG_AXIS.x : face < 4 ? LOG_AXIS.y : LOG_AXIS.z;
+  if (block === BLOCK.torch) {
+    const out = FACE_FACING[face];
+    return out === null || out === undefined ? TORCH_ON_FLOOR : TORCH_ON_WALL + out;
+  }
+  if (block === BLOCK.lantern) return face === 3 ? LANTERN.hanging : LANTERN.standing;
   if (isFacing(block)) return facing;
   return 0;
 }
