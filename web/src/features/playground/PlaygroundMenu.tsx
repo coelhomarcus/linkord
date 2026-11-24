@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import type { KeyboardEvent, ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { cn } from '@/shared/lib/utils';
+import { MicrophoneIcon, MonitorIcon, SpeakerHighIcon } from '@/shared/ui/icons';
 import { useCallControls } from '@/features/calls/useCallControls';
 import { MicQuickMenu, ScreenShareQuickMenu, SpeakerQuickMenu } from '@/features/calls/CallDeviceMenus';
 import { SoundboardButton } from '@/features/soundboard/SoundboardButton';
@@ -14,22 +15,45 @@ import { decodeSkin, encodeSkin, SkinError, skinCanvas } from './skins/skins';
 import type { Skin } from './skins/skins';
 import { boxFaces, partLayout } from './skins/skinFormat';
 import { PIXEL_TEXT } from './pixelFont';
+import { PIXEL_BUTTON, PIXEL_BUTTON_DANGER, PIXEL_PANEL, PIXEL_SHADOW } from './pixelUi';
 import type { PartName } from './skins/skinFormat';
 
-// The playground's game menu, opened with Tab (or its button): everything the
-// call's control bar did, plus the camera and the skin, over a dimmed world.
-// Arrows move between the entries, as in a game; Tab or Esc goes back.
+// The playground's game menu, opened with Tab (or its button): a column of
+// chunky buttons over the dimmed world, the way a block game pauses (the world
+// goes on, it is a call). It does everything the call's control bar did, plus
+// the camera, and opens two pages of its own, the skin and who is around.
+// Arrows move between the buttons; Esc goes back a page, Tab back to the game.
 
-const ROW = `group/row flex w-full items-center gap-3 border-2 border-transparent bg-white/6 px-3 py-1.5 text-left ${PIXEL_TEXT.lg} leading-none text-white outline-none transition-colors duration-100 hover:bg-white/14 focus-visible:border-white data-[on=true]:text-white aria-disabled:text-white/40`;
-const STATE = `ml-auto ${PIXEL_TEXT.sm} text-white/60`;
-const CORNER = 'static size-7 rounded-none bg-transparent ring-0 text-white/70 hover:bg-white/14';
+type Page = 'main' | 'skin' | 'players';
 
-function Row({ children, state, ...props }: { children: ReactNode; state?: string } & React.ButtonHTMLAttributes<HTMLButtonElement>) {
+function MenuButton({ children, wide, danger, ...props }: { children: ReactNode; wide?: boolean; danger?: boolean } & React.ButtonHTMLAttributes<HTMLButtonElement>) {
   return (
-    <button type="button" data-menu-item {...props} className={cn(ROW, props.className)}>
+    <button type="button" data-menu-item {...props} className={cn(PIXEL_BUTTON, wide && 'col-span-2', danger && PIXEL_BUTTON_DANGER, props.className)}>
       {children}
-      {state && <span className={STATE}>{state}</span>}
     </button>
+  );
+}
+
+/** "Label: state", the state a little dimmer. */
+function Setting({ label, state }: { label: string; state?: string }) {
+  return (
+    <span className="truncate">
+      {label}
+      {state && <span className="text-white/75">: {state}</span>}
+    </span>
+  );
+}
+
+const DEVICE_SLAB = 'relative flex h-9 w-14 items-center gap-1 border-2 border-black/80 bg-[#5b5f69] pl-1.5 text-white shadow-[inset_2px_2px_0_rgb(255_255_255/0.22),inset_-2px_-3px_0_rgb(0_0_0/0.45)] has-[:hover]:bg-[#6f7480] has-[:focus-visible]:border-white';
+// the device menus open from a bare caret; here the whole slab, with its icon, is the trigger
+const DEVICE_TRIGGER = 'absolute inset-0 size-auto justify-end rounded-none bg-transparent pr-1.5 text-white ring-0 hover:bg-transparent';
+
+function DeviceSlab({ icon, children }: { icon: ReactNode; children: ReactNode }) {
+  return (
+    <span className={DEVICE_SLAB}>
+      <span aria-hidden className="grid place-items-center">{icon}</span>
+      {children}
+    </span>
   );
 }
 
@@ -57,7 +81,7 @@ function SkinPreview({ skin, label }: { skin: Skin; label: string }) {
     draw('leftArm', 12, 8);
     draw('head', 4, 0);
   }, [skin]);
-  return <canvas ref={ref} width={16} height={32} role="img" aria-label={label} className="h-48 w-24 flex-none [image-rendering:pixelated]" />;
+  return <canvas ref={ref} width={16} height={32} role="img" aria-label={label} className="h-56 w-28 flex-none [image-rendering:pixelated]" />;
 }
 
 interface MenuProps {
@@ -76,6 +100,7 @@ export function PlaygroundMenu({ session, localId, localUserId, players, present
   const controls = useCallControls();
   const panelRef = useRef<HTMLDivElement | null>(null);
   const fileRef = useRef<HTMLInputElement | null>(null);
+  const [page, setPage] = useState<Page>('main');
   const [skinError, setSkinError] = useState<string | null>(null);
   const customSkin = useSyncExternalStore(
     (listener) => session.onSkinsChange(listener),
@@ -83,22 +108,24 @@ export function PlaygroundMenu({ session, localId, localUserId, players, present
   );
   const skin = customSkin ?? defaultSkin(localUserId);
 
+  // each page starts on its first button, as a game menu does
   useEffect(() => {
     panelRef.current?.querySelector<HTMLElement>('[data-menu-item]')?.focus();
-  }, []);
+  }, [page]);
 
   function onKeyDown(event: KeyboardEvent<HTMLDivElement>) {
     if (event.key === 'Escape') {
       event.preventDefault();
-      onResume();
+      if (page === 'main') onResume();
+      else setPage('main');
       return;
     }
-    if (event.key !== 'ArrowDown' && event.key !== 'ArrowUp') return;
+    const step = { ArrowDown: 1, ArrowRight: 1, ArrowUp: -1, ArrowLeft: -1 }[event.key];
+    if (!step) return;
     event.preventDefault();
     const items = [...(panelRef.current?.querySelectorAll<HTMLElement>('[data-menu-item]') ?? [])];
     const index = items.indexOf(document.activeElement as HTMLElement);
-    const next = items[(index + (event.key === 'ArrowDown' ? 1 : -1) + items.length) % items.length];
-    next?.focus();
+    items[(index + step + items.length) % items.length]?.focus();
   }
 
   async function pickSkin(file: File | undefined) {
@@ -122,79 +149,90 @@ export function PlaygroundMenu({ session, localId, localUserId, players, present
   }
 
   const onOff = (on: boolean) => (on ? t('menu.on') : t('menu.off'));
+  const title = page === 'skin' ? t('skin.title') : page === 'players' ? `${t('menu.people')} (${players.length})` : t('menu.title');
 
   return (
-    <div className="absolute inset-0 z-30 grid place-items-center bg-black/60 p-4 motion-modal">
-      <div
-        ref={panelRef}
-        role="dialog"
-        aria-modal="true"
-        aria-label={t('menu.title')}
-        onKeyDown={onKeyDown}
-        className="flex max-h-full w-full max-w-3xl flex-col gap-4 overflow-y-auto border-2 border-white/25 bg-[#141518]/95 p-4 text-white shadow-popover md:flex-row"
-      >
-        <nav className="flex min-w-0 flex-1 flex-col gap-1.5">
-          <h2 className={`mb-1 ${PIXEL_TEXT.title} leading-none`}>{t('menu.title')}</h2>
-          <Row onClick={onResume} className="bg-white/14">{t('menu.resume')}</Row>
-          <Row onClick={controls.mic.toggle} aria-disabled={controls.mic.locked || undefined} aria-label={controls.mic.label}
-            state={controls.mic.locked ? undefined : controls.mic.muted ? t('menu.muted') : t('menu.on')}>
-            {t('menu.mic')}
-          </Row>
-          <Row onClick={controls.deafen.toggle} aria-label={controls.deafen.label} state={onOff(!controls.deafen.on)}>{t('menu.sound')}</Row>
-          <Row onClick={controls.share.toggle} aria-disabled={controls.share.locked || undefined} aria-label={controls.share.label} state={controls.share.locked ? undefined : onOff(controls.share.on)}>
-            {t('menu.share')}
-            {controls.share.locked && <span className={STATE}>{controls.share.label}</span>}
-          </Row>
-          <Row onClick={onToggleView} state={t(CAMERA_LABEL[cameraMode])}>{t('menu.view')}</Row>
-          <Row onClick={controls.fullscreen.toggle} state={onOff(controls.fullscreen.on)}>{t('menu.fullscreen')}</Row>
-          <div className={`flex items-center gap-1 bg-white/6 px-3 py-1 ${PIXEL_TEXT.lg}`}>
-            <span className="mr-auto text-white/80">{t('menu.tools')}</span>
-            <span className="relative"><MicQuickMenu className={CORNER} /></span>
-            <span className="relative"><SpeakerQuickMenu className={CORNER} /></span>
-            <span className="relative"><ScreenShareQuickMenu className={CORNER} /></span>
-            {controls.soundboard && (
-              <SoundboardButton
-                conversationId={controls.soundboard.conversationId}
-                callServerId={controls.soundboard.serverId}
-                className="grid size-7 place-items-center text-white/80 hover:bg-white/14"
-                activeClassName="bg-white/14 text-white"
-                iconClassName="size-5"
-              />
-            )}
-          </div>
-          <Row onClick={controls.leave} className="mt-2 bg-red/25 text-red-text hover:bg-red/40">{controls.leaveLabel}</Row>
-          <p className={`mt-1 ${PIXEL_TEXT.sm} leading-tight text-white/50`}>{t('menu.hint')}</p>
-        </nav>
+    <div className="absolute inset-0 z-30 grid place-items-center overflow-y-auto bg-black/55 p-4 backdrop-blur-[2px] motion-modal">
+      <div ref={panelRef} role="dialog" aria-modal="true" aria-label={title} onKeyDown={onKeyDown} className="flex w-full max-w-md flex-col gap-3 text-white">
+        <h2 className={`text-center ${PIXEL_TEXT.title} leading-none ${PIXEL_SHADOW}`}>{title}</h2>
 
-        <section className="flex w-full flex-col gap-4 md:w-64">
-          <div>
-            <h3 className={`mb-2 ${PIXEL_TEXT.xl} leading-none text-white/80`}>{t('skin.title')}</h3>
-            <div className="flex gap-3">
+        {page === 'main' && (
+          <div className="grid grid-cols-2 gap-2">
+            <MenuButton wide onClick={onResume}>{t('menu.resume')}</MenuButton>
+            <MenuButton onClick={controls.mic.toggle} aria-disabled={controls.mic.locked || undefined} aria-label={controls.mic.label}>
+              <Setting label={t('menu.mic')} state={controls.mic.locked ? undefined : controls.mic.muted ? t('menu.muted') : t('menu.on')} />
+            </MenuButton>
+            <MenuButton onClick={controls.deafen.toggle} aria-label={controls.deafen.label}>
+              <Setting label={t('menu.sound')} state={onOff(!controls.deafen.on)} />
+            </MenuButton>
+            <MenuButton onClick={onToggleView}>
+              <Setting label={t('menu.view')} state={t(CAMERA_LABEL[cameraMode])} />
+            </MenuButton>
+            <MenuButton onClick={controls.fullscreen.toggle}>
+              <Setting label={t('menu.fullscreen')} state={onOff(controls.fullscreen.on)} />
+            </MenuButton>
+            <MenuButton wide onClick={controls.share.toggle} aria-disabled={controls.share.locked || undefined} aria-label={controls.share.label}>
+              <Setting label={t('menu.share')} state={controls.share.locked ? controls.share.label : onOff(controls.share.on)} />
+            </MenuButton>
+            <MenuButton onClick={() => setPage('skin')}>{t('menu.skin')}</MenuButton>
+            <MenuButton onClick={() => setPage('players')}>{t('menu.players', { count: players.length })}</MenuButton>
+            <div className={cn('col-span-2 flex items-center gap-2 px-3 py-1.5', PIXEL_PANEL)}>
+              <span className={`mr-auto ${PIXEL_TEXT.md} leading-none text-white/85 ${PIXEL_SHADOW}`}>{t('menu.devices')}</span>
+              <DeviceSlab icon={<MicrophoneIcon size={18} />}><MicQuickMenu className={DEVICE_TRIGGER} /></DeviceSlab>
+              <DeviceSlab icon={<SpeakerHighIcon size={18} />}><SpeakerQuickMenu className={DEVICE_TRIGGER} /></DeviceSlab>
+              <DeviceSlab icon={<MonitorIcon size={18} />}><ScreenShareQuickMenu className={DEVICE_TRIGGER} /></DeviceSlab>
+              {controls.soundboard && (
+                <SoundboardButton
+                  conversationId={controls.soundboard.conversationId}
+                  callServerId={controls.soundboard.serverId}
+                  className={cn('grid h-9 w-11 place-items-center', DEVICE_SLAB, 'pl-0')}
+                  activeClassName="bg-[#6f7480]"
+                  iconClassName="size-5"
+                />
+              )}
+            </div>
+            <MenuButton wide danger onClick={controls.leave} className="mt-2">{controls.leaveLabel}</MenuButton>
+          </div>
+        )}
+
+        {page === 'skin' && (
+          <div className="flex flex-col gap-3">
+            <div className={cn('flex items-center gap-4 p-4', PIXEL_PANEL)}>
               <SkinPreview skin={skin} label={t('skin.preview')} />
-              <div className={`flex min-w-0 flex-col gap-1.5 ${PIXEL_TEXT.sm} leading-tight`}>
+              <div className={`flex min-w-0 flex-col gap-1.5 ${PIXEL_TEXT.md} leading-tight ${PIXEL_SHADOW}`}>
                 <span>{customSkin ? t('skin.custom') : t('skin.default')}</span>
-                <span className="text-white/60">{skin.slim ? t('skin.slim') : t('skin.classic')}</span>
-                <Row onClick={() => fileRef.current?.click()} className={`mt-1 ${PIXEL_TEXT.sm}`}>{t('skin.choose')}</Row>
-                {customSkin && <Row onClick={() => void wear(null, null)} className={PIXEL_TEXT.sm}>{t('skin.reset')}</Row>}
-                <input ref={fileRef} type="file" accept="image/png" hidden
-                  onChange={(event) => { void pickSkin(event.target.files?.[0]); event.target.value = ''; }} />
-                {skinError && <p role="alert" className="text-red-text">{skinError}</p>}
+                <span className="text-white/65">{skin.slim ? t('skin.slim') : t('skin.classic')}</span>
+                <span className={`mt-2 ${PIXEL_TEXT.sm} text-white/55`}>{t('skin.formatHint')}</span>
               </div>
             </div>
+            {skinError && <p role="alert" className={`${PIXEL_TEXT.md} leading-tight text-red-text ${PIXEL_SHADOW}`}>{skinError}</p>}
+            <div className="grid grid-cols-2 gap-2">
+              <MenuButton wide={!customSkin} onClick={() => fileRef.current?.click()}>{t('skin.choose')}</MenuButton>
+              {customSkin && <MenuButton onClick={() => void wear(null, null)}>{t('skin.reset')}</MenuButton>}
+              <MenuButton wide onClick={() => setPage('main')} className="mt-2">{t('menu.done')}</MenuButton>
+            </div>
+            <input ref={fileRef} type="file" accept="image/png" hidden
+              onChange={(event) => { void pickSkin(event.target.files?.[0]); event.target.value = ''; }} />
           </div>
-          <div>
-            <h3 className={`mb-2 ${PIXEL_TEXT.xl} leading-none text-white/80`}>{t('menu.people')} ({players.length})</h3>
-            <ul className={`flex flex-col gap-1 ${PIXEL_TEXT.md} leading-none`}>
+        )}
+
+        {page === 'players' && (
+          <div className="flex flex-col gap-3">
+            <ul className={cn(`flex max-h-[50vh] flex-col gap-1 overflow-y-auto p-2 ${PIXEL_TEXT.md} leading-none ${PIXEL_SHADOW}`, PIXEL_PANEL)}>
               {players.map((player) => (
-                <li key={player.id} className={cn('flex items-center gap-2 border-l-4 bg-white/6 px-2 py-1', player.speaking ? 'border-green' : 'border-transparent')}>
+                <li key={player.id} className="flex items-center gap-2 px-2 py-1.5 odd:bg-white/5">
+                  <span aria-hidden className={cn('size-2.5 flex-none', player.speaking ? 'bg-green' : 'bg-white/25')} />
                   <span className="truncate">{player.name}</span>
-                  {player.id === localId && <span className="text-white/50">({t('menu.you')})</span>}
-                  {player.id === presenterId && <span className={`ml-auto ${PIXEL_TEXT.xs} text-white/60`}>{t('menu.onScreen')}</span>}
+                  {player.id === localId && <span className="text-white/55">({t('menu.you')})</span>}
+                  {player.id === presenterId && <span className={`ml-auto ${PIXEL_TEXT.sm} text-white/70`}>{t('menu.onScreen')}</span>}
                 </li>
               ))}
             </ul>
+            <MenuButton onClick={() => setPage('main')}>{t('menu.done')}</MenuButton>
           </div>
-        </section>
+        )}
+
+        <p className={`text-center ${PIXEL_TEXT.sm} leading-tight text-white/60 ${PIXEL_SHADOW}`}>{page === 'main' ? t('menu.hint') : t('menu.pageHint')}</p>
       </div>
     </div>
   );

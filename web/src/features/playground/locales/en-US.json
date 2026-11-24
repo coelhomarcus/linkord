@@ -21,7 +21,7 @@
     "taken": "Someone else is already on the big screen. Wait until they stop sharing to stream."
   },
   "menu": {
-    "title": "Menu",
+    "title": "Game menu",
     "open": "Open the menu",
     "resume": "Back to the game",
     "hint": "Tab or Esc returns to the game / arrows choose / Enter confirms",
@@ -36,8 +36,13 @@
     "share": "Big screen",
     "view": "Camera",
     "fullscreen": "Fullscreen",
-    "tools": "Devices and sounds",
-    "leave": "Leave the call"
+    "leave": "Leave the call",
+    "pageHint": "Esc returns to the menu / Tab returns to the game",
+    "skin": "Skin...",
+    "players_one": "Players ({{count}})...",
+    "players_other": "Players ({{count}})...",
+    "devices": "Devices",
+    "done": "Done"
   },
   "skin": {
     "title": "Your skin",
@@ -53,7 +58,8 @@
       "size": "That file is too large for a skin.",
       "unreadable": "That file could not be read as an image.",
       "save": "The skin could not be saved. Try again."
-    }
+    },
+    "formatHint": "A 64×64 or 64×32 PNG"
   },
   "hud": {
     "muted": "Microphone muted",

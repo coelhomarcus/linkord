@@ -20,6 +20,11 @@ describe('proximityGain', () => {
     expect(mid).toBeLessThan(0.5);
   });
 
+  it('still carries a voice across the plaza, about 12 m away, almost at full volume', () => {
+    expect(proximityGain(12)).toBeGreaterThan(0.85);
+    expect(proximityGain(30)).toBeGreaterThan(0.4);
+  });
+
   it('plays someone at an unknown distance at full volume', () => {
     expect(proximityGain(Number.NaN)).toBe(1);
   });

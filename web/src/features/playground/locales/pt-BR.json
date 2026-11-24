@@ -21,7 +21,7 @@
     "taken": "Outra pessoa já está no telão. Espere ela parar de compartilhar para transmitir."
   },
   "menu": {
-    "title": "Menu",
+    "title": "Menu do jogo",
     "open": "Abrir menu",
     "resume": "Voltar ao jogo",
     "hint": "Tab ou Esc volta ao jogo / setas escolhem / Enter confirma",
@@ -36,8 +36,13 @@
     "share": "Telão",
     "view": "Câmera",
     "fullscreen": "Tela cheia",
-    "tools": "Dispositivos e sons",
-    "leave": "Sair da chamada"
+    "leave": "Sair da chamada",
+    "pageHint": "Esc volta ao menu / Tab volta ao jogo",
+    "skin": "Skin...",
+    "players_one": "Jogadores ({{count}})...",
+    "players_other": "Jogadores ({{count}})...",
+    "devices": "Dispositivos",
+    "done": "Concluído"
   },
   "skin": {
     "title": "Sua skin",
@@ -53,7 +58,8 @@
       "size": "Esse arquivo é grande demais para uma skin.",
       "unreadable": "Não deu para ler esse arquivo como imagem.",
       "save": "Não deu para salvar a skin. Tente de novo."
-    }
+    },
+    "formatHint": "PNG de 64×64 ou 64×32"
   },
   "hud": {
     "muted": "Microfone mudo",

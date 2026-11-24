@@ -15,6 +15,7 @@ import { CAMERA_LABEL, CAMERA_SWITCH_LABEL, nextCameraMode } from './engine/cont
 import type { CameraMode } from './engine/controls';
 import { PlaygroundMenu } from './PlaygroundMenu';
 import { loadPixelFont, PIXEL_FONT, PIXEL_TEXT } from './pixelFont';
+import { HUD_BUTTON, HUD_CHIP as CHIP, PIXEL_PANEL, PIXEL_SHADOW } from './pixelUi';
 
 const samePlayers = (a: PlaygroundPlayer[], b: PlaygroundPlayer[]) =>
   a.length === b.length && a.every((p, i) => {
@@ -36,8 +37,6 @@ const LOCKED_KEYS = ['KeyW', 'KeyT', 'KeyN', 'KeyQ', 'Tab'];
 type KeyboardLock = { lock?: (codes?: string[]) => Promise<void>; unlock?: () => void };
 const keyboardLock = () => (navigator as Navigator & { keyboard?: KeyboardLock }).keyboard;
 
-const HUD_BUTTON = `pointer-events-auto flex items-center gap-2 whitespace-nowrap border-2 border-white/20 bg-black/55 px-2.5 py-1 ${PIXEL_TEXT.md} leading-none text-white outline-none hover:bg-black/75 focus-visible:border-white`;
-const CHIP = `flex items-center gap-1.5 border-2 border-white/15 bg-black/55 px-2 py-0.5 ${PIXEL_TEXT.sm} leading-none text-white`;
 
 /** A playground call: the 3D world where the tile grid would be, with a game
  * menu on Tab instead of a control bar. Loaded on demand (App.tsx), since
@@ -127,6 +126,8 @@ export default function PlaygroundStage({ allIds, onBack }: { allIds: string[]; 
       const inside = !!document.pointerLockElement || (!!stage && stage.contains(document.activeElement));
       if (!inside) return;
       event.preventDefault();
+      // a held Tab repeats its key press: only the first one opens or closes the menu
+      if (event.repeat) return;
       setMenuOpen((open) => {
         if (!open) relockRef.current = !!document.pointerLockElement;
         return !open;
@@ -206,8 +207,13 @@ export default function PlaygroundStage({ allIds, onBack }: { allIds: string[]; 
             <ArrowLeftIcon size={18} />
           </button>
           {!failed && !locked && !moved && (
-            <p className={`max-w-lg border-2 border-white/15 bg-black/55 px-3 py-1.5 text-center ${PIXEL_TEXT.sm} leading-tight text-white/90`}>
-              {touchFirst ? t('hint.touch') : t('hint.desktop')}
+            <p className={cn(`max-w-lg px-3 py-1.5 text-center ${PIXEL_TEXT.sm} leading-tight text-white/90 ${PIXEL_SHADOW}`, PIXEL_PANEL)}>
+              {(touchFirst ? t('hint.touch') : t('hint.desktop')).split(' / ').map((part, index) => (
+                <span key={part} className="inline-block whitespace-nowrap">
+                  {index > 0 && <span aria-hidden className="mx-2.5 inline-block size-1 bg-white/45 align-middle" />}
+                  {part}
+                </span>
+              ))}
             </p>
           )}
           <div className="flex gap-2">
@@ -236,7 +242,7 @@ export default function PlaygroundStage({ allIds, onBack }: { allIds: string[]; 
         <div className="pointer-events-none absolute bottom-[calc(0.75rem+env(safe-area-inset-bottom))] left-1/2 z-40 flex w-[min(28rem,calc(100%-2rem))] -translate-x-1/2 flex-col items-center gap-1.5">
           {notices.map((notice) => (
             <button key={notice.text} type="button" onClick={notice.dismiss} role="status" aria-label={`${notice.text} · ${tc('controls.dismissNotice')}`}
-              className={`pointer-events-auto w-full border-2 border-white/20 bg-black/75 px-3 py-1.5 text-left ${PIXEL_TEXT.sm} leading-tight text-white/90 hover:bg-black/85`}>
+              className={cn(`pointer-events-auto w-full px-3 py-1.5 text-left ${PIXEL_TEXT.sm} leading-tight text-white/90 ${PIXEL_SHADOW} hover:border-white/80`, PIXEL_PANEL)}>
               {notice.text}
             </button>
           ))}
@@ -245,7 +251,7 @@ export default function PlaygroundStage({ allIds, onBack }: { allIds: string[]; 
 
       {touchFirst && !failed && !menuOpen && (
         <button type="button" aria-label={t('jump')} onClick={() => engineRef.current?.jump()}
-          className="absolute bottom-1/3 right-4 z-20 grid size-14 place-items-center border-2 border-white/25 bg-black/45 text-white">
+          className={cn(HUD_BUTTON, 'absolute bottom-1/3 right-4 z-20 size-14 justify-center px-0')}>
           <CaretUpIcon size={26} />
         </button>
       )}
