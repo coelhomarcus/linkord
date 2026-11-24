@@ -154,7 +154,7 @@ export function PlaygroundMenu({ session, localId, localUserId, players, present
                 <SoundboardButton
                   conversationId={controls.soundboard.conversationId}
                   callServerId={controls.soundboard.serverId}
-                  className={cn(DOCK_SLAB, 'hover:bg-[#6f7480]')}
+                  className={cn(DOCK_SLAB, 'w-full hover:bg-[#6f7480]')}
                   activeClassName="bg-[#6f7480]"
                   iconClassName="size-8 drop-shadow-[2px_2px_0_rgb(0_0_0/0.55)]"
                 />

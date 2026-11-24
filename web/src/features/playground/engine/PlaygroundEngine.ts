@@ -216,7 +216,10 @@ export class PlaygroundEngine {
   setMenuOpen(open: boolean): void {
     this.controls.enabled = !open;
     if (open && this.controls.locked) document.exitPointerLock();
-    if (!open) this.focus();
+    // back to the game, unless something outside it took the focus meanwhile (the media viewer a
+    // picture in the chat opened): it keeps the keys until it closes
+    const focused = document.activeElement;
+    if (!open && (!focused || focused === document.body || this.container.contains(focused))) this.focus();
   }
 
   /** Locks the mouse again; only works from a click or a key press. */
