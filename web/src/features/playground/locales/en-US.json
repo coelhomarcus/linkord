@@ -58,5 +58,14 @@
     "muted": "Microphone muted",
     "deafened": "Sound off",
     "sharing": "You are on the big screen"
+  },
+  "chat": {
+    "notLinked": "This playground has no chat. Whoever manages the channel picks one in Channel settings → Game chat.",
+    "noAccess": "You do not have access to the game chat's channel.",
+    "cannotSend": "You cannot send messages in #{{channel}}.",
+    "failed": "not sent",
+    "label": "Game chat, #{{channel}}",
+    "input": "Message #{{channel}}",
+    "inputNoChannel": "Message"
   }
 }

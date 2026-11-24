@@ -216,7 +216,10 @@
     "topic": "Channel Topic",
     "topicPlaceholder": "Let everyone know how to use this channel",
     "synced": "This channel follows its category's permissions. Changing anything here stops that.",
-    "sync": "Sync with Category"
+    "sync": "Sync with Category",
+    "gameChat": "Game chat",
+    "gameChatNone": "None",
+    "gameChatHint": "Messages in this text channel show inside the game (T opens the chat), and what players type in the game is posted to it."
   },
   "deleteChannel": {
     "title": "Delete #{{name}}",
@@ -510,7 +513,8 @@
       "volume": "Volume",
       "avatar": "Avatar",
       "reason": "Reason",
-      "description": "Description"
+      "description": "Description",
+      "gameChat": "Game chat"
     },
     "values": {
       "yes": "Yes",

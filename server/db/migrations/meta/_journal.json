@@ -575,6 +575,13 @@
       "when": 1795488385675,
       "tag": "0081_playground_skins",
       "breakpoints": true
+    },
+    {
+      "idx": 82,
+      "version": "7",
+      "when": 1795492602913,
+      "tag": "0082_playground_game_chat",
+      "breakpoints": true
     }
   ]
 }

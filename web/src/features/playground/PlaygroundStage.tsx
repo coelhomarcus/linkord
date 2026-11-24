@@ -14,6 +14,7 @@ import type { PlaygroundPlayer } from './engine/PlaygroundEngine';
 import { nextCameraMode } from './engine/controls';
 import type { CameraMode } from './engine/controls';
 import { PlaygroundMenu } from './PlaygroundMenu';
+import { PlaygroundChat } from './PlaygroundChat';
 import { loadPixelFont, PIXEL_FONT, PIXEL_TEXT } from './pixelFont';
 import { HUD_BUTTON, HUD_CHIP as CHIP, PIXEL_PANEL, PIXEL_SHADOW } from './pixelUi';
 
@@ -55,6 +56,9 @@ export default function PlaygroundStage({ allIds, onBack }: { allIds: string[]; 
   const relockRef = useRef(false);
   const [cameraMode, setCameraMode] = useState<CameraMode>('third');
   const [menuOpen, setMenuOpen] = useState(false);
+  const [chatOpen, setChatOpen] = useState(false);
+  const menuOpenRef = useRef(false);
+  useEffect(() => { menuOpenRef.current = menuOpen; }, [menuOpen]);
   const [fontReady, setFontReady] = useState(false);
   // no WebGL (turned off, or a GPU the browser refuses): the call itself still works
   const [failed] = useState(() => !canUseWebGL());
@@ -124,6 +128,7 @@ export default function PlaygroundStage({ allIds, onBack }: { allIds: string[]; 
       event.preventDefault();
       // a held Tab repeats its key press: only the first one opens or closes the menu
       if (event.repeat) return;
+      setChatOpen(false);
       setMenuOpen((open) => {
         if (!open) relockRef.current = !!document.pointerLockElement;
         return !open;
@@ -133,16 +138,35 @@ export default function PlaygroundStage({ allIds, onBack }: { allIds: string[]; 
     return () => window.removeEventListener('keydown', onKeyDown);
   }, [callStageRef]);
 
+  // T or Enter opens the game chat, as in the game
+  useEffect(() => {
+    function onKeyDown(event: KeyboardEvent) {
+      if ((event.code !== 'KeyT' && event.code !== 'Enter') || event.repeat || event.ctrlKey || event.metaKey || event.altKey) return;
+      const stage = callStageRef.current;
+      const target = event.target instanceof HTMLElement ? event.target : null;
+      // Enter on a focused HUD button presses it instead
+      if (target?.closest('button, input, textarea, select, [contenteditable="true"]')) return;
+      const inside = !!document.pointerLockElement || (!!stage && stage.contains(document.activeElement));
+      if (!inside || menuOpenRef.current) return;
+      event.preventDefault();
+      relockRef.current = !!document.pointerLockElement;
+      setChatOpen(true);
+    }
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [callStageRef]);
+
+  const overlayOpen = menuOpen || chatOpen;
   useEffect(() => {
     const engine = engineRef.current;
     if (!engine) return;
-    engine.setMenuOpen(menuOpen);
-    // back from the menu with Tab: the key press lets the mouse be taken again
-    if (!menuOpen && relockRef.current) {
+    engine.setMenuOpen(overlayOpen);
+    // back from the menu with Tab, or from the chat with Enter: the key press lets the mouse be taken again
+    if (!overlayOpen && relockRef.current) {
       relockRef.current = false;
       engine.lockPointer();
     }
-  }, [menuOpen]);
+  }, [overlayOpen]);
 
   // fullscreen: keep Ctrl+W and friends inside the game
   useEffect(() => {
@@ -165,6 +189,13 @@ export default function PlaygroundStage({ allIds, onBack }: { allIds: string[]; 
     controls.shareError ? { text: controls.shareError, dismiss: controls.dismissShareError } : null,
     controls.micNotice ? { text: controls.micNotice, dismiss: controls.dismissMicNotice } : null,
   ].filter((notice) => notice !== null);
+
+  const chips = [
+    controls.reconnecting && <span key="reconnecting" className={CHIP}>{tc('controls.statusReconnecting')}</span>,
+    controls.mic.muted && <span key="muted" className={CHIP}><MicrophoneSlashIcon size={16} className="text-red" />{t('hud.muted')}</span>,
+    controls.deafen.on && <span key="deafened" className={CHIP}><SpeakerSlashIcon size={16} className="text-red" />{t('hud.deafened')}</span>,
+    controls.share.on && <span key="sharing" className={CHIP}><MonitorIcon size={16} className="text-green" />{t('hud.sharing')}</span>,
+  ].filter(Boolean);
 
   return (
     <main ref={callStageRef} data-stage className="relative flex min-h-0 min-w-0 flex-1 select-none overflow-hidden bg-bg-call text-white" style={{ fontFamily: `${PIXEL_FONT}, monospace` }}>
@@ -207,13 +238,14 @@ export default function PlaygroundStage({ allIds, onBack }: { allIds: string[]; 
         </div>
       )}
 
-      {!menuOpen && (
+      {!menuOpen && !chatOpen && (
         <div className="pointer-events-none absolute bottom-[calc(0.75rem+env(safe-area-inset-bottom))] left-3 z-20 flex flex-col items-start gap-1.5">
-          {controls.reconnecting && <span className={CHIP}>{tc('controls.statusReconnecting')}</span>}
-          {controls.mic.muted && <span className={CHIP}><MicrophoneSlashIcon size={16} className="text-red" />{t('hud.muted')}</span>}
-          {controls.deafen.on && <span className={CHIP}><SpeakerSlashIcon size={16} className="text-red" />{t('hud.deafened')}</span>}
-          {controls.share.on && <span className={CHIP}><MonitorIcon size={16} className="text-green" />{t('hud.sharing')}</span>}
+          {chips}
         </div>
+      )}
+
+      {!menuOpen && activeCallConversationId && (
+        <PlaygroundChat callConversationId={activeCallConversationId} open={chatOpen} lift={chips.length} onClose={() => setChatOpen(false)} />
       )}
 
       {notices.length > 0 && (

@@ -58,5 +58,14 @@
     "muted": "Microfone mudo",
     "deafened": "Som desligado",
     "sharing": "Você está no telão"
+  },
+  "chat": {
+    "notLinked": "Este playground não tem chat. Quem gerencia o canal escolhe um em Configurações do canal → Chat do jogo.",
+    "noAccess": "Você não tem acesso ao canal do chat do jogo.",
+    "cannotSend": "Você não pode enviar mensagens em #{{channel}}.",
+    "failed": "não enviada",
+    "label": "Chat do jogo, #{{channel}}",
+    "input": "Mensagem em #{{channel}}",
+    "inputNoChannel": "Mensagem"
   }
 }

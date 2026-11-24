@@ -164,6 +164,9 @@ export const conversations = pgTable('conversations', {
   // (a 3D space with proximity voice). Set when the channel is created; a
   // text channel or DM keeps 'standard'.
   voiceMode: varchar('voice_mode', { length: 12 }).notNull().default('standard'),
+  // A playground's game chat: the server's text channel its players talk in from
+  // inside the game (features/playground). Null on anything else, or when unset.
+  playgroundChatId: text('playground_chat_id').references((): AnyPgColumn => conversations.id, { onDelete: 'set null' }),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 }, (t) => [
@@ -173,6 +176,7 @@ export const conversations = pgTable('conversations', {
   check('conversations_type_check', sql`${t.type} IN ('direct','text','voice')`),
   check('conversations_server_channel_check', sql`(${t.type} = 'direct') = (${t.serverId} IS NULL)`),
   check('conversations_voice_mode_check', sql`${t.voiceMode} IN ('standard','playground') AND (${t.voiceMode} = 'standard' OR ${t.type} = 'voice')`),
+  check('conversations_playground_chat_check', sql`${t.playgroundChatId} IS NULL OR ${t.voiceMode} = 'playground'`),
 ]);
 
 /** The two members of a DM. Server channels have no rows here: who belongs

@@ -216,7 +216,10 @@
     "topic": "Tópico do canal",
     "topicPlaceholder": "Diga a todos como usar este canal",
     "synced": "Este canal segue as permissões da categoria. Mudar algo aqui deixa de segui-las.",
-    "sync": "Sincronizar com a categoria"
+    "sync": "Sincronizar com a categoria",
+    "gameChat": "Chat do jogo",
+    "gameChatNone": "Nenhum",
+    "gameChatHint": "As mensagens deste canal de texto aparecem dentro do jogo (T abre o chat), e o que os jogadores escrevem no jogo é enviado a ele."
   },
   "deleteChannel": {
     "title": "Excluir #{{name}}",
@@ -510,7 +513,8 @@
       "volume": "Volume",
       "avatar": "Avatar",
       "reason": "Motivo",
-      "description": "Descrição"
+      "description": "Descrição",
+      "gameChat": "Chat do jogo"
     },
     "values": {
       "yes": "Sim",
