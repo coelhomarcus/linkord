@@ -68,7 +68,7 @@ export class Controls {
   pitch = 0;
   /** third-person camera distance */
   distance = DEFAULT_CAMERA_DISTANCE;
-  mode: CameraMode = 'third';
+  mode: CameraMode = 'first';
   /** a click while the mouse is locked (or a plain click where the lock is refused, a tap on a touch
    * screen): the arm swings */
   onAction: () => void = () => {};

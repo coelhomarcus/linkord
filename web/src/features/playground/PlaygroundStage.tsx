@@ -77,7 +77,7 @@ export default function PlaygroundStage({ allIds, onBack }: { allIds: string[]; 
   const relockRef = useRef(false);
   /** the mouse was let go on purpose (Alt): no pause for it */
   const releasedRef = useRef(false);
-  const [cameraMode, setCameraMode] = useState<CameraMode>('third');
+  const [cameraMode, setCameraMode] = useState<CameraMode>('first');
   const [menuOpen, setMenuOpen] = useState(false);
   const [chatOpen, setChatOpen] = useState(false);
   const [inventoryOpen, setInventoryOpen] = useState(false);
