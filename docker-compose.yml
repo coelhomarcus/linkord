@@ -141,13 +141,14 @@ services:
     cap_drop:
       - ALL
 
-  # The playground service: the app's own image running its other process. Browsers reach it at PLAYGROUND_URL
+  # The playground service, from its own image (playground/Dockerfile). Browsers reach it at PLAYGROUND_URL
   # (http://localhost:3100 here; behind Caddy, the app's domain, which routes /playground/ to it).
   playground:
     profiles: ["playground"]
-    build: .
+    build:
+      context: .
+      dockerfile: playground/Dockerfile
     restart: unless-stopped
-    command: ["node", "playground/dist/index.js"]
     environment:
       PLAYGROUND_DATABASE_URL: postgres://linkord:${PLAYGROUND_POSTGRES_PASSWORD:-linkord}@playground-postgres:5432/linkord_playground
       PLAYGROUND_SECRET: ${PLAYGROUND_SECRET:-}
