@@ -146,6 +146,9 @@ export interface LinkordDesktop {
   screenShare?: DesktopScreenShare;
   /** brings the window back, hidden or minimised included */
   focusWindow?: () => Promise<void>;
+  /** puts the window in fullscreen or takes it out; Esc does not leave it as it leaves an element's
+   * (shared/lib/fullscreen.ts). Absent in builds that only have the element's fullscreen. */
+  setFullScreen?: (on: boolean) => Promise<void>;
   /** `linkord://` links opened while the app runs, as paths on this origin (an invite, a
    * conversation); returns the unsubscribe. Absent in builds without deep links. */
   onDeepLink?: (callback: (path: string) => void) => () => void;

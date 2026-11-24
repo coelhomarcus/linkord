@@ -42,3 +42,12 @@ export interface WindowState {
 export function windowState(window: { isMaximized(): boolean; isFullScreen(): boolean; isFocused(): boolean }): WindowState {
   return { maximized: window.isMaximized(), fullScreen: window.isFullScreen(), focused: window.isFocused() };
 }
+
+/**
+ * The page's request to put the window in fullscreen or take it out, or null when it is not one.
+ * The page asks for the window's fullscreen rather than an element's because Chromium leaves an
+ * element's on Esc, and the page needs Esc for itself (the playground's screens and pause menu).
+ */
+export function parseFullScreenRequest(value: unknown): boolean | null {
+  return typeof value === 'boolean' ? value : null;
+}

@@ -3,7 +3,7 @@ import { isAppPage } from './appPage.js';
 import { parseBadgeCount } from './badge.js';
 import type { Strings } from './strings.js';
 import { setTaskbarBadge } from './taskbarBadge.js';
-import { windowState } from './titleBar.js';
+import { parseFullScreenRequest, windowState } from './titleBar.js';
 
 // The same names are spelled out in src/preload/index.cts, which cannot import this file
 const FOCUS_WINDOW = 'linkord:window:focus';
@@ -13,6 +13,7 @@ const TOGGLE_MAXIMIZE = 'linkord:window:toggle-maximize';
 const CLOSE = 'linkord:window:close';
 const GET_STATE = 'linkord:window:get-state';
 const STATE_CHANGED = 'linkord:window:state';
+const SET_FULL_SCREEN = 'linkord:window:set-full-screen';
 
 export function installAppBridge(appOrigin: string, strings: Strings): void {
   // A notification clicked while the window is hidden (in the tray) or
@@ -35,6 +36,12 @@ export function installAppBridge(appOrigin: string, strings: Strings): void {
   });
   // The window's close handler decides what closing means (hide to the tray)
   ipcMain.handle(CLOSE, (event) => { appWindow(event)?.close(); });
+  // The call stage and the playground fill a fullscreen window (web/src/shared/lib/fullscreen.ts)
+  ipcMain.handle(SET_FULL_SCREEN, (event, value: unknown) => {
+    const window = appWindow(event);
+    const on = parseFullScreenRequest(value);
+    if (window && on !== null) window.setFullScreen(on);
+  });
   ipcMain.handle(GET_STATE, (event) => {
     const window = appWindow(event);
     return window ? windowState(window) : null;
