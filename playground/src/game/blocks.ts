@@ -23,10 +23,13 @@ export const BLOCK = {
   whiteTerracotta: 52, orangeTerracotta: 53, magentaTerracotta: 54, lightBlueTerracotta: 55, yellowTerracotta: 56, limeTerracotta: 57, pinkTerracotta: 58, grayTerracotta: 59,
   lightGrayTerracotta: 60, cyanTerracotta: 61, purpleTerracotta: 62, blueTerracotta: 63, brownTerracotta: 64, greenTerracotta: 65, redTerracotta: 66, blackTerracotta: 67,
   terracotta: 68,
+  chest: 69,
+  /** opens a screen with every item; nobody breaks it (game/worldGen.ts puts one by the plaza) */
+  creativeChest: 70,
 } as const;
 export type Block = (typeof BLOCK)[keyof typeof BLOCK];
 /** one past the largest block number */
-export const BLOCK_COUNT = 69;
+export const BLOCK_COUNT = 71;
 
 /** The game's sixteen colours, in its order: the coloured blocks are numbered by it. */
 export const COLORS = [
@@ -101,6 +104,9 @@ const BLOCK_DEFS = {
   ...coloredDefs('concrete', solid(1.8, 'pickaxe', null, 0)),
   ...coloredDefs('terracotta', solid(1.25, 'pickaxe', null, 0)),
   [BLOCK.terracotta]: solid(1.25, 'pickaxe', 'terracotta', 0),
+  // a chest is a little smaller than its cell: what is behind it shows round its edges
+  [BLOCK.chest]: { ...solid(2.5, 'axe', 'chest'), opaque: false, lightOpacity: 0 },
+  [BLOCK.creativeChest]: { ...solid(-1, null, null), opaque: false, lightOpacity: 0 },
 } as Record<Block, BlockDef>;
 
 export function isBlock(value: number): value is Block {
@@ -113,12 +119,28 @@ export function blockDef(block: number): BlockDef {
 
 /** What a placed block may take the place of. */
 export const isReplaceable = (block: number): boolean => block === BLOCK.air || block === BLOCK.water;
+/** Where a block's front faces (a chest's): +z, -x, -z, +x. */
+export type Facing = 0 | 1 | 2 | 3;
+
+/** Blocks whose state is where their front faces. */
+export const isFacing = (block: number): boolean => block === BLOCK.chest || block === BLOCK.creativeChest;
+
+/** The way from the cell (x, z) toward a point: where a block placed there by someone standing at the
+ * point faces. */
+export function facingToward(at: { x: number; z: number }, x: number, z: number): Facing {
+  const dx = at.x - (x + 0.5);
+  const dz = at.z - (z + 0.5);
+  if (Math.abs(dx) > Math.abs(dz)) return dx > 0 ? 3 : 1;
+  return dz > 0 ? 0 : 2;
+}
+
 /** Which way a log lies: its state. */
 export const LOG_AXIS = { y: 0, x: 1, z: 2 } as const;
 
 /** How many states a block has (state numbers below this are its own; 0 always is). */
 function stateCount(block: number): number {
-  return block === BLOCK.log ? 3 : 1;
+  if (block === BLOCK.log) return 3;
+  return isFacing(block) ? 4 : 1;
 }
 
 /** A state byte that means something for that block; anything else is read as 0. */
@@ -127,11 +149,14 @@ export function validState(block: number, state: number): number {
 }
 
 /** The state a block takes as it is placed against `face` (+x, -x, +y, -y, +z, -z, of the block it was
- * placed on; -1 unknown): a log lies along the way it was put, as in the game. */
-export function placedState(block: number, face: number): number {
+ * placed on; -1 unknown) by someone it would face (`facing`): a log lies along the way it was put, a chest
+ * faces whoever put it, as in the game. */
+export function placedState(block: number, face: number, facing: Facing = 0): number {
   if (block === BLOCK.log && face >= 0 && face < 6) return face < 2 ? LOG_AXIS.x : face < 4 ? LOG_AXIS.y : LOG_AXIS.z;
+  if (isFacing(block)) return facing;
   return 0;
 }
 
 /** What a right click opens instead of placing against. */
-export const isUsable = (block: number): boolean => block === BLOCK.craftingTable || block === BLOCK.furnace;
+export const isUsable = (block: number): boolean =>
+  block === BLOCK.craftingTable || block === BLOCK.furnace || block === BLOCK.chest || block === BLOCK.creativeChest;

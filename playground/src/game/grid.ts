@@ -41,6 +41,13 @@ export class BlockGrid {
     return (y * SIZE + (x + HALF)) * SIZE + (z + HALF);
   }
 
+  /** The cell at an index: BlockGrid.index the other way. */
+  static cell(index: number): [x: number, y: number, z: number] {
+    const layer = SIZE * SIZE;
+    const y = Math.floor(index / layer);
+    return [Math.floor((index % layer) / SIZE) - HALF, y, (index % SIZE) - HALF];
+  }
+
   get(x: number, y: number, z: number): Block {
     if (!BlockGrid.inside(x, y, z)) return BLOCK.air;
     return this.blocks[BlockGrid.index(x, y, z)] as Block;

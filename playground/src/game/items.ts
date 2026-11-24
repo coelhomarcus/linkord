@@ -69,6 +69,7 @@ const ITEMS: ReadonlyMap<string, ItemDef> = new Map([
   block('iron_ore', BLOCK.ironOre),
   block('gold_ore', BLOCK.goldOre),
   block('glass', BLOCK.glass),
+  block('chest', BLOCK.chest, 300),
   block('terracotta', BLOCK.terracotta),
   ...COLORED_KINDS.flatMap((kind) => COLORS.map((color) => block(`${color}_${kind}`, coloredBlock(kind, color)))),
   material('stick', 100),

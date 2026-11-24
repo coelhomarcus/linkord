@@ -26,7 +26,7 @@ function flatWorld() {
   }
   grid.set(3, GROUND, 0, BLOCK.craftingTable);
   grid.set(-3, GROUND, 0, BLOCK.furnace);
-  return { generator: GENERATOR_VERSION, blocks: grid.blocks, furnaces: [{ x: -3, y: GROUND, z: 0, facing: 0 }], items: [], clock: 30_000, states: null };
+  return { generator: GENERATOR_VERSION, blocks: grid.blocks, furnaces: [{ x: -3, y: GROUND, z: 0, facing: 0 }], items: [], clock: 30_000, states: null, chests: [] };
 }
 
 const sent = new Map<string, ServerMessage[]>();
@@ -76,8 +76,9 @@ describe('building', () => {
     await handleWorldGet(player, {}, (reply) => { answer = reply; });
     const blocks = new BlockGrid(new Uint8Array(inflateRawSync(answer.blocks as Buffer)), new Uint8Array(inflateRawSync(answer.states as Buffer)));
     assert.equal(blocks.get(0, GROUND - 1, 0), BLOCK.dirt);
-    // a world saved before states has them all 0
-    assert.ok(blocks.states.every((state) => state === 0));
+    // a world saved before states has them all 0, but for the creative chest it got on loading
+    assert.deepEqual([...blocks.states].filter((state) => state !== 0), [blocks.stateAt(8, 30, 8)]);
+    assert.equal(blocks.get(8, 30, 8), BLOCK.creativeChest);
     assert.deepEqual(answer.furnaces, [{ x: -3, y: GROUND, z: 0, facing: 0, lit: false }]);
     assert.equal(answer.clock, 30_000);
     assert.equal(lastInventory(player).ack, 0);
@@ -193,9 +194,59 @@ describe('building', () => {
     world.grid.set(4, GROUND, 4, BLOCK.log, LOG_AXIS.z);
     const store = memoryWorldStore();
     setWorldStore(store);
-    await store.save(CALL, { generator: GENERATOR_VERSION, blocks: world.grid.blocks, states: world.grid.states, furnaces: [], items: [], clock: 0 });
+    await store.save(CALL, { generator: GENERATOR_VERSION, blocks: world.grid.blocks, states: world.grid.states, furnaces: [], chests: [], items: [], clock: 0 });
     const loaded = await worldFor(CALL);
     assert.equal(loaded.grid.stateAt(4, GROUND, 4), LOG_AXIS.z);
+  });
+
+  test('a chest faces whoever placed it, keeps what is put in it for everyone, and spills it when broken', async () => {
+    const builder = connect('a');
+    const other = connect('b');
+    await stand(builder, 0.5, 2.5);
+    await stand(other, 1.5, -1.5);
+    await give(builder, { 0: { item: 'chest', count: 1 }, 1: { item: 'diamond', count: 3 } });
+    const world = loadedWorld(CALL)!;
+    await handlePlace(builder, { seq: 1, x: 0, y: GROUND, z: 0, face: 2 });
+    assert.equal(world.grid.get(0, GROUND, 0), BLOCK.chest);
+    assert.equal(world.grid.stateAt(0, GROUND, 0), 0, 'it faces +z, toward the builder');
+
+    await handleUse(builder, { seq: 2, x: 0, y: GROUND, z: 0 });
+    assert.deepEqual(lastInventory(builder).inventory.open, { kind: 'chest', x: 0, y: GROUND, z: 0 });
+    await handleUse(other, { seq: 1, x: 0, y: GROUND, z: 0 });
+    await handleInventoryOp(builder, { seq: 3, op: { op: 'click', slot: { area: 'inv', index: 1 }, button: 'left', shift: true } });
+    const seen = (player: Player) => (messages(player, 'playground-inv').at(-1) as unknown as { chest?: Slot[] }).chest;
+    assert.deepEqual(seen(builder)?.[0], { item: 'diamond', count: 3 });
+    assert.deepEqual(seen(other)?.[0], { item: 'diamond', count: 3 }, 'the other viewer sees it too');
+
+    const realNow = Date.now;
+    handleDigStart(builder, { x: 0, y: GROUND, z: 0 });
+    const dig = Date.now();
+    Date.now = () => dig + 10_000;
+    try {
+      await handleBreak(builder, { seq: 4, x: 0, y: GROUND, z: 0 });
+    } finally {
+      Date.now = realNow;
+    }
+    assert.equal(world.grid.get(0, GROUND, 0), BLOCK.air);
+    assert.equal(world.chests.size, 0);
+    const lying = [...world.items.values()].map((item) => item.stack.item).sort();
+    assert.deepEqual(lying, ['chest', 'diamond']);
+    assert.equal(lastInventory(other).inventory.open, null, 'its screen closed for whoever had it open');
+  });
+
+  test('the creative chest stands by the plaza, never breaks, and gives any item', async () => {
+    const world = loadedWorld(CALL)!;
+    const at = { x: 8, y: 30, z: 8 };
+    assert.equal(world.grid.get(at.x, at.y, at.z), BLOCK.creativeChest, 'a world from before it gets one');
+    const player = connect('a');
+    await handlePosition(player, { x: 8.5, y: 30, z: 10.5, yaw: 0 });
+    handleDigStart(player, at);
+    await handleBreak(player, { seq: 1, ...at });
+    assert.equal(world.grid.get(at.x, at.y, at.z), BLOCK.creativeChest);
+    await handleUse(player, { seq: 2, ...at });
+    assert.equal((lastInventory(player).inventory.open as { kind?: string } | null)?.kind, 'creative');
+    await handleInventoryOp(player, { seq: 3, op: { op: 'creative', item: 'golden_axe', button: 'left', shift: true } });
+    assert.deepEqual(lastInventory(player).inventory.slots[0], { item: 'golden_axe', count: 1 });
   });
 
   test('a furnace opens, takes ore and coal, and smelts on its own', async () => {

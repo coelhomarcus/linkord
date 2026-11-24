@@ -86,7 +86,10 @@
     "emptySlot": "Espaço vazio",
     "you": "Você",
     "furnace": "Fornalha",
-    "result": "Resultado"
+    "result": "Resultado",
+    "chest": "Baú",
+    "creative": "Baú criativo",
+    "creativeScroll": "Rolar os itens"
   },
   "items": {
     "grassBlock": "Bloco de grama",
@@ -103,6 +106,7 @@
     "ironOre": "Minério de ferro",
     "goldOre": "Minério de ouro",
     "glass": "Vidro",
+    "chest": "Baú",
     "terracotta": "Terracota",
     "whiteWool": "Lã branca",
     "orangeWool": "Lã laranja",

@@ -1,4 +1,4 @@
-import { BLOCK, type Block } from './blocks.js';
+import { BLOCK, type Block, type Facing } from './blocks.js';
 import { BlockGrid } from './grid.js';
 import { HALF, HEIGHT, PLAZA, PLAZA_HEIGHT, SCREEN_WALL, SEA_LEVEL, SIZE } from './layout.js';
 
@@ -16,7 +16,7 @@ import { HALF, HEIGHT, PLAZA, PLAZA_HEIGHT, SCREEN_WALL, SEA_LEVEL, SIZE } from 
 // changed (worlds.ts). The same seed always gives the same world.
 
 /** Bumped when the generator changes, and stored with each world it made. */
-export const GENERATOR_VERSION = 1;
+export const GENERATOR_VERSION = 2;
 const SEED = 20261124;
 
 const ISLAND_RADIUS = 54;
@@ -36,10 +36,11 @@ const PATHS: readonly [number, number, number, number][] = [
   [-10, -2, -36, -10], // west, to the meadows and the beach
 ];
 /** the lobby's workshop at the plaza's south-east edge */
-const SHOP = { table: [8, 6], furnace: [6, 8] } as const;
+const SHOP = { table: [8, 6], furnace: [6, 8], creativeChest: [8, 8] } as const;
+/** the creative chest's front faces the plaza's middle */
+const CREATIVE_CHEST_FACING: Facing = 1;
 
-/** Where a furnace's front faces: +z, -x, -z, +x. */
-export type Facing = 0 | 1 | 2 | 3;
+export type { Facing };
 
 export interface GeneratedWorld {
   grid: BlockGrid;
@@ -167,6 +168,7 @@ export function generateWorld(): GeneratedWorld {
   for (let x = SCREEN_WALL.minX; x < SCREEN_WALL.maxX; x++) for (let y = SCREEN_WALL.bottom; y < SCREEN_WALL.top; y++) grid.set(x, y, SCREEN_WALL.z, BLOCK.frame);
   grid.set(SHOP.table[0], PLAZA_HEIGHT, SHOP.table[1], BLOCK.craftingTable);
   grid.set(SHOP.furnace[0], PLAZA_HEIGHT, SHOP.furnace[1], BLOCK.furnace);
+  placeCreativeChest(grid);
   // the furnace's front faces the plaza's middle
   return { grid, furnaces: [{ x: SHOP.furnace[0], y: PLAZA_HEIGHT, z: SHOP.furnace[1], facing: 2 }] };
 }
@@ -180,6 +182,14 @@ const ORES: Ore[] = [
 ];
 
 /** Veins of ore in the stone: a short random walk from a random cell, the deeper ores the rarer. */
+/** Puts the creative chest by the crafting table and the furnace unless the world has one: new worlds get
+ * it here, worlds made before it when they load. Whatever stood in its cell gives way. */
+export function placeCreativeChest(grid: BlockGrid): boolean {
+  if (grid.blocks.includes(BLOCK.creativeChest)) return false;
+  grid.set(SHOP.creativeChest[0], PLAZA_HEIGHT, SHOP.creativeChest[1], BLOCK.creativeChest, CREATIVE_CHEST_FACING);
+  return true;
+}
+
 function placeOres(grid: BlockGrid, rand: () => number): void {
   const steps = [[1, 0, 0], [-1, 0, 0], [0, 1, 0], [0, -1, 0], [0, 0, 1], [0, 0, -1]] as const;
   for (const ore of ORES) {

@@ -1,16 +1,15 @@
-import { BLOCK, blockDef, isReplaceable, isUsable, placedState, type Block } from './game/blocks.js';
+import { BLOCK, blockDef, facingToward, isReplaceable, isUsable, placedState, type Block } from './game/blocks.js';
 import { withinPickup } from './game/drops.js';
 import { heldBlock, heldStack, openContainer, readOp, useHeld, wearHeld } from './game/inventory.js';
 import { HEIGHT } from './game/layout.js';
 import { breakTicks, brokenInto, dropOf, wearForBreaking } from './game/mining.js';
-import type { Facing } from './game/worldGen.js';
 import {
   acknowledge, applyInventoryOp, connectionLeft, heldInCall, holdersLookingAt, inventoryOf, pickUp, sendInventory, setInventory, showFurnace, throwStacks,
 } from './inventories.js';
 import { isAlive, positionOf } from './combat.js';
 import { allPlayers, isCurrent, playersIn, send, type Player } from './roster.js';
 import {
-  addFurnace, brokenStart, furnaceAt, furnaceLook, isCell, itemView, loadedWorld, loadedWorlds, maintainWorlds, packedBlocks, setBlocks, spawnItems,
+  addFurnace, brokenStart, chestAt, furnaceAt, furnaceLook, isCell, itemView, loadedWorld, loadedWorlds, maintainWorlds, packedBlocks, setBlocks, spawnItems,
   takeItems, tickWorld, worldFor, type World,
 } from './worlds.js';
 import { logger } from './logger.js';
@@ -114,8 +113,8 @@ export async function handleBreak(player: Player, msg: Record<string, unknown>):
     return sendInventory(player);
   }
   digs.delete(player.id);
-  // a crafting table or furnace being used: its screens close, a furnace spills what it held
-  if (block === BLOCK.craftingTable || block === BLOCK.furnace) {
+  // a crafting table, furnace or chest being used: its screens close, a furnace or chest spills what it held
+  if (block === BLOCK.craftingTable || block === BLOCK.furnace || block === BLOCK.chest) {
     for (const looking of holdersLookingAt(player.conversationId, x, y, z)) {
       for (const other of playersIn(player.conversationId)) {
         if (other.userId !== looking.userId) continue;
@@ -124,7 +123,7 @@ export async function handleBreak(player: Player, msg: Record<string, unknown>):
       }
     }
     const furnace = furnaceAt(world, x, y, z);
-    const contents = furnace?.state.slots.filter((slot) => !!slot) ?? [];
+    const contents = [...furnace?.state.slots ?? [], ...chestAt(world, x, y, z)?.slots ?? []].filter((slot) => !!slot);
     if (contents.length) spawnItems(world, contents.map((stack) => ({ stack, start: brokenStart(x, y, z) })), 'broken');
   }
   setBlocks(world, [[x, y, z, brokenInto(world.grid, x, y, z)]]);
@@ -132,14 +131,6 @@ export async function handleBreak(player: Player, msg: Record<string, unknown>):
   if (drop) spawnItems(world, [{ stack: { item: drop, count: 1 }, start: brokenStart(x, y, z) }], 'broken');
   setInventory(holder, wearHeld(holder.inventory, wearForBreaking(held, block)));
   sendInventory(player);
-}
-
-/** Which way a furnace placed by someone standing at `at` faces: toward them. */
-function facingToward(at: { x: number; z: number }, x: number, z: number): Facing {
-  const dx = at.x - (x + 0.5);
-  const dz = at.z - (z + 0.5);
-  if (Math.abs(dx) > Math.abs(dz)) return dx > 0 ? 3 : 1;
-  return dz > 0 ? 0 : 2;
 }
 
 /** Whether any living player's body (as last reported) is inside the cell. */
@@ -172,13 +163,15 @@ export async function handlePlace(player: Player, msg: Record<string, unknown>):
     correct(player, world, cell);
     return sendInventory(player);
   }
-  setBlocks(world, [[x, y, z, block as Block, placedState(block, readFace(msg.face))]]);
-  if (block === BLOCK.furnace) addFurnace(world, x, y, z, facingToward(positionOf(player.id)!, x, z));
+  // a furnace or chest faces whoever placed it
+  const facing = facingToward(positionOf(player.id)!, x, z);
+  setBlocks(world, [[x, y, z, block as Block, placedState(block, readFace(msg.face), facing)]]);
+  if (block === BLOCK.furnace) addFurnace(world, x, y, z, facing);
   setInventory(holder, useHeld(holder.inventory));
   sendInventory(player);
 }
 
-/** `block-use {seq, x, y, z}`: a right click on a crafting table or furnace opens it. */
+/** `block-use {seq, x, y, z}`: a right click on a crafting table, furnace, chest or the creative chest opens it. */
 export async function handleUse(player: Player, msg: Record<string, unknown>): Promise<void> {
   const holder = await inventoryOf(player);
   const world = loadedWorld(player.conversationId);
@@ -188,7 +181,8 @@ export async function handleUse(player: Player, msg: Record<string, unknown>): P
     const [x, y, z] = cell;
     const block = world.grid.get(x, y, z);
     if (isUsable(block) && (block !== BLOCK.furnace || furnaceAt(world, x, y, z))) {
-      const opened = openContainer(holder.inventory, { kind: block === BLOCK.furnace ? 'furnace' : 'table', x, y, z });
+      const kind = block === BLOCK.furnace ? 'furnace' : block === BLOCK.chest ? 'chest' : block === BLOCK.creativeChest ? 'creative' : 'table';
+      const opened = openContainer(holder.inventory, { kind, x, y, z });
       setInventory(holder, opened.window.inventory);
       throwStacks(player.conversationId, opened.dropped, positionOf(player.id));
     }

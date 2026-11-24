@@ -13,7 +13,7 @@ import { proximityGain } from './proximity';
 import { spawnPoint } from '@game/layout';
 import { heldBlock, openContainer, useHeld, wearHeld } from '@game/inventory';
 import type { InventoryOp } from '@game/inventory';
-import { BLOCK, isReplaceable, placedState } from '@game/blocks';
+import { BLOCK, facingToward, isReplaceable, isUsable, placedState } from '@game/blocks';
 import type { Block } from '@game/blocks';
 import { brokenInto, wearForBreaking } from '@game/mining';
 import { inflateBlocks, WorldState } from './worldState';
@@ -259,15 +259,16 @@ export class PlaygroundSession {
       (window) => ({ ...window, inventory: useHeld(window.inventory) }),
       (seq) => this.link.send({ t: 'block-place', seq, x, y, z, face }),
     );
-    if (sent) this.world.predict(x, y, z, block as Block, placedState(block, face));
+    if (sent) this.world.predict(x, y, z, block as Block, placedState(block, face, facingToward(this.local, x, z)));
     return sent;
   }
 
-  /** A crafting table or furnace opened: its screen shows at once, its contents when the service answers. */
+  /** A crafting table, furnace or chest opened: its screen shows at once, its contents when the service answers. */
   useBlock(x: number, y: number, z: number): boolean {
     const block = this.world.grid?.get(x, y, z);
-    if (block !== BLOCK.craftingTable && block !== BLOCK.furnace) return false;
-    const kind = block === BLOCK.furnace ? 'furnace' : 'table';
+    if (block === undefined || !isUsable(block)) return false;
+    // a chest's contents come with the service's answer
+    const kind = block === BLOCK.furnace ? 'furnace' : block === BLOCK.chest ? 'chest' : block === BLOCK.creativeChest ? 'creative' : 'table';
     return this.inventory.predict(
       (window) => openContainer(window.inventory, { kind, x, y, z }).window,
       (seq) => this.link.send({ t: 'block-use', seq, x, y, z }),

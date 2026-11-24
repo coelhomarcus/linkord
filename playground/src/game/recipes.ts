@@ -27,6 +27,7 @@ const RECIPES: readonly Recipe[] = [
   { pattern: ['#', '#'], key: { '#': 'oak_planks' }, result: { item: 'stick', count: 4 } },
   { pattern: ['##', '##'], key: { '#': 'oak_planks' }, result: { item: 'crafting_table', count: 1 } },
   { pattern: ['###', '# #', '###'], key: { '#': 'cobblestone' }, result: { item: 'furnace', count: 1 } },
+  { pattern: ['###', '# #', '###'], key: { '#': 'oak_planks' }, result: { item: 'chest', count: 1 } },
   ...TOOL_TIERS.flatMap((tier) => (Object.entries(TOOL_SHAPES) as [keyof typeof TOOL_SHAPES, readonly string[]][]).map(([kind, pattern]): Shaped => ({
     pattern, key: { X: TOOL_MATERIAL[tier], '#': 'stick' }, result: { item: `${tier}_${kind}`, count: 1 },
   }))),

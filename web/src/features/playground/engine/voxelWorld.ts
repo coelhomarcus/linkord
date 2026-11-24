@@ -4,7 +4,8 @@ import type { Block } from '@game/blocks';
 import type { BlockGrid } from '@game/grid';
 import { HALF, HEIGHT, SEA_LEVEL, SIZE } from '@game/layout';
 import type { WorldState } from '../worldState';
-import { applyPackTiles, blockAtlas, faceTile, faceTurned, packWater, tileUv, waterTexture } from './blockTextures';
+import { applyPackTiles, blockAtlas, chestUv, faceTile, faceTurned, packWater, tileUv, waterTexture } from './blockTextures';
+import { CHEST_FACES, isChest, turnInCell, turnVector } from './chestModel';
 import { Clouds } from './clouds';
 import { cornerBrightness, cornerOcclusion, lightmap, MAX_LIGHT, sideShade, SkyLight } from './lighting';
 import type { LightChange } from './lighting';
@@ -111,6 +112,10 @@ function chunkGeometry(grid: BlockGrid, sky: SkyLight, world: WorldState, cx: nu
         }
         const furnace = block === BLOCK.furnace ? world.furnaceAt(x, y, z) ?? undefined : undefined;
         const state = grid.stateAt(x, y, z);
+        if (isChest(block)) {
+          chestFaces(blocks, block, state, sky.at(x, y, z), x, y, z);
+          continue;
+        }
         FACES.forEach((face, faceIndex) => {
           const [dx, dy, dz] = face.dir;
           if (!faceShown(block, grid.get(x + dx, y + dy, z + dz))) return;
@@ -161,6 +166,35 @@ function chunkGeometry(grid: BlockGrid, sky: SkyLight, world: WorldState, cx: nu
     }
   }
   return { blocks, water };
+}
+
+/** A chest's three boxes (chestModel.ts), turned to face where its state says, lit by the sky light of its
+ * own cell; each face gets the fixed shade of the way it now points. */
+function chestFaces(out: Arrays, block: typeof BLOCK.chest | typeof BLOCK.creativeChest, state: number, light: number, x: number, y: number, z: number): void {
+  for (const face of CHEST_FACES) {
+    const start = out.positions.length / 3;
+    const [nx, ny, nz] = turnVector(face.normal, state);
+    const direction = nx > 0.5 ? 0 : nx < -0.5 ? 1 : ny > 0.5 ? 2 : ny < -0.5 ? 3 : nz > 0.5 ? 4 : 5;
+    const shade = FACES[direction]!.shade;
+    const corners = face.corners.map(([cx, cy, cz]) => turnInCell([cx / 16, cy / 16, cz / 16], state));
+    corners.forEach(([cx, cy, cz], i) => {
+      out.positions.push(x + cx, y + cy, z + cz);
+      out.normals.push(nx, ny, nz);
+      // a hair in from the texel's edge, so the nearest one is always the face's own
+      const [tu, tv] = face.uvs[i]!;
+      const [cu, cv] = face.uvs.reduce(([su, sv], [u, v]) => [su + u / 4, sv + v / 4], [0, 0]);
+      out.uvs.push(...chestUv(block, tu + Math.sign(cu - tu) * 0.01, tv + Math.sign(cv - tv) * 0.01));
+      out.colors.push(shade, shade, shade);
+      out.light.push(light / MAX_LIGHT);
+    });
+    // the game's polygons go round either way: keep the one whose front is outside
+    const [a, b, c] = corners;
+    const e1 = [b![0] - a![0], b![1] - a![1], b![2] - a![2]];
+    const e2 = [c![0] - a![0], c![1] - a![1], c![2] - a![2]];
+    const outward = (e1[1]! * e2[2]! - e1[2]! * e2[1]!) * nx + (e1[2]! * e2[0]! - e1[0]! * e2[2]!) * ny + (e1[0]! * e2[1]! - e1[1]! * e2[0]!) * nz > 0;
+    if (outward) out.indices.push(start, start + 1, start + 2, start, start + 2, start + 3);
+    else out.indices.push(start, start + 2, start + 1, start, start + 3, start + 2);
+  }
 }
 
 /** A water cell's faces toward air, leaves or glass: its top a little low when open to the sky, so the

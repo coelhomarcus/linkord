@@ -3,9 +3,9 @@ import { BLOCK, type Block } from './game/blocks.js';
 import { advanceClock, NEW_WORLD_TIME, readClock } from './game/dayTime.js';
 import { PICKUP_DELAY_MS, DESPAWN_MS, restingPlace, type Motion } from './game/drops.js';
 import { BlockGrid } from './game/grid.js';
-import { parseFurnace, parseStack, type ItemStack } from './game/inventory.js';
+import { CHEST_SIZE, parseChest, parseFurnace, parseStack, type ItemStack, type Slot } from './game/inventory.js';
 import { createFurnace, furnaceActive, stepFurnace, type FurnaceState } from './game/smelting.js';
-import { generateWorld, GENERATOR_VERSION, type Facing } from './game/worldGen.js';
+import { generateWorld, GENERATOR_VERSION, placeCreativeChest, type Facing } from './game/worldGen.js';
 import { memoryWorldStore, type WorldStore } from './worldStore.js';
 import { sendToCall } from './roster.js';
 import { logger } from './logger.js';
@@ -60,10 +60,19 @@ export interface Furnace {
   shownAt: number;
 }
 
+/** What a chest holds, by where it stands. */
+export interface Chest {
+  x: number;
+  y: number;
+  z: number;
+  slots: Slot[];
+}
+
 export interface World {
   conversationId: string;
   grid: BlockGrid;
   furnaces: Map<string, Furnace>;
+  chests: Map<string, Chest>;
   items: Map<number, DroppedItem>;
   nextItemId: number;
   /** when the first change since the last save was made, or null when saved */
@@ -112,6 +121,15 @@ function readFurnaces(value: unknown): Furnace[] {
   });
 }
 
+function readChests(value: unknown, grid: BlockGrid): Chest[] {
+  if (!Array.isArray(value)) return [];
+  return value.flatMap((entry: Record<string, unknown>) => {
+    const { x, y, z } = entry ?? {};
+    if (!isCell(x, y, z) || grid.get(x as number, y as number, z as number) !== BLOCK.chest) return [];
+    return [{ x: x as number, y: y as number, z: z as number, slots: parseChest(entry.slots) }];
+  });
+}
+
 function readItems(value: unknown, now: number): DroppedItem[] {
   if (!Array.isArray(value)) return [];
   return value.flatMap((entry: Record<string, unknown>, i) => {
@@ -124,10 +142,18 @@ function readItems(value: unknown, now: number): DroppedItem[] {
   });
 }
 
-function newWorld(conversationId: string, grid: BlockGrid, furnaces: Furnace[], items: DroppedItem[], clock: number, now: number): World {
+function newWorld(conversationId: string, grid: BlockGrid, furnaces: Furnace[], chests: Chest[], items: DroppedItem[], clock: number, now: number): World {
+  const chestMap = new Map(chests.map((chest) => [furnaceKey(chest.x, chest.y, chest.z), chest]));
+  // a chest block whose contents were never stored (or were lost) starts empty
+  for (let i = 0; i < grid.blocks.length; i++) {
+    if (grid.blocks[i] !== BLOCK.chest) continue;
+    const [x, y, z] = BlockGrid.cell(i);
+    if (!chestMap.has(furnaceKey(x, y, z))) chestMap.set(furnaceKey(x, y, z), { x, y, z, slots: parseChest(null) });
+  }
   return {
     conversationId, grid,
     furnaces: new Map(furnaces.map((furnace) => [furnaceKey(furnace.x, furnace.y, furnace.z), furnace])),
+    chests: chestMap,
     items: new Map(items.map((item) => [item.id, item])),
     nextItemId: items.length + 1,
     dirtySince: null, version: 0, packed: null, emptySince: null, tickedAt: now, clock, clockShownAt: now,
@@ -138,12 +164,17 @@ async function load(conversationId: string): Promise<World> {
   const now = Date.now();
   const stored = await store.load(conversationId);
   if (stored) {
-    return newWorld(conversationId, BlockGrid.from(stored.blocks, stored.states), readFurnaces(stored.furnaces), readItems(stored.items, now), readClock(stored.clock), now);
+    const grid = BlockGrid.from(stored.blocks, stored.states);
+    // a world made before the creative chest gets it now
+    const fixed = placeCreativeChest(grid);
+    const world = newWorld(conversationId, grid, readFurnaces(stored.furnaces), readChests(stored.chests, grid), readItems(stored.items, now), readClock(stored.clock), now);
+    if (fixed) world.dirtySince = now;
+    return world;
   }
   const started = performance.now();
   const generated = generateWorld();
   const furnaces = generated.furnaces.map(({ x, y, z, facing }) => ({ x, y, z, facing, state: createFurnace(), lit: false, shownAt: 0 }));
-  const world = newWorld(conversationId, generated.grid, furnaces, [], NEW_WORLD_TIME, now);
+  const world = newWorld(conversationId, generated.grid, furnaces, [], [], NEW_WORLD_TIME, now);
   log.info('world generated', { conversationId, ms: Math.round(performance.now() - started) });
   world.dirtySince = now;
   await save(world);
@@ -173,6 +204,7 @@ function snapshot(world: World, now: number) {
     blocks: world.grid.blocks,
     states: world.grid.states,
     furnaces: [...world.furnaces.values()].map(({ x, y, z, facing, state }) => ({ x, y, z, facing, state })),
+    chests: [...world.chests.values()].filter((chest) => chest.slots.some(Boolean)),
     items: [...world.items.values()].map((item) => ({ stack: item.stack, x: item.x, y: item.y, z: item.z, age: now - item.spawnedAt })),
     clock: world.clock,
   };
@@ -220,6 +252,8 @@ export function setBlocks(world: World, changes: BlockChange[]): void {
   for (const [x, y, z, block, state] of changes) {
     world.grid.set(x, y, z, block, state);
     if (block !== BLOCK.furnace) world.furnaces.delete(furnaceKey(x, y, z));
+    if (block !== BLOCK.chest) world.chests.delete(furnaceKey(x, y, z));
+    else if (!world.chests.has(furnaceKey(x, y, z))) world.chests.set(furnaceKey(x, y, z), { x, y, z, slots: Array.from({ length: CHEST_SIZE }, () => null) });
   }
   world.version++;
   changed(world);
@@ -322,6 +356,16 @@ export function addFurnace(world: World, x: number, y: number, z: number, facing
 
 export function furnaceAt(world: World, x: number, y: number, z: number): Furnace | null {
   return world.furnaces.get(furnaceKey(x, y, z)) ?? null;
+}
+
+export function chestAt(world: World, x: number, y: number, z: number): Chest | null {
+  return world.chests.get(furnaceKey(x, y, z)) ?? null;
+}
+
+/** A chest's slots after a click into it: kept, and saved. */
+export function updateChest(world: World, chest: Chest, slots: readonly Slot[]): void {
+  chest.slots = [...slots];
+  changed(world);
 }
 
 /** A furnace's state after a click into it: kept, and saved. */

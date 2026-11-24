@@ -8,9 +8,9 @@ import { InventoryState } from '@/features/playground/inventory/inventory';
 import { defaultSkin } from '@/features/playground/skins/defaultSkins';
 
 /** The screen over a client inventory whose requests always go out, as the session wires it. */
-function setup(start: Window = { inventory: addItem(createInventory(), { item: 'stone', count: 10 }).inventory, furnace: null }) {
+function setup(start: Window = { inventory: addItem(createInventory(), { item: 'stone', count: 10 }).inventory, furnace: null, chest: null }) {
   const state = new InventoryState();
-  state.receive({ ack: 0, inventory: start.inventory, furnace: start.furnace });
+  state.receive({ ack: 0, inventory: start.inventory, furnace: start.furnace, chest: start.chest ? [...start.chest] : null });
   const sent: InventoryOp[] = [];
   const onClose = vi.fn();
   const onOp = (op: InventoryOp) => state.perform(op, (_seq, sentOp) => { sent.push(sentOp); return true; });
@@ -44,13 +44,42 @@ describe('InventoryScreen', () => {
   });
 
   it('crafts planks from a log in the 2×2 grid', () => {
-    const { state } = setup({ inventory: addItem(createInventory(), { item: 'oak_log', count: 1 }).inventory, furnace: null });
+    const { state } = setup({ inventory: addItem(createInventory(), { item: 'oak_log', count: 1 }).inventory, furnace: null, chest: null });
     fireEvent.click(screen.getByRole('button', { name: 'Tronco de carvalho (1)' }));
     // the grid's first cell comes after the armour and the off hand
     fireEvent.click(screen.getAllByRole('button', { name: 'Espaço vazio' })[5]!);
     fireEvent.click(screen.getByRole('button', { name: 'Tábuas de carvalho (4)' }));
     expect(state.get().cursor).toEqual({ item: 'oak_planks', count: 4 });
     expect(state.get().grid.every((cell) => cell === null)).toBe(true);
+  });
+
+  it('shows a chest\'s 27 slots and moves a stack into it with shift', () => {
+    const inventory = addItem(createInventory(), { item: 'stone', count: 10 }).inventory;
+    const opened = openContainer(inventory, { kind: 'chest', x: 0, y: 0, z: 0 }).window;
+    const { state } = setup({ ...opened, chest: Array.from({ length: 27 }, () => null) });
+    expect(screen.getByRole('dialog', { name: 'Baú' })).toBeInTheDocument();
+    expect(screen.getAllByRole('button', { name: 'Espaço vazio' })).toHaveLength(27 + 35);
+    fireEvent.click(screen.getByRole('button', { name: 'Pedra (10)' }), { shiftKey: true });
+    expect(state.getWindow().chest?.[0]).toEqual({ item: 'stone', count: 10 });
+    expect(state.get().slots[0]).toBeNull();
+  });
+
+  it('gives any item from the creative chest and throws away what is carried onto it', () => {
+    const opened = openContainer(createInventory(), { kind: 'creative', x: 8, y: 30, z: 8 }).window;
+    const { state, sent } = setup(opened);
+    expect(screen.getByRole('dialog', { name: 'Baú criativo' })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Terra' }));
+    expect(state.get().cursor).toEqual({ item: 'dirt', count: 64 });
+    fireEvent.click(screen.getByRole('button', { name: 'Pedra' }));
+    expect(state.get().cursor).toBeNull();
+    expect(sent).toEqual([
+      { op: 'creative', item: 'dirt', button: 'left', shift: false },
+      { op: 'creative', item: 'stone', button: 'left', shift: false },
+    ]);
+    // the tools are further down: the wheel brings them up
+    expect(screen.queryByRole('button', { name: 'Picareta de diamante' })).toBeNull();
+    for (let i = 0; i < 20; i++) fireEvent.wheel(screen.getByRole('dialog'), { deltaY: 100 });
+    expect(screen.getByRole('button', { name: 'Picareta de diamante' })).toBeInTheDocument();
   });
 
   it('shows a crafting table\'s 3×3 grid and a furnace\'s slots', () => {
@@ -73,18 +102,18 @@ describe('InventoryState', () => {
   it('shows its own changes on top of the service\'s word until the service has them', () => {
     const state = new InventoryState();
     const start = addItem(createInventory(), { item: 'dirt', count: 5 }).inventory;
-    state.receive({ ack: 0, inventory: start, furnace: null });
+    state.receive({ ack: 0, inventory: start, furnace: null, chest: null });
     state.perform({ op: 'select', slot: 3 }, () => true);
     expect(state.get().selected).toBe(3);
     // the service, before it read that request: the change still shows
-    state.receive({ ack: 0, inventory: start, furnace: null });
+    state.receive({ ack: 0, inventory: start, furnace: null, chest: null });
     expect(state.get().selected).toBe(3);
     // it refused it after all: what it says stands
-    state.receive({ ack: 1, inventory: start, furnace: null });
+    state.receive({ ack: 1, inventory: start, furnace: null, chest: null });
     expect(state.get().selected).toBe(0);
     // nothing is shown that could not be sent
     state.perform({ op: 'select', slot: 5 }, () => false);
     expect(state.get().selected).toBe(0);
-    expect(applyOp({ inventory: start, furnace: null }, { op: 'select', slot: 2 }).window.inventory.selected).toBe(2);
+    expect(applyOp({ inventory: start, furnace: null, chest: null }, { op: 'select', slot: 2 }).window.inventory.selected).toBe(2);
   });
 });

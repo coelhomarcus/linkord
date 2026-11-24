@@ -1,5 +1,5 @@
 import { isBlock } from './blocks.js';
-import { itemDef, maxStackOf } from './items.js';
+import { ITEM_IDS, itemDef, maxStackOf } from './items.js';
 import { matchRecipe } from './recipes.js';
 import { createFurnace, FURNACE_FUEL, FURNACE_INPUT, FURNACE_OUTPUT, fuelTicks, smeltResult, type FurnaceState } from './smelting.js';
 
@@ -7,7 +7,8 @@ import { createFurnace, FURNACE_FUEL, FURNACE_INPUT, FURNACE_OUTPUT, fuelTicks, 
 // way: 9 hotbar slots (one selected, what the hand holds), 27 more inside, 4
 // for armour and one for the off hand; the stack the mouse carries; a crafting
 // grid (the inventory's own 2×2, or a crafting table's 3×3) with its result;
-// and a furnace's three slots while one is open. Every change is an operation
+// a furnace's three slots or a chest's 27 while one is open; and the creative
+// chest's screen, every item to take as many of as one likes. Every change is an operation
 // (`applyOp`), a pure function of the state, so the playground service, which
 // keeps every inventory, and the browser, which shows the result of a click at
 // once, run the very same rules. The clicks are the game's: a left click picks
@@ -32,8 +33,13 @@ export interface ItemStack {
 
 export type Slot = ItemStack | null;
 
-/** A crafting table or a furnace open over the inventory, by where it stands. */
-export interface OpenContainer { kind: 'table' | 'furnace'; x: number; y: number; z: number }
+/** A crafting table, a furnace, a chest or the creative chest open over the inventory, by where it stands. */
+export interface OpenContainer { kind: 'table' | 'furnace' | 'chest' | 'creative'; x: number; y: number; z: number }
+
+/** a chest's slots, three rows of nine */
+export const CHEST_SIZE = 27;
+/** What the creative chest offers: every item, in the order the game lists them. */
+export const CREATIVE_ITEMS: readonly string[] = ITEM_IDS;
 
 export interface Inventory {
   slots: readonly Slot[];
@@ -51,7 +57,8 @@ export type SlotRef =
   | { area: 'inv'; index: number }
   | { area: 'grid'; index: number }
   | { area: 'result' }
-  | { area: 'furnace'; index: number };
+  | { area: 'furnace'; index: number }
+  | { area: 'chest'; index: number };
 
 export type InventoryOp =
   | { op: 'click'; slot: SlotRef; button: 'left' | 'right'; shift: boolean }
@@ -63,12 +70,17 @@ export type InventoryOp =
   | { op: 'drop-held'; all: boolean }
   | { op: 'select'; slot: number }
   /** the screen closes: the grid and the carried stack go back to the inventory */
-  | { op: 'close' };
+  | { op: 'close' }
+  /** a click on the creative chest's `item` (null: on an empty cell): what the mouse carries goes away;
+   * with nothing carried, a full stack is taken (one with the right button), or with shift put straight
+   * into the hotbar */
+  | { op: 'creative'; item: string | null; button: 'left' | 'right'; shift: boolean };
 
-/** The inventory and, while one is open, the furnace it looks into. */
+/** The inventory and, while one is open, the furnace or chest it looks into. */
 export interface Window {
   inventory: Inventory;
   furnace: FurnaceState | null;
+  chest: readonly Slot[] | null;
 }
 
 export interface OpResult {
@@ -177,7 +189,7 @@ export function craftingResult(inventory: Inventory): ItemStack | null {
 export function openContainer(inventory: Inventory, container: OpenContainer): OpResult {
   const closed = closeScreen(inventory);
   return {
-    window: { inventory: { ...closed.inventory, open: container, grid: Array.from({ length: container.kind === 'table' ? GRID_3X3 : GRID_2X2 }, () => null) }, furnace: null },
+    window: { inventory: { ...closed.inventory, open: container, grid: Array.from({ length: container.kind === 'table' ? GRID_3X3 : GRID_2X2 }, () => null) }, furnace: null, chest: null },
     dropped: closed.dropped,
   };
 }
@@ -216,6 +228,12 @@ export function parseStack(value: unknown): Slot {
   return stack;
 }
 
+/** A chest's slots from stored or sent JSON: always CHEST_SIZE of them. */
+export function parseChest(value: unknown): Slot[] {
+  const raw = Array.isArray(value) ? value : [];
+  return Array.from({ length: CHEST_SIZE }, (_, i) => parseStack(raw[i]));
+}
+
 /** A sanitised furnace from stored JSON. */
 export function parseFurnace(value: unknown): FurnaceState {
   const furnace = createFurnace();
@@ -236,6 +254,7 @@ interface Draft {
   slots: Slot[];
   grid: Slot[];
   furnace: FurnaceState | null;
+  chest: Slot[] | null;
   cursor: Slot;
   inventory: Inventory;
   dropped: ItemStack[];
@@ -245,6 +264,7 @@ function getSlot(draft: Draft, ref: SlotRef): Slot {
   if (ref.area === 'inv') return draft.slots[ref.index] ?? null;
   if (ref.area === 'grid') return draft.grid[ref.index] ?? null;
   if (ref.area === 'furnace') return draft.furnace?.slots[ref.index] ?? null;
+  if (ref.area === 'chest') return draft.chest?.[ref.index] ?? null;
   return null;
 }
 
@@ -252,12 +272,14 @@ function setSlot(draft: Draft, ref: SlotRef, slot: Slot): void {
   if (ref.area === 'inv') draft.slots[ref.index] = slot;
   else if (ref.area === 'grid') draft.grid[ref.index] = slot;
   else if (ref.area === 'furnace' && draft.furnace) draft.furnace.slots[ref.index as 0 | 1 | 2] = slot;
+  else if (ref.area === 'chest' && draft.chest) draft.chest[ref.index] = slot;
 }
 
 /** Whether a slot exists in this window and may take `stack` (null: whether it exists at all). */
 function accepts(draft: Draft, ref: SlotRef, stack: ItemStack | null): boolean {
   if (ref.area === 'inv') return Number.isInteger(ref.index) && ref.index >= 0 && ref.index < SLOT_COUNT && (!stack || invAccepts(ref.index, stack));
   if (ref.area === 'grid') return Number.isInteger(ref.index) && ref.index >= 0 && ref.index < draft.grid.length;
+  if (ref.area === 'chest') return !!draft.chest && Number.isInteger(ref.index) && ref.index >= 0 && ref.index < CHEST_SIZE;
   if (ref.area === 'furnace') {
     if (!draft.furnace || !Number.isInteger(ref.index) || ref.index < 0 || ref.index > 2) return false;
     if (!stack) return true;
@@ -359,13 +381,38 @@ function moveIntoFurnace(draft: Draft, stack: ItemStack, index: number): number 
   return stack.count - moved;
 }
 
+/** Puts as much of `stack` as fits into the open chest, onto its stacks first; returns what is left. */
+function storeInChest(draft: Draft, stack: ItemStack): number {
+  const chest = draft.chest!;
+  let left = stack.count;
+  const max = maxStackOf(stack.item);
+  for (let pass = 0; pass < 2; pass++) {
+    for (let i = 0; i < chest.length && left > 0; i++) {
+      const there = chest[i];
+      if (pass === 0 ? !there || !sameKind(there, stack) || there.count >= max : !!there) continue;
+      const moved = Math.min(left, max - (there?.count ?? 0));
+      chest[i] = stackOf(stack, (there?.count ?? 0) + moved);
+      left -= moved;
+    }
+  }
+  return left;
+}
+
 /** A shift-click: the stack goes where the game sends it. */
 function quickMoveRef(draft: Draft, ref: SlotRef): void {
   if (ref.area === 'result') return takeAllResults(draft);
   if (ref.area === 'grid' || ref.area === 'furnace') return moveToInventory(draft, ref, [...INSIDE, ...HOTBAR]);
+  // out of a chest, the game fills the inventory from its far end
+  if (ref.area === 'chest') return moveToInventory(draft, ref, [...HOTBAR].reverse().concat([...INSIDE].reverse()));
   const slot = getSlot(draft, ref);
   if (!slot) return;
   const index = ref.index;
+  if (draft.chest && index < STORAGE_END) {
+    setSlot(draft, ref, stackOf(slot, storeInChest(draft, slot)));
+    return;
+  }
+  // the creative screen shows only the hotbar: nothing to move it to
+  if (draft.inventory.open?.kind === 'creative') return;
   if (draft.furnace && index < STORAGE_END) {
     const target = smeltResult(slot.item) ? FURNACE_INPUT : fuelTicks(slot.item) > 0 ? FURNACE_FUEL : null;
     if (target !== null) {
@@ -400,6 +447,19 @@ function swapRef(draft: Draft, ref: SlotRef, hotbar: number): void {
   draft.slots[hotbar] = slot;
 }
 
+/** A click on the creative chest's screen: see the `creative` operation. */
+function clickCreative(draft: Draft, op: Extract<InventoryOp, { op: 'creative' }>): void {
+  if (draft.cursor) {
+    // the game's bin: anything carried onto its items is gone
+    draft.cursor = null;
+    return;
+  }
+  if (!op.item || !CREATIVE_ITEMS.includes(op.item)) return;
+  const full: ItemStack = { item: op.item, count: maxStackOf(op.item) };
+  if (op.shift) store(draft.slots, full, HOTBAR);
+  else draft.cursor = op.button === 'left' ? full : { item: op.item, count: 1 };
+}
+
 function throwFrom(draft: Draft, stack: Slot, all: boolean): Slot {
   if (!stack) return null;
   const count = all ? stack.count : 1;
@@ -415,6 +475,7 @@ export function applyOp(window: Window, op: InventoryOp): OpResult {
     slots: [...inventory.slots],
     grid: [...inventory.grid],
     furnace: window.furnace && inventory.open?.kind === 'furnace' ? { ...window.furnace, slots: [...window.furnace.slots] } : null,
+    chest: window.chest && inventory.open?.kind === 'chest' ? [...window.chest] : null,
     cursor: inventory.cursor,
     inventory,
     dropped: [],
@@ -444,13 +505,17 @@ export function applyOp(window: Window, op: InventoryOp): OpResult {
       return { window, dropped: [] };
     case 'close': {
       const closed = closeScreen(inventory);
-      return { window: { inventory: closed.inventory, furnace: null }, dropped: closed.dropped };
+      return { window: { inventory: closed.inventory, furnace: null, chest: null }, dropped: closed.dropped };
     }
+    case 'creative':
+      if (inventory.open?.kind === 'creative') clickCreative(draft, op);
+      break;
   }
   return {
     window: {
       inventory: { ...inventory, slots: draft.slots, grid: draft.grid, cursor: draft.cursor },
       furnace: draft.furnace ?? window.furnace,
+      chest: draft.chest ?? window.chest,
     },
     dropped: draft.dropped,
   };
@@ -461,7 +526,7 @@ function readSlotRef(value: unknown): SlotRef | null {
   if (!value || typeof value !== 'object') return null;
   const { area, index } = value as Record<string, unknown>;
   if (area === 'result') return { area };
-  if ((area === 'inv' || area === 'grid' || area === 'furnace') && typeof index === 'number' && Number.isInteger(index)) return { area, index };
+  if ((area === 'inv' || area === 'grid' || area === 'furnace' || area === 'chest') && typeof index === 'number' && Number.isInteger(index)) return { area, index };
   return null;
 }
 
@@ -483,6 +548,9 @@ export function readOp(value: unknown): InventoryOp | null {
     case 'drop-held': return { op: 'drop-held', all: raw.all === true };
     case 'select': return typeof raw.slot === 'number' ? { op: 'select', slot: raw.slot } : null;
     case 'close': return { op: 'close' };
+    case 'creative':
+      if (raw.button !== 'left' && raw.button !== 'right') return null;
+      return { op: 'creative', item: typeof raw.item === 'string' ? raw.item : null, button: raw.button, shift: raw.shift === true };
     default: return null;
   }
 }

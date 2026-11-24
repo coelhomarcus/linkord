@@ -86,7 +86,10 @@
     "emptySlot": "Empty slot",
     "you": "You",
     "furnace": "Furnace",
-    "result": "Result"
+    "result": "Result",
+    "chest": "Chest",
+    "creative": "Creative chest",
+    "creativeScroll": "Scroll the items"
   },
   "items": {
     "grassBlock": "Grass Block",
@@ -103,6 +106,7 @@
     "ironOre": "Iron Ore",
     "goldOre": "Gold Ore",
     "glass": "Glass",
+    "chest": "Chest",
     "terracotta": "Terracotta",
     "whiteWool": "White wool",
     "orangeWool": "Orange wool",

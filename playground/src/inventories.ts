@@ -5,7 +5,7 @@ import {
 import type { Motion } from './game/drops.js';
 import { memoryInventoryStore, type InventoryStore } from './worldStore.js';
 import { isCurrent, playersIn, send, sendToCall, type Player } from './roster.js';
-import { furnaceAt, loadedWorld, spawnItems, updateFurnace, type Furnace, type World } from './worlds.js';
+import { chestAt, furnaceAt, loadedWorld, spawnItems, updateChest, updateFurnace, type Chest, type Furnace, type World } from './worlds.js';
 import { logger } from './logger.js';
 
 const log = logger.child({ component: 'inventories' });
@@ -140,8 +140,17 @@ function openFurnace(holder: Holder): { world: World; furnace: Furnace } | null 
   return furnace ? { world, furnace } : null;
 }
 
+/** The chest a holder has open, if it still stands. */
+function openChest(holder: Holder): { world: World; chest: Chest } | null {
+  const open = holder.inventory.open;
+  const world = loadedWorld(holder.conversationId);
+  if (open?.kind !== 'chest' || !world) return null;
+  const chest = chestAt(world, open.x, open.y, open.z);
+  return chest ? { world, chest } : null;
+}
+
 function windowOf(holder: Holder): Window {
-  return { inventory: holder.inventory, furnace: openFurnace(holder)?.furnace.state ?? null };
+  return { inventory: holder.inventory, furnace: openFurnace(holder)?.furnace.state ?? null, chest: openChest(holder)?.chest.slots ?? null };
 }
 
 /** Records the last request the connection sent. */
@@ -149,24 +158,26 @@ export function acknowledge(player: Player, seq: unknown): void {
   if (typeof seq === 'number' && Number.isInteger(seq) && seq > (acks.get(player.id) ?? 0)) acks.set(player.id, seq);
 }
 
-/** Tells a connection what its account carries now, with what is in the furnace it has open. */
+/** Tells a connection what its account carries now, with what is in the furnace or chest it has open. */
 export function sendInventory(player: Player): void {
   const holder = loadedHolder(player);
   if (!holder || !isCurrent(player)) return;
   const { slots, selected, cursor, grid, open } = holder.inventory;
   const furnace = openFurnace(holder)?.furnace.state;
+  const chest = openChest(holder)?.chest.slots;
   send(player, {
     t: 'playground-inv', conversationId: player.conversationId, ack: acks.get(player.id) ?? 0,
-    inventory: { slots, selected, cursor, grid, open }, ...(furnace ? { furnace } : {}),
+    inventory: { slots, selected, cursor, grid, open }, ...(furnace ? { furnace } : {}), ...(chest ? { chest } : {}),
   });
 }
 
-/** Sends every connection that has `furnace` open what is in it now (`except` is told separately). */
-export function showFurnace(conversationId: string, furnace: { x: number; y: number; z: number }, except?: Player): void {
+/** Sends every connection that has the furnace or chest at `at` open what is in it now (`except` is told
+ * separately). */
+export function showFurnace(conversationId: string, at: { x: number; y: number; z: number }, except?: Player, kind: 'furnace' | 'chest' = 'furnace'): void {
   for (const player of playersIn(conversationId)) {
     if (player === except) continue;
     const open = loadedHolder(player)?.inventory.open;
-    if (open?.kind === 'furnace' && open.x === furnace.x && open.y === furnace.y && open.z === furnace.z) sendInventory(player);
+    if (open?.kind === kind && open.x === at.x && open.y === at.y && open.z === at.z) sendInventory(player);
   }
 }
 
@@ -175,16 +186,21 @@ function thrownStart(at: { x: number; y: number; z: number; yaw: number }): Moti
   return { x: at.x, y: at.y + 1.32, z: at.z, vx: Math.sin(at.yaw) * 0.3, vy: 0.1, vz: Math.cos(at.yaw) * 0.3 };
 }
 
-/** Applies a click (or any other operation) to the player's inventory and, through it, to the furnace it
- * has open. What it throws lands in front of `at`. */
+/** Applies a click (or any other operation) to the player's inventory and, through it, to the furnace or
+ * chest it has open. What it throws lands in front of `at`. */
 export function applyInventoryOp(holder: Holder, player: Player, op: InventoryOp, at: { x: number; y: number; z: number; yaw: number } | null): OpResult {
   const before = windowOf(holder);
   const result = applyOp(before, op);
   const opened = openFurnace(holder);
+  const chest = openChest(holder);
   setInventory(holder, result.window.inventory);
   if (opened && result.window.furnace && result.window.furnace !== before.furnace) {
     updateFurnace(opened.world, opened.furnace, result.window.furnace);
     showFurnace(holder.conversationId, opened.furnace, player);
+  }
+  if (chest && result.window.chest && result.window.chest !== before.chest) {
+    updateChest(chest.world, chest.chest, result.window.chest);
+    showFurnace(holder.conversationId, chest.chest, player, 'chest');
   }
   throwStacks(holder.conversationId, result.dropped, at);
   return result;

@@ -28,6 +28,9 @@ import frameUrl from '../assets/pixel-perfection/polished_blackstone.png?url';
 import sandUrl from '../assets/pixel-perfection/sand.png?url';
 import stoneUrl from '../assets/pixel-perfection/stone.png?url';
 import waterUrl from '../assets/pixel-perfection/water_still.png?url';
+import chestUrl from '../assets/pixel-perfection/entity/chest/normal.png?url';
+import creativeChestUrl from '../assets/pixel-perfection/entity/chest/ender.png?url';
+import { chestSidePixels } from './chestModel';
 
 // The world's pixel art: 16×16 tiles on one 256×256 atlas, read with nearest
 // filtering so every texel stays a crisp square. The tiles are Pixel
@@ -49,6 +52,8 @@ const BASE_TILES = {
   cobblestone: 10, coalOre: 11, ironOre: 12, goldOre: 13, diamondOre: 14, bedrock: 15, gravel: 16, glass: 17,
   tableTop: 18, tableSide: 19, tableFront: 20, furnaceTop: 21, furnaceSide: 22, furnaceFront: 23, furnaceFrontOn: 24,
   terracotta: 25,
+  // a chest's sides as an item's cube shows them, made from its entity texture
+  chestTop: 26, chestFront: 27, chestSide: 28, creativeChestTop: 29, creativeChestFront: 30, creativeChestSide: 31,
 } as const;
 /** a coloured block's tile, by the pack's name for it */
 type ColoredTile = `${Color}_${ColoredKind}`;
@@ -91,6 +96,8 @@ const BLOCK_TILES: Record<number, FaceTiles | undefined> = {
   [BLOCK.craftingTable]: ['tableTop', 'tableSide', 'planks', 'tableFront'],
   [BLOCK.furnace]: ['furnaceTop', 'furnaceSide', 'furnaceTop', 'furnaceFront'],
   [BLOCK.terracotta]: same('terracotta'),
+  [BLOCK.chest]: ['chestTop', 'chestSide', 'chestTop', 'chestFront'],
+  [BLOCK.creativeChest]: ['creativeChestTop', 'creativeChestSide', 'creativeChestTop', 'creativeChestFront'],
   ...coloredFaces(),
 };
 
@@ -112,6 +119,7 @@ export function faceTile(block: Exclude<Block, 0 | 15>, face: number, furnace?: 
     return end ? top : side;
   }
   if (block === BLOCK.furnace && face === FACING_FACE[furnace?.facing ?? 0]) return furnace?.lit ? 'furnaceFrontOn' : front!;
+  if ((block === BLOCK.chest || block === BLOCK.creativeChest) && face === FACING_FACE[state & 3]) return front!;
   if (block === BLOCK.craftingTable && (face === 1 || face === 5)) return front!;
   const kind = FACE_SIDE[face]!;
   return kind === 'top' ? top : kind === 'bottom' ? bottom : side;
@@ -155,7 +163,16 @@ function coloredPainter(color: Color, kind: ColoredKind): Paint {
   return noisy(mix(dye, TERRACOTTA, 0.55), 0.1);
 }
 
+const CHEST_WOOD = hex(0x9c6b30);
+const CREATIVE_STONE = hex(0x1f2a2c);
+
 const PAINTERS: Record<TileName, Paint> = {
+  chestTop: noisy(CHEST_WOOD, 0.15),
+  chestFront: (x, y, rand) => (x >= 7 && x <= 8 && y >= 5 && y <= 8 ? hex(0xc8c8c8) : PAINTERS.chestTop(x, y, rand)),
+  chestSide: noisy(CHEST_WOOD, 0.15),
+  creativeChestTop: noisy(CREATIVE_STONE, 0.3),
+  creativeChestFront: (x, y, rand) => (x >= 7 && x <= 8 && y >= 5 && y <= 8 ? hex(0x3bd28c) : PAINTERS.creativeChestTop(x, y, rand)),
+  creativeChestSide: noisy(CREATIVE_STONE, 0.3),
   ...Object.fromEntries(COLORED_KINDS.flatMap((kind) => COLORS.map((color) => [`${color}_${kind}`, coloredPainter(color, kind)]))) as Record<ColoredTile, Paint>,
   terracotta: noisy(TERRACOTTA, 0.1),
   grassTop: (_x, _y, rand) => scale(GRASS, rand() < 0.12 ? 1.18 : rand() < 0.15 ? 0.82 : 0.92 + rand() * 0.14),
@@ -230,7 +247,10 @@ export function blockAtlas(): THREE.CanvasTexture {
   canvas.width = ATLAS_SIZE;
   canvas.height = ATLAS_SIZE;
   const ctx = canvas.getContext('2d');
-  if (ctx) for (const name of Object.keys(TILES) as TileName[]) paintTile(ctx, name);
+  if (ctx) {
+    for (const name of Object.keys(TILES) as TileName[]) paintTile(ctx, name);
+    paintChestTextures(ctx);
+  }
   return pixelTexture(canvas);
 }
 
@@ -283,6 +303,8 @@ const WATER_FRAME_SECONDS = 0.1;
 
 interface PackTile {
   url: string;
+  /** a side of a chest made from its entity texture, in place of a tile of its own */
+  chest?: 'top' | 'front' | 'side';
   tint?: Rgb;
   /** drawn over the tile, tinted: the grass hanging over a grass block's side */
   overlay?: { url: string; tint: Rgb };
@@ -292,6 +314,12 @@ const BLOCK_URLS = import.meta.glob<string>('../assets/pixel-perfection/*.png', 
 const blockUrl = (name: string): string => BLOCK_URLS[`../assets/pixel-perfection/${name}.png`] ?? '';
 
 const PACK_TILES: Record<TileName, PackTile> = {
+  chestTop: { url: chestUrl, chest: 'top' },
+  chestFront: { url: chestUrl, chest: 'front' },
+  chestSide: { url: chestUrl, chest: 'side' },
+  creativeChestTop: { url: creativeChestUrl, chest: 'top' },
+  creativeChestFront: { url: creativeChestUrl, chest: 'front' },
+  creativeChestSide: { url: creativeChestUrl, chest: 'side' },
   ...Object.fromEntries(COLORED_TILES.map((name) => [name, { url: blockUrl(name) }])) as Record<ColoredTile, PackTile>,
   terracotta: { url: blockUrl('terracotta') },
   grassTop: { url: grassTopUrl, tint: GRASS_TINT },
@@ -362,22 +390,51 @@ function overlay(base: ImageData, top: ImageData): ImageData {
  * tinted as the world draws it (an item's icon). */
 export async function blockFacePixels(block: Exclude<Block, 0 | 15>, face: 'top' | 'side' | 'front'): Promise<ImageData> {
   const tiles = tilesOf(block);
-  const tile = PACK_TILES[face === 'top' ? tiles[0] : face === 'front' ? tiles[3] ?? tiles[1] : tiles[1]];
+  return packPixels(PACK_TILES[face === 'top' ? tiles[0] : face === 'front' ? tiles[3] ?? tiles[1] : tiles[1]]);
+}
+
+/** A tile's pixels from the pack: tinted, overlaid, or cut from a chest's texture. */
+async function packPixels(tile: PackTile): Promise<ImageData> {
   const [base, top] = await Promise.all([loadImage(tile.url), tile.overlay ? loadImage(tile.overlay.url) : null]);
   const pixels = pixelsOf(base, tile.tint);
+  if (tile.chest) return chestSidePixels(pixels, tile.chest);
   return top && tile.overlay ? overlay(pixels, pixelsOf(top, tile.overlay.tint)) : pixels;
+}
+
+/** Where each chest's whole 64×64 texture sits in the atlas (pixels), for its model (chestModel.ts). */
+const CHEST_TEXTURES = { [BLOCK.chest]: { x: 0, y: 128, url: chestUrl, paint: CHEST_WOOD }, [BLOCK.creativeChest]: { x: 64, y: 128, url: creativeChestUrl, paint: CREATIVE_STONE } } as const;
+export const CHEST_TEXTURE_SIZE = 64;
+
+/** The atlas's (u, v) of a pixel of a chest's texture. */
+export function chestUv(block: typeof BLOCK.chest | typeof BLOCK.creativeChest, px: number, py: number): [number, number] {
+  const origin = CHEST_TEXTURES[block];
+  return [(origin.x + px) / ATLAS_SIZE, 1 - (origin.y + py) / ATLAS_SIZE];
+}
+
+function paintChestTextures(ctx: CanvasRenderingContext2D): void {
+  for (const { x, y, paint } of Object.values(CHEST_TEXTURES)) {
+    ctx.fillStyle = `rgb(${paint.join(',')})`;
+    ctx.fillRect(x, y, CHEST_TEXTURE_SIZE, CHEST_TEXTURE_SIZE);
+  }
 }
 
 /** Replaces the painted tiles with the pack's once they load. A tile that fails keeps its painting. */
 export async function applyPackTiles(atlas: THREE.CanvasTexture): Promise<void> {
   const ctx = (atlas.image as HTMLCanvasElement).getContext('2d');
   if (!ctx) return;
+  await Promise.all(Object.values(CHEST_TEXTURES).map(async ({ x, y, url }) => {
+    try {
+      const pixels = pixelsOf(await loadImage(url));
+      ctx.clearRect(x, y, CHEST_TEXTURE_SIZE, CHEST_TEXTURE_SIZE);
+      ctx.putImageData(pixels, x, y);
+    } catch {
+      // the painted one stands in
+    }
+  }));
   await Promise.all((Object.keys(PACK_TILES) as TileName[]).map(async (name) => {
     const tile = PACK_TILES[name];
     try {
-      const [base, top] = await Promise.all([loadImage(tile.url), tile.overlay ? loadImage(tile.overlay.url) : null]);
-      let pixels = pixelsOf(base, tile.tint);
-      if (top && tile.overlay) pixels = overlay(pixels, pixelsOf(top, tile.overlay.tint));
+      const pixels = await packPixels(tile);
       const index = TILES[name];
       ctx.clearRect((index % COLUMNS) * TILE, Math.floor(index / COLUMNS) * TILE, TILE, TILE);
       ctx.putImageData(pixels, (index % COLUMNS) * TILE, Math.floor(index / COLUMNS) * TILE);

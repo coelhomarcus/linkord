@@ -1,7 +1,7 @@
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  addItem, applyOp, ARMOR_SLOTS, createInventory, heldStack, OFFHAND_SLOT, openContainer, parseInventory, useHeld, wearHeld,
+  addItem, applyOp, ARMOR_SLOTS, CHEST_SIZE, createInventory, CREATIVE_ITEMS, heldStack, OFFHAND_SLOT, openContainer, parseInventory, useHeld, wearHeld,
   type Inventory, type InventoryOp, type Slot, type SlotRef, type Window,
 } from '../../src/game/inventory.js';
 import { createFurnace, type FurnaceState } from '../../src/game/smelting.js';
@@ -18,7 +18,7 @@ function withSlots(slots: Record<number, Slot>, cursor: Slot = null, extra: Part
 }
 
 const inv = (index: number): SlotRef => ({ area: 'inv', index });
-const run = (inventory: Inventory, op: InventoryOp, furnace: FurnaceState | null = null) => applyOp({ inventory, furnace }, op);
+const run = (inventory: Inventory, op: InventoryOp, furnace: FurnaceState | null = null) => applyOp({ inventory, furnace, chest: null }, op);
 const click = (inventory: Inventory, slot: SlotRef, button: 'left' | 'right' = 'left', shift = false) => run(inventory, { op: 'click', slot, button, shift }).window.inventory;
 
 describe('addItem', () => {
@@ -115,6 +115,7 @@ describe('furnace', () => {
   const opened = (inventory: Inventory): Window => ({
     inventory: openContainer(inventory, { kind: 'furnace', x: 0, y: 0, z: 0 }).window.inventory,
     furnace: createFurnace(),
+    chest: null,
   });
 
   test('shift sends ore to the input and coal to the fuel', () => {
@@ -135,7 +136,7 @@ describe('furnace', () => {
   });
 
   test('a furnace slot does nothing without a furnace open', () => {
-    const window: Window = { inventory: withSlots({}, dirt(1)), furnace: null };
+    const window: Window = { inventory: withSlots({}, dirt(1)), furnace: null, chest: null };
     assert.deepEqual(applyOp(window, { op: 'click', slot: { area: 'furnace', index: 0 }, button: 'left', shift: false }).window.inventory, window.inventory);
   });
 });
@@ -153,5 +154,59 @@ describe('held items and storage', () => {
     assert.deepEqual(read?.slots.slice(0, 3), [dirt(64), null, { item: 'iron_sword', count: 1, damage: 3 }]);
     assert.equal(read?.selected, 2);
     assert.equal(parseInventory('nope'), null);
+  });
+});
+
+describe('chests', () => {
+  const chestOpen = (inventory: Inventory) => ({ ...inventory, open: { kind: 'chest' as const, x: 0, y: 0, z: 0 } });
+  const emptyChest = (): Slot[] => Array.from({ length: CHEST_SIZE }, () => null);
+
+  test('a click moves stacks in and out of the open chest, and the chest keeps them', () => {
+    const chest = emptyChest();
+    const put = applyOp({ inventory: chestOpen(withSlots({}, dirt(10))), furnace: null, chest }, { op: 'click', slot: { area: 'chest', index: 4 }, button: 'left', shift: false });
+    assert.deepEqual(put.window.chest?.[4], dirt(10));
+    assert.equal(put.window.inventory.cursor, null);
+    assert.equal(chest[4], null, 'the window it was given is left alone');
+  });
+
+  test('shift moves a stack from the inventory into the chest, onto its stacks first, and back to the hotbar\'s far end', () => {
+    const chest = emptyChest();
+    chest[2] = dirt(60);
+    const into = applyOp({ inventory: chestOpen(withSlots({ 0: dirt(10) })), furnace: null, chest }, { op: 'click', slot: inv(0), button: 'left', shift: true });
+    assert.deepEqual(into.window.chest?.[2], dirt(64));
+    assert.deepEqual(into.window.chest?.[0], dirt(6));
+    assert.equal(into.window.inventory.slots[0], null);
+    const out = applyOp(into.window, { op: 'click', slot: { area: 'chest', index: 0 }, button: 'left', shift: true });
+    assert.deepEqual(out.window.inventory.slots[8], dirt(6));
+  });
+
+  test('a chest slot is no slot with no chest open', () => {
+    const result = applyOp({ inventory: withSlots({}, dirt(1)), furnace: null, chest: emptyChest() }, { op: 'click', slot: { area: 'chest', index: 0 }, button: 'left', shift: false });
+    assert.deepEqual(result.window.inventory.cursor, dirt(1));
+  });
+});
+
+describe('the creative chest', () => {
+  const creative = (inventory: Inventory) => ({ ...inventory, open: { kind: 'creative' as const, x: 8, y: 30, z: 8 } });
+  const take = (inventory: Inventory, item: string | null, button: 'left' | 'right' = 'left', shift = false) =>
+    applyOp({ inventory, furnace: null, chest: null }, { op: 'creative', item, button, shift }).window.inventory;
+
+  test('offers every item', () => {
+    assert.ok(CREATIVE_ITEMS.includes('diamond_pickaxe'));
+    assert.ok(CREATIVE_ITEMS.includes('red_wool'));
+    assert.ok(CREATIVE_ITEMS.includes('chest'));
+  });
+
+  test('gives a full stack, one with the right button, or a stack straight into the hotbar with shift', () => {
+    assert.deepEqual(take(creative(createInventory()), 'stone').cursor, stone(64));
+    assert.deepEqual(take(creative(createInventory()), 'diamond_sword').cursor, { item: 'diamond_sword', count: 1 });
+    assert.deepEqual(take(creative(createInventory()), 'stone', 'right').cursor, stone(1));
+    assert.deepEqual(take(creative(withSlots({ 0: dirt(1) })), 'stone', 'left', true).slots[1], stone(64));
+  });
+
+  test('takes away what the mouse carries onto it, and gives nothing with no creative chest open', () => {
+    assert.equal(take(creative(withSlots({}, dirt(30))), 'stone').cursor, null);
+    assert.equal(take(withSlots({}), 'stone').cursor, null);
+    assert.equal(take(creative(createInventory()), 'no_such_item').cursor, null);
   });
 });

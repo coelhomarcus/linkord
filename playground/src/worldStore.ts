@@ -14,6 +14,7 @@ export interface StoredWorld {
   /** the cells' states, laid out the same; null for a world saved before there were any */
   states: Uint8Array | null;
   furnaces: unknown;
+  chests: unknown;
   items: unknown;
   /** its clock, in ticks (game/dayTime.ts) */
   clock: number;
@@ -38,10 +39,10 @@ export function databaseWorldStore(db: PlaygroundDb): WorldStore {
       if (!row) return null;
       return {
         generator: row.generator, blocks: new Uint8Array(inflateRawSync(row.blocks)),
-        states: row.states ? new Uint8Array(inflateRawSync(row.states)) : null, furnaces: row.furnaces, items: row.items, clock: row.clock };
+        states: row.states ? new Uint8Array(inflateRawSync(row.states)) : null, furnaces: row.furnaces, chests: row.chests, items: row.items, clock: row.clock };
     },
     async save(conversationId, world) {
-      const values = { generator: world.generator, blocks: deflateRawSync(world.blocks), states: world.states ? deflateRawSync(world.states) : null, furnaces: world.furnaces, items: world.items, clock: world.clock, updatedAt: new Date() };
+      const values = { generator: world.generator, blocks: deflateRawSync(world.blocks), states: world.states ? deflateRawSync(world.states) : null, furnaces: world.furnaces, chests: world.chests, items: world.items, clock: world.clock, updatedAt: new Date() };
       await db.insert(playgroundWorlds).values({ conversationId, ...values })
         .onConflictDoUpdate({ target: playgroundWorlds.conversationId, set: values });
     },
