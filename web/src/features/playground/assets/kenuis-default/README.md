@@ -9,6 +9,7 @@ under the [MIT License](LICENSE.md). The files here are unchanged copies of the 
   models (`engine/blockModels.ts`, after the pack's `models/block/template_torch.json` and
   `template_torch_wall.json`), and `torch.png` is the torch item's picture too;
 - `item/` (the pictures of tools and materials), from `assets/minecraft/textures/item/`;
+- `particle/flame.png`, from `assets/minecraft/textures/particle/`: a torch's flame (`engine/particles.ts`);
 - `entity/chest/`, from `assets/minecraft/textures/entity/chest/`: `normal.png` for a chest and `ender.png`
   for the creative chest, drawn as the chest model by `engine/chestModel.ts`;
 - `environment/`, from `assets/minecraft/textures/environment/`: `clouds.png` (the clouds' pattern,

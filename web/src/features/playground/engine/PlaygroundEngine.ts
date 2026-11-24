@@ -22,6 +22,7 @@ import { applyKnockback, BODY_HEIGHT, createBody, HALF_WIDTH, SNEAKING_EYE_HEIGH
 import type { Terrain } from './playerPhysics';
 import { cellBox, rayBoxDistance, targetPlayer } from './playerTarget';
 import { Particles } from './particles';
+import { animateBlocks, torchFlame } from './blockAnimation';
 import { isCriticalHit } from '../playgroundCombat';
 import type { PlaygroundHit } from '../playgroundCombat';
 import type { PhysicsBody } from './playerPhysics';
@@ -658,7 +659,12 @@ export class PlaygroundEngine {
     const dead = this.session.combat.isDead;
     this.particles.tick();
     // nobody moves before the world is there to stand on
-    if (!this.session.world.grid) return;
+    const grid = this.session.world.grid;
+    if (!grid) return;
+    animateBlocks(grid, Math.floor(this.body.x), Math.floor(this.body.y), Math.floor(this.body.z), (x, y, z, state) => {
+      const [fx, fy, fz] = torchFlame(state);
+      this.particles.torch(x + fx, y + fy, z + fz);
+    });
     const intent = dead ? STILL : this.controls.intent();
     const jump = (this.controls.consumeJump() && !dead) || intent.jump;
     this.digTick(dead);

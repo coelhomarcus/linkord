@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import flameUrl from '../assets/kenuis-default/particle/flame.png?url';
 import critUrl from '../assets/pixel-perfection/particle/critical_hit.png?url';
 import damageUrl from '../assets/pixel-perfection/particle/damage.png?url';
 import generic0Url from '../assets/pixel-perfection/particle/generic_0.png?url';
@@ -11,13 +12,15 @@ import generic6Url from '../assets/pixel-perfection/particle/generic_6.png?url';
 import generic7Url from '../assets/pixel-perfection/particle/generic_7.png?url';
 import type { Terrain } from './playerPhysics';
 
-// The block game's particles for a fight, each a small square facing the
-// camera, stepped at the game's 20 ticks a second with its own rules (written
-// from how the game behaves; the textures are Pixel Perfection's):
+// The block game's particles, each a small square facing the camera, stepped
+// at the game's 20 ticks a second with its own rules (written from how the
+// game behaves; the textures are Pixel Perfection's, the flame Kenui's Default's):
 // - crit: the stars of a critical hit, thrown out of the target's middle for 3
 //   ticks; they slow fast, sink a little and warm from grey to yellow;
 // - damage: the dark hearts that rise from whoever was hurt;
-// - poof: the grey puffs left where a dead player vanishes, shrinking as they rise.
+// - poof: the grey puffs left where a dead player vanishes, shrinking as they rise;
+// - flame and smoke, from a torch's tip (blockAnimation.ts): the flame hangs
+//   there at full brightness, shrinking; the dark smoke drifts up.
 
 const MAX_PARTICLES = 300;
 /** a particle's size 1 is this wide, in blocks */
@@ -27,7 +30,7 @@ const CRIT_TRIES_PER_TICK = 16;
 const PLAYER_WIDTH = 0.6;
 const PLAYER_HEIGHT = 1.8;
 
-type Kind = 'crit' | 'damage' | 'poof';
+type Kind = 'crit' | 'damage' | 'poof' | 'flame' | 'smoke';
 
 interface Particle {
   kind: Kind;
@@ -68,7 +71,8 @@ export class Particles {
   private readonly lightAt: (x: number, y: number, z: number) => number;
   private readonly crit: THREE.Texture;
   private readonly damage: THREE.Texture;
-  /** the puff's frames, from the largest */
+  private readonly flame: THREE.Texture;
+  /** the puff's frames, from the largest (smoke's too) */
   private readonly poof: THREE.Texture[];
 
   constructor(terrain: Pick<Terrain, 'isSolid'>, lightAt: (x: number, y: number, z: number) => number) {
@@ -77,6 +81,7 @@ export class Particles {
     const loader = new THREE.TextureLoader();
     this.crit = loadTexture(loader, critUrl);
     this.damage = loadTexture(loader, damageUrl);
+    this.flame = loadTexture(loader, flameUrl);
     this.poof = [generic7Url, generic6Url, generic5Url, generic4Url, generic3Url, generic2Url, generic1Url, generic0Url].map((url) => loadTexture(loader, url));
   }
 
@@ -101,6 +106,29 @@ export class Particles {
         x + rand() * PLAYER_WIDTH * 2 - PLAYER_WIDTH, y + rand() * PLAYER_HEIGHT, z + rand() * PLAYER_WIDTH * 2 - PLAYER_WIDTH,
         gaussian() * 0.02, gaussian() * 0.02, gaussian() * 0.02,
       );
+    }
+  }
+
+  /** A torch's flame and smoke, at (x, y, z) (its tip). */
+  torch(x: number, y: number, z: number): void {
+    const smoke = this.add('smoke', this.poof[0]!, x, y, z, 0, 0, 0);
+    if (smoke) {
+      smoke.vx *= 0.1;
+      smoke.vy *= 0.1;
+      smoke.vz *= 0.1;
+      const grey = rand() * 0.3;
+      smoke.r = grey;
+      smoke.g = grey;
+      smoke.b = grey;
+      smoke.size *= 0.75;
+      smoke.maxAge = Math.floor(8 / (rand() * 0.8 + 0.2));
+    }
+    const flame = this.add('flame', this.flame, x, y, z, 0, 0, 0);
+    if (flame) {
+      flame.vx *= 0.01;
+      flame.vy *= 0.01;
+      flame.vz *= 0.01;
+      flame.maxAge = Math.floor(8 / (rand() * 0.8 + 0.2)) + 4;
     }
   }
 
@@ -178,12 +206,21 @@ export class Particles {
         this.remove(i);
         continue;
       }
-      if (p.kind === 'poof') {
+      if (p.kind === 'poof' || p.kind === 'smoke') {
         p.vy += 0.004;
         this.move(p);
-        p.vx *= 0.9;
-        p.vy *= 0.9;
-        p.vz *= 0.9;
+        const drag = p.kind === 'smoke' ? 0.96 : 0.9;
+        p.vx *= drag;
+        p.vy *= drag;
+        p.vz *= drag;
+      } else if (p.kind === 'flame') {
+        // nothing stops a flame: it hangs where it was lit, slowing
+        p.x += p.vx;
+        p.y += p.vy;
+        p.z += p.vz;
+        p.vx *= 0.96;
+        p.vy *= 0.96;
+        p.vz *= 0.96;
       } else {
         this.move(p);
         if (p.kind === 'crit') {
@@ -226,10 +263,13 @@ export class Particles {
       const z = p.pz + (p.z - p.pz) * partial;
       p.sprite.position.set(x, y, z);
       let size = p.size;
-      if (p.kind !== 'poof') size *= Math.min(1, Math.max(0, ((p.age + partial) / p.maxAge) * 32));
-      else p.material.map = this.poof[Math.min(this.poof.length - 1, Math.floor((p.age * this.poof.length) / p.maxAge))]!;
+      const life = (p.age + partial) / p.maxAge;
+      if (p.kind === 'flame') size *= 1 - life * life * 0.5;
+      else if (p.kind !== 'poof') size *= Math.min(1, Math.max(0, life * 32));
+      if (p.kind === 'poof' || p.kind === 'smoke') p.material.map = this.poof[Math.min(this.poof.length - 1, Math.floor((p.age * this.poof.length) / p.maxAge))]!;
       p.sprite.scale.setScalar(size * UNIT_SIZE);
-      const light = this.lightAt(x, y, z);
+      // a flame gives its own light
+      const light = p.kind === 'flame' ? 1 : this.lightAt(x, y, z);
       p.material.color.setRGB(p.r * light, p.g * light, p.b * light);
     }
   }
@@ -246,6 +286,7 @@ export class Particles {
     this.emitters.length = 0;
     this.crit.dispose();
     this.damage.dispose();
+    this.flame.dispose();
     for (const texture of this.poof) texture.dispose();
     this.group.removeFromParent();
   }
