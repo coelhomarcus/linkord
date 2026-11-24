@@ -8,6 +8,7 @@ import { useCallRoster } from './callRoster';
 import type { AnchorRect } from '../../state/RoomContext';
 import { useParticipantMedia } from './useLiveKitTrack';
 import { useMuteForMe } from './useMuteForMe';
+import { enterFullscreen, exitFullscreen } from '@/shared/lib/fullscreen';
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuRadioGroup, DropdownMenuRadioItem,
   DropdownMenuSeparator, DropdownMenuSub, DropdownMenuSubContent, DropdownMenuSubTrigger,
@@ -167,11 +168,8 @@ export function TileMenu({ onOpenProfile }: TileMenuProps) {
   }
   const isTileFullscreen = !!handle && fullscreenElement === handle.root;
   function toggleTileFullscreen() {
-    if (isTileFullscreen) {
-      document.exitFullscreen().catch(() => {});
-    } else {
-      handle?.root.requestFullscreen?.().catch(() => {});
-    }
+    if (isTileFullscreen) void exitFullscreen();
+    else if (handle) void enterFullscreen(handle.root);
   }
   function togglePip() {
     if (!handle?.video) return;

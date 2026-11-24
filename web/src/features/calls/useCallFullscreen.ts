@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import type { RefObject } from 'react';
 import { useFullscreenElement } from '@/shared/hooks/useFullscreenElement';
+import { enterFullscreen, exitFullscreen, fullscreenElement as currentFullscreenElement } from '@/shared/lib/fullscreen';
 
 interface CallFullscreenApi {
   /** True specifically when THIS container (the call stage) is the
@@ -14,7 +15,8 @@ interface CallFullscreenApi {
   fullscreenElement: HTMLElement | null;
 }
 
-/** Request fullscreen for the call view; if unavailable or rejected, keep the expanded view usable. */
+/** Request fullscreen for the call view (the window's, in the desktop app: shared/lib/fullscreen.ts);
+ * if unavailable or rejected, keep the expanded view usable. */
 export function useCallFullscreen(containerRef: RefObject<HTMLElement | null>): CallFullscreenApi {
   const fullscreenElement = useFullscreenElement();
   // Compared in an effect, not inline during render — reading `.current`
@@ -26,13 +28,12 @@ export function useCallFullscreen(containerRef: RefObject<HTMLElement | null>): 
   }, [fullscreenElement, containerRef]);
 
   const toggleCallFullscreen = useCallback(async () => {
-    if (document.fullscreenElement) {
-      await document.exitFullscreen().catch(() => {});
+    if (currentFullscreenElement()) {
+      await exitFullscreen();
       return;
     }
     const el = containerRef.current;
-    if (!el?.requestFullscreen || document.fullscreenEnabled === false) return;
-    await el.requestFullscreen().catch(() => {});
+    if (el) await enterFullscreen(el);
   }, [containerRef]);
 
   return { isCallFullscreen, toggleCallFullscreen, fullscreenElement };

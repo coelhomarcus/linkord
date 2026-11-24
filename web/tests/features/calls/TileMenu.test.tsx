@@ -492,10 +492,12 @@ describe('TileMenu — tile fullscreen', () => {
   it('offers "Sair da tela cheia" and exits fullscreen when this tile is the fullscreen element', () => {
     // The menu portals into the fullscreen element, so it has to be attached for screen queries to find it.
     const root = document.body.appendChild(document.createElement('div'));
+    Object.defineProperty(document, 'fullscreenElement', { value: root, configurable: true });
     document.exitFullscreen = vi.fn().mockResolvedValue(undefined);
     renderWithTileRoot(root, root);
     expect(screen.queryByText('Tela cheia')).not.toBeInTheDocument();
     fireEvent.click(screen.getByText('Sair da tela cheia'));
     expect(document.exitFullscreen).toHaveBeenCalled();
+    Object.defineProperty(document, 'fullscreenElement', { value: null, configurable: true });
   });
 });

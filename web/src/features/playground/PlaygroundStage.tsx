@@ -331,7 +331,8 @@ export default function PlaygroundStage({ allIds, onBack }: { allIds: string[]; 
     }
   }, [overlayOpen]);
 
-  // fullscreen: keep Ctrl+W and friends inside the game
+  // fullscreen: keep Ctrl+W and friends inside the game. Only the browser's: the desktop app fills a
+  // fullscreen window instead (shared/lib/fullscreen.ts), where Esc already reaches the page
   useEffect(() => {
     function sync() {
       const stage = callStageRef.current;

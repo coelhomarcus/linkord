@@ -464,7 +464,25 @@ html, body {
 .scrollbar-none { scrollbar-width: none; }
 .scrollbar-none::-webkit-scrollbar { display: none; }
 
-.tile-fullscreen-target:fullscreen {
+/* In the desktop app an element is shown fullscreen by filling the fullscreen window
+   (shared/lib/fullscreen.ts), so Esc stays the page's: what the browser's own :fullscreen
+   rules do, above everything else on the page as the top layer would be. */
+[data-window-fullscreen] {
+  position: fixed !important;
+  inset: 0 !important;
+  z-index: 2147483647 !important;
+  box-sizing: border-box !important;
+  margin: 0 !important;
+  min-width: 0 !important;
+  max-width: none !important;
+  min-height: 0 !important;
+  max-height: none !important;
+  width: 100% !important;
+  height: 100% !important;
+  transform: none !important;
+}
+
+.tile-fullscreen-target:is(:fullscreen, [data-window-fullscreen]) {
   /* Focused frames have inline dimensions fitted to their stage slot. */
   width: 100% !important;
   height: 100% !important;

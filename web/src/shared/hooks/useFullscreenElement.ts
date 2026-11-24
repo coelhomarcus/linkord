@@ -1,22 +1,10 @@
-import { useEffect, useState } from 'react';
+import { useSyncExternalStore } from 'react';
+import { fullscreenElement, subscribeFullscreen } from '@/shared/lib/fullscreen';
 
-/** The element currently in the browser's native Fullscreen mode, or null —
- * kept in sync with `fullscreenchange` so it reacts correctly to Escape/F11,
- * not just to this app's own request/exit calls. Menus and popovers portal
- * into this element (when set) instead of `document.body`, which the
- * Fullscreen API renders on top of and so would otherwise hide them.
- * `document.fullscreenElement` types as the generic DOM `Element`, but
- * every element this app ever requests fullscreen on is an `HTMLElement`. */
+/** The element shown fullscreen right now, or null: the Fullscreen API's, or in the desktop app the
+ * one filling the fullscreen window (shared/lib/fullscreen.ts). It follows Esc and F11 too, not just
+ * this app's own calls. Menus and popovers portal into it (when set) instead of `document.body`,
+ * which a fullscreen element would otherwise hide. */
 export function useFullscreenElement(): HTMLElement | null {
-  const [element, setElement] = useState<HTMLElement | null>(() => (document.fullscreenElement as HTMLElement | null) ?? null);
-
-  useEffect(() => {
-    function sync() {
-      setElement((document.fullscreenElement as HTMLElement | null) ?? null);
-    }
-    document.addEventListener('fullscreenchange', sync);
-    return () => document.removeEventListener('fullscreenchange', sync);
-  }, []);
-
-  return element;
+  return useSyncExternalStore(subscribeFullscreen, fullscreenElement, () => null);
 }
