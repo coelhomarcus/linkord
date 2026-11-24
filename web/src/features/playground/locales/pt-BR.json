@@ -1,0 +1,21 @@
+{
+  "sceneLabel": "Playground 3D. Clique para controlar seu personagem.",
+  "back": "Voltar para o servidor",
+  "unsupported": "Este navegador não conseguiu abrir o mundo 3D (WebGL desligado ou indisponível). Você continua na chamada e ouve todo mundo normalmente.",
+  "jump": "Pular",
+  "hint": {
+    "desktop": "Clique na cena para andar · WASD ou setas · Shift corre · Espaço pula · V troca a câmera · Esc solta o mouse",
+    "touch": "Arraste à esquerda para andar e à direita para olhar em volta"
+  },
+  "camera": {
+    "first": "1ª pessoa",
+    "third": "3ª pessoa",
+    "toFirst": "Ver em primeira pessoa",
+    "toThird": "Ver em terceira pessoa"
+  },
+  "screen": {
+    "idle": "Nenhuma transmissão no telão",
+    "idleHint": "Compartilhe sua tela para todo mundo assistir aqui",
+    "taken": "Outra pessoa já está no telão. Espere ela parar de compartilhar para transmitir."
+  }
+}

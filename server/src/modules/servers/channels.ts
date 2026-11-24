@@ -10,7 +10,7 @@ import { revokeCallAccess } from '../calls/callAccess.js';
 import { enforceCallPermissions } from '../calls/callPermissions.js';
 import { participants } from '../presence/participants.js';
 import { ALL_PERMISSIONS, canManageRole, hasPermission, outranks, PERMISSIONS } from './permissions.js';
-import { channelPermissionsIn, invalidateServer, memberInput, type ServerSnapshot } from './serverAccess.js';
+import { channelPermissionsIn, invalidateServer, memberInput, toVoiceMode, type ServerSnapshot } from './serverAccess.js';
 import { sanitizeCategoryName, sanitizeChannelName, sanitizeTopic } from './serversRepository.js';
 import { sendServerUpdateToMembers } from './serverSummaries.js';
 import { requireServerMember, requireSession, type ServerActor } from './serverHttp.js';
@@ -59,6 +59,7 @@ async function handleCreateChannel(request: FastifyRequest<{ Params: ServerParam
   if (!actor) return;
   const body = jsonBody(request.body);
   const type: ChannelType = body.type === 'voice' ? 'voice' : 'text';
+  const voiceMode = type === 'voice' ? toVoiceMode(body.voiceMode) : 'standard';
   const name = sanitizeChannelName(body.name, type);
   if (!name) return sendError(reply, 400, 'invalid_name', 'Dê um nome ao canal.');
   if (actor.snapshot.channels.length >= config.MAX_CHANNELS_PER_SERVER) {
@@ -68,11 +69,12 @@ async function handleCreateChannel(request: FastifyRequest<{ Params: ServerParam
   const position = actor.snapshot.channels.filter((c) => c.categoryId === categoryId).reduce((max, c) => Math.max(max, c.position + 1), 0);
   const id = crypto.randomUUID();
   await db.transaction(async (tx) => {
-    await tx.insert(conversations).values({ id, type, title: name, createdBy: actor.userId, serverId, categoryId, position, updatedAt: new Date() });
-    await recordServerAudit(tx, { serverId, actorId: actor.userId, action: 'channel.create', targetType: 'channel', targetId: id, targetLabel: name, changes: createdFields({ name, type }) });
+    await tx.insert(conversations).values({ id, type, voiceMode, title: name, createdBy: actor.userId, serverId, categoryId, position, updatedAt: new Date() });
+    // the audit log names a playground as its own kind of channel
+    await recordServerAudit(tx, { serverId, actorId: actor.userId, action: 'channel.create', targetType: 'channel', targetId: id, targetLabel: name, changes: createdFields({ name, type: voiceMode === 'playground' ? 'playground' : type }) });
   });
   await changed(serverId);
-  log.info('channel created', { serverId, channelId: id, type });
+  log.info('channel created', { serverId, channelId: id, type, voiceMode });
   sendJson(reply, 201, { channelId: id });
 }
 

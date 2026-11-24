@@ -27,7 +27,8 @@
     "previousStream": "Transmissão anterior",
     "nextStream": "Próxima transmissão",
     "noSpeakPermission": "Você não tem permissão para falar neste canal",
-    "noStreamPermission": "Você não tem permissão para vídeo e tela neste canal"
+    "noStreamPermission": "Você não tem permissão para vídeo e tela neste canal",
+    "screenTaken": "Outra pessoa já está no telão"
   },
   "callSettings": {
     "title": "Exibição da chamada",

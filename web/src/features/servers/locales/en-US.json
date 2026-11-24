@@ -78,11 +78,13 @@
     "type": "Channel Type",
     "types": {
       "text": "Text",
-      "voice": "Voice"
+      "voice": "Voice",
+      "playground": "Playground"
     },
     "typeHint": {
       "text": "Send messages, images, GIFs, emoji, opinions, and puns",
-      "voice": "Hang out together with voice, video, and screen share"
+      "voice": "Hang out together with voice, video, and screen share",
+      "playground": "A 3D world: everyone is a character, voices fade with distance and a big screen to watch together"
     },
     "name": "Channel Name",
     "namePlaceholder": "new-channel",
@@ -518,7 +520,8 @@
       "text": "text",
       "voice": "voice",
       "before": "Before",
-      "after": "After"
+      "after": "After",
+      "playground": "playground"
     },
     "emptyText": "Changes to roles, channels, members and invites are recorded here.",
     "emptyFilteredText": "Adjust or clear the filters to see everything."

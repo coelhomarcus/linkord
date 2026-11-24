@@ -73,7 +73,7 @@ function ChangeLine({ change }: { change: AuditChange }) {
       if (typeof value === 'boolean') return t(value ? 'auditLog.values.yes' : 'auditLog.values.no');
       if (change.key === 'color' && typeof value === 'string') return <span className="inline-flex items-center gap-1"><span className="size-3 rounded-full" style={{ background: value }} />{value}</span>;
       if (change.key === 'icon' || change.key === 'avatar') return t('auditLog.values.image');
-      if (change.key === 'type') return t(value === 'voice' ? 'auditLog.values.voice' : 'auditLog.values.text');
+      if (change.key === 'type') return t(value === 'voice' ? 'auditLog.values.voice' : value === 'playground' ? 'auditLog.values.playground' : 'auditLog.values.text');
       if (change.key === 'expiresAt' && typeof value === 'string') return new Date(value).toLocaleString(i18n.language, { dateStyle: 'short', timeStyle: 'short' });
       return String(value);
     };

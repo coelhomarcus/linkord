@@ -28,8 +28,8 @@ export type ReactionEmoji = string;
 
 /** Wire protocol version this build speaks; the server refuses older ones
  * (client_outdated). Keep in sync with server/src/realtime/protocolVersion.ts
- * — version 29 adds `notice` (friend requests and server invitations shown by a tab without push). */
-export const PROTOCOL_VERSION = 30;
+ * — version 31 adds `voiceMode` to server channels (playground voice channels). */
+export const PROTOCOL_VERSION = 31;
 
 export interface LiveNotice {
   kind: 'friend_request' | 'friend_accepted' | 'server_invitation';
@@ -321,6 +321,8 @@ export interface Conversation {
   position?: number;
   /** effective permission bits in a channel (features/servers/permissionBits.ts); absent on a DM */
   permissions?: number;
+  /** a voice channel's call layout; absent means 'standard' */
+  voiceMode?: VoiceMode;
 }
 
 /** A DM as the server sends it — no title or server. */
@@ -339,10 +341,15 @@ export interface RoleSummary {
 
 export interface CategorySummary { id: string; name: string; position: number }
 
+/** How a voice channel's call is shown: tiles, or the 3D playground (features/playground). */
+export type VoiceMode = 'standard' | 'playground';
+
 export interface ChannelSummary {
   id: string;
   serverId: string;
   type: 'text' | 'voice';
+  /** absent from a server older than protocol 31, which has no playgrounds */
+  voiceMode?: VoiceMode;
   name: string;
   topic: string;
   categoryId: string | null;

@@ -1,0 +1,21 @@
+{
+  "sceneLabel": "3D playground. Click to control your character.",
+  "back": "Back to the server",
+  "unsupported": "This browser could not open the 3D world (WebGL is off or unavailable). You are still in the call and hear everyone as usual.",
+  "jump": "Jump",
+  "hint": {
+    "desktop": "Click the scene to walk · WASD or arrows · Shift runs · Space jumps · V switches camera · Esc frees the mouse",
+    "touch": "Drag on the left to walk and on the right to look around"
+  },
+  "camera": {
+    "first": "First person",
+    "third": "Third person",
+    "toFirst": "Switch to first person",
+    "toThird": "Switch to third person"
+  },
+  "screen": {
+    "idle": "Nothing on the big screen",
+    "idleHint": "Share your screen for everyone to watch here",
+    "taken": "Someone else is already on the big screen. Wait until they stop sharing to stream."
+  }
+}

@@ -27,7 +27,8 @@
     "previousStream": "Previous stream",
     "nextStream": "Next stream",
     "noSpeakPermission": "You don't have permission to speak in this channel",
-    "noStreamPermission": "You don't have permission to use video or screen share in this channel"
+    "noStreamPermission": "You don't have permission to use video or screen share in this channel",
+    "screenTaken": "Someone else is on the big screen"
   },
   "callSettings": {
     "title": "Call display",

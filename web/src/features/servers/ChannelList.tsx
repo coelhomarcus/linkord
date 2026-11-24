@@ -1,4 +1,4 @@
-import { BellSlashIcon, CaretDownIcon, CaretRightIcon, ChecksIcon, FolderPlusIcon, GearSixIcon, HashIcon, PlusCircleIcon, PlusIcon, SignOutIcon, SpeakerHighIcon, UserPlusIcon } from '@/shared/ui/icons';
+import { BellSlashIcon, CaretDownIcon, CaretRightIcon, ChecksIcon, FolderPlusIcon, GearSixIcon, PlusCircleIcon, PlusIcon, SignOutIcon, UserPlusIcon } from '@/shared/ui/icons';
 import { useRef, useState } from 'react';
 import type { DragEvent } from 'react';
 import { useNavigate } from 'react-router';
@@ -22,6 +22,7 @@ import { CreateChannelDialog, type CreateTarget } from './CreateChannelDialog';
 import { ServerInviteDialog } from './ServerInviteDialog';
 import { leaveServer } from './serversApi';
 import { can, canMoveInto, canOpenSettings, channelSettingsTabs, groupChannels, serverUnread } from './serverUtils';
+import { ChannelGlyph } from './ChannelGlyph';
 import { useServerSettings } from './ServerSettingsContext';
 import { NotificationMenuItems } from '@/features/notifications/NotificationMenuItems';
 import { VoiceMembers, type VoiceDrag } from './VoiceMembers';
@@ -50,7 +51,6 @@ function ChannelRow({ server, channel, active, onOpen, onInvite, onOpenProfile, 
   const mentions = channel.type === 'text' ? mentionsByConversation.get(channel.id) ?? 0 : 0;
   // a muted channel reads as quiet: dimmed, its own unread hidden (only mentions still count)
   const muted = channel.type === 'text' && notificationPolicyFor({ id: channel.id, serverId: server.id }).muted;
-  const Icon = channel.type === 'voice' ? SpeakerHighIcon : HashIcon;
   // someone dragged out of another voice channel can land in this one
   const accepts = channel.type === 'voice' && !!drag && drag.fromChannelId !== channel.id && canMoveInto(channel, state.me.role === 'admin');
   const dropHandlers = accepts ? {
@@ -75,7 +75,7 @@ function ChannelRow({ server, channel, active, onOpen, onInvite, onOpenProfile, 
         {active && <ActiveFill />}
         {unread > 0 && !active && <span aria-hidden className="absolute -left-2 top-1/2 h-2 w-1 -translate-y-1/2 rounded-r-full bg-text-primary" />}
         <button type="button" onClick={onOpen} aria-current={active ? 'page' : undefined} className="flex min-w-0 flex-1 items-center gap-1.5 self-stretch rounded-lg px-2 text-left focus-ring">
-          <Icon size={20} className={cn('flex-none', active || unread > 0 ? 'text-text-secondary' : 'text-text-muted')} />
+          <ChannelGlyph channel={channel} size={20} className={cn('flex-none', active || unread > 0 ? 'text-text-secondary' : 'text-text-muted')} />
           <span className={cn('truncate text-body', unread > 0 ? 'font-semibold' : 'font-medium')}>{channel.name}</span>
           {muted && <BellSlashIcon size={14} className="flex-none text-text-muted" aria-label={tn('preferences.muted')} role="img" />}
           {mentions > 0 && !active && (
