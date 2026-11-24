@@ -3,7 +3,6 @@ import type { KeyboardEvent, ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { cn } from '@/shared/lib/utils';
 import { useCallControls } from '@/features/calls/useCallControls';
-import { MicQuickMenu, ScreenShareQuickMenu, SpeakerQuickMenu } from '@/features/calls/CallDeviceMenus';
 import { SoundboardButton } from '@/features/soundboard/SoundboardButton';
 import type { PlaygroundSession } from './playgroundSession';
 import type { PlaygroundPlayer } from './engine/PlaygroundEngine';
@@ -65,19 +64,6 @@ function DockToggle({ icon, label, state, tone, ...props }: {
   );
 }
 
-const DEVICE_SLAB = 'relative flex h-9 w-14 items-center gap-1 border-2 border-black/80 bg-[#5b5f69] pl-1.5 text-white shadow-[inset_2px_2px_0_rgb(255_255_255/0.22),inset_-2px_-3px_0_rgb(0_0_0/0.45)] has-[:hover]:bg-[#6f7480] has-[:focus-visible]:border-white';
-// the device menus open from a bare caret; here the whole slab, with its icon, is the trigger
-const DEVICE_TRIGGER = 'absolute inset-0 size-auto justify-end rounded-none bg-transparent pr-1.5 text-white ring-0 hover:bg-transparent';
-
-function DeviceSlab({ icon, children }: { icon: ReactNode; children: ReactNode }) {
-  return (
-    <span className={DEVICE_SLAB}>
-      <span aria-hidden className="grid place-items-center">{icon}</span>
-      {children}
-    </span>
-  );
-}
-
 interface MenuProps {
   session: PlaygroundSession;
   localId: string;
@@ -86,13 +72,10 @@ interface MenuProps {
   presenterId: string | null;
   cameraMode: CameraMode;
   onToggleView: () => void;
-  /** whether the click that starts playing goes fullscreen (playgroundSettings.ts) */
-  autoFullscreen: boolean;
-  onToggleAutoFullscreen: () => void;
   onResume: () => void;
 }
 
-export function PlaygroundMenu({ session, localId, localUserId, players, presenterId, cameraMode, onToggleView, autoFullscreen, onToggleAutoFullscreen, onResume }: MenuProps) {
+export function PlaygroundMenu({ session, localId, localUserId, players, presenterId, cameraMode, onToggleView, onResume }: MenuProps) {
   const { t } = useTranslation('playground');
   const controls = useCallControls();
   const panelRef = useRef<HTMLDivElement | null>(null);
@@ -157,7 +140,7 @@ export function PlaygroundMenu({ session, localId, localUserId, players, present
           <div className="grid grid-cols-2 gap-2">
             <MenuButton wide onClick={onResume}>{t('menu.resume')}</MenuButton>
             {/* the call's switches, as the floating call bar has them */}
-            <div role="group" aria-label={t('menu.dock')} className={cn('col-span-2 grid grid-cols-3 gap-2 p-2', PIXEL_PANEL)}>
+            <div role="group" aria-label={t('menu.dock')} className={cn('col-span-2 grid gap-2 p-2', controls.soundboard ? 'grid-cols-4' : 'grid-cols-3', PIXEL_PANEL)}>
               <DockToggle icon="mic" label={t('menu.mic')} onClick={controls.mic.toggle} aria-label={controls.mic.label}
                 aria-disabled={controls.mic.locked || undefined} aria-pressed={!controls.mic.muted}
                 tone={controls.mic.muted || controls.mic.locked ? 'off' : 'plain'}
@@ -167,19 +150,13 @@ export function PlaygroundMenu({ session, localId, localUserId, players, present
               <DockToggle icon="screen" label={t('menu.share')} onClick={controls.share.toggle} aria-label={controls.share.label}
                 aria-disabled={controls.share.locked || undefined} aria-pressed={controls.share.on}
                 tone={controls.share.on ? 'live' : 'plain'} state={controls.share.locked ? t('menu.taken') : onOff(controls.share.on)} />
-            </div>
-            <div className={cn('col-span-2 flex items-center gap-2 px-3 py-1.5', PIXEL_PANEL)}>
-              <span className={`mr-auto ${PIXEL_TEXT.md} leading-none text-white/85 ${PIXEL_SHADOW}`}>{t('menu.devices')}</span>
-              <DeviceSlab icon={<PixelIcon name="mic" className="size-5" />}><MicQuickMenu className={DEVICE_TRIGGER} /></DeviceSlab>
-              <DeviceSlab icon={<PixelIcon name="speaker" className="size-5" />}><SpeakerQuickMenu className={DEVICE_TRIGGER} /></DeviceSlab>
-              <DeviceSlab icon={<PixelIcon name="screen" className="size-5" />}><ScreenShareQuickMenu className={DEVICE_TRIGGER} /></DeviceSlab>
               {controls.soundboard && (
                 <SoundboardButton
                   conversationId={controls.soundboard.conversationId}
                   callServerId={controls.soundboard.serverId}
-                  className={cn('grid h-9 w-11 place-items-center', DEVICE_SLAB, 'pl-0')}
+                  className={cn(DOCK_SLAB, 'hover:bg-[#6f7480]')}
                   activeClassName="bg-[#6f7480]"
-                  iconClassName="size-5"
+                  iconClassName="size-8 drop-shadow-[2px_2px_0_rgb(0_0_0/0.55)]"
                 />
               )}
             </div>
@@ -188,9 +165,6 @@ export function PlaygroundMenu({ session, localId, localUserId, players, present
             </MenuButton>
             <MenuButton onClick={controls.fullscreen.toggle}>
               <Setting label={t('menu.fullscreen')} state={onOff(controls.fullscreen.on)} />
-            </MenuButton>
-            <MenuButton wide onClick={onToggleAutoFullscreen}>
-              <Setting label={t('menu.autoFullscreen')} state={onOff(autoFullscreen)} />
             </MenuButton>
             <MenuButton onClick={() => setPage('skin')}>{t('menu.skin')}</MenuButton>
             <MenuButton onClick={() => setPage('players')}>{t('menu.players', { count: players.length })}</MenuButton>

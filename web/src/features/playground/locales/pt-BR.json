@@ -34,9 +34,7 @@
     "skin": "Skin...",
     "players_one": "Jogadores ({{count}})...",
     "players_other": "Jogadores ({{count}})...",
-    "devices": "Dispositivos",
     "done": "Concluído",
-    "autoFullscreen": "Tela cheia ao jogar",
     "dock": "Chamada",
     "taken": "ocupado"
   },

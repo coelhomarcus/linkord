@@ -24,7 +24,6 @@ import { InventoryScreen } from './inventory/InventoryScreen';
 import { putCursorBack, scrollSelection, selectSlot, useInventory } from './inventory/inventory';
 import { defaultSkin } from './skins/defaultSkins';
 import { gameKeyAction, KEYBOARD_LOCK_KEYS } from './gameKeys';
-import { loadAutoFullscreen, saveAutoFullscreen } from './playgroundSettings';
 import { loadPixelFont, PIXEL_FONT, PIXEL_TEXT } from './pixelFont';
 import { HUD_BUTTON, HUD_CHIP as CHIP, PIXEL_PANEL, PIXEL_SHADOW } from './pixelUi';
 
@@ -77,7 +76,6 @@ export default function PlaygroundStage({ allIds, onBack }: { allIds: string[]; 
   const [chatOpen, setChatOpen] = useState(false);
   const [inventoryOpen, setInventoryOpen] = useState(false);
   const [hudHidden, setHudHidden] = useState(false);
-  const [autoFullscreen, setAutoFullscreen] = useState(loadAutoFullscreen);
   // read by the key and pointer-lock listeners; written before the effects below that act on them
   const menuOpenRef = useRef(false);
   const chatOpenRef = useRef(false);
@@ -231,22 +229,10 @@ export default function PlaygroundStage({ allIds, onBack }: { allIds: string[]; 
     };
   }, []);
 
-  // A click that takes the mouse also takes the screen when the player wants it (the default): in
-  // fullscreen the Keyboard Lock API keeps Esc, Tab and Ctrl+W in the game, which no page can otherwise
-  function onStagePointerDown(event: React.PointerEvent) {
-    if (event.pointerType !== 'mouse' || event.button !== 0 || !autoFullscreen || controls.fullscreen.on || menuOpen || chatOpen) return;
-    void toggleFullscreen();
-  }
-
   useEffect(() => {
     engineRef.current?.setHudShown(!hudHidden);
   }, [hudHidden, session, fontReady]);
 
-  function changeAutoFullscreen() {
-    const next = !autoFullscreen;
-    setAutoFullscreen(next);
-    saveAutoFullscreen(next);
-  }
 
   const showInventory = inventoryOpen && !dead && !menuOpen;
   const overlayOpen = menuOpen || chatOpen || dead || showInventory;
@@ -312,7 +298,6 @@ export default function PlaygroundStage({ allIds, onBack }: { allIds: string[]; 
         role="application"
         aria-label={t('sceneLabel')}
         inert={menuOpen}
-        onPointerDownCapture={onStagePointerDown}
         className="absolute inset-0 outline-none"
       >
         {/* The shared screen plays here, invisible: the 3D screen draws its frames. It
@@ -394,8 +379,6 @@ export default function PlaygroundStage({ allIds, onBack }: { allIds: string[]; 
           presenterId={presenterId}
           cameraMode={cameraMode}
           onToggleView={toggleView}
-          autoFullscreen={autoFullscreen}
-          onToggleAutoFullscreen={changeAutoFullscreen}
           onResume={resume}
         />
       )}

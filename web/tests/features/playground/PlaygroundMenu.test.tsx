@@ -20,8 +20,6 @@ function renderMenu(onResume = vi.fn(), overrides = {}) {
       presenterId="conn-bia"
       cameraMode="third"
       onToggleView={() => {}}
-      autoFullscreen
-      onToggleAutoFullscreen={() => {}}
       onResume={onResume}
     />,
     overrides,
@@ -49,14 +47,15 @@ describe('PlaygroundMenu', () => {
     expect(onResume).toHaveBeenCalledTimes(1);
   });
 
-  it('puts the microphone, the sound and the big screen in a dock above the devices', () => {
+  it('puts the microphone, the sound and the big screen in a dock, with no devices or fullscreen-when-playing', () => {
     renderMenu();
     const dock = screen.getByRole('group', { name: 'Chamada' });
     const switches = [...dock.querySelectorAll('button')];
     expect(switches).toHaveLength(3);
     expect(switches[0]).toHaveAccessibleName('Ativar microfone');
     expect(switches[0]).toHaveAttribute('aria-pressed', 'false');
-    expect(dock.compareDocumentPosition(screen.getByText('Dispositivos')) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(screen.queryByText('Dispositivos')).not.toBeInTheDocument();
+    expect(screen.queryByText(/Tela cheia ao jogar/)).not.toBeInTheDocument();
   });
 
   it('lists who is on the island on a page of its own, and Esc comes back to the menu', () => {
