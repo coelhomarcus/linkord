@@ -82,6 +82,8 @@ async function main(): Promise<void> {
   };
   process.on('SIGTERM', () => shutdown('SIGTERM'));
   process.on('SIGINT', () => shutdown('SIGINT'));
+  // started by the app in its own container (server/src/app/embeddedPlayground.ts): leave with it
+  if (process.send) process.on('disconnect', () => shutdown('app gone'));
 }
 
 main().catch((err: unknown) => {
