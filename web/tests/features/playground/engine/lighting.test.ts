@@ -147,7 +147,8 @@ describe('ScreenLight', () => {
     expect(light.at(0, PLAZA_HEIGHT, front + 4)).toBeLessThan(light.at(0, PLAZA_HEIGHT, front + 2));
     const fresh = new ScreenLight(world);
     for (let x = -14; x <= 14; x++) for (let y = PLAZA_HEIGHT; y <= PLAZA_HEIGHT + 12; y++) for (let z = front; z <= front + 15; z++) expect(light.at(x, y, z)).toBe(fresh.at(x, y, z));
-  });
+    // 275 updates, each working out the light again: about 5 s on a CI runner, past the default limit
+  }, 20_000);
 
   it('is covered by a block put right in front of the picture', () => {
     const world = plaza();
