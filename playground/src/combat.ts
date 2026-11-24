@@ -1,5 +1,8 @@
 import { isCurrent, playerById, playersIn, send, sendToCall, type Player } from './roster.js';
 import { memoryExperienceStore, type ExperienceStore } from './experience.js';
+import { hitDamage, wearForHitting } from './game/mining.js';
+import { wearHeld } from './game/inventory.js';
+import { dropEverything, heldItemOf, inventoryOf, sendInventory, setInventory } from './inventories.js';
 import { logger } from './logger.js';
 
 const log = logger.child({ component: 'combat' });
@@ -13,7 +16,8 @@ const log = logger.child({ component: 'combat' });
 // stands, which everyone sees.
 //
 // The rules are the block game's 1.8 combat, as its server applies them: a
-// bare hand deals 1 (half a heart) of 20; a hit while falling is a critical
+// bare hand deals 1 (half a heart) of 20, a tool or sword what it is made for
+// (game/items.ts: a diamond sword 8), wearing it down; a hit while falling is a critical
 // (×1.5); a hit makes its target immune for 10 ticks, during which only the
 // part of a stronger hit above the last one counts, with no knockback; the
 // knockback halves the target's speed and pushes it 0.4 away from the attacker
@@ -21,6 +25,8 @@ const log = logger.child({ component: 'combat' });
 // attacker. What the attacker's own movement says (falling, sprinting) is its
 // client's word, like its position. Health comes back 1 every 4 s, as with a
 // full hunger bar.
+//
+// A death drops everything its player carried where it fell (inventories.ts).
 //
 // Health is kept in memory by connection (the app's participant id), through a
 // reconnect to this service but not through its restart: the first report after
@@ -36,7 +42,6 @@ const log = logger.child({ component: 'combat' });
 // and restarts.
 
 export const MAX_HEALTH = 20;
-const FIST_DAMAGE = 1;
 const CRIT_MULTIPLIER = 1.5;
 /** the half of the game's 20-tick invulnerableTime in which a new hit only counts what it adds */
 export const HURT_IMMUNITY_MS = 500;
@@ -136,8 +141,10 @@ export function landHit(target: Fighter, damage: number, now: number): HitOutcom
   return { dealt, hurt, health: target.health };
 }
 
-export function attackDamage(crit: boolean): number {
-  return crit ? FIST_DAMAGE * CRIT_MULTIPLIER : FIST_DAMAGE;
+/** What a hit with the held item (null: a bare hand) deals. */
+export function attackDamage(crit: boolean, heldItem: string | null = null): number {
+  const damage = hitDamage(heldItem);
+  return crit ? damage * CRIT_MULTIPLIER : damage;
 }
 
 interface Knockback {
@@ -261,6 +268,19 @@ function fighterOf(player: Player): Fighter {
   return fighter;
 }
 
+/** Where a connection last said it stands (feet) and faces, or null before it said. */
+export function positionOf(playerId: string): { x: number; y: number; z: number; yaw: number } | null {
+  const fighter = fighters.get(playerId);
+  if (!fighter || fighter.positionAt === 0) return null;
+  return { x: fighter.x, y: fighter.y, z: fighter.z, yaw: fighter.yaw };
+}
+
+/** Whether a connection is alive (one that never reported counts as alive at full health). */
+export function isAlive(playerId: string): boolean {
+  const fighter = fighters.get(playerId);
+  return !fighter || healthOf(fighter, Date.now()) > 0;
+}
+
 /** Everyone connected in the call who has a fighter there, with it. */
 function fightersIn(conversationId: string): [Player, Fighter][] {
   const found: [Player, Fighter][] = [];
@@ -303,8 +323,16 @@ export async function handleAttack(player: Player, msg: { targetId?: unknown; x?
   // minute) stands still where it last said, for everyone
   if (healthOf(attacker, now) <= 0 || target.positionAt === 0 || !withinReach(attacker, target)) return;
   const crit = msg.crit === true;
-  const outcome = landHit(target, attackDamage(crit), now);
+  const held = heldItemOf(player);
+  const outcome = landHit(target, attackDamage(crit, held), now);
   if (!outcome) return;
+  const wear = wearForHitting(held);
+  if (wear > 0) {
+    void inventoryOf(player).then((holder) => {
+      setInventory(holder, wearHeld(holder.inventory, wear));
+      sendInventory(player);
+    });
+  }
   const knockback = outcome.hurt ? knockbackFor(attacker, target, msg.sprint === true) : null;
   sendToCall(player.conversationId, {
     t: 'playground-hit',
@@ -317,7 +345,9 @@ export async function handleAttack(player: Player, msg: { targetId?: unknown; x?
     hurt: outcome.hurt,
     ...(knockback ? { push: knockback.push, ...(knockback.extra ? { extra: knockback.extra } : {}) } : {}),
   });
-  if (outcome.health > 0 || targetPlayer.userId === player.userId) return;
+  if (outcome.health > 0) return;
+  dropEverything(targetPlayer, target);
+  if (targetPlayer.userId === player.userId) return;
   await rewardKill(player, xpOf(player.conversationId, targetPlayer.userId));
 }
 

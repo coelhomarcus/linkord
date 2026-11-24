@@ -4,15 +4,21 @@ import { verifyPlaygroundToken } from './access.js';
 import { admit, allPlayers, isCurrent, playerFor, remove, type Player } from './roster.js';
 import { handleAttack, handlePosition, handleRespawn, playerJoined, playerLeft, sweepFighters } from './combat.js';
 import { handleSkinGet, handleSkinSet } from './skins.js';
+import { buildingLeft, handleBreak, handleDigStart, handleInventoryOp, handlePlace, handleUse, handleWorldGet, maintainGame, tickGame } from './building.js';
+import { inventoryOf } from './inventories.js';
 import { logger } from './logger.js';
 
 const log = logger.child({ component: 'socket' });
 
 /** Where browsers connect; a proxy on the app's own domain sends this path here. */
 const SOCKET_PATH = '/playground/ws';
-// game messages are a few numbers each; the largest is a skin (14 kB as PNG, a third more in base64)
+// game messages are a few numbers each; the largest is a skin (14 kB as PNG, a third more in base64).
+// The world itself only goes out (`world-get`'s answer), which this does not limit.
 const MAX_MESSAGE_BYTES = 32 * 1024;
 const SWEEP_MS = 5000;
+/** the game's own clock: furnaces, items on the ground, pickups */
+const GAME_TICK_MS = 100;
+const MAINTAIN_MS = 1000;
 
 // Per connection: a client reports its position at most ~7 times a second and punches once per click;
 // a dropped one is replaced by the next. Renewal is twice a minute.
@@ -25,6 +31,14 @@ const LIMITS: Record<string, Limit> = {
   // one per person who shows up in the call, and its retries
   'skin-get': { windowMs: 10_000, max: 60 },
   'skin-set': { windowMs: 60_000, max: 10 },
+  // the world on arrival, and again after a reconnect
+  'world-get': { windowMs: 60_000, max: 6 },
+  // a block breaks at most every 5 ticks (instant ones), clicks in an inventory come fast
+  'dig-start': { windowMs: 10_000, max: 150 },
+  'block-break': { windowMs: 10_000, max: 80 },
+  'block-place': { windowMs: 10_000, max: 80 },
+  'block-use': { windowMs: 10_000, max: 30 },
+  'inv-op': { windowMs: 10_000, max: 300 },
 };
 
 type Ack = (answer: Record<string, unknown>) => void;
@@ -35,6 +49,12 @@ const HANDLERS: Record<string, Handler> = {
   'playground-respawn': (player) => handleRespawn(player),
   'skin-get': handleSkinGet,
   'skin-set': handleSkinSet,
+  'world-get': handleWorldGet,
+  'dig-start': (player, msg) => handleDigStart(player, msg),
+  'block-break': (player, msg) => handleBreak(player, msg),
+  'block-place': (player, msg) => handlePlace(player, msg),
+  'block-use': (player, msg) => handleUse(player, msg),
+  'inv-op': (player, msg) => handleInventoryOp(player, msg),
 };
 const noAck: Ack = () => {};
 
@@ -99,6 +119,7 @@ export function createPlaygroundSocket(httpServer: HttpServer, secret: string): 
     const player = playerFor(socket.data.claims, socket);
     admit(player);
     playerJoined(player);
+    void inventoryOf(player);
     log.debug('joined', { participantId: player.id, conversationId: player.conversationId });
     const windows = new Map<string, Window>();
 
@@ -113,12 +134,24 @@ export function createPlaygroundSocket(httpServer: HttpServer, secret: string): 
     });
 
     socket.on('disconnect', (reason) => {
-      if (remove(player)) playerLeft(player, Date.now());
+      if (remove(player)) {
+        playerLeft(player, Date.now());
+        run('disconnect', () => buildingLeft(player));
+      }
       log.debug('left', { participantId: player.id, reason });
     });
   });
 
   const timer = setInterval(() => sweep(Date.now()), SWEEP_MS);
   timer.unref();
-  return { io, stop: () => clearInterval(timer) };
+  const game = setInterval(() => run('tick', () => tickGame(Date.now())), GAME_TICK_MS);
+  game.unref();
+  let maintaining = false;
+  const upkeep = setInterval(() => {
+    if (maintaining) return;
+    maintaining = true;
+    void maintainGame(Date.now()).catch((err: unknown) => log.error('error saving worlds', err)).finally(() => { maintaining = false; });
+  }, MAINTAIN_MS);
+  upkeep.unref();
+  return { io, stop: () => { clearInterval(timer); clearInterval(game); clearInterval(upkeep); } };
 }

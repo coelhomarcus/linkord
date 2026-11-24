@@ -15,6 +15,13 @@
       "when": 1795509960069,
       "tag": "0001_skins",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1795513121656,
+      "tag": "0002_world",
+      "breakpoints": true
     }
   ]
 }

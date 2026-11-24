@@ -5,14 +5,17 @@ import { runMigrations } from './db/migrate.js';
 import { databaseExperienceStore } from './experience.js';
 import { setExperienceStore } from './combat.js';
 import { databaseSkinStore, setSkinStore } from './skins.js';
+import { databaseInventoryStore, databaseWorldStore } from './worldStore.js';
+import { saveAllWorlds, setWorldStore } from './worlds.js';
+import { saveAllInventories, setInventoryStore } from './inventories.js';
 import { handleInternal, INTERNAL_PREFIX } from './internal.js';
 import { createPlaygroundSocket } from './socket.js';
 import { logger } from './logger.js';
 
 const log = logger.child({ component: 'process' });
 
-// The playground service: the game state of playground calls (fighting,
-// experience and skins today), apart from the app so a restart of either leaves
+// The playground service: the game state of playground calls (the worlds and
+// what players carry, fighting, experience and skins), apart from the app so a restart of either leaves
 // the other running. The app hands each player a short-lived pass
 // (PLAYGROUND_SECRET), and the browser brings it here over Socket.IO; the app
 // itself talks to it under /playground/internal/ (internal.ts). Deployed from
@@ -33,6 +36,8 @@ async function main(): Promise<void> {
   await runMigrations(db);
   setExperienceStore(databaseExperienceStore(db));
   setSkinStore(databaseSkinStore(db));
+  setWorldStore(databaseWorldStore(db));
+  setInventoryStore(databaseInventoryStore(db));
 
   let readyAt = 0;
   let ready = false;
@@ -76,8 +81,11 @@ async function main(): Promise<void> {
     log.info('shutting down', { signal });
     socket.stop();
     // clients reconnect on their own with a fresh pass (useful for a deploy); health is kept in
-    // memory, so it starts over, while experience is in the database
-    socket.io.close(() => { void pool.end().finally(() => process.exit(0)); });
+    // memory, so it starts over, while experience, worlds and inventories are in the database
+    // worlds and inventories changed since their last save are written first
+    socket.io.close(() => {
+      void Promise.allSettled([saveAllWorlds(), saveAllInventories()]).then(() => pool.end()).finally(() => process.exit(0));
+    });
     setTimeout(() => process.exit(0), 5000).unref();
   };
   process.on('SIGTERM', () => shutdown('SIGTERM'));

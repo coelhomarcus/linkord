@@ -1,4 +1,4 @@
-import { integer, pgTable, primaryKey, text, timestamp } from 'drizzle-orm/pg-core';
+import { customType, integer, jsonb, pgTable, primaryKey, text, timestamp } from 'drizzle-orm/pg-core';
 
 // The playground's own database (PLAYGROUND_DATABASE_URL), apart from the app's.
 // Ids here are the app's (accounts, conversations) as plain text: there is no
@@ -19,3 +19,25 @@ export const playgroundSkins = pgTable('playground_skins', {
   png: text('png').notNull(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 });
+
+const bytea = customType<{ data: Buffer; driverData: Buffer }>({ dataType: () => 'bytea' });
+
+/** Each playground's world (worlds.ts), saved as its players change it: the blocks, one byte a cell
+ * (game/grid.ts), deflated; the furnaces with what is in them; the items lying on the ground. `generator`
+ * is the version of game/worldGen.ts that first made it. */
+export const playgroundWorlds = pgTable('playground_worlds', {
+  conversationId: text('conversation_id').primaryKey(),
+  generator: integer('generator').notNull(),
+  blocks: bytea('blocks').notNull(),
+  furnaces: jsonb('furnaces').notNull().default([]),
+  items: jsonb('items').notNull().default([]),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+});
+
+/** What each account carries in each playground (inventories.ts): its 41 slots and the hotbar slot in hand. */
+export const playgroundInventories = pgTable('playground_inventories', {
+  conversationId: text('conversation_id').notNull(),
+  userId: text('user_id').notNull(),
+  inventory: jsonb('inventory').notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+}, (t) => [primaryKey({ columns: [t.conversationId, t.userId] })]);

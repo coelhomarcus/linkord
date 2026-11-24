@@ -1,6 +1,7 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { verifyInternalRequest } from './access.js';
 import { forgetExperience } from './combat.js';
+import { forgetInventories } from './inventories.js';
 import { parseSkinPng } from './skinPng.js';
 import { skinStore, type SkinRow } from './skins.js';
 import { allPlayers } from './roster.js';
@@ -13,8 +14,8 @@ const log = logger.child({ component: 'internal' });
 // to send in its own database until this answers 200, so a request that fails
 // is simply sent again later (server/src/modules/playground/playgroundSync.ts).
 //
-// - `forget`: accounts deleted in the app; their skins, experience and any
-//   connection still open here go.
+// - `forget`: accounts deleted in the app; their skins, experience, inventories
+//   and any connection still open here go.
 // - `import-skins`: skins saved in the app before this service kept them.
 
 export const INTERNAL_PREFIX = '/playground/internal/';
@@ -49,6 +50,7 @@ async function forget(body: Record<string, unknown>): Promise<void> {
   if (!Array.isArray(userIds) || userIds.length > MAX_IDS || !userIds.every(isId)) throw new BadRequest('userIds');
   await skinStore().forget(userIds);
   await forgetExperience(userIds);
+  await forgetInventories(userIds);
   const gone = new Set(userIds);
   for (const player of allPlayers()) {
     if (gone.has(player.userId)) {
