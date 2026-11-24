@@ -42,6 +42,8 @@ const MAX_CAMERA_DISTANCE = 8;
 
 const MOVE_KEYS = new Set(['KeyW', 'KeyA', 'KeyS', 'KeyD', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'ShiftLeft', 'ShiftRight', 'Space']);
 const FORWARD_KEYS = new Set(['KeyW', 'ArrowUp']);
+/** held while moving forward, starts a sprint, as in the game */
+const SPRINT_KEYS = new Set(['ControlLeft', 'ControlRight']);
 
 interface Drag { pointerId: number; startX: number; startY: number; x: number; y: number }
 
@@ -144,6 +146,7 @@ export class Controls {
     const has = (...codes: string[]) => codes.some((code) => this.keys.has(code));
     const forward = Number(has('KeyW', 'ArrowUp')) - Number(has('KeyS', 'ArrowDown'));
     const sneak = has('ShiftLeft', 'ShiftRight');
+    if (forward > 0 && !sneak && has('ControlLeft', 'ControlRight')) this.sprinting = true;
     if (forward <= 0 || sneak) this.sprinting = false;
     return {
       forward,
@@ -182,7 +185,13 @@ export class Controls {
   private onKeyDown = (event: KeyboardEvent): void => {
     if (!this.active() || !this.enabled) return;
     if (event.target instanceof HTMLElement && event.target.closest('input, textarea, [contenteditable="true"], select')) return;
-    if (event.ctrlKey || event.metaKey) {
+    if (SPRINT_KEYS.has(event.code)) {
+      this.keys.add(event.code);
+      return;
+    }
+    // Ctrl is the sprint key, so movement goes on with it held
+    const sprintHeld = event.ctrlKey && !event.metaKey && !event.altKey && MOVE_KEYS.has(event.code);
+    if ((event.ctrlKey || event.metaKey) && !sprintHeld) {
       // a finger on Ctrl beside WASD must not reload, save or bookmark the page
       // (or reload the desktop app, which would drop the call). Ctrl+W, T and N
       // only a fullscreen keyboard lock can hold (PlaygroundStage).
