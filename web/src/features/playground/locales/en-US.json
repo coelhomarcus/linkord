@@ -4,14 +4,16 @@
   "unsupported": "This browser could not open the 3D world (WebGL is off or unavailable). You are still in the call and hear everyone as usual.",
   "jump": "Jump",
   "hint": {
-    "desktop": "Click or drag the scene to look around / WASD walks / Shift runs / Space jumps / V switches camera / Tab opens the menu",
+    "desktop": "Click or drag the scene to look around / WASD walks / double-tap W sprints / Shift sneaks / Space jumps / V switches camera / Tab opens the menu",
     "touch": "Drag on the left to walk and on the right to look around"
   },
   "camera": {
     "first": "First person",
     "third": "Third person",
+    "front": "Third person (front)",
     "toFirst": "Switch to first person",
-    "toThird": "Switch to third person"
+    "toThird": "Switch to third person, from behind",
+    "toFront": "Switch to third person, from the front"
   },
   "screen": {
     "idle": "Nothing on the big screen",

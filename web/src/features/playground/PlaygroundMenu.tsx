@@ -7,6 +7,7 @@ import { MicQuickMenu, ScreenShareQuickMenu, SpeakerQuickMenu } from '@/features
 import { SoundboardButton } from '@/features/soundboard/SoundboardButton';
 import type { PlaygroundSession } from './playgroundSession';
 import type { PlaygroundPlayer } from './engine/PlaygroundEngine';
+import { CAMERA_LABEL } from './engine/controls';
 import type { CameraMode } from './engine/controls';
 import { defaultSkin } from './skins/defaultSkins';
 import { decodeSkin, encodeSkin, SkinError, skinCanvas } from './skins/skins';
@@ -144,7 +145,7 @@ export function PlaygroundMenu({ session, localId, localUserId, players, present
             {t('menu.share')}
             {controls.share.locked && <span className={STATE}>{controls.share.label}</span>}
           </Row>
-          <Row onClick={onToggleView} state={t(cameraMode === 'first' ? 'camera.first' : 'camera.third')}>{t('menu.view')}</Row>
+          <Row onClick={onToggleView} state={t(CAMERA_LABEL[cameraMode])}>{t('menu.view')}</Row>
           <Row onClick={controls.fullscreen.toggle} state={onOff(controls.fullscreen.on)}>{t('menu.fullscreen')}</Row>
           <div className={`flex items-center gap-1 bg-white/6 px-3 py-1 ${PIXEL_TEXT.lg}`}>
             <span className="mr-auto text-white/80">{t('menu.tools')}</span>

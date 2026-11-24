@@ -3,38 +3,56 @@
 // right. Keys only count while the playground has focus (or the pointer is
 // locked), so typing in the chat beside it never walks anyone.
 
-export type CameraMode = 'first' | 'third';
+/** First person, third person from behind, and third person from the front (V goes round them). */
+export type CameraMode = 'first' | 'third' | 'front';
+
+export const CAMERA_MODES: readonly CameraMode[] = ['first', 'third', 'front'];
+
+/** the playground namespace's names for each mode, and for switching to it */
+export const CAMERA_LABEL = { first: 'camera.first', third: 'camera.third', front: 'camera.front' } as const satisfies Record<CameraMode, string>;
+export const CAMERA_SWITCH_LABEL = { first: 'camera.toFirst', third: 'camera.toThird', front: 'camera.toFront' } as const satisfies Record<CameraMode, string>;
+
+export function nextCameraMode(mode: CameraMode): CameraMode {
+  return CAMERA_MODES[(CAMERA_MODES.indexOf(mode) + 1) % CAMERA_MODES.length]!;
+}
 
 export interface MoveIntent {
   /** -1..1, positive is forward */
   forward: number;
   /** -1..1, positive is right */
   right: number;
-  run: boolean;
+  sprint: boolean;
+  sneak: boolean;
+  /** Space held: jumps again on landing */
+  jump: boolean;
+  /** a thumb on the joystick jumps onto steps by itself */
+  autoJump: boolean;
 }
 
 const MOUSE_SENSITIVITY = 0.0024;
 const TOUCH_SENSITIVITY = 0.006;
 const JOYSTICK_RADIUS = 56;
-const PITCH_LIMITS: Record<CameraMode, [number, number]> = {
-  // third person: how far the camera may look up from behind (negative is from above)
-  third: [-1.15, 0.3],
-  first: [-1.45, 1.45],
-};
-// where the view rests after switching: slightly above the shoulder, or level with the eyes
-const RESTING_PITCH: Record<CameraMode, number> = { third: -0.32, first: 0 };
+// straight up or down, short of the pole where the heading would flip
+const MAX_PITCH = Math.PI / 2 - 0.01;
+/** a second press of forward within this long starts a sprint (7 ticks) */
+const SPRINT_DOUBLE_TAP_MS = 350;
+/** the third-person camera's distance, and how far the wheel can take it */
+export const DEFAULT_CAMERA_DISTANCE = 4;
+const MIN_CAMERA_DISTANCE = 2;
+const MAX_CAMERA_DISTANCE = 8;
 
 const MOVE_KEYS = new Set(['KeyW', 'KeyA', 'KeyS', 'KeyD', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'ShiftLeft', 'ShiftRight', 'Space']);
+const FORWARD_KEYS = new Set(['KeyW', 'ArrowUp']);
 
 interface Drag { pointerId: number; startX: number; startY: number; x: number; y: number }
 
 export class Controls {
   /** camera heading, radians around +y; 0 looks toward -z (the screen) */
   yaw = 0;
-  /** look-up angle */
-  pitch = RESTING_PITCH.third;
+  /** look-up angle, the same in every camera mode */
+  pitch = 0;
   /** third-person camera distance */
-  distance = 5;
+  distance = DEFAULT_CAMERA_DISTANCE;
   mode: CameraMode = 'third';
   onToggleMode: () => void = () => {};
   onLockChange: (locked: boolean) => void = () => {};
@@ -46,6 +64,8 @@ export class Controls {
 
   private readonly keys = new Set<string>();
   private jumpQueued = false;
+  private sprinting = false;
+  private lastForwardPress = -Infinity;
   private joystick: Drag | null = null;
   private look: Drag | null = null;
   /** a held mouse button turning the view where the pointer cannot be locked */
@@ -111,7 +131,11 @@ export class Controls {
 
   setMode(mode: CameraMode): void {
     this.mode = mode;
-    this.pitch = RESTING_PITCH[mode];
+  }
+
+  /** Walking into a wall ends a sprint, as it does in the game. */
+  stopSprint(): void {
+    this.sprinting = false;
   }
 
   private engage(): void {
@@ -126,13 +150,19 @@ export class Controls {
       const dy = (this.joystick.y - this.joystick.startY) / JOYSTICK_RADIUS;
       const length = Math.hypot(dx, dy);
       const scale = length > 1 ? 1 / length : 1;
-      return { forward: -dy * scale, right: dx * scale, run: length > 0.9 };
+      return { forward: -dy * scale, right: dx * scale, sprint: length > 0.9 && -dy * scale > 0.5, sneak: false, jump: false, autoJump: true };
     }
     const has = (...codes: string[]) => codes.some((code) => this.keys.has(code));
+    const forward = Number(has('KeyW', 'ArrowUp')) - Number(has('KeyS', 'ArrowDown'));
+    const sneak = has('ShiftLeft', 'ShiftRight');
+    if (forward <= 0 || sneak) this.sprinting = false;
     return {
-      forward: Number(has('KeyW', 'ArrowUp')) - Number(has('KeyS', 'ArrowDown')),
+      forward,
       right: Number(has('KeyD', 'ArrowRight')) - Number(has('KeyA', 'ArrowLeft')),
-      run: has('ShiftLeft', 'ShiftRight'),
+      sprint: this.sprinting,
+      sneak,
+      jump: has('Space'),
+      autoJump: false,
     };
   }
 
@@ -151,8 +181,7 @@ export class Controls {
   }
 
   private clampPitch(): void {
-    const [min, max] = PITCH_LIMITS[this.mode];
-    this.pitch = Math.min(Math.max(this.pitch, min), max);
+    this.pitch = Math.min(Math.max(this.pitch, -MAX_PITCH), MAX_PITCH);
   }
 
   private turn(dx: number, dy: number, sensitivity: number): void {
@@ -180,6 +209,10 @@ export class Controls {
     // Space and the arrows would scroll or press the focused button otherwise
     event.preventDefault();
     if (event.code === 'Space' && !event.repeat) this.jumpQueued = true;
+    if (FORWARD_KEYS.has(event.code) && !event.repeat) {
+      if (event.timeStamp - this.lastForwardPress < SPRINT_DOUBLE_TAP_MS) this.sprinting = true;
+      this.lastForwardPress = event.timeStamp;
+    }
     this.keys.add(event.code);
     this.engage();
   };
@@ -190,6 +223,7 @@ export class Controls {
 
   private clear = (): void => {
     this.keys.clear();
+    this.sprinting = false;
     this.joystick = null;
     this.look = null;
     this.mouseLook = null;
@@ -197,7 +231,10 @@ export class Controls {
   };
 
   private onPointerLockChange = (): void => {
-    if (!this.locked) this.keys.clear();
+    if (!this.locked) {
+      this.keys.clear();
+      this.sprinting = false;
+    }
     else this.engage();
     this.onLockChange(this.locked);
   };
@@ -282,8 +319,8 @@ export class Controls {
   };
 
   private onWheel = (event: WheelEvent): void => {
-    if (this.mode !== 'third' || !this.enabled) return;
+    if (this.mode === 'first' || !this.enabled) return;
     event.preventDefault();
-    this.distance = Math.min(Math.max(this.distance + event.deltaY * 0.004, 2.2), 10);
+    this.distance = Math.min(Math.max(this.distance + event.deltaY * 0.004, MIN_CAMERA_DISTANCE), MAX_CAMERA_DISTANCE);
   };
 }

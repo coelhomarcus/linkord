@@ -11,6 +11,7 @@ import { usePlaygroundSession } from './playgroundSession';
 import { screenPresenterId } from './screenPresenter';
 import { PlaygroundEngine } from './engine/PlaygroundEngine';
 import type { PlaygroundPlayer } from './engine/PlaygroundEngine';
+import { CAMERA_LABEL, CAMERA_SWITCH_LABEL, nextCameraMode } from './engine/controls';
 import type { CameraMode } from './engine/controls';
 import { PlaygroundMenu } from './PlaygroundMenu';
 import { loadPixelFont, PIXEL_FONT, PIXEL_TEXT } from './pixelFont';
@@ -161,7 +162,7 @@ export default function PlaygroundStage({ allIds, onBack }: { allIds: string[]; 
     };
   }, [callStageRef]);
 
-  const nextMode: CameraMode = cameraMode === 'third' ? 'first' : 'third';
+  const nextMode = nextCameraMode(cameraMode);
   const toggleView = () => engineRef.current?.setCameraMode(nextMode);
   const resume = () => setMenuOpen(false);
   const notices = [
@@ -210,9 +211,9 @@ export default function PlaygroundStage({ allIds, onBack }: { allIds: string[]; 
             </p>
           )}
           <div className="flex gap-2">
-            <button type="button" onClick={toggleView} disabled={failed} aria-label={t(nextMode === 'first' ? 'camera.toFirst' : 'camera.toThird')} className={HUD_BUTTON}>
+            <button type="button" onClick={toggleView} disabled={failed} aria-label={t(CAMERA_SWITCH_LABEL[nextMode])} className={HUD_BUTTON}>
               {nextMode === 'first' ? <EyeIcon size={18} /> : <UserIcon size={18} />}
-              <span className="max-sm:hidden">{t(cameraMode === 'third' ? 'camera.third' : 'camera.first')}</span>
+              <span className="max-sm:hidden">{t(CAMERA_LABEL[cameraMode])}</span>
             </button>
             <button type="button" onClick={() => { relockRef.current = false; setMenuOpen(true); }} aria-label={t('menu.open')} className={HUD_BUTTON}>
               <DotsThreeIcon size={18} />

@@ -77,7 +77,7 @@ export class PlaygroundSession {
     this.localUserId = localUserId;
     this.audio = audio;
     const spawn = spawnPoint(localId);
-    this.local = { ...spawn, pitch: 0, motion: 'idle' };
+    this.local = { ...spawn, pitch: 0, motion: 'idle', headYaw: spawn.yaw, crouch: false, swings: 0 };
   }
 
   start(): void {
@@ -264,7 +264,8 @@ export class PlaygroundSession {
 
   private send(force: boolean): void {
     const now = performance.now();
-    const key = `${this.local.x.toFixed(2)},${this.local.y.toFixed(2)},${this.local.z.toFixed(2)},${this.local.yaw.toFixed(2)},${this.local.motion}`;
+    const { x, y, z, yaw, headYaw, pitch, motion, crouch, swings } = this.local;
+    const key = `${x.toFixed(2)},${y.toFixed(2)},${z.toFixed(2)},${yaw.toFixed(2)},${headYaw.toFixed(2)},${pitch.toFixed(2)},${motion},${crouch},${swings}`;
     const due = force || now - this.lastSentAt >= HEARTBEAT_MS || (key !== this.lastSentKey && now - this.lastSentAt >= SEND_INTERVAL_MS);
     if (!due || this.room.state !== ConnectionState.Connected) return;
     this.lastSentAt = now;

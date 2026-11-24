@@ -1,17 +1,19 @@
 import * as THREE from 'three';
-import type { Motion } from '../playgroundProtocol';
 import { boxFaces, partLayout, SKIN_HEIGHT, SKIN_WIDTH } from '../skins/skinFormat';
 import type { PartName } from '../skins/skinFormat';
 import type { Skin } from '../skins/skins';
 import { skinCanvas } from '../skins/skins';
 import { pixelTexture } from './blockTextures';
 import { FACE_SHADE } from './voxelWorld';
+import { angleDelta, bipedPose, LimbSwing } from './bipedPose';
 import { Nameplate } from './nameplate';
+import type { Bob } from './viewBob';
 
 // A person as six boxes painted from their skin, each with an outer layer one
 // half-pixel (head) or a quarter-pixel (the rest) larger, the way the skin
 // format expects. The model is 32 skin pixels tall and faces +z; it is
-// animated by turning its limbs, no animation files needed.
+// animated by turning its limbs around the humanoid model's pivots
+// (bipedPose.ts), no animation files needed.
 
 /** World units per skin pixel: the 32-pixel model stands 1.8 blocks tall. */
 export const PX = 1.8 / 32;
@@ -75,23 +77,43 @@ export function partMesh(part: PartName, skin: Skin, materials: SkinMaterials): 
   return group;
 }
 
-const WALK_SPEED_BY_MOTION: Record<Motion, number> = { idle: 0, walk: 3.2, run: 6.4, jump: 1 };
+/** Where each part's box sits from its pivot, in pixels (the pivots are the humanoid model's). */
+function partOffset(part: PartName, slim: boolean): [number, number, number] {
+  const arm = slim ? 0.5 : 1;
+  switch (part) {
+    case 'head': return [0, 4, 0];
+    case 'body': return [0, -6, 0];
+    case 'rightArm': return [-arm, -4, 0];
+    case 'leftArm': return [arm, -4, 0];
+    default: return [0, -6, 0];
+  }
+}
+
+const PARTS: PartName[] = ['head', 'body', 'rightArm', 'leftArm', 'rightLeg', 'leftLeg'];
+const PUNCH_SECONDS = 0.3;
+
+/** What the avatar is doing this frame, besides where it stands. */
+export interface AvatarMotion {
+  /** horizontal speed, blocks per second: the limbs swing with it */
+  speed: number;
+  /** where the head faces relative to the body, radians */
+  headYaw: number;
+  /** positive looks up */
+  headPitch: number;
+  crouching: boolean;
+}
 
 export class BlockAvatar {
   readonly root = new THREE.Group();
   private readonly body = new THREE.Group();
   private readonly nameplate: Nameplate;
   private materials: SkinMaterials | null = null;
-  private head = new THREE.Group();
-  private leftArm = new THREE.Group();
-  private rightArm = new THREE.Group();
-  private leftLeg = new THREE.Group();
-  private rightLeg = new THREE.Group();
-  private phase = 0;
-  private time = Math.random() * 10;
-  private swing = 0;
-  private motion: Motion = 'idle';
-  private pitch = 0;
+  private readonly parts = new Map<PartName, THREE.Group>();
+  private readonly limbs = new LimbSwing();
+  private slim = false;
+  private age = Math.random() * 10;
+  /** seconds into a punch, or null */
+  private punch: number | null = null;
 
   constructor(skin: Skin, name: string) {
     this.nameplate = new Nameplate(name);
@@ -108,23 +130,19 @@ export class BlockAvatar {
     if (this.materials) disposeSkinMaterials(this.materials);
     const materials = skinMaterials(skin);
     this.materials = materials;
-    const armWidth = skin.slim ? 3 : 4;
-    const pivot = (part: PartName, x: number, y: number, offsetY: number) => {
-      const group = new THREE.Group();
-      group.position.set(x * PX, y * PX, 0);
+    this.slim = skin.slim;
+    this.parts.clear();
+    for (const part of PARTS) {
+      const pivot = new THREE.Group();
+      pivot.rotation.order = 'ZYX';
       const mesh = partMesh(part, skin, materials);
-      mesh.position.y = offsetY * PX;
-      group.add(mesh);
-      this.body.add(group);
-      return group;
-    };
-    // facing +z, the character's right is -x
-    this.rightLeg = pivot('rightLeg', -2, 12, -6);
-    this.leftLeg = pivot('leftLeg', 2, 12, -6);
-    pivot('body', 0, 18, 0);
-    this.rightArm = pivot('rightArm', -(4 + armWidth / 2), 22, -4);
-    this.leftArm = pivot('leftArm', 4 + armWidth / 2, 22, -4);
-    this.head = pivot('head', 0, 24, 4);
+      const [x, y, z] = partOffset(part, skin.slim);
+      mesh.position.set(x * PX, y * PX, z * PX);
+      pivot.add(mesh);
+      this.body.add(pivot);
+      this.parts.set(part, pivot);
+    }
+    this.pose({ speed: 0, headYaw: 0, headPitch: 0, crouching: false }, 0);
   }
 
   setLabel(name: string, speaking: boolean): void {
@@ -135,36 +153,39 @@ export class BlockAvatar {
     this.nameplate.sprite.visible = visible;
   }
 
-  setMotion(motion: Motion): void {
-    this.motion = motion;
+  /** Swings the right arm, as a click does. A punch already past its middle starts over. */
+  swingArm(): void {
+    if (this.punch === null || this.punch >= PUNCH_SECONDS / 2) this.punch = 0;
   }
 
-  /** Where the head looks, up (positive) or down. */
-  setPitch(pitch: number): void {
-    this.pitch = pitch;
-  }
-
-  update(dt: number): void {
-    this.time += dt;
-    const speed = WALK_SPEED_BY_MOTION[this.motion];
-    const target = Math.min(speed / 3.2, 1.2);
-    // ease into and out of the stride instead of snapping the legs straight
-    this.swing += (target - this.swing) * (1 - Math.exp(-10 * dt));
-    this.phase += dt * (4 + speed * 1.6);
-    const stride = Math.sin(this.phase) * 0.75 * this.swing;
-    this.rightLeg.rotation.x = stride;
-    this.leftLeg.rotation.x = -stride;
-    this.rightArm.rotation.x = -stride * 0.9;
-    this.leftArm.rotation.x = stride * 0.9;
-    // arms breathe a little while standing
-    const sway = 0.04 + Math.sin(this.time * 1.4) * 0.03;
-    this.rightArm.rotation.z = -sway;
-    this.leftArm.rotation.z = sway;
-    if (this.motion === 'jump') {
-      this.rightArm.rotation.z = -0.35;
-      this.leftArm.rotation.z = 0.35;
+  update(dt: number, motion: AvatarMotion): void {
+    this.age += dt;
+    this.limbs.update(motion.speed, dt);
+    if (this.punch !== null) {
+      this.punch += dt;
+      if (this.punch >= PUNCH_SECONDS) this.punch = null;
     }
-    this.head.rotation.x = -this.pitch;
+    this.pose(motion, this.punch === null ? 0 : this.punch / PUNCH_SECONDS);
+  }
+
+  private pose(motion: AvatarMotion, attack: number): void {
+    const pose = bipedPose({
+      limbSwing: this.limbs.position,
+      limbAmount: this.limbs.amount,
+      age: this.age,
+      headYaw: motion.headYaw,
+      headPitch: motion.headPitch,
+      crouching: motion.crouching,
+      attack,
+      slim: this.slim,
+    });
+    for (const part of PARTS) {
+      const pivot = this.parts.get(part)!;
+      const { position, rotation } = pose[part];
+      pivot.position.set(position[0] * PX, position[1] * PX, position[2] * PX);
+      pivot.rotation.set(rotation[0], rotation[1], rotation[2], 'ZYX');
+    }
+    this.body.position.y = -pose.drop * PX;
   }
 
   dispose(): void {
@@ -175,63 +196,163 @@ export class BlockAvatar {
   }
 }
 
-/** The local player's right arm as seen in first person: it bobs while
- * walking and swings when clicking. Drawn in its own pass over the world, so it
- * never sinks into a wall. */
+// First person, the arm is the humanoid model's right arm built and placed the
+// way the original renders a bare hand: its own cube geometry, in its own
+// model space (y down), and the same chain of transforms (renderPlayerArm),
+// ported from minecraft-renderer (github.com/zardoy/minecraft-web-client, MIT,
+// Copyright (c) 2020 PrismarineJS): hand.ts and holdingBlock.ts.
+
+const DEG = Math.PI / 180;
+const ARM_SWING_SECONDS = 0.25;
+
+/** A box of the original's ModelPart.Cube, pixels in, blocks out, faces mapped to the skin. */
+function vanillaCube(texU: number, texV: number, origin: [number, number, number], size: [number, number, number], inflate: number): THREE.BufferGeometry {
+  const [ox, oy, oz] = origin;
+  const [sx, sy, sz] = size;
+  const minX = (ox - inflate) / 16;
+  const minY = (oy - inflate) / 16;
+  const minZ = (oz - inflate) / 16;
+  const maxX = (ox + sx + inflate) / 16;
+  const maxY = (oy + sy + inflate) / 16;
+  const maxZ = (oz + sz + inflate) / 16;
+  const corners = [
+    [minX, minY, minZ], [maxX, minY, minZ], [maxX, maxY, minZ], [minX, maxY, minZ],
+    [minX, minY, maxZ], [maxX, minY, maxZ], [maxX, maxY, maxZ], [minX, maxY, maxZ],
+  ];
+  const u0 = texU;
+  const u1 = texU + sz;
+  const u2 = texU + sz + sx;
+  const u3 = texU + sz + sx + sx;
+  const u4 = texU + sz + sx + sz;
+  const u5 = texU + sz + sx + sz + sx;
+  const v0 = texV;
+  const v1 = texV + sz;
+  const v2 = texV + sz + sy;
+  // the original's face order, corners and texture rectangles; y is down, so "down" is the shoulder's top
+  const faces: { corners: number[]; uv: [number, number, number, number]; shade: number }[] = [
+    { corners: [5, 4, 0, 1], uv: [u1, v0, u2, v1], shade: 1 },
+    { corners: [2, 3, 7, 6], uv: [u2, v1, u3, v0], shade: 0.5 },
+    { corners: [0, 4, 7, 3], uv: [u0, v1, u1, v2], shade: 0.62 },
+    { corners: [1, 0, 3, 2], uv: [u1, v1, u2, v2], shade: 0.8 },
+    { corners: [5, 1, 2, 6], uv: [u2, v1, u4, v2], shade: 0.62 },
+    { corners: [4, 5, 6, 7], uv: [u4, v1, u5, v2], shade: 0.8 },
+  ];
+  const positions: number[] = [];
+  const uvs: number[] = [];
+  const colors: number[] = [];
+  const indices: number[] = [];
+  faces.forEach((face, index) => {
+    const [uL, vT, uR, vB] = face.uv;
+    const faceUv = [[uR, vT], [uL, vT], [uL, vB], [uR, vB]];
+    for (let i = 0; i < 4; i++) {
+      positions.push(...corners[face.corners[i]!]!);
+      uvs.push(faceUv[i]![0]! / SKIN_WIDTH, 1 - faceUv[i]![1]! / SKIN_HEIGHT);
+      colors.push(face.shade, face.shade, face.shade);
+    }
+    const base = index * 4;
+    indices.push(base, base + 1, base + 2, base, base + 2, base + 3);
+  });
+  const geometry = new THREE.BufferGeometry();
+  geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+  geometry.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));
+  geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
+  geometry.setIndex(indices);
+  return geometry;
+}
+
+const scratch = new THREE.Matrix4();
+
+/** renderPlayerArm's transforms for the right hand, `swing` 0..1 through a punch. */
+function bareHandMatrix(swing: number, slim: boolean): THREE.Matrix4 {
+  const matrix = new THREE.Matrix4();
+  const root = Math.sqrt(swing);
+  const swingX = -0.3 * Math.sin(root * Math.PI);
+  const swingY = 0.4 * Math.sin(root * 2 * Math.PI);
+  const swingZ = -0.4 * Math.sin(swing * Math.PI);
+  matrix.multiply(scratch.makeTranslation(swingX + 0.64, swingY - 0.6, swingZ - 0.72));
+  matrix.multiply(scratch.makeRotationY(45 * DEG));
+  matrix.multiply(scratch.makeRotationY(Math.sin(root * Math.PI) * 70 * DEG));
+  matrix.multiply(scratch.makeRotationZ(Math.sin(swing * swing * Math.PI) * -20 * DEG));
+  matrix.multiply(scratch.makeTranslation(-1, 3.6, 3.5));
+  matrix.multiply(scratch.makeRotationZ(120 * DEG));
+  matrix.multiply(scratch.makeRotationX(200 * DEG));
+  matrix.multiply(scratch.makeRotationY(-135 * DEG));
+  matrix.multiply(scratch.makeTranslation(5.6, 0, 0));
+  // the arm's own pivot on the model
+  matrix.multiply(scratch.makeTranslation(-5 / 16, (slim ? 2.5 : 2) / 16, 0));
+  return matrix;
+}
+
+/** The local player's right arm as seen in first person: it bobs with the
+ * walk, lags a little behind the view when turning, and punches on a click.
+ * Drawn in its own pass over the world, so it never sinks into a wall. */
 export class FirstPersonArm {
   readonly scene = new THREE.Scene();
-  readonly camera = new THREE.PerspectiveCamera(70, 1, 0.01, 10);
-  private readonly holder = new THREE.Group();
+  readonly camera = new THREE.PerspectiveCamera(70, 1, 0.05, 100);
+  /** the view's frame: bob and turning lag move it */
+  private readonly view = new THREE.Group();
+  private readonly arm = new THREE.Group();
   private materials: SkinMaterials | null = null;
-  private phase = 0;
-  private swingTime = 1;
-  /** how far right the arm sits, so it stays in view on a narrow window too */
-  private offsetX = 0.45;
+  private slim = false;
+  private swingTime: number | null = null;
+  private lagPitch: number | null = null;
+  private lagYaw = 0;
 
   constructor(skin: Skin) {
-    this.scene.add(this.holder);
+    this.arm.matrixAutoUpdate = false;
+    this.view.add(this.arm);
+    this.scene.add(this.view);
     this.setSkin(skin);
   }
 
   setSkin(skin: Skin): void {
-    for (const child of [...this.holder.children]) {
-      child.traverse((node) => { if ((node as THREE.Mesh).isMesh) (node as THREE.Mesh).geometry.dispose(); });
-      this.holder.remove(child);
+    for (const child of [...this.arm.children]) {
+      (child as THREE.Mesh).geometry.dispose();
+      this.arm.remove(child);
     }
     if (this.materials) disposeSkinMaterials(this.materials);
     this.materials = skinMaterials(skin);
-    const arm = partMesh('rightArm', skin, this.materials);
-    // pivots around its middle; the pose (update) does the rest
-    arm.position.y = 0;
-    this.holder.add(arm);
+    this.slim = skin.slim;
+    const width = skin.slim ? 3 : 4;
+    const origin: [number, number, number] = [skin.slim ? -2 : -3, -2, -2];
+    this.arm.add(new THREE.Mesh(vanillaCube(40, 16, origin, [width, 12, 4], 0), this.materials.inner));
+    this.arm.add(new THREE.Mesh(vanillaCube(40, 32, origin, [width, 12, 4], 0.25), this.materials.outer));
   }
 
+  /** A click: the punch starts over once it is past its middle. */
   swing(): void {
-    this.swingTime = 0;
+    if (this.swingTime === null || this.swingTime >= ARM_SWING_SECONDS / 2) this.swingTime = 0;
   }
 
-  update(dt: number, walking: number): void {
-    this.phase += dt * 9 * walking;
-    this.swingTime = Math.min(this.swingTime + dt / 0.28, 1);
-    const bobX = Math.sin(this.phase) * 0.025 * walking;
-    const bobY = -Math.abs(Math.cos(this.phase)) * 0.03 * walking;
-    const swing = Math.sin(this.swingTime * Math.PI);
-    // The whole arm reaching forward from the bottom right corner, shoulder out of
-    // view and hand toward the crosshair, so the eye sees its top and inner side,
-    // never the hand's end. Tipped forward and up first, then turned in a little
-    // ('YXZ' applies the turn after the tilt); a click pushes it out and in.
-    this.holder.position.set(this.offsetX + bobX - swing * 0.12, -0.46 + bobY + swing * 0.06, -0.74 - swing * 0.12);
-    this.holder.rotation.set(2.05 + swing * 0.25, 0.12 + swing * 0.25, 0.3, 'YXZ');
+  /** `pitch`/`yaw` are the view's, `bob` its walking sway for the arm. */
+  update(dt: number, pitch: number, yaw: number, bob: Bob): void {
+    if (this.swingTime !== null) {
+      this.swingTime += dt;
+      if (this.swingTime >= ARM_SWING_SECONDS) this.swingTime = null;
+    }
+    const progress = this.swingTime === null ? 0 : this.swingTime / ARM_SWING_SECONDS;
+
+    // the arm trails the view a little when turning, and catches up
+    if (this.lagPitch === null) {
+      this.lagPitch = pitch;
+      this.lagYaw = yaw;
+    } else {
+      this.lagPitch += (pitch - this.lagPitch) * (1 - Math.pow(0.5, dt * 28));
+      this.lagYaw += angleDelta(this.lagYaw, yaw) * (1 - Math.pow(0.5, dt * 36));
+    }
+    this.view.position.set(bob.x, bob.y, 0);
+    this.view.rotation.set(bob.pitch + (pitch - this.lagPitch) * -0.05, angleDelta(this.lagYaw, yaw) * -0.035, bob.roll);
+    this.arm.matrix.copy(bareHandMatrix(progress, this.slim));
+    this.arm.matrixWorldNeedsUpdate = true;
   }
 
   setAspect(aspect: number): void {
-    this.offsetX = 0.25 * Math.min(aspect, 1.9);
     this.camera.aspect = aspect;
     this.camera.updateProjectionMatrix();
   }
 
   dispose(): void {
-    this.holder.traverse((node) => { if ((node as THREE.Mesh).isMesh) (node as THREE.Mesh).geometry.dispose(); });
+    this.arm.traverse((node) => { if ((node as THREE.Mesh).isMesh) (node as THREE.Mesh).geometry.dispose(); });
     if (this.materials) disposeSkinMaterials(this.materials);
   }
 }

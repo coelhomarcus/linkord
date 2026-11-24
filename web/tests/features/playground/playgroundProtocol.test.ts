@@ -6,8 +6,12 @@ const bytes = (value: unknown) => new TextEncoder().encode(JSON.stringify(value)
 
 describe('playgroundProtocol', () => {
   it('round-trips a state, to the centimetre', () => {
-    const decoded = decodeState(encodeState({ x: 1.234, y: 0.5, z: -7.891, yaw: 3.14159, pitch: -0.456, motion: 'run' }));
-    expect(decoded).toEqual({ x: 1.23, y: 0.5, z: -7.89, yaw: 3.14, pitch: -0.46, motion: 'run' });
+    const decoded = decodeState(encodeState({ x: 1.234, y: 0.5, z: -7.891, yaw: 3.14159, pitch: -0.456, motion: 'run', headYaw: 2.5, crouch: true, swings: 257 }));
+    expect(decoded).toEqual({ x: 1.23, y: 0.5, z: -7.89, yaw: 3.14, pitch: -0.46, motion: 'run', headYaw: 2.5, crouch: true, swings: 1 });
+  });
+
+  it('reads a packet from an older tab as a head facing the body, standing, never swinging', () => {
+    expect(decodeState(bytes({ v: 1, p: [0, 0, 0], r: 1.5, m: 1 }))).toMatchObject({ headYaw: 1.5, crouch: false, swings: 0 });
   });
 
   it('keeps a peer inside the world, whatever it claims', () => {

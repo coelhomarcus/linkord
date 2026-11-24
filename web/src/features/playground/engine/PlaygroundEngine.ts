@@ -6,8 +6,13 @@ import { MAX_HEIGHT } from '../playgroundWorld';
 import { defaultSkin } from '../skins/defaultSkins';
 import type { Skin } from '../skins/skins';
 import { BlockAvatar, FirstPersonArm } from './blockAvatar';
-import { Controls } from './controls';
+import { angleDelta, turnBody } from './bipedPose';
+import { cameraDistance } from './cameraCollision';
+import { Controls, nextCameraMode } from './controls';
 import type { CameraMode } from './controls';
+import { createBody, groundUnder, SNEAKING_EYE_HEIGHT, STANDING_EYE_HEIGHT, stepBody, TICK_SECONDS } from './playerPhysics';
+import type { PhysicsBody } from './playerPhysics';
+import { computeBob, createBobState, tickBob } from './viewBob';
 import { ScreenDisplay } from './screen';
 import type { ScreenLabels } from './screen';
 import { buildWorld } from './voxelWorld';
@@ -35,30 +40,24 @@ export interface EngineOptions {
   onFirstInput: () => void;
 }
 
-const WALK_SPEED = 4.3;
-const RUN_SPEED = 7;
-const JUMP_SPEED = 7.6;
-const GRAVITY = 26;
-const EYE_HEIGHT = 1.62;
-const CAMERA_TARGET_HEIGHT = 1.5;
-const TURN_RATE = 12;
 const MAX_FRAME_SECONDS = 0.1;
-/** half the width of a person, for bumping into blocks */
-const BODY_RADIUS = 0.3;
-/** how high a block can be and still be walked onto without jumping */
-const STEP_HEIGHT = 1.01;
+/** a frame longer than this many ticks (a tab in the background) skips the rest */
+const MAX_TICKS_PER_FRAME = 5;
+/** the arm swing turns the body toward the head for this long */
+const ATTACK_TICKS = 6;
+/** the arm's walking sway runs this much faster than the view's */
+const HAND_BOB_SPEED = 1.8;
+/** a peer moving slower than this (blocks per second) is standing */
+const STILL_SPEED = 0.3;
 
 interface RemoteAvatar {
   userId: string;
   avatar: BlockAvatar;
   position: THREE.Vector3;
   yaw: number;
+  headYaw: number;
+  swings: number;
   placed: boolean;
-}
-
-/** The signed shortest turn from one heading to another. */
-function angleDelta(from: number, to: number): number {
-  return Math.atan2(Math.sin(to - from), Math.cos(to - from));
 }
 
 /** Frame-rate independent smoothing toward a target. */
@@ -79,9 +78,22 @@ export class PlaygroundEngine {
   private readonly resizeObserver: ResizeObserver;
   private readonly local: BlockAvatar;
   private readonly arm: FirstPersonArm;
+  /** the physics state, one tick ahead of what is drawn */
+  private readonly body: PhysicsBody;
+  private readonly previous = new THREE.Vector3();
+  /** where the avatar is drawn this frame, between the last two ticks */
   private readonly position = new THREE.Vector3();
-  private readonly velocity = new THREE.Vector3();
+  private tickTime = 0;
+  /** the body's heading; the head's is the camera's */
   private facing: number;
+  private eyeHeight = STANDING_EYE_HEIGHT;
+  private previousEyeHeight = STANDING_EYE_HEIGHT;
+  private readonly bob = createBobState();
+  private sneaking = false;
+  private sprinting = false;
+  private speed = 0;
+  private attackTicks = 0;
+  private swings = 0;
   private motion: Motion = 'idle';
   private readonly remotes = new Map<string, RemoteAvatar>();
   private readonly unsubscribeSkins: () => void;
@@ -103,7 +115,9 @@ export class PlaygroundEngine {
     this.scene.add(this.screen.group);
 
     const start = session.local;
-    this.position.set(start.x, Math.max(start.y, this.groundUnder(start.x, start.z)), start.z);
+    this.body = createBody(start.x, Math.max(start.y, groundUnder(this.island, start.x, start.z)), start.z);
+    this.previous.set(this.body.x, this.body.y, this.body.z);
+    this.position.copy(this.previous);
     this.facing = start.yaw;
     const skin = this.skinOf(options.localUserId);
     this.local = new BlockAvatar(skin, '');
@@ -114,10 +128,10 @@ export class PlaygroundEngine {
     this.controls = new Controls(canvas, container);
     // start behind the avatar, looking the way it faces
     this.controls.yaw = this.facing + Math.PI;
-    this.controls.onToggleMode = () => this.setCameraMode(this.controls.mode === 'third' ? 'first' : 'third');
+    this.controls.onToggleMode = () => this.setCameraMode(nextCameraMode(this.controls.mode));
     this.controls.onLockChange = options.onPointerLockChange;
     this.controls.onFirstInput = options.onFirstInput;
-    this.controls.onAction = () => this.arm.swing();
+    this.controls.onAction = () => this.swingArm();
 
     this.unsubscribeSkins = session.onSkinsChange(() => this.refreshSkins());
 
@@ -138,7 +152,7 @@ export class PlaygroundEngine {
         const avatar = new BlockAvatar(this.skinOf(player.userId), player.name);
         avatar.root.visible = false;
         this.scene.add(avatar.root);
-        remote = { userId: player.userId, avatar, position: new THREE.Vector3(), yaw: 0, placed: false };
+        remote = { userId: player.userId, avatar, position: new THREE.Vector3(), yaw: 0, headYaw: 0, swings: 0, placed: false };
         this.remotes.set(player.id, remote);
       }
       remote.avatar.setLabel(player.name, player.speaking);
@@ -229,22 +243,41 @@ export class PlaygroundEngine {
     this.arm.setAspect(width / height);
   }
 
+  private swingArm(): void {
+    this.arm.swing();
+    this.local.swingArm();
+    this.attackTicks = ATTACK_TICKS;
+    this.swings = (this.swings + 1) & 0xff;
+  }
+
   private tick = (time: number): void => {
     if (this.disposed) return;
     this.frame = requestAnimationFrame(this.tick);
     this.timer.update(time);
     const dt = Math.min(this.timer.getDelta(), MAX_FRAME_SECONDS);
     this.world.update(dt);
-    this.moveLocal(dt);
+
+    this.tickTime += dt;
+    let ticks = 0;
+    while (this.tickTime >= TICK_SECONDS) {
+      this.tickTime -= TICK_SECONDS;
+      if (ticks++ < MAX_TICKS_PER_FRAME) this.physicsTick();
+    }
+    const partial = this.tickTime / TICK_SECONDS;
+    this.position.set(
+      this.previous.x + (this.body.x - this.previous.x) * partial,
+      this.previous.y + (this.body.y - this.previous.y) * partial,
+      this.previous.z + (this.body.z - this.previous.z) * partial,
+    );
+
+    this.drawLocal(dt);
     this.moveRemotes(dt);
-    this.placeCamera();
+    this.placeCamera(partial);
     this.screen.update();
     this.renderer.render(this.scene, this.camera);
     if (this.controls.mode === 'first') {
       // the arm in its own pass, over everything: it never sinks into a wall
-      const onGround = this.position.y <= this.groundUnder(this.position.x, this.position.z) + 0.05;
-      const walking = onGround ? Math.min(Math.hypot(this.velocity.x, this.velocity.z) / WALK_SPEED, 1) : 0;
-      this.arm.update(dt, walking);
+      this.arm.update(dt, this.controls.pitch, this.controls.yaw, computeBob(this.bob, partial, HAND_BOB_SPEED));
       this.renderer.autoClear = false;
       this.renderer.clearDepth();
       this.renderer.render(this.arm.scene, this.arm.camera);
@@ -252,77 +285,46 @@ export class PlaygroundEngine {
     }
   };
 
-  /** The highest ground under any part of someone standing at (x, z). */
-  private groundUnder(x: number, z: number): number {
-    let ground = 0;
-    for (const dx of [-BODY_RADIUS, BODY_RADIUS]) for (const dz of [-BODY_RADIUS, BODY_RADIUS]) ground = Math.max(ground, this.island.groundAt(x + dx, z + dz));
-    return ground;
-  }
-
-  /** Whether someone with their feet at height y fits at (x, z): no water, no wall taller than a step. */
-  private fits(x: number, z: number, y: number): boolean {
-    for (const dx of [-BODY_RADIUS, BODY_RADIUS]) {
-      for (const dz of [-BODY_RADIUS, BODY_RADIUS]) {
-        if (this.island.isWater(x + dx, z + dz)) return false;
-        if (this.island.groundAt(x + dx, z + dz) > y + STEP_HEIGHT) return false;
-      }
-    }
-    return true;
-  }
-
-  private moveLocal(dt: number): void {
+  /** One step of the game's 20 a second: movement, the body's turn, the eyes and the bob. */
+  private physicsTick(): void {
     const intent = this.controls.intent();
-    const yaw = this.controls.yaw;
-    // the camera's forward and right on the ground
-    const forward = new THREE.Vector3(-Math.sin(yaw), 0, -Math.cos(yaw));
-    const right = new THREE.Vector3(Math.cos(yaw), 0, -Math.sin(yaw));
-    const wish = forward.multiplyScalar(intent.forward).add(right.multiplyScalar(intent.right));
-    const amount = Math.min(wish.length(), 1);
-    if (amount > 0) wish.normalize();
-    const speed = (intent.run ? RUN_SPEED : WALK_SPEED) * amount;
-    const ground = this.groundUnder(this.position.x, this.position.z);
-    const airborne = this.position.y > ground + 0.01;
-    const blend = follow(airborne ? 5 : 16, dt);
-    this.velocity.x += (wish.x * speed - this.velocity.x) * blend;
-    this.velocity.z += (wish.z * speed - this.velocity.z) * blend;
+    const jump = this.controls.consumeJump() || intent.jump;
+    this.previous.set(this.body.x, this.body.y, this.body.z);
+    this.previousEyeHeight = this.eyeHeight;
+    stepBody(this.island, this.body, { ...intent, jump, yaw: this.controls.yaw }, MAX_HEIGHT);
+    if (this.body.collidedHorizontally) this.controls.stopSprint();
+    this.sneaking = intent.sneak;
+    this.sprinting = intent.sprint && intent.forward > 0 && !intent.sneak;
 
-    // one axis at a time, so walking into a wall at an angle slides along it
-    const nextX = this.position.x + this.velocity.x * dt;
-    if (this.fits(nextX, this.position.z, this.position.y)) this.position.x = nextX;
-    else this.velocity.x = 0;
-    const nextZ = this.position.z + this.velocity.z * dt;
-    if (this.fits(this.position.x, nextZ, this.position.y)) this.position.z = nextZ;
-    else this.velocity.z = 0;
+    const movedX = this.body.x - this.previous.x;
+    const movedZ = this.body.z - this.previous.z;
+    const moved = Math.hypot(movedX, movedZ);
+    this.speed = moved / TICK_SECONDS;
+    tickBob(this.bob, moved, this.body.onGround);
+    if (this.attackTicks > 0) this.attackTicks--;
+    this.facing = turnBody(this.facing, this.headYaw(), movedX, movedZ, this.attackTicks > 0);
+    this.eyeHeight += ((this.sneaking ? SNEAKING_EYE_HEIGHT : STANDING_EYE_HEIGHT) - this.eyeHeight) * 0.5;
+    this.motion = !this.body.onGround ? 'jump' : this.speed > STILL_SPEED ? (this.sprinting ? 'run' : 'walk') : 'idle';
+  }
 
-    const floor = this.groundUnder(this.position.x, this.position.z);
-    if (this.controls.consumeJump() && this.position.y <= floor + 0.01) this.velocity.y = JUMP_SPEED;
-    this.velocity.y -= GRAVITY * dt;
-    this.position.y += this.velocity.y * dt;
-    if (this.position.y <= floor) {
-      // walking onto a block a step up lands on top of it
-      this.position.y = floor;
-      this.velocity.y = 0;
-    }
-    this.position.y = Math.min(this.position.y, MAX_HEIGHT);
+  /** Where the head faces: where the camera looks. */
+  private headYaw(): number {
+    return this.controls.yaw + Math.PI;
+  }
 
-    const groundSpeed = Math.hypot(this.velocity.x, this.velocity.z);
-    if (this.controls.mode === 'first') {
-      this.facing = yaw + Math.PI;
-    } else if (groundSpeed > 0.2 && amount > 0) {
-      this.facing += angleDelta(this.facing, Math.atan2(wish.x, wish.z)) * follow(TURN_RATE, dt);
-    }
-    this.motion = this.position.y > floor + 0.05 ? 'jump' : groundSpeed > (WALK_SPEED + RUN_SPEED) / 2 ? 'run' : groundSpeed > 0.3 ? 'walk' : 'idle';
-    const pitch = this.controls.mode === 'first' ? this.controls.pitch : 0;
-
+  private drawLocal(dt: number): void {
+    const headYaw = this.headYaw();
+    const pitch = this.controls.pitch;
     this.local.root.position.copy(this.position);
     this.local.root.rotation.y = this.facing;
-    this.local.setMotion(this.motion);
-    this.local.setPitch(pitch);
-    this.local.update(dt);
+    this.local.update(dt, { speed: this.speed, headYaw: angleDelta(this.facing, headYaw), headPitch: pitch, crouching: this.sneaking });
     // the body would fill the view from inside it; the first-person arm stands in
-    this.local.root.visible = this.controls.mode === 'third';
+    this.local.root.visible = this.controls.mode !== 'first';
 
-    const state: PlayerState = { x: this.position.x, y: this.position.y, z: this.position.z, yaw: this.facing, pitch, motion: this.motion };
+    const state: PlayerState = {
+      x: this.position.x, y: this.position.y, z: this.position.z,
+      yaw: this.facing, pitch, motion: this.motion, headYaw, crouch: this.sneaking, swings: this.swings,
+    };
     this.session.setLocal(state);
   }
 
@@ -332,40 +334,68 @@ export class PlaygroundEngine {
       const known = this.session.remotes.get(id);
       if (!known) continue;
       const { state } = known;
+      let speed = 0;
       if (!remote.placed) {
         remote.position.set(state.x, state.y, state.z);
         remote.yaw = state.yaw;
+        remote.headYaw = state.headYaw;
+        remote.swings = state.swings;
         remote.placed = true;
         remote.avatar.root.visible = true;
       } else {
-        remote.position.x += (state.x - remote.position.x) * blend;
+        const stepX = (state.x - remote.position.x) * blend;
+        const stepZ = (state.z - remote.position.z) * blend;
+        remote.position.x += stepX;
         remote.position.y += (state.y - remote.position.y) * blend;
-        remote.position.z += (state.z - remote.position.z) * blend;
+        remote.position.z += stepZ;
         remote.yaw += angleDelta(remote.yaw, state.yaw) * blend;
+        remote.headYaw += angleDelta(remote.headYaw, state.headYaw) * blend;
+        speed = dt > 0 ? Math.hypot(stepX, stepZ) / dt : 0;
+      }
+      if (state.swings !== remote.swings) {
+        remote.swings = state.swings;
+        remote.avatar.swingArm();
       }
       remote.avatar.root.position.copy(remote.position);
       remote.avatar.root.rotation.y = remote.yaw;
-      remote.avatar.setMotion(state.motion);
-      remote.avatar.setPitch(state.pitch);
-      remote.avatar.update(dt);
+      remote.avatar.update(dt, { speed, headYaw: angleDelta(remote.yaw, remote.headYaw), headPitch: state.pitch, crouching: state.crouch });
     }
   }
 
-  private placeCamera(): void {
+  private readonly viewQuaternion = new THREE.Quaternion();
+  private readonly bobQuaternion = new THREE.Quaternion();
+  private readonly viewEuler = new THREE.Euler(0, 0, 0, 'YXZ');
+  private readonly bobEuler = new THREE.Euler(0, 0, 0, 'ZXY');
+  private readonly eye = new THREE.Vector3();
+  private readonly lookDirection = new THREE.Vector3();
+
+  private placeCamera(partial: number): void {
     const { yaw, pitch } = this.controls;
+    const eyeHeight = this.previousEyeHeight + (this.eyeHeight - this.previousEyeHeight) * partial;
+    this.eye.set(this.position.x, this.position.y + eyeHeight, this.position.z);
+    this.viewEuler.set(pitch, yaw, 0);
+    this.viewQuaternion.setFromEuler(this.viewEuler);
+
     if (this.controls.mode === 'first') {
-      this.camera.position.set(this.position.x, this.position.y + EYE_HEIGHT, this.position.z);
-      this.camera.rotation.set(pitch, yaw, 0, 'YXZ');
+      // the walk sways the view: a roll, then a dip, and a small offset in its own frame
+      const bob = computeBob(this.bob, partial);
+      this.bobEuler.set(bob.pitch, 0, bob.roll);
+      this.bobQuaternion.setFromEuler(this.bobEuler);
+      this.camera.quaternion.copy(this.viewQuaternion).multiply(this.bobQuaternion);
+      this.camera.position.set(bob.x, bob.y, 0).applyQuaternion(this.camera.quaternion).add(this.eye);
       return;
     }
-    const target = new THREE.Vector3(this.position.x, this.position.y + CAMERA_TARGET_HEIGHT, this.position.z);
-    const elevation = -pitch;
-    const distance = this.controls.distance;
-    const x = target.x + Math.sin(yaw) * Math.cos(elevation) * distance;
-    const z = target.z + Math.cos(yaw) * Math.cos(elevation) * distance;
-    // never below the ground behind the player
-    const y = Math.max(target.y + Math.sin(elevation) * distance, this.island.groundAt(x, z) + 0.4);
-    this.camera.position.set(x, y, z);
-    this.camera.lookAt(target);
+
+    // third person: on the line of sight through the eyes, behind them or in front
+    this.lookDirection.set(0, 0, -1).applyQuaternion(this.viewQuaternion);
+    const away = this.controls.mode === 'third' ? -1 : 1;
+    this.lookDirection.multiplyScalar(away);
+    const distance = cameraDistance(this.island, this.eye, this.lookDirection, this.controls.distance);
+    this.camera.position.copy(this.eye).addScaledVector(this.lookDirection, distance);
+    if (this.controls.mode === 'third') {
+      this.camera.quaternion.copy(this.viewQuaternion);
+    } else {
+      this.camera.lookAt(this.eye);
+    }
   }
 }
