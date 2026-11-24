@@ -3,7 +3,8 @@ WORKDIR /app/web
 COPY web/package.json web/package-lock.json ./
 RUN npm ci --no-audit --no-fund
 COPY web/ ./
-# the playground's game rules, which the web app shares with the playground service (`@game/`)
+# the playground's game rules, which the web app shares with the playground service (`@game/`); the service
+# itself has its own image (playground/Dockerfile)
 COPY playground/src/game/ /app/playground/src/game/
 RUN npm run build
 
@@ -12,8 +13,7 @@ WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci --no-audit --no-fund
 COPY server/ ./server/
-COPY playground/ ./playground/
-RUN npm run build:server && npm run build:playground
+RUN npm run build:server
 
 FROM node:22-alpine AS server-deps
 WORKDIR /app
@@ -32,10 +32,6 @@ COPY --from=server-deps /app/node_modules ./node_modules
 COPY package.json ./
 COPY --from=server-build /app/server/dist ./server/dist
 COPY server/db/migrations ./server/db/migrations
-# The playground service (playground/), the same image started with `node playground/dist/index.js`: see
-# "Playground service" in docs/DEPLOY.md.
-COPY --from=server-build /app/playground/dist ./playground/dist
-COPY playground/db/migrations ./playground/db/migrations
 COPY --from=web-build /app/web/dist ./web/dist
 
 # The code above stays owned by root and is only readable by `node`, so a compromised process (an image
@@ -46,8 +42,7 @@ RUN mkdir -p /app/uploads /app/backups && chown node:node /app/uploads /app/back
 USER node
 
 EXPOSE 3000
-# both processes listen on 3000 in their own container, so one health check fits either
-ENV HOST_BIND=0.0.0.0 PORT=3000 PLAYGROUND_PORT=3000 TRUST_PROXY=1
+ENV HOST_BIND=0.0.0.0 PORT=3000 TRUST_PROXY=1
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=5s \
   CMD wget -qO- http://127.0.0.1:3000/healthz > /dev/null || exit 1
