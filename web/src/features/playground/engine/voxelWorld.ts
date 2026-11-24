@@ -260,6 +260,8 @@ export interface World {
   furnaceChanged(x: number, z: number): void;
   /** the world arrived again (a reconnect): everything is built anew */
   reload(): void;
+  /** how much of the terrain is built since the world (re)arrived, 0..1 */
+  buildProgress(): number;
   /** whether the view is under water (the fog closes in) */
   setUnderwater(underwater: boolean): void;
   dispose(): void;
@@ -340,10 +342,13 @@ export function buildWorld(scene: THREE.Scene, state: WorldState): World {
     for (let cx = c0; cx <= c1; cx++) for (let cz = d0; cz <= d1; cz++) dirty.add(cx * CHUNKS + cz);
   }
 
+  /** the chunks the arrival of the world left to build */
+  let firstBuild = new Set<number>();
   function reload(): void {
     if (!state.grid) return;
     sky = new SkyLight(state.grid);
     for (let i = 0; i < chunks.length; i++) dirty.add(i);
+    firstBuild = new Set(dirty);
   }
   reload();
 
@@ -362,6 +367,7 @@ export function buildWorld(scene: THREE.Scene, state: WorldState): World {
       markBox(x, x, z, z);
     },
     reload,
+    buildProgress: () => (sky ? 1 - firstBuild.size / chunks.length : 0),
     setUnderwater(underwater) {
       scene.fog = underwater ? waterFog : skyFog;
       scene.background = underwater ? waterColor : skyColor;
@@ -374,6 +380,7 @@ export function buildWorld(scene: THREE.Scene, state: WorldState): World {
       const started = performance.now();
       for (const index of dirty) {
         dirty.delete(index);
+        firstBuild.delete(index);
         buildChunk(index);
         if (performance.now() - started > BUILD_BUDGET_MS) break;
       }

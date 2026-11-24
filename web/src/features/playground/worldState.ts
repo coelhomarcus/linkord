@@ -1,4 +1,3 @@
-import { useSyncExternalStore } from 'react';
 import { BLOCK, isBlock } from '@game/blocks';
 import type { Block } from '@game/blocks';
 import type { Motion } from '@game/drops';
@@ -36,7 +35,7 @@ const furnaceKey = (x: number, y: number, z: number) => `${x},${y},${z}`;
 
 /** The deflated blocks the service sends, back to one byte a cell. */
 export async function inflateBlocks(bytes: ArrayBuffer | Uint8Array): Promise<Uint8Array> {
-  const stream = new Blob([bytes as BlobPart]).stream().pipeThrough(new DecompressionStream('deflate-raw'));
+  const stream = new Response(bytes as BodyInit).body!.pipeThrough(new DecompressionStream('deflate-raw'));
   return new Uint8Array(await new Response(stream).arrayBuffer());
 }
 
@@ -169,12 +168,4 @@ export class WorldState {
   dispose(): void {
     this.listeners.clear();
   }
-}
-
-const noSubscription = () => () => {};
-const notLoaded = () => false;
-
-/** Whether the world has arrived (the view waits for it). */
-export function useWorldLoaded(world: WorldState | null): boolean {
-  return useSyncExternalStore(world ? (listener) => world.subscribe(listener) : noSubscription, world ? () => world.loaded : notLoaded);
 }

@@ -130,5 +130,12 @@
     "diamondAxe": "Machado de diamante",
     "diamondShovel": "Pá de diamante"
   },
-  "loadingWorld": "Carregando o mundo…"
+  "loading": {
+    "title": "Carregando o mundo",
+    "connecting": "Conectando ao servidor do jogo",
+    "unreachable": "Não foi possível conectar ao servidor do jogo. Tentando de novo…",
+    "downloading": "Baixando o mundo",
+    "worldFailed": "O servidor do jogo não conseguiu abrir o mundo. Tentando de novo…",
+    "building": "Construindo o terreno"
+  }
 }

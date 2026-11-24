@@ -7,7 +7,8 @@ import { cn } from '@/shared/lib/utils';
 import { useRoom, useRoomSelector, useRoomState } from '@/state/RoomContext';
 import { useCallControls } from '@/features/calls/useCallControls';
 import { useAttachTrack, useParticipantMedia } from '@/features/calls/useLiveKitTrack';
-import { getActivePlaygroundSession, usePlaygroundSession } from './playgroundSession';
+import { getActivePlaygroundSession, useLoading, usePlaygroundSession } from './playgroundSession';
+import { PlaygroundLoadingScreen } from './PlaygroundLoadingScreen';
 import { screenPresenterId } from './screenPresenter';
 import { PlaygroundEngine } from './engine/PlaygroundEngine';
 import type { PlaygroundPlayer } from './engine/PlaygroundEngine';
@@ -24,7 +25,6 @@ import { useGuiScale } from './hud/gui';
 import { InventoryScreen } from './inventory/InventoryScreen';
 import { HOTBAR_SIZE } from '@game/inventory';
 import { useInventoryWindow } from './inventory/inventory';
-import { useWorldLoaded } from './worldState';
 import { defaultSkin } from './skins/defaultSkins';
 import { gameKeyAction, KEYBOARD_LOCK_KEYS } from './gameKeys';
 import { loadPixelFont, PIXEL_FONT, PIXEL_TEXT } from './pixelFont';
@@ -66,7 +66,8 @@ export default function PlaygroundStage({ allIds, onBack }: { allIds: string[]; 
   const dead = vitals.health <= 0;
   const inventoryWindow = useInventoryWindow(session?.inventory ?? null);
   const inventory = inventoryWindow.inventory;
-  const worldLoaded = useWorldLoaded(session?.world ?? null);
+  const loading = useLoading(session);
+  const inWorld = loading.phase === 'ready';
   const scale = useGuiScale(callStageRef);
   const controls = useCallControls();
   const touchFirst = useMediaQuery(TOUCH_FIRST_QUERY);
@@ -289,7 +290,7 @@ export default function PlaygroundStage({ allIds, onBack }: { allIds: string[]; 
   }, [callStageRef]);
 
   const toggleView = () => engineRef.current?.setCameraMode(nextCameraMode(cameraMode));
-  const showHud = !menuOpen && !hudHidden && !failed && !!session;
+  const showHud = !menuOpen && !hudHidden && !failed && !!session && inWorld;
   // the hearts and hotbar's height, which the chat lines and notices stay above
   const hudHeight = showHud ? 39 * scale + 4 : 0;
   function closeInventory() {
@@ -332,11 +333,7 @@ export default function PlaygroundStage({ allIds, onBack }: { allIds: string[]; 
         <video ref={videoRef} autoPlay muted playsInline aria-hidden className="pointer-events-none absolute left-0 top-0 -z-10 h-[720px] w-[1280px] opacity-0" />
       </div>
 
-      {!failed && session && !worldLoaded && (
-        <div className="pointer-events-none absolute inset-0 z-10 grid place-items-center p-6 text-center">
-          <p role="status" className={`${PIXEL_TEXT.lg} leading-tight text-white/90 ${PIXEL_SHADOW}`}>{t('loadingWorld')}</p>
-        </div>
-      )}
+      {!failed && session && !inWorld && <PlaygroundLoadingScreen loading={loading} scale={scale} />}
 
       {failed && (
         <div className="absolute inset-0 grid place-items-center p-6 text-center">
@@ -345,7 +342,7 @@ export default function PlaygroundStage({ allIds, onBack }: { allIds: string[]; 
       )}
 
       {/* a crosshair to aim the first-person view */}
-      {cameraMode === 'first' && !menuOpen && !hudHidden && !failed && !dead && (
+      {cameraMode === 'first' && !menuOpen && !hudHidden && !failed && !dead && inWorld && (
         <div aria-hidden className="pointer-events-none absolute left-1/2 top-1/2 z-10 mix-blend-difference">
           <span className="absolute h-0.5 w-5 -translate-x-1/2 -translate-y-1/2 bg-white" />
           <span className="absolute h-5 w-0.5 -translate-x-1/2 -translate-y-1/2 bg-white" />

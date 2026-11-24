@@ -130,5 +130,12 @@
     "diamondAxe": "Diamond Axe",
     "diamondShovel": "Diamond Shovel"
   },
-  "loadingWorld": "Loading the world…"
+  "loading": {
+    "title": "Loading the world",
+    "connecting": "Connecting to the game server",
+    "unreachable": "Could not reach the game server. Trying again…",
+    "downloading": "Downloading the world",
+    "worldFailed": "The game server could not open the world. Trying again…",
+    "building": "Building terrain"
+  }
 }

@@ -268,3 +268,53 @@ describe('PlaygroundSession fighting', () => {
     session.dispose();
   });
 });
+
+describe('PlaygroundSession loading', () => {
+  function sessionWithWorld(request: () => Promise<Record<string, unknown>>) {
+    const fake = fakeRoom();
+    const link = { start: vi.fn(), dispose: vi.fn(), receiveToken: vi.fn(), request: vi.fn(request), send: vi.fn((_msg: PlaygroundClientMessage) => true) };
+    let options: ServiceLinkOptions | null = null;
+    const session = new PlaygroundSession(fake.room, 'conv', 'conn-me', 'me', { current: new Map() }, () => true, (given) => {
+      options = given;
+      return link;
+    });
+    return { session, options: () => options! };
+  }
+
+  beforeEach(() => {
+    account.fetchAccountSkin.mockReset().mockResolvedValue(null);
+  });
+
+  it('goes from connecting through downloading and building into the world', async () => {
+    const { deflateRawSync } = await import('node:zlib');
+    const { CELL_COUNT } = await import('@game/grid');
+    const blocks = deflateRawSync(new Uint8Array(CELL_COUNT));
+    const { session, options } = sessionWithWorld(async () => ({ blocks: new Uint8Array(blocks), furnaces: [], items: [], held: [] }));
+    session.start();
+    expect(session.getLoading().phase).toBe('connecting');
+    options().onStatus?.('connected');
+    expect(session.getLoading().phase).toBe('downloading');
+    options().onConnect();
+    await vi.waitFor(() => expect(session.world.loaded).toBe(true));
+    expect(session.getLoading().phase).toBe('building');
+    session.reportBuild(0.5);
+    expect(session.getLoading()).toEqual({ phase: 'building', progress: 0.5 });
+    session.reportBuild(1);
+    expect(session.getLoading().phase).toBe('ready');
+    // a later reconnect does not bring the loading screen back
+    options().onStatus?.('unreachable');
+    expect(session.getLoading().phase).toBe('ready');
+    session.dispose();
+  });
+
+  it('says when the service cannot be reached or cannot open the world', async () => {
+    const { session, options } = sessionWithWorld(async () => { throw new Error('unavailable'); });
+    session.start();
+    options().onStatus?.('unreachable');
+    expect(session.getLoading().phase).toBe('unreachable');
+    options().onStatus?.('connected');
+    options().onConnect();
+    await vi.waitFor(() => expect(session.getLoading().phase).toBe('worldFailed'));
+    session.dispose();
+  });
+});

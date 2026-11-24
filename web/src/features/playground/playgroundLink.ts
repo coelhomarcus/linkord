@@ -71,6 +71,9 @@ export interface ServiceLink {
   request(request: PlaygroundRequest): Promise<Record<string, unknown>>;
 }
 
+/** How the link is doing: on its way, connected, or failing to get there (it keeps trying). */
+export type LinkStatus = 'connecting' | 'connected' | 'unreachable';
+
 export interface ServiceLinkOptions {
   conversationId: string;
   /** asks the app for a pass; false when its socket is not connected */
@@ -78,6 +81,7 @@ export interface ServiceLinkOptions {
   onMessage: (message: PlaygroundServerMessage) => void;
   /** connected (again): whatever the service should hear first goes out now */
   onConnect: () => void;
+  onStatus?: (status: LinkStatus) => void;
 }
 
 const SOCKET_PATH = '/playground/ws';
@@ -94,6 +98,8 @@ const ANSWER_TIMEOUT_MS = 5000;
 /** a world nobody visited yet is generated first */
 const WORLD_TIMEOUT_MS = 20_000;
 const RETRY_MS = [1000, 2000, 5000, 10_000, 20_000];
+/** this many failed tries in a row, and the link says it cannot get there */
+const UNREACHABLE_AFTER = 2;
 
 type Grant = { url: string; token: string } | 'refused' | 'unanswered';
 
@@ -204,6 +210,7 @@ export class PlaygroundLink implements ServiceLink {
     for (const event of SERVER_EVENTS) socket.on(event, (message: PlaygroundServerMessage) => this.options.onMessage(message));
     socket.on('connect', () => {
       this.attempts = 0;
+      this.options.onStatus?.('connected');
       this.renewTimer = setInterval(() => void this.renew(), RENEW_MS);
       for (const waiter of [...this.connectWaiters]) waiter(socket);
       this.options.onConnect();
@@ -229,6 +236,7 @@ export class PlaygroundLink implements ServiceLink {
     if (this.stopped || this.retryTimer) return;
     const base = RETRY_MS[Math.min(this.attempts, RETRY_MS.length - 1)]!;
     this.attempts++;
+    this.options.onStatus?.(this.attempts >= UNREACHABLE_AFTER ? 'unreachable' : 'connecting');
     this.retryTimer = setTimeout(() => {
       this.retryTimer = null;
       void this.connect();

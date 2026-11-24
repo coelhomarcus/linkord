@@ -8,7 +8,9 @@ import type { Logger } from '../lib/logger.js';
 // process: a crash there is logged and the service started again, and never
 // takes the app down; a restart of the app (a deploy) restarts it too. It shares
 // this process's environment, so the same PLAYGROUND_* variables configure
-// both, and listens on its own port, which the proxy routes /playground/ to.
+// both, and listens on its own port; the app passes the game's websocket on
+// /playground/ on to it (playgroundProxy.ts), so the proxy in front may route
+// everything to the app.
 
 /** compiled, this is server/dist/app/; the image keeps playground/dist next to server/ */
 const PLAYGROUND_ENTRY = path.join(import.meta.dirname, '..', '..', '..', 'playground', 'dist', 'index.js');

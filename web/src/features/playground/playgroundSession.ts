@@ -19,7 +19,7 @@ import { brokenInto, wearForBreaking } from '@game/mining';
 import { inflateBlocks, WorldState } from './worldState';
 import { PlaygroundCombat } from './playgroundCombat';
 import { PlaygroundLink } from './playgroundLink';
-import type { ServiceLink, ServiceLinkOptions, PlaygroundServerMessage, PlaygroundTokenReply } from './playgroundLink';
+import type { LinkStatus, ServiceLink, ServiceLinkOptions, PlaygroundServerMessage, PlaygroundTokenReply } from './playgroundLink';
 import { InventoryState, readSnapshot } from './inventory/inventory';
 
 // Everything a playground call needs while you are in it, whether or not its
@@ -62,6 +62,15 @@ export interface PlaygroundMember {
   userId: string;
 }
 
+/** Where getting into the world stands, as the loading screen tells it. */
+export type LoadingPhase = 'connecting' | 'unreachable' | 'downloading' | 'worldFailed' | 'building' | 'ready';
+
+export interface Loading {
+  phase: LoadingPhase;
+  /** how much of the terrain is built, 0..1, while building */
+  progress: number;
+}
+
 export interface RemotePlayer {
   state: PlayerState;
   receivedAt: number;
@@ -99,6 +108,8 @@ export class PlaygroundSession {
   readonly world = new WorldState();
   /** bumped by each new connection, so a world read for an older one is dropped */
   private linkGeneration = 0;
+  private loading: Loading = { phase: 'connecting', progress: 0 };
+  private readonly loadingListeners = new Set<() => void>();
   private timer: ReturnType<typeof setInterval> | null = null;
 
   private readonly room: Room;
@@ -129,6 +140,7 @@ export class PlaygroundSession {
         this.inventory.forgetPending();
         void this.loadWorld(++this.linkGeneration);
       },
+      onStatus: (status) => this.linkStatus(status),
     });
     const spawn = spawnPoint(localId);
     this.local = { ...spawn, pitch: 0, motion: 'idle', headYaw: spawn.yaw, crouch: false, swings: 0 };
@@ -158,9 +170,34 @@ export class PlaygroundSession {
     this.retryTimers.clear();
     for (const handle of this.audio.current.values()) clearSpatialGain(handle.element);
     this.skinListeners.clear();
+    this.loadingListeners.clear();
     this.link.dispose();
     this.combat.dispose();
     this.world.dispose();
+  }
+
+  getLoading = (): Loading => this.loading;
+
+  subscribeLoading = (listener: () => void): (() => void) => {
+    this.loadingListeners.add(listener);
+    return () => { this.loadingListeners.delete(listener); };
+  };
+
+  private setLoading(phase: LoadingPhase, progress = 0): void {
+    // once in the world, a reconnect does not bring the loading screen back
+    if (this.loading.phase === 'ready' || (phase === this.loading.phase && progress === this.loading.progress)) return;
+    this.loading = { phase, progress };
+    for (const listener of this.loadingListeners) listener();
+  }
+
+  private linkStatus(status: LinkStatus): void {
+    if (this.world.loaded) return;
+    this.setLoading(status === 'connected' ? 'downloading' : status);
+  }
+
+  /** The 3D view says how much of the terrain it has built (1: all of it, the world shows). */
+  reportBuild(progress: number): void {
+    if (this.world.loaded) this.setLoading(progress >= 1 ? 'ready' : 'building', Math.round(progress * 100) / 100);
   }
 
   /** The world as it is now, from the service (a failed read is tried again a little later). */
@@ -173,11 +210,14 @@ export class PlaygroundSession {
       if (!(packed instanceof ArrayBuffer) && !(packed instanceof Uint8Array)) throw new Error('no blocks');
       blocks = await inflateBlocks(packed);
     } catch {
-      if (generation === this.linkGeneration) this.retry(() => { if (generation === this.linkGeneration) void this.loadWorld(generation); });
+      if (generation !== this.linkGeneration) return;
+      if (!this.world.loaded) this.setLoading('worldFailed');
+      this.retry(() => { if (generation === this.linkGeneration) void this.loadWorld(generation); });
       return;
     }
     if (this.disposed || generation !== this.linkGeneration) return;
     this.world.load(blocks, answer);
+    this.setLoading('building');
   }
 
   private sendInventoryOp = (seq: number, op: InventoryOp): boolean => this.link.send({ t: 'inv-op', seq, op });
@@ -513,6 +553,15 @@ export function getActivePlaygroundSession(): PlaygroundSession | null {
 function subscribeToPlaygroundSession(listener: () => void): () => void {
   listeners.add(listener);
   return () => { listeners.delete(listener); };
+}
+
+const NOT_LOADED: Loading = { phase: 'connecting', progress: 0 };
+const noLoadingSubscription = () => () => {};
+const notLoaded = () => NOT_LOADED;
+
+/** Where getting into the world stands (connecting outside a playground). */
+export function useLoading(session: PlaygroundSession | null): Loading {
+  return useSyncExternalStore(session?.subscribeLoading ?? noLoadingSubscription, session?.getLoading ?? notLoaded);
 }
 
 /** The session of the playground call you are in, or null outside one. */

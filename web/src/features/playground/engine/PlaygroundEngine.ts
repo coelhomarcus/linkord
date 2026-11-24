@@ -555,6 +555,7 @@ export class PlaygroundEngine {
     this.timer.update(time);
     const dt = Math.min(this.timer.getDelta(), MAX_FRAME_SECONDS);
     this.world.update(dt);
+    if (this.session.world.grid) this.session.reportBuild(this.world.buildProgress());
     this.followDeath();
     this.playHits();
 
