@@ -26,6 +26,7 @@ import { type ErrorCode } from '../http/errors.js';
 import * as moderation from '../modules/moderation/moderation.js';
 import * as streamPreview from '../modules/calls/streamPreview.js';
 import * as dmCalls from '../modules/calls/dmCalls.js';
+import * as playgroundCombat from '../modules/playground/combat.js';
 import { refusesImmediateJoin } from '../modules/calls/dmCallMachine.js';
 import { notePublishRights, publishRightsFor } from '../modules/calls/callPermissions.js';
 import { channelPermissions, toVoiceMode } from '../modules/servers/serverAccess.js';
@@ -55,6 +56,7 @@ export const handlers: HandlerTable = Object.assign(
   moderation.handlers,
   streamPreview.handlers,
   dmCalls.handlers,
+  playgroundCombat.handlers,
 );
 
 interface JoinMessage {
@@ -113,6 +115,11 @@ export const ACTION_LIMITS: Record<string, ActionLimit> = {
   // report is never sent again, so this leaves room for both at once and for two of the account's computers
   'activity-set': { windowMs: 60_000, max: 60, silent: true },
   'activity-settings-set': { windowMs: 60_000, max: 20 },
+  // a playground client reports its position at most ~7 times a second, and a punch per click; a
+  // dropped one is replaced by the next (playground/combat.ts)
+  'playground-pos': { windowMs: 10_000, max: 120, silent: true },
+  'playground-attack': { windowMs: 10_000, max: 120, silent: true },
+  'playground-respawn': { windowMs: 10_000, max: 10, silent: true },
 };
 
 // call-join and call-leave bypass the handler table; each one persists call membership.
