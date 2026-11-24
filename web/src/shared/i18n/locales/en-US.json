@@ -104,6 +104,7 @@
     "networkUpload": "Network error while uploading the file.",
     "uploadTimeout": "The server took too long to respond to the upload. Try again.",
     "codes": {
+      "playground_exists": "This server already has a playground.",
       "invalid_credentials": "Invalid username or password.",
       "account_unavailable": "This account is unavailable. Contact an administrator.",
       "account_deleted": "This account was deleted at its owner's request.",

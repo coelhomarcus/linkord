@@ -27,8 +27,11 @@ export function CreateChannelDialog({ server, target, onClose }: { server: Serve
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const category = target?.kind === 'channel' && target.categoryId ? server.categories.find((c) => c.id === target.categoryId) : null;
-  // a playground needs the server's playground service; outside RoomProvider it is offered
-  const kinds: ChannelKind[] = useOptionalRoomSelector((room) => room.playgroundEnabled) === false ? ['text', 'voice'] : ['text', 'voice', 'playground'];
+  // a playground needs the server's playground service (outside RoomProvider it is offered), and a
+  // server has one at most: its world is the server's
+  const servicePresent = useOptionalRoomSelector((room) => room.playgroundEnabled) !== false;
+  const hasPlayground = server.channels.some((channel) => channel.voiceMode === 'playground');
+  const kinds: ChannelKind[] = servicePresent && !hasPlayground ? ['text', 'voice', 'playground'] : ['text', 'voice'];
   const isCategory = target?.kind === 'category';
 
   function close() {
