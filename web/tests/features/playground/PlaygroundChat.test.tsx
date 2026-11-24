@@ -116,21 +116,24 @@ describe('PlaygroundChat', () => {
     expect(screen.getByRole('log')).toHaveTextContent('linha 31');
   });
 
-  it('draws links underlined and clickable, stickers and pictures, not only their text', () => {
+  it('draws links clickable, and stickers, pictures, files and mentions only as they look', () => {
     const withLink = message(1, 'olha https://example.com/mapa');
     const sticker = { ...message(2, ''), sticker: { id: 'st1', name: 'Joinha' } } as ChatMessage;
     const picture = { ...message(3, ''), attachments: [{ id: 'a1', name: 'print.png', mime: 'image/png', size: 10, thumbId: 't1', width: 100, height: 50 }] } as ChatMessage;
     const file = { ...message(4, ''), attachments: [{ id: 'a2', name: 'notas.txt', mime: 'text/plain', size: 10 }] } as ChatMessage;
+    const gif = message(5, 'https://static.klipy.com/ii/abc/1a/2b/gato.gif');
     setup({
       servers: [server([playground('geral'), channel({ id: 'geral', name: 'chat-geral' })])],
-      messagesByConversation: new Map([['geral', [withLink, sticker, picture, file]]]),
+      messagesByConversation: new Map([['geral', [withLink, sticker, picture, file, gif]]]),
     });
     const link = screen.getByRole('link', { name: 'https://example.com/mapa' });
     expect(link).toHaveAttribute('href', 'https://example.com/mapa');
     expect(link).toHaveAttribute('target', '_blank');
     expect(screen.getByRole('img', { name: 'Figurinha: Joinha' })).toHaveAttribute('src', '/api/stickers/st1');
     expect(screen.getByRole('img', { name: 'print.png' })).toHaveAttribute('src', '/uploads/t1');
-    expect(screen.getByRole('link', { name: 'notas.txt' })).toHaveAttribute('href', '/uploads/a2');
+    expect(screen.getByText('notas.txt')).toBeInTheDocument();
+    expect(screen.getAllByRole('link')).toEqual([link]);
+    expect(screen.getByRole('log').querySelector('button, [role="button"]')).toBeNull();
   });
 });
 

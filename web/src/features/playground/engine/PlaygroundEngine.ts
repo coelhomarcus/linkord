@@ -266,8 +266,8 @@ export class PlaygroundEngine {
   setMenuOpen(open: boolean): void {
     this.controls.enabled = !open;
     if (open && this.controls.locked) document.exitPointerLock();
-    // back to the game, unless something outside it took the focus meanwhile (the media viewer a
-    // picture in the chat opened): it keeps the keys until it closes
+    // back to the game, unless something outside it took the focus meanwhile (a dialog over the
+    // call): it keeps the keys until it closes
     const focused = document.activeElement;
     if (!open && (!focused || focused === document.body || this.container.contains(focused))) this.focus();
   }

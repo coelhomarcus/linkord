@@ -15,7 +15,6 @@ import type { PlaygroundPlayer } from './engine/PlaygroundEngine';
 import { nextCameraMode } from './engine/controls';
 import type { CameraMode } from './engine/controls';
 import { PlaygroundMenu } from './PlaygroundMenu';
-import { MediaViewerProvider } from '@/features/chat/MediaViewerProvider';
 import { PlaygroundChat } from './PlaygroundChat';
 import { PlaygroundDeathScreen } from './PlaygroundDeathScreen';
 import { PixelIcon } from './PixelIcon';
@@ -372,10 +371,7 @@ export default function PlaygroundStage({ allIds, onBack }: { allIds: string[]; 
       )}
 
       {!menuOpen && (!hudHidden || chatOpen) && activeCallConversationId && (
-        // the chat's pictures open here, and stay open once the chat closes
-        <MediaViewerProvider>
-          <PlaygroundChat callConversationId={activeCallConversationId} open={chatOpen} hudHeight={hudHeight} onClose={() => setChatOpen(false)} />
-        </MediaViewerProvider>
+        <PlaygroundChat callConversationId={activeCallConversationId} open={chatOpen} hudHeight={hudHeight} onClose={() => setChatOpen(false)} />
       )}
 
       {notices.length > 0 && (
