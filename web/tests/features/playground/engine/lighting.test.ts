@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { BLOCK } from '@game/blocks';
 import type { Block } from '@game/blocks';
-import { HEIGHT } from '@game/layout';
+import { HEIGHT, PLAZA_HEIGHT, SCREEN_WALL } from '@game/layout';
 import { BlockGrid } from '@game/grid';
-import { BlockLight, MAX_LIGHT, SkyLight } from '@game/light';
+import { BlockLight, MAX_LIGHT, SCREEN_LIGHT_CELLS, ScreenLight, SkyLight } from '@game/light';
 import { cornerBrightness, cornerOcclusion, lightmap, sideShade } from '@/features/playground/engine/lighting';
 
 /** flat stone up to y = 4, a stone roof over x 0..2 at y = 8 (but where `holes` says), a leaf block over
@@ -110,6 +110,58 @@ describe('BlockLight', () => {
     const light = new BlockLight(world);
     world.set(15, 5, 15, BLOCK.stone);
     expect(light.update(15, 5, 15)).toBeNull();
+  });
+});
+
+describe('ScreenLight', () => {
+  /** flat ground up to the plaza's surface and the screen's wall of frame blocks */
+  function plaza(): BlockGrid {
+    const world = new BlockGrid();
+    for (let x = -30; x <= 30; x++) for (let z = -40; z <= 10; z++) for (let y = 0; y < PLAZA_HEIGHT; y++) world.set(x, y, z, BLOCK.stone);
+    for (let x = SCREEN_WALL.minX; x < SCREEN_WALL.maxX; x++) for (let y = SCREEN_WALL.bottom; y < SCREEN_WALL.top; y++) world.set(x, y, SCREEN_WALL.z, BLOCK.frame);
+    return world;
+  }
+  const front = SCREEN_LIGHT_CELLS.z;
+
+  it('starts full in front of the picture and fades with distance across the plaza', () => {
+    const light = new ScreenLight(plaza());
+    expect(light.at(0, PLAZA_HEIGHT, front)).toBe(MAX_LIGHT);
+    expect(light.at(0, PLAZA_HEIGHT, front + 5)).toBe(MAX_LIGHT - 5);
+    expect(light.at(0, PLAZA_HEIGHT, front + 20)).toBe(0);
+  });
+
+  it('reaches behind the wall of the screen only the long way round, over its top', () => {
+    const light = new ScreenLight(plaza());
+    const behind = light.at(0, PLAZA_HEIGHT, SCREEN_WALL.z - 1);
+    expect(behind).toBeLessThan(light.at(0, PLAZA_HEIGHT, front + 2) - 6);
+  });
+
+  it('casts the shadow of a wall on the ground, the same as working it all out again', () => {
+    const world = plaza();
+    const light = new ScreenLight(world);
+    const before = light.at(0, PLAZA_HEIGHT, front + 6);
+    // a wall across the plaza, as high as the screen, a few blocks in front of it
+    for (let x = -12; x <= 12; x++) for (let y = PLAZA_HEIGHT; y <= PLAZA_HEIGHT + 10; y++) world.set(x, y, front + 3, BLOCK.stone);
+    for (let x = -12; x <= 12; x++) for (let y = PLAZA_HEIGHT; y <= PLAZA_HEIGHT + 10; y++) light.update(x, y, front + 3);
+    expect(light.at(0, PLAZA_HEIGHT, front + 6)).toBeLessThan(before);
+    expect(light.at(0, PLAZA_HEIGHT, front + 4)).toBeLessThan(light.at(0, PLAZA_HEIGHT, front + 2));
+    const fresh = new ScreenLight(world);
+    for (let x = -14; x <= 14; x++) for (let y = PLAZA_HEIGHT; y <= PLAZA_HEIGHT + 12; y++) for (let z = front; z <= front + 15; z++) expect(light.at(x, y, z)).toBe(fresh.at(x, y, z));
+  });
+
+  it('is covered by a block put right in front of the picture', () => {
+    const world = plaza();
+    world.set(0, PLAZA_HEIGHT + 2, front, BLOCK.stone);
+    const light = new ScreenLight(world);
+    expect(light.at(0, PLAZA_HEIGHT + 2, front)).toBe(0);
+    expect(light.at(1, PLAZA_HEIGHT + 2, front)).toBe(MAX_LIGHT);
+  });
+
+  it('says nothing changed when a block changes out of its reach', () => {
+    const world = plaza();
+    const light = new ScreenLight(world);
+    world.set(0, PLAZA_HEIGHT, 8, BLOCK.stone);
+    expect(light.update(0, PLAZA_HEIGHT, 8)).toBeNull();
   });
 });
 

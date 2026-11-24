@@ -1,6 +1,6 @@
 import { blockDef, type Block } from './blocks.js';
 import { BlockGrid, CELL_COUNT } from './grid.js';
-import { HALF, HEIGHT } from './layout.js';
+import { HALF, HEIGHT, SCREEN } from './layout.js';
 
 // The light in every cell of a world, in two channels as the block game keeps
 // it, each 0..15. Sky light falls straight down from the open sky at full
@@ -10,7 +10,8 @@ import { HALF, HEIGHT } from './layout.js';
 // `light`) and spreads the same way in every direction. A change relights only
 // the cells it can reach. Nothing of it is stored: it all follows from the
 // blocks, so the service (where monsters may appear) and every browser (which
-// draws it, web/src/features/playground/engine/lighting.ts) agree.
+// draws it, web/src/features/playground/engine/lighting.ts) agree. A third
+// channel, ScreenLight, is the big screen's glow: only browsers draw it.
 //
 // The rules are minecraft-renderer's (github.com/zardoy/minecraft-web-client,
 // MIT, Copyright (c) 2020 PrismarineJS) and the game's.
@@ -195,6 +196,63 @@ export class BlockLight extends LightChannel {
         for (let z = box.z0; z <= box.z1; z++) {
           const index = BlockGrid.index(x, y, z);
           const light = blockDef(this.grid.get(x, y, z)).light;
+          this.levels[index] = light;
+          if (light > 1) queue.push(index);
+        }
+      }
+    }
+    this.rimInto(box, queue);
+    this.spread(box, queue);
+  }
+}
+
+/** The cells just in front of the big screen's picture, where its glow starts: a box, inclusive. */
+export const SCREEN_LIGHT_CELLS = {
+  minX: Math.floor(SCREEN.x - SCREEN.width / 2), maxX: Math.ceil(SCREEN.x + SCREEN.width / 2) - 1,
+  minY: Math.floor(SCREEN.y - SCREEN.height / 2), maxY: Math.ceil(SCREEN.y + SCREEN.height / 2) - 1,
+  z: Math.floor(SCREEN.z),
+} as const;
+
+const inScreenCells = (x: number, y: number, z: number) =>
+  z === SCREEN_LIGHT_CELLS.z && x >= SCREEN_LIGHT_CELLS.minX && x <= SCREEN_LIGHT_CELLS.maxX && y >= SCREEN_LIGHT_CELLS.minY && y <= SCREEN_LIGHT_CELLS.maxY;
+
+/** How far the big screen reaches, 0..15 in every cell, spread as block light is from the cells in front
+ * of its picture: walls cast its shadow, and a block put right in front of it covers it. Only where the
+ * light gets to; its colour is what is on the screen, which the browser keeps apart (engine/screenGlow.ts)
+ * so a new colour never relights anything. */
+export class ScreenLight extends LightChannel {
+  constructor(grid: LightGrid) {
+    super(grid);
+    const c = SCREEN_LIGHT_CELLS;
+    this.relight(clampBox(c.minX - REACH, c.maxX + REACH, c.minY - REACH, c.maxY + REACH, c.z - REACH, c.z + REACH));
+  }
+
+  /** The screen's light in the cell (x, y, z); none outside the world. */
+  at(x: number, y: number, z: number): number {
+    if (!BlockGrid.inside(x, y, z)) return 0;
+    return this.level(x, y, z);
+  }
+
+  /** The light again after the block at (x, y, z) changed; the box of cells whose light changed, or null. */
+  update(x: number, y: number, z: number): LightChange | null {
+    const c = SCREEN_LIGHT_CELLS;
+    // nothing changes beyond the light's reach of the screen
+    if (x < c.minX - REACH || x > c.maxX + REACH || y < c.minY - REACH || y > c.maxY + REACH || Math.abs(z - c.z) > REACH) return null;
+    const box = clampBox(x - REACH, x + REACH, y - REACH, y + REACH, z - REACH, z + REACH);
+    const before = this.snapshot(box);
+    this.relight(box);
+    return this.changed(box, before);
+  }
+
+  /** Works the light out again in the box from the screen's cells in it (less what a block there lets
+   * through) and the light of the cells around it. */
+  private relight(box: Box): void {
+    const queue: number[] = [];
+    for (let x = box.x0; x <= box.x1; x++) {
+      for (let y = box.y0; y <= box.y1; y++) {
+        for (let z = box.z0; z <= box.z1; z++) {
+          const index = BlockGrid.index(x, y, z);
+          const light = inScreenCells(x, y, z) ? Math.max(0, MAX_LIGHT - blockDef(this.grid.get(x, y, z)).lightOpacity) : 0;
           this.levels[index] = light;
           if (light > 1) queue.push(index);
         }

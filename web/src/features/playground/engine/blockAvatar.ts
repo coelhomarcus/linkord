@@ -157,7 +157,7 @@ export class BlockAvatar {
   private age = Math.random() * 10;
   /** seconds into a punch, or null */
   private punch: number | null = null;
-  private light = 1;
+  private readonly light = new THREE.Color(1, 1, 1);
   private hurtLeft = 0;
   /** seconds since dying, or null while alive */
   private dying: number | null = null;
@@ -200,16 +200,17 @@ export class BlockAvatar {
     this.pose({ speed: 0, headYaw: 0, headPitch: 0, crouching: false }, 0);
   }
 
-  /** How lit the spot it stands on is (0..1, lighting.ts's lightmap): dimmer under trees and overhangs. */
-  setLight(brightness: number): void {
-    if (brightness === this.light) return;
-    this.light = brightness;
+  /** How lit the spot it stands on is (voxelWorld.ts's lightAt): dimmer under trees and overhangs, tinted
+   * in front of the big screen. */
+  setLight(light: THREE.Color): void {
+    if (light.equals(this.light)) return;
+    this.light.copy(light);
     this.applyLight();
   }
 
   private applyLight(): void {
-    this.materials?.inner.color.setScalar(this.light);
-    this.materials?.outer.color.setScalar(this.light);
+    this.materials?.inner.color.copy(this.light);
+    this.materials?.outer.color.copy(this.light);
     this.held?.setLight(this.light);
   }
 
@@ -456,7 +457,7 @@ export class FirstPersonArm {
   private readonly arm = new THREE.Group();
   private readonly item = new THREE.Group();
   private held: ItemModel | null = null;
-  private light = 1;
+  private readonly light = new THREE.Color(1, 1, 1);
   private materials: SkinMaterials | null = null;
   private slim = false;
   private swingTime: number | null = null;
@@ -486,11 +487,11 @@ export class FirstPersonArm {
   }
 
   /** The light where the player stands, as BlockAvatar.setLight. */
-  setLight(brightness: number): void {
-    this.light = brightness;
-    this.materials?.inner.color.setScalar(brightness);
-    this.materials?.outer.color.setScalar(brightness);
-    this.held?.setLight(brightness);
+  setLight(light: THREE.Color): void {
+    this.light.copy(light);
+    this.materials?.inner.color.copy(light);
+    this.materials?.outer.color.copy(light);
+    this.held?.setLight(light);
   }
 
   /** What the hand holds (a model the arm then owns), or nothing: the bare arm. */

@@ -190,14 +190,16 @@ export class PlaygroundEngine {
 
     this.world = buildWorld(this.scene, session.world);
     this.scene.add(this.outline.object, this.breakOverlay.object);
-    this.particles = new Particles(this.terrain, (x, y, z) => this.brightnessAt(x, y, z));
+    this.particles = new Particles(this.terrain, (x, y, z, out) => this.world.lightAt(x, y, z, out));
     this.scene.add(this.particles.group);
     this.models = new ItemModels(this.world.atlas);
-    this.dropped = new DroppedItems(this.models, () => session.world.grid, (x, y, z) => this.brightnessAt(x, y, z));
+    this.dropped = new DroppedItems(this.models, () => session.world.grid, (x, y, z, out) => this.world.lightAt(x, y, z, out));
     this.scene.add(this.dropped.group);
     this.dropped.reset(session.world.items.values());
     this.screen = new ScreenDisplay(options.screenLabels);
     this.scene.add(this.screen.group);
+    // the same zones, kept up to date in place by the screen
+    this.world.setScreenGlow(this.screen.glow.zones);
 
     const start = session.local;
     this.body = createBody(start.x, start.y, start.z);
@@ -403,10 +405,6 @@ export class PlaygroundEngine {
     if (id === this.options.localId) return this.position.clone().setY(this.position.y + 0.8);
     const remote = this.remotes.get(id);
     return remote?.placed ? remote.position.clone().setY(remote.position.y + 0.8) : null;
-  }
-
-  private brightnessAt(x: number, y: number, z: number): number {
-    return this.world.brightnessAt(x, y, z);
   }
 
   private heldItem(): string | null {
@@ -636,13 +634,13 @@ export class PlaygroundEngine {
     this.particles.update(partial);
     this.dropped.update(dt);
     this.placeCamera(partial);
+    this.screen.update(dt);
     // the sky, the sun and the moon around this frame's eye
     this.world.update(dt, this.session.world.clock(time), this.camera.position);
     this.camera.getWorldDirection(this.earForward);
     this.sounds.listen(this.camera.position.x, this.camera.position.y, this.camera.position.z, this.earForward, this.camera.up);
     this.aimOutline();
     this.followWater();
-    this.screen.update();
     this.renderer.render(this.scene, this.camera);
     if (this.controls.mode === 'first' && this.armShown) {
       // the arm in its own pass, over everything: it never sinks into a wall
@@ -710,9 +708,11 @@ export class PlaygroundEngine {
     if (body.onGround && !sneaking && below && this.steps.step(moved)) this.sounds.footstep(below, feet);
   }
 
-  /** How lit someone standing at `at` is: the sky light in the cell at their chest. */
-  private lightAt(at: THREE.Vector3): number {
-    return this.brightnessAt(at.x, at.y + 1, at.z);
+  private readonly bodyLight = new THREE.Color();
+
+  /** How lit someone standing at `at` is: the light in the cell at their chest. */
+  private lightAt(at: THREE.Vector3): THREE.Color {
+    return this.world.lightAt(at.x, at.y + 1, at.z, this.bodyLight);
   }
 
   /** With the eyes in water, the view closes in, blue. */

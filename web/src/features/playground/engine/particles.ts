@@ -68,14 +68,15 @@ export class Particles {
   private readonly particles: Particle[] = [];
   private readonly emitters: Emitter[] = [];
   private readonly terrain: Pick<Terrain, 'isSolid'>;
-  private readonly lightAt: (x: number, y: number, z: number) => number;
+  private readonly lightAt: (x: number, y: number, z: number, out: THREE.Color) => THREE.Color;
+  private readonly light = new THREE.Color();
   private readonly crit: THREE.Texture;
   private readonly damage: THREE.Texture;
   private readonly flame: THREE.Texture;
   /** the puff's frames, from the largest (smoke's too) */
   private readonly poof: THREE.Texture[];
 
-  constructor(terrain: Pick<Terrain, 'isSolid'>, lightAt: (x: number, y: number, z: number) => number) {
+  constructor(terrain: Pick<Terrain, 'isSolid'>, lightAt: (x: number, y: number, z: number, out: THREE.Color) => THREE.Color) {
     this.terrain = terrain;
     this.lightAt = lightAt;
     const loader = new THREE.TextureLoader();
@@ -269,8 +270,8 @@ export class Particles {
       if (p.kind === 'poof' || p.kind === 'smoke') p.material.map = this.poof[Math.min(this.poof.length - 1, Math.floor((p.age * this.poof.length) / p.maxAge))]!;
       p.sprite.scale.setScalar(size * UNIT_SIZE);
       // a flame gives its own light
-      const light = p.kind === 'flame' ? 1 : this.lightAt(x, y, z);
-      p.material.color.setRGB(p.r * light, p.g * light, p.b * light);
+      const light = p.kind === 'flame' ? this.light.setScalar(1) : this.lightAt(x, y, z, this.light);
+      p.material.color.setRGB(p.r * light.r, p.g * light.g, p.b * light.b);
     }
   }
 

@@ -23,7 +23,8 @@ export interface ItemModel {
   shape: ItemShape;
   /** a tool or a stick, held by its handle (the game's item/handheld model); other pictures are held flat */
   handheld: boolean;
-  setLight(brightness: number): void;
+  /** the light where it is (voxelWorld.ts's lightAt) */
+  setLight(light: THREE.Color): void;
   dispose(): void;
 }
 
@@ -133,7 +134,7 @@ export class ItemModels {
       }
       const material = new THREE.MeshBasicMaterial({ map: this.atlas, vertexColors: true, alphaTest: 0.5 });
       object.add(new THREE.Mesh(geometry, material));
-      return { object, shape: 'block', handheld: false, setLight: (b) => material.color.setScalar(b), dispose: () => { object.removeFromParent(); material.dispose(); } };
+      return { object, shape: 'block', handheld: false, setLight: (light) => material.color.copy(light), dispose: () => { object.removeFromParent(); material.dispose(); } };
     }
     // both sides: a hand may show it mirrored
     const material = new THREE.MeshBasicMaterial({ vertexColors: true, side: THREE.DoubleSide });
@@ -147,7 +148,7 @@ export class ItemModels {
       if (geometry && !gone && !this.disposed) object.add(new THREE.Mesh(geometry, material));
     });
     const handheld = !!itemDef(itemId)?.tool || itemId === 'stick';
-    return { object, shape: 'flat', handheld, setLight: (b) => material.color.setScalar(b), dispose: () => { gone = true; object.removeFromParent(); material.dispose(); } };
+    return { object, shape: 'flat', handheld, setLight: (light) => material.color.copy(light), dispose: () => { gone = true; object.removeFromParent(); material.dispose(); } };
   }
 
   dispose(): void {

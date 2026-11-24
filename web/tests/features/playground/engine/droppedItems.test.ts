@@ -38,7 +38,7 @@ describe('DroppedItems', () => {
 
   it('falls smoothly: drawn between its ticks at the frame rate, not in 20-a-second jumps', () => {
     const grid = flat();
-    const dropped = new DroppedItems(models, () => grid, () => 1);
+    const dropped = new DroppedItems(models, () => grid, (_x, _y, _z, out) => out.setScalar(1));
     dropped.add(item());
     const heights: number[] = [];
     // 60 frames a second for half a second: every frame shows it a little lower
@@ -52,7 +52,7 @@ describe('DroppedItems', () => {
 
   it('glides to where it is heard to be now instead of jumping there', () => {
     const grid = flat();
-    const dropped = new DroppedItems(models, () => grid, () => 1);
+    const dropped = new DroppedItems(models, () => grid, (_x, _y, _z, out) => out.setScalar(1));
     dropped.add(item({ y: GROUND }));
     for (let frame = 0; frame < 10; frame++) dropped.update(1 / 60);
     const before = heightOf(dropped);

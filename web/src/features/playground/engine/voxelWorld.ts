@@ -2,15 +2,16 @@ import * as THREE from 'three';
 import { BLOCK, blockDef } from '@game/blocks';
 import type { Block } from '@game/blocks';
 import type { BlockGrid } from '@game/grid';
-import { HALF, HEIGHT, SEA_LEVEL, SIZE } from '@game/layout';
+import { HALF, HEIGHT, SCREEN, SEA_LEVEL, SIZE } from '@game/layout';
 import type { WorldState } from '../worldState';
-import { BlockLight, MAX_LIGHT, SkyLight } from '@game/light';
+import { BlockLight, MAX_LIGHT, ScreenLight, SkyLight } from '@game/light';
 import type { LightChange } from '@game/light';
 import { applyPackTiles, blockAtlas, chestUv, faceTile, faceTurned, packLantern, packWater, tileUv, waterTexture } from './blockTextures';
 import { hasModel, modelFaces } from './blockModels';
 import { CHEST_FACES, isChest, turnInCell, turnVector } from './chestModel';
 import { Clouds } from './clouds';
 import { cornerBrightness, cornerOcclusion, lightmap, sideShade } from './lighting';
+import { glowAt, GLOW_ZONES, type Rgb } from './screenGlow';
 import { Sky, sunDirection } from './sky';
 import { daylight, MAX_SKY_DARKEN, skyDarken } from '@game/dayTime';
 
@@ -21,7 +22,10 @@ import { daylight, MAX_SKY_DARKEN, skyDarken } from '@game/dayTime';
 // averaged around it (game/light.ts, lighting.ts); the shader darkens the sky
 // light with the time of day (game/dayTime.ts: 15 by day is 4 at night, a
 // little blue), so a sunset needs no rebuilding, and takes the brighter of it
-// and the block light, warm as torchlight is. Torches and lanterns are their
+// and the block light, warm as torchlight is. The big screen's light is a third
+// value per corner (game/light.ts's ScreenLight) that the shader multiplies by
+// the colour on the screen (screenGlow.ts), uniforms that change without a
+// rebuild, and adds on top. Torches and lanterns are their
 // models (blockModels.ts), lit by their own cell. The sun, moving across the sky (sky.ts), casts shadows on top: a
 // shadow map, as minecraft-renderer's sun shadows (github.com/zardoy/
 // minecraft-web-client, MIT, Copyright (c) 2020 PrismarineJS) do it, taking sky
@@ -54,6 +58,10 @@ const SHADOW_FROM = 0.08;
 const SHADOW_FULL = 0.3;
 /** the moonlight's colour, which the sky's light takes on as it darkens */
 const NIGHT_TINT = new THREE.Color(0.78, 0.82, 1);
+/** how strong the big screen's light is by day and at night: a hint in the sun, clear in the dark */
+const SCREEN_GLOW = { day: 0.15, night: 0.9 } as const;
+/** an averaged picture is a dim colour: its light is brought up by this much (and kept under 1) */
+const SCREEN_GLOW_GAIN = 2.5;
 
 /** How bright light of `level` (0..15) is with the sky darkened by `darken` steps: the sky light a
  * block face or a person gets now. */
@@ -83,14 +91,26 @@ function faceShown(block: Block, neighbour: Block): boolean {
   return true;
 }
 
-/** `colors` is a corner's shade and occlusion, `light` and `blockLight` the sky and block light around it (0..1) */
-interface Arrays { positions: number[]; normals: number[]; uvs: number[]; colors: number[]; light: number[]; blockLight: number[]; indices: number[] }
-const arrays = (): Arrays => ({ positions: [], normals: [], uvs: [], colors: [], light: [], blockLight: [], indices: [] });
+/** `colors` is a corner's shade and occlusion, `light`, `blockLight` and `screenLight` the sky, block and
+ * screen light around it (0..1) */
+interface Arrays { positions: number[]; normals: number[]; uvs: number[]; colors: number[]; light: number[]; blockLight: number[]; screenLight: number[]; indices: number[] }
+const arrays = (): Arrays => ({ positions: [], normals: [], uvs: [], colors: [], light: [], blockLight: [], screenLight: [], indices: [] });
 
-/** Both channels of the world's light. */
-interface Light { sky: SkyLight; block: BlockLight }
+/** Every channel of the world's light. */
+interface Light { sky: SkyLight; block: BlockLight; screen: ScreenLight }
 
-function toGeometry({ positions, normals, uvs, colors, light, blockLight, indices }: Arrays): THREE.BufferGeometry {
+/** The light of one cell, 0..15 a channel. */
+interface CellLight { sky: number; block: number; screen: number }
+const cellLight = (light: Light, x: number, y: number, z: number): CellLight =>
+  ({ sky: light.sky.at(x, y, z), block: light.block.at(x, y, z), screen: light.screen.at(x, y, z) });
+
+function pushLight(out: Arrays, { sky, block, screen }: CellLight): void {
+  out.light.push(sky / MAX_LIGHT);
+  out.blockLight.push(block / MAX_LIGHT);
+  out.screenLight.push(screen / MAX_LIGHT);
+}
+
+function toGeometry({ positions, normals, uvs, colors, light, blockLight, screenLight, indices }: Arrays): THREE.BufferGeometry {
   const geometry = new THREE.BufferGeometry();
   geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
   geometry.setAttribute('normal', new THREE.Float32BufferAttribute(normals, 3));
@@ -98,6 +118,7 @@ function toGeometry({ positions, normals, uvs, colors, light, blockLight, indice
   geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
   geometry.setAttribute('skyLight', new THREE.Float32BufferAttribute(light, 1));
   geometry.setAttribute('blockLight', new THREE.Float32BufferAttribute(blockLight, 1));
+  geometry.setAttribute('screenLight', new THREE.Float32BufferAttribute(screenLight, 1));
   geometry.setIndex(indices);
   geometry.computeBoundingSphere();
   return geometry;
@@ -122,11 +143,11 @@ function chunkGeometry(grid: BlockGrid, light: Light, world: WorldState, cx: num
         const furnace = block === BLOCK.furnace ? world.furnaceAt(x, y, z) ?? undefined : undefined;
         const state = grid.stateAt(x, y, z);
         if (isChest(block)) {
-          chestFaces(blocks, block, state, sky.at(x, y, z), light.block.at(x, y, z), x, y, z);
+          chestFaces(blocks, block, state, cellLight(light, x, y, z), x, y, z);
           continue;
         }
         if (hasModel(block)) {
-          modelFacesInto(blocks, block as typeof BLOCK.torch | typeof BLOCK.lantern, state, sky.at(x, y, z), light.block.at(x, y, z), x, y, z);
+          modelFacesInto(blocks, block as typeof BLOCK.torch | typeof BLOCK.lantern, state, cellLight(light, x, y, z), x, y, z);
           continue;
         }
         FACES.forEach((face, faceIndex) => {
@@ -157,11 +178,13 @@ function chunkGeometry(grid: BlockGrid, light: Light, world: WorldState, cx: num
             // smooth light: the cells around the corner that light can be in
             let skyLight = 0;
             let blockLight = 0;
+            let screenLight = 0;
             let lit = 0;
             cells.forEach(([bx, by, bz], index) => {
               if (index > 0 && opaque(grid.get(bx, by, bz))) return;
               skyLight += sky.at(bx, by, bz);
               blockLight += light.block.at(bx, by, bz);
+              screenLight += light.screen.at(bx, by, bz);
               lit++;
             });
             const level = lit ? skyLight / lit : MAX_LIGHT;
@@ -169,8 +192,7 @@ function chunkGeometry(grid: BlockGrid, light: Light, world: WorldState, cx: num
             brightness.push(cornerBrightness(face.shade, occlusion, Math.max(level, blockLevel)));
             const shade = cornerBrightness(face.shade, occlusion, MAX_LIGHT);
             blocks.colors.push(shade, shade, shade);
-            blocks.light.push(level / MAX_LIGHT);
-            blocks.blockLight.push(blockLevel / MAX_LIGHT);
+            pushLight(blocks, { sky: level, block: blockLevel, screen: lit ? screenLight / lit : 0 });
           }
           // split the quad along its brighter diagonal, or the occlusion shows a seam across it
           if (brightness[0]! + brightness[3]! > brightness[1]! + brightness[2]!) {
@@ -205,7 +227,7 @@ function pushQuad(out: Arrays, start: number, corners: readonly (readonly [numbe
 
 /** A torch's or lantern's model (blockModels.ts) in its state, lit by the light of its own cell; a
  * lantern's faces get the fixed shade of the way they point, a torch's none, as in the game. */
-function modelFacesInto(out: Arrays, block: typeof BLOCK.torch | typeof BLOCK.lantern, state: number, light: number, blockLight: number, x: number, y: number, z: number): void {
+function modelFacesInto(out: Arrays, block: typeof BLOCK.torch | typeof BLOCK.lantern, state: number, light: CellLight, x: number, y: number, z: number): void {
   const tile = tileUv(faceTile(block, 0, undefined, state));
   for (const face of modelFaces(block, state)) {
     const start = out.positions.length / 3;
@@ -220,8 +242,7 @@ function modelFacesInto(out: Arrays, block: typeof BLOCK.torch | typeof BLOCK.la
       const v = (pv + Math.sign(cv - pv) * 0.01) / 16;
       out.uvs.push(tile.u0 + u * (tile.u1 - tile.u0), tile.v1 - v * (tile.v1 - tile.v0));
       out.colors.push(shade, shade, shade);
-      out.light.push(light / MAX_LIGHT);
-      out.blockLight.push(blockLight / MAX_LIGHT);
+      pushLight(out, light);
     });
     pushQuad(out, start, face.corners, face.normal);
   }
@@ -229,7 +250,7 @@ function modelFacesInto(out: Arrays, block: typeof BLOCK.torch | typeof BLOCK.la
 
 /** A chest's three boxes (chestModel.ts), turned to face where its state says, lit by the light of its own
  * cell; each face gets the fixed shade of the way it now points. */
-function chestFaces(out: Arrays, block: typeof BLOCK.chest | typeof BLOCK.creativeChest, state: number, light: number, blockLight: number, x: number, y: number, z: number): void {
+function chestFaces(out: Arrays, block: typeof BLOCK.chest | typeof BLOCK.creativeChest, state: number, light: CellLight, x: number, y: number, z: number): void {
   for (const face of CHEST_FACES) {
     const start = out.positions.length / 3;
     const normal = turnVector(face.normal, state);
@@ -244,8 +265,7 @@ function chestFaces(out: Arrays, block: typeof BLOCK.chest | typeof BLOCK.creati
       const [cu, cv] = face.uvs.reduce(([su, sv], [u, v]) => [su + u / 4, sv + v / 4], [0, 0]);
       out.uvs.push(...chestUv(block, tu + Math.sign(cu - tu) * 0.01, tv + Math.sign(cv - tv) * 0.01));
       out.colors.push(shade, shade, shade);
-      out.light.push(light / MAX_LIGHT);
-      out.blockLight.push(blockLight / MAX_LIGHT);
+      pushLight(out, light);
     });
     // the game's polygons go round either way: keep the one whose front is outside
     pushQuad(out, start, corners, normal);
@@ -260,8 +280,7 @@ function waterFaces(grid: BlockGrid, light: Light, out: Arrays, x: number, y: nu
     const [dx, dy, dz] = face.dir;
     if (!faceShown(BLOCK.water, grid.get(x + dx, y + dy, z + dz))) return;
     const start = out.positions.length / 3;
-    const level = light.sky.at(x + dx, y + dy, z + dz) / MAX_LIGHT;
-    const blockLevel = light.block.at(x + dx, y + dy, z + dz) / MAX_LIGHT;
+    const front = cellLight(light, x + dx, y + dy, z + dz);
     for (const [cx, cy, cz] of face.corners) {
       const py = y + (cy ? top : 0);
       out.positions.push(x + cx, py, z + cz);
@@ -269,15 +288,16 @@ function waterFaces(grid: BlockGrid, light: Light, out: Arrays, x: number, y: nu
       // the texture repeats once a block: tops by x and z, sides along the face and up
       out.uvs.push(dy !== 0 ? x + cx : dx !== 0 ? z + cz : x + cx, dy !== 0 ? z + cz : py);
       out.colors.push(face.shade, face.shade, face.shade);
-      out.light.push(level);
-      out.blockLight.push(blockLevel);
+      pushLight(out, front);
     }
     out.indices.push(start, start + 1, start + 2, start + 2, start + 1, start + 3);
   });
 }
 
-/** The uniforms the time of day moves, shared by the blocks' and the water's materials. */
+/** The uniforms the time of day and the big screen move, shared by the blocks' and the water's materials. */
 interface DayUniforms {
+  /** the screen's light at full strength in its left, centre and right zones, already scaled for the time of day */
+  screenGlow: { value: THREE.Color[] };
   /** steps the sky light loses now (0..11) */
   skyDarken: { value: number };
   /** the colour the sky's light takes on (white by day) */
@@ -288,6 +308,7 @@ interface DayUniforms {
 }
 
 const dayUniforms = (): DayUniforms => ({
+  screenGlow: { value: Array.from({ length: GLOW_ZONES }, () => new THREE.Color(0, 0, 0)) },
   skyDarken: { value: 0 },
   skyTint: { value: new THREE.Color(1, 1, 1) },
   sunStrength: { value: 1 },
@@ -297,10 +318,18 @@ const dayUniforms = (): DayUniforms => ({
 /** The light a corner gets now: its baked sky light (lighting.ts's lightmap, darkened, in `sun` of its
  * strength where the sun's shadow falls) or its block light, whichever is brighter. Block light is warm:
  * white at full, its green and blue falling off faster than its red as it dims, the game's lightmap's
- * torchlight. */
+ * torchlight. The big screen's light adds to either, in the colour of the screen's zone nearest along x
+ * (screenGlow.ts's glowAt), falling off with the square of its level so it is bright close to the screen
+ * and a wall's shadow behind it shows, though the light bends round its edges as block light does. */
 const LIGHT_GLSL = /* glsl */ `
   uniform float skyDarken;
   uniform vec3 skyTint;
+  uniform vec3 screenGlow[${GLOW_ZONES}];
+  vec3 screenLightAt(float screenLight, float x) {
+    float t = clamp((x - ${SCREEN.x.toFixed(1)}) / ${(SCREEN.width / 3).toFixed(4)}, -1.0, 1.0);
+    vec3 side = t < 0.0 ? screenGlow[0] : screenGlow[2];
+    return mix(screenGlow[1], side, abs(t)) * screenLight * screenLight;
+  }
   vec3 cornerLight(float skyLight, float blockLight, float sun) {
     float level = max(0.0, skyLight * ${MAX_LIGHT.toFixed(1)} - skyDarken) / ${MAX_LIGHT.toFixed(1)};
     vec3 sky = vec3(${lightmap(0).toFixed(4)} + level * ${(1 - lightmap(0)).toFixed(4)}) * skyTint * sun;
@@ -332,16 +361,20 @@ function blockMaterial(map: THREE.Texture, uniforms: DayUniforms, water = false)
       uniform mat3 mapTransform;
       attribute float skyLight;
       attribute float blockLight;
+      attribute float screenLight;
       varying vec2 vUv;
       varying vec3 vShade;
       varying float vSkyLight;
       varying float vBlockLight;
+      varying float vScreenLight;
+      varying float vWorldX;
       varying vec3 vWorldNormal;
       void main() {
         vUv = (mapTransform * vec3(uv, 1.0)).xy;
         vShade = color;
         vSkyLight = skyLight;
         vBlockLight = blockLight;
+        vScreenLight = screenLight;
         #include <beginnormal_vertex>
         #include <defaultnormal_vertex>
         #include <begin_vertex>
@@ -352,6 +385,7 @@ function blockMaterial(map: THREE.Texture, uniforms: DayUniforms, water = false)
         #endif
         #include <fog_vertex>
         vWorldNormal = normalize(mat3(modelMatrix) * objectNormal);
+        vWorldX = (modelMatrix * vec4(transformed, 1.0)).x;
       }
     `,
     fragmentShader: /* glsl */ `
@@ -372,11 +406,13 @@ function blockMaterial(map: THREE.Texture, uniforms: DayUniforms, water = false)
       varying vec3 vShade;
       varying float vSkyLight;
       varying float vBlockLight;
+      varying float vScreenLight;
+      varying float vWorldX;
       varying vec3 vWorldNormal;
       void main() {
         vec4 texel = texture2D(map, vUv);
         #ifdef WATER
-        vec3 light = vShade * cornerLight(vSkyLight, vBlockLight, 1.0);
+        vec3 light = vShade * (cornerLight(vSkyLight, vBlockLight, 1.0) + screenLightAt(vScreenLight, vWorldX));
         gl_FragColor = vec4(texel.rgb * light, texel.a * ${WATER_OPACITY.toFixed(2)});
         #else
         // the holes in the leaves and the glass
@@ -385,7 +421,7 @@ function blockMaterial(map: THREE.Texture, uniforms: DayUniforms, water = false)
         // only: a torch lights a shadow as well as anywhere)
         float facing = smoothstep(-0.15, 0.15, dot(vWorldNormal, sunDirection));
         float sunlit = facing * getShadowMask();
-        vec3 light = vShade * cornerLight(vSkyLight, vBlockLight, mix(1.0, mix(SHADOWED_SKY_LIGHT, 1.0, sunlit), sunStrength));
+        vec3 light = vShade * (cornerLight(vSkyLight, vBlockLight, mix(1.0, mix(SHADOWED_SKY_LIGHT, 1.0, sunlit), sunStrength)) + screenLightAt(vScreenLight, vWorldX));
         gl_FragColor = vec4(texel.rgb * light, texel.a);
         #endif
         #include <tonemapping_fragment>
@@ -429,9 +465,12 @@ export interface World {
   /** advances what moves on its own: water, clouds, the sky and the sun at the world's `clock` around
    * the `eye`; rebuilds chunks that changed, as time allows */
   update(dt: number, clock: number, eye: THREE.Vector3): void;
-  /** how lit a point is now (0..1, lighting.ts's lightmap of its sky light, darkened at night, or of its
-   * block light, whichever is brighter), to light the people and items there */
-  brightnessAt(x: number, y: number, z: number): number;
+  /** how lit a point is now, into `out`: lighting.ts's lightmap of its sky light, darkened at night, or of
+   * its block light, whichever is brighter, and the big screen's coloured light on top; to light the people,
+   * items and particles there as the blocks around them are */
+  lightAt(x: number, y: number, z: number, out: THREE.Color): THREE.Color;
+  /** the colour on the big screen now, by zone (screenGlow.ts) */
+  setScreenGlow(zones: readonly Rgb[]): void;
   /** blocks that changed: their light is worked out again and the chunks they touch rebuilt */
   blocksChanged(cells: readonly [number, number, number][]): void;
   /** a furnace lit or put out: its block is drawn again */
@@ -491,7 +530,17 @@ export function buildWorld(scene: THREE.Scene, state: WorldState): World {
     const open = darkenedLight(MAX_LIGHT, darken);
     seaMaterial.color.copy(day.skyTint.value).multiplyScalar(open);
     clouds.setDaylight(daylight(clock), day.skyTint.value);
+    const strength = THREE.MathUtils.lerp(SCREEN_GLOW.day, SCREEN_GLOW.night, darken / MAX_SKY_DARKEN);
+    day.screenGlow.value.forEach((color, zone) => {
+      const [r, g, b] = screenZones[zone]!;
+      color.setRGB(Math.min(1, r * SCREEN_GLOW_GAIN), Math.min(1, g * SCREEN_GLOW_GAIN), Math.min(1, b * SCREEN_GLOW_GAIN)).multiplyScalar(strength);
+    });
   }
+
+  /** the colour on the screen, by zone, as screenGlow.ts last gave it */
+  let screenZones: readonly Rgb[] = Array.from({ length: GLOW_ZONES }, (): Rgb => [0, 0, 0]);
+  const zoneColors: Rgb[] = day.screenGlow.value.map(() => [0, 0, 0]);
+  const glow: Rgb = [0, 0, 0];
 
   let light: Light | null = null;
   const chunks: Chunk[] = Array.from({ length: CHUNKS * CHUNKS }, () => ({ blocks: null, water: null }));
@@ -544,7 +593,7 @@ export function buildWorld(scene: THREE.Scene, state: WorldState): World {
   let firstBuild = new Set<number>();
   function reload(): void {
     if (!state.grid) return;
-    light = { sky: new SkyLight(state.grid), block: new BlockLight(state.grid) };
+    light = { sky: new SkyLight(state.grid), block: new BlockLight(state.grid), screen: new ScreenLight(state.grid) };
     for (let i = 0; i < chunks.length; i++) dirty.add(i);
     firstBuild = new Set(dirty);
   }
@@ -552,16 +601,24 @@ export function buildWorld(scene: THREE.Scene, state: WorldState): World {
 
   return {
     atlas,
-    brightnessAt(x, y, z) {
-      if (!light) return darkenedLight(MAX_LIGHT, day.skyDarken.value);
+    lightAt(x, y, z, out) {
+      if (!light) return out.setScalar(darkenedLight(MAX_LIGHT, day.skyDarken.value));
       const [bx, by, bz] = [Math.floor(x), Math.floor(y), Math.floor(z)];
-      return Math.max(darkenedLight(light.sky.at(bx, by, bz), day.skyDarken.value), lightmap(light.block.at(bx, by, bz) / MAX_LIGHT));
+      out.setScalar(Math.max(darkenedLight(light.sky.at(bx, by, bz), day.skyDarken.value), lightmap(light.block.at(bx, by, bz) / MAX_LIGHT)));
+      const screen = (light.screen.at(bx, by, bz) / MAX_LIGHT) ** 2;
+      if (!screen) return out;
+      day.screenGlow.value.forEach((color, zone) => color.toArray(zoneColors[zone]!));
+      const [r, g, b] = glowAt(zoneColors, x, glow);
+      return out.setRGB(out.r + r * screen, out.g + g * screen, out.b + b * screen);
+    },
+    setScreenGlow(zones) {
+      screenZones = zones;
     },
     blocksChanged(cells) {
       if (!light) return;
       for (const [x, y, z] of cells) {
         markBox(x, x, z, z);
-        const changes: (LightChange | null)[] = [light.sky.update(x, z), light.block.update(x, y, z)];
+        const changes: (LightChange | null)[] = [light.sky.update(x, z), light.block.update(x, y, z), light.screen.update(x, y, z)];
         for (const change of changes) if (change) markBox(change.minX, change.maxX, change.minZ, change.maxZ);
       }
     },

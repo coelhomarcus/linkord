@@ -1,9 +1,11 @@
 import * as THREE from 'three';
 import { SCREEN } from '@game/layout';
 import { PIXEL_FONT } from '../pixelFont';
+import { ScreenGlow } from './screenGlow';
 
 // The big screen: one shared stream fitted inside its frame, or a resting
-// card saying how to put something on it.
+// card saying how to put something on it. Its light's colour follows the
+// picture (screenGlow.ts).
 
 export interface ScreenLabels {
   idle: string;
@@ -12,6 +14,8 @@ export interface ScreenLabels {
 
 export class ScreenDisplay {
   readonly group = new THREE.Group();
+  /** the colour of the light it gives off */
+  readonly glow = new ScreenGlow();
   private readonly picture: THREE.Mesh<THREE.PlaneGeometry, THREE.MeshBasicMaterial>;
   private readonly idleCanvas = document.createElement('canvas');
   private readonly idleTexture: THREE.CanvasTexture;
@@ -41,6 +45,7 @@ export class ScreenDisplay {
     this.videoTexture?.dispose();
     this.videoTexture = null;
     this.video = video;
+    this.glow.setVideo(video);
     this.fittedFor = '';
     if (video) {
       this.videoTexture = new THREE.VideoTexture(video);
@@ -53,8 +58,10 @@ export class ScreenDisplay {
     this.picture.material.needsUpdate = true;
   }
 
-  /** Letterboxes the stream to its own shape; a shared window can be any size and change mid-stream. */
-  update(): void {
+  /** Follows the picture's colour, and letterboxes the stream to its own shape; a shared window can be any
+   * size and change mid-stream. */
+  update(dt: number): void {
+    this.glow.update(dt);
     const video = this.video;
     if (!video || !video.videoWidth || !video.videoHeight) return;
     const key = `${video.videoWidth}x${video.videoHeight}`;
@@ -90,6 +97,7 @@ export class ScreenDisplay {
   }
 
   dispose(): void {
+    this.glow.dispose();
     this.videoTexture?.dispose();
     this.idleTexture.dispose();
     this.picture.geometry.dispose();

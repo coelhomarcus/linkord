@@ -43,10 +43,11 @@ export class DroppedItems {
   readonly group = new THREE.Group();
   private readonly models: ItemModels;
   private readonly grid: () => BlockGrid | null;
-  private readonly lightAt: (x: number, y: number, z: number) => number;
+  private readonly lightAt: (x: number, y: number, z: number, out: THREE.Color) => THREE.Color;
+  private readonly light = new THREE.Color();
   private readonly shown = new Map<number, Shown>();
 
-  constructor(models: ItemModels, grid: () => BlockGrid | null, lightAt: (x: number, y: number, z: number) => number) {
+  constructor(models: ItemModels, grid: () => BlockGrid | null, lightAt: (x: number, y: number, z: number, out: THREE.Color) => THREE.Color) {
     this.models = models;
     this.grid = grid;
     this.lightAt = lightAt;
@@ -123,7 +124,7 @@ export class DroppedItems {
     // resting on its bottom, bobbing a little above it, turning slowly
     object.position.set(at.x, at.y + size / 2 + 0.05 + Math.sin(entry.age * 2) * 0.05, at.z);
     object.rotation.y = entry.age;
-    entry.model.setLight(this.lightAt(at.x, at.y + 0.2, at.z));
+    entry.model.setLight(this.lightAt(at.x, at.y + 0.2, at.z, this.light));
   }
 
   update(dt: number): void {
