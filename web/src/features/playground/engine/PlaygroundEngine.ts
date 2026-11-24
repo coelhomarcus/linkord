@@ -12,7 +12,10 @@ import { cameraDistance } from './cameraCollision';
 import { lightmap, MAX_LIGHT } from './lighting';
 import { Controls, nextCameraMode } from './controls';
 import type { CameraMode } from './controls';
-import { createBody, SNEAKING_EYE_HEIGHT, STANDING_EYE_HEIGHT, stepBody, TICK_SECONDS } from './playerPhysics';
+import { applyKnockback, createBody, SNEAKING_EYE_HEIGHT, STANDING_EYE_HEIGHT, stepBody, TICK_SECONDS } from './playerPhysics';
+import { cellBox, rayBoxDistance, targetPlayer } from './playerTarget';
+import { isCriticalHit } from '../playgroundCombat';
+import type { PlaygroundHit } from '../playgroundCombat';
 import type { PhysicsBody } from './playerPhysics';
 import { computeBob, createBobState, tickBob } from './viewBob';
 import { ScreenDisplay } from './screen';
@@ -46,6 +49,8 @@ const MAX_TICKS_PER_FRAME = 5;
 const ATTACK_TICKS = 6;
 /** a peer moving slower than this (blocks per second) is standing */
 const STILL_SPEED = 0.3;
+/** a sprinting punch that lands slows the attacker to this much and ends the sprint, as in the game */
+const SPRINT_HIT_SLOWDOWN = 0.6;
 
 interface RemoteAvatar {
   userId: string;
@@ -260,10 +265,39 @@ export class PlaygroundEngine {
   }
 
   private swingArm(): void {
+    if (this.session.combat.isDead) return;
     this.arm.swing();
     this.local.swingArm();
     this.attackTicks = ATTACK_TICKS;
     this.swings = (this.swings + 1) & 0xff;
+    this.attack();
+  }
+
+  /** The punch lands on whoever the eyes look at, within reach and before any block. */
+  private attack(): void {
+    this.aim.set(0, 0, -1).applyQuaternion(this.viewQuaternion);
+    const block = targetBlock((x, y, z) => this.island.get(x, y, z) !== BLOCK.air, this.eye, this.aim);
+    const blockDistance = block ? rayBoxDistance(this.eye, this.aim, cellBox(block)) ?? Infinity : Infinity;
+    const { dead } = this.session.combat;
+    const candidates = [...this.remotes].filter(([id, remote]) => remote.placed && remote.avatar.root.visible && !dead.has(id));
+    const targetId = targetPlayer(this.eye, this.aim, candidates, blockDistance);
+    if (!targetId) return;
+    this.session.attack(targetId, isCriticalHit(this.body, this.body.fallDistance), this.sprinting);
+    if (this.sprinting) {
+      this.body.vx *= SPRINT_HIT_SLOWDOWN;
+      this.body.vz *= SPRINT_HIT_SLOWDOWN;
+      this.controls.stopSprint();
+      this.sprinting = false;
+    }
+  }
+
+  /** What the server decided about each punch: the knockback, if it was on you. */
+  private playHits(): void {
+    for (const hit of this.session.combat.takeHits()) this.playHit(hit);
+  }
+
+  private playHit(hit: PlaygroundHit): void {
+    if (hit.targetId === this.options.localId && hit.push) applyKnockback(this.body, hit.push, hit.extra);
   }
 
   private tick = (time: number): void => {
@@ -272,6 +306,7 @@ export class PlaygroundEngine {
     this.timer.update(time);
     const dt = Math.min(this.timer.getDelta(), MAX_FRAME_SECONDS);
     this.world.update(dt);
+    this.playHits();
 
     this.tickTime += dt;
     let ticks = 0;

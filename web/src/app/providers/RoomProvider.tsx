@@ -38,6 +38,7 @@ import { useOwnStatus } from '@/features/status/useOwnStatus';
 import { useActivitySettings } from '@/features/activity/useActivitySettings';
 import { useActivityReporter } from '@/features/activity/useActivityReporter';
 import { syncServerClock } from '@/features/activity/serverClock';
+import { getActivePlaygroundSession } from '@/features/playground/playgroundSession';
 import { useIdleReporter } from '@/features/status/useIdleReporter';
 import { useNotificationSettings } from '@/features/notifications/useNotificationSettings';
 import { badgeCounts, policyAlerts } from '@/features/notifications/notificationSettings';
@@ -373,6 +374,10 @@ export function RoomProvider({ children }: { children: ReactNode }) {
         break;
       case 'soundboard-play':
         soundboardEvents.onSoundboardPlay(m);
+        break;
+      case 'playground-hit':
+      case 'playground-health':
+        getActivePlaygroundSession()?.receive(m);
         break;
       case 'server-sounds-changed':
         soundboardEvents.onServerSoundsChanged(m);

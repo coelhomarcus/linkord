@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { createBody, stepBody, TICK_SECONDS } from '@/features/playground/engine/playerPhysics';
+import { applyKnockback, createBody, stepBody, TICK_SECONDS } from '@/features/playground/engine/playerPhysics';
 import type { PhysicsBody, PhysicsInput, Terrain } from '@/features/playground/engine/playerPhysics';
 
 const MAX_HEIGHT = 24;
@@ -118,5 +118,31 @@ describe('playerPhysics', () => {
       return body.x - x;
     };
     expect(distance(true)).toBeGreaterThan(distance(false) + 1);
+  });
+
+  it('counts how far it falls, only on the way down, and forgets it on landing', () => {
+    const body = createBody(0, 5, 0);
+    stepBody(terrain, body, input({ forward: 0, jump: true }), MAX_HEIGHT);
+    expect(body.fallDistance).toBe(0);
+    let fell = 0;
+    for (let i = 0; i < 30 && !body.onGround; i++) {
+      stepBody(terrain, body, input({ forward: 0 }), MAX_HEIGHT);
+      fell = Math.max(fell, body.fallDistance);
+    }
+    expect(fell).toBeGreaterThan(1);
+    expect(body.onGround).toBe(true);
+    expect(body.fallDistance).toBe(0);
+  });
+
+  it('takes a knockback the game\'s way: half its speed, the push, and up to 0.4 up', () => {
+    const body = { ...createBody(0, 5, 0), vx: 0.2, vy: -0.08, vz: 0 };
+    applyKnockback(body, [0.4, 0]);
+    expect(body.vx).toBeCloseTo(0.5);
+    expect(body.vy).toBeCloseTo(0.36);
+    expect(body.onGround).toBe(false);
+    const sprinted = { ...createBody(0, 5, 0), vy: 0.3 };
+    applyKnockback(sprinted, [0, 0.4], [0, 0.1, 0.5]);
+    expect(sprinted.vy).toBeCloseTo(0.5);
+    expect(sprinted.vz).toBeCloseTo(0.9);
   });
 });

@@ -2,6 +2,7 @@ import { useSyncExternalStore } from 'react';
 import { ConnectionState, RoomEvent } from 'livekit-client';
 import type { RemoteParticipant, Room } from 'livekit-client';
 import type { AudioHandle } from '@/state/RoomContext';
+import type { ClientMessage, ServerMessage } from '@/shared/types/protocol';
 import { clearSpatialGain, setSpatialGain } from '@/features/calls/participantVolume';
 import { decodeState, encodeState, PLAYGROUND_TOPIC, SKIN_TOPIC } from './playgroundProtocol';
 import { fetchAccountSkin, forgetLegacySkin, saveAccountSkin, takeLegacySkin } from './skins/accountSkin';
@@ -10,6 +11,7 @@ import type { Skin } from './skins/skins';
 import type { PlayerState } from './playgroundProtocol';
 import { proximityGain } from './proximity';
 import { spawnPoint } from './playgroundWorld';
+import { PlaygroundCombat } from './playgroundCombat';
 
 // Everything a playground call needs while you are in it, whether or not its
 // 3D view is on screen: where you stand, where everyone else last said they
@@ -24,6 +26,10 @@ import { spawnPoint } from './playgroundWorld';
 // A change is also sent to the others as a reliable packet of at most
 // MAX_SKIN_BYTES (an empty one meaning "my account's default"), after it is
 // saved: that is only the fast path, and what older tabs still listen for.
+//
+// Fighting is the server's (playgroundCombat.ts): the session also reports
+// your position to it over the socket, less often than to the others, sends
+// your punches and passes on what the server says about health.
 
 // a moving avatar is sent at most this often...
 const SEND_INTERVAL_MS = 66;
@@ -32,6 +38,8 @@ const HEARTBEAT_MS = 1000;
 const AUDIO_TICK_MS = 100;
 // a skin that could not be read (a network blip) is asked for again after this
 const SKIN_RETRY_MS = 5000;
+// the server only needs your position to measure a punch's reach (6 blocks of leeway)
+const SERVER_REPORT_MS = 150;
 
 /** Someone in the call, by connection and by account. */
 export interface PlaygroundMember {
@@ -62,6 +70,11 @@ export class PlaygroundSession {
   private disposed = false;
   private lastSentAt = 0;
   private lastSentKey = '';
+  private lastReportedAt = 0;
+  private lastReportedKey = '';
+  /** the next report asks the server for everyone's health, until one goes out */
+  private askHealth = true;
+  readonly combat: PlaygroundCombat;
   private timer: ReturnType<typeof setInterval> | null = null;
 
   private readonly room: Room;
@@ -69,13 +82,19 @@ export class PlaygroundSession {
   readonly localId: string;
   readonly localUserId: string;
   private readonly audio: { current: Map<string, AudioHandle> };
+  private readonly sendWs: (msg: ClientMessage) => boolean;
 
-  constructor(room: Room, conversationId: string, localId: string, localUserId: string, audio: { current: Map<string, AudioHandle> }) {
+  constructor(
+    room: Room, conversationId: string, localId: string, localUserId: string, audio: { current: Map<string, AudioHandle> },
+    sendWs: (msg: ClientMessage) => boolean = () => false,
+  ) {
     this.room = room;
     this.conversationId = conversationId;
     this.localId = localId;
     this.localUserId = localUserId;
     this.audio = audio;
+    this.sendWs = sendWs;
+    this.combat = new PlaygroundCombat(localId);
     const spawn = spawnPoint(localId);
     this.local = { ...spawn, pitch: 0, motion: 'idle', headYaw: spawn.yaw, crouch: false, swings: 0 };
   }
@@ -87,6 +106,7 @@ export class PlaygroundSession {
     this.room.on(RoomEvent.Reconnected, this.onConnected);
     this.timer = setInterval(this.tick, AUDIO_TICK_MS);
     this.send(true);
+    this.report();
     void this.loadLocalSkin();
   }
 
@@ -102,6 +122,24 @@ export class PlaygroundSession {
     this.retryTimers.clear();
     for (const handle of this.audio.current.values()) clearSpatialGain(handle.element);
     this.skinListeners.clear();
+    this.combat.dispose();
+  }
+
+  /** A punch that landed on someone, as this client saw it; the server decides whether it counts. */
+  attack(targetId: string, crit: boolean, sprint: boolean): void {
+    if (this.combat.isDead) return;
+    const { x, y, z, headYaw } = this.local;
+    this.sendWs({ t: 'playground-attack', targetId, x, y, z, yaw: headYaw, crit, sprint });
+  }
+
+  /** Back to life, once dead; the server answers with the health. */
+  respawn(): void {
+    this.sendWs({ t: 'playground-respawn' });
+  }
+
+  /** What the server says about this call's fighting (RoomProvider passes it on). */
+  receive(message: Extract<ServerMessage, { t: 'playground-hit' | 'playground-health' }>): void {
+    if (message.conversationId === this.conversationId && !this.disposed) this.combat.receive(message);
   }
 
   /** The skin an account chose, or null for its default. */
@@ -241,6 +279,7 @@ export class PlaygroundSession {
   setLocal(state: PlayerState): void {
     this.local = state;
     this.send(false);
+    this.report();
   }
 
   /** Who is in the call now: reads the skin of anyone new and drops what is known about anyone gone. */
@@ -272,6 +311,19 @@ export class PlaygroundSession {
     this.lastSentKey = key;
     // a full buffer or a lost permission only costs this one packet; the next frame tries again
     this.room.localParticipant.publishData(encodeState(this.local), { reliable: false, topic: PLAYGROUND_TOPIC }).catch(() => {});
+  }
+
+  private report(): void {
+    const now = performance.now();
+    const { x, y, z, headYaw } = this.local;
+    const key = `${x.toFixed(2)},${y.toFixed(2)},${z.toFixed(2)},${headYaw.toFixed(2)}`;
+    const due = this.askHealth || now - this.lastReportedAt >= HEARTBEAT_MS || (key !== this.lastReportedKey && now - this.lastReportedAt >= SERVER_REPORT_MS);
+    if (!due) return;
+    const sent = this.sendWs({ t: 'playground-pos', x, y, z, yaw: headYaw, ...(this.askHealth ? { first: true } : {}) });
+    if (!sent) return;
+    this.lastReportedAt = now;
+    this.lastReportedKey = key;
+    this.askHealth = false;
   }
 
   /** A change someone just saved. From a connection not yet in the roster it is ignored: the read
@@ -310,6 +362,7 @@ export class PlaygroundSession {
 
   private tick = (): void => {
     this.send(false);
+    this.report();
     for (const [key, handle] of this.audio.current) {
       // `<id>:screen` is a stream's own sound: the big screen is for everyone, wherever they stand
       if (key.includes(':')) continue;

@@ -4,6 +4,7 @@ import type { Room } from 'livekit-client';
 import { PlaygroundSession } from '@/features/playground/playgroundSession';
 import { SKIN_TOPIC } from '@/features/playground/playgroundProtocol';
 import { LOCAL_STORAGE_KEYS } from '@/shared/lib/localStorage';
+import type { ClientMessage } from '@/shared/types/protocol';
 
 const account = vi.hoisted(() => ({
   stored: new Map<string, Uint8Array | null>(),
@@ -169,3 +170,45 @@ describe('PlaygroundSession skins', () => {
     expect(fake.skinPackets()).toEqual([{ payload: [7], to: undefined }]);
   });
 });
+
+describe('PlaygroundSession fighting', () => {
+  function sessionWithSocket() {
+    const fake = fakeRoom();
+    const sendWs = vi.fn((_msg: ClientMessage) => true);
+    const session = new PlaygroundSession(fake.room, 'conv', 'conn-me', 'me', { current: new Map() }, sendWs);
+    const sent = (t: ClientMessage['t']) => sendWs.mock.calls.map(([msg]) => msg).filter((msg) => msg.t === t);
+    return { session, sendWs, sent };
+  }
+
+  beforeEach(() => {
+    account.fetchAccountSkin.mockReset().mockResolvedValue(null);
+  });
+
+  it('reports the position to the server, asking for everyone\'s health the first time', () => {
+    const { session, sent } = sessionWithSocket();
+    session.start();
+    expect(sent('playground-pos')).toEqual([{ t: 'playground-pos', x: session.local.x, y: session.local.y, z: session.local.z, yaw: session.local.headYaw, first: true }]);
+    // too soon after the last one
+    session.setLocal({ ...session.local, x: session.local.x + 1 });
+    expect(sent('playground-pos')).toHaveLength(1);
+    session.dispose();
+  });
+
+  it('sends a punch from where you stand, and none while dead', () => {
+    const { session, sent } = sessionWithSocket();
+    session.attack('conn-bia', true, false);
+    expect(sent('playground-attack')).toEqual([{ t: 'playground-attack', targetId: 'conn-bia', x: session.local.x, y: session.local.y, z: session.local.z, yaw: session.local.headYaw, crit: true, sprint: false }]);
+    session.receive({ t: 'playground-hit', conversationId: 'conv', attackerId: 'conn-bia', targetId: 'conn-me', damage: 1, health: 0, crit: false, hurt: true });
+    session.attack('conn-bia', false, false);
+    expect(sent('playground-attack')).toHaveLength(1);
+    session.dispose();
+  });
+
+  it('only listens to its own call', () => {
+    const { session } = sessionWithSocket();
+    session.receive({ t: 'playground-health', conversationId: 'another', players: [{ id: 'conn-me', health: 3 }] });
+    expect(session.combat.getVitals().health).toBe(20);
+    session.dispose();
+  });
+});
+

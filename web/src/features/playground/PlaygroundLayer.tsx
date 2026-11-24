@@ -13,7 +13,7 @@ function sameMembers(a: PlaygroundMember[], b: PlaygroundMember[]): boolean {
  * without its 3D view on screen. Renders nothing. */
 export function PlaygroundLayer({ conversationId, participantIds }: { conversationId: string; participantIds: string[] }) {
   const { t } = useTranslation('playground');
-  const { livekitRoom, audioRegistry, stopSharing, dispatch } = useRoom('livekitRoom', 'audioRegistry', 'stopSharing', 'dispatch');
+  const { livekitRoom, audioRegistry, stopSharing, dispatch, sendWs } = useRoom('livekitRoom', 'audioRegistry', 'stopSharing', 'dispatch', 'sendWs');
   const { me } = useRoomState('me');
   const meId = me.id;
   const meUserId = me.userId;
@@ -26,14 +26,14 @@ export function PlaygroundLayer({ conversationId, participantIds }: { conversati
 
   useEffect(() => {
     if (!meId || !meUserId) return;
-    const created = new PlaygroundSession(livekitRoom, conversationId, meId, meUserId, audioRegistry);
+    const created = new PlaygroundSession(livekitRoom, conversationId, meId, meUserId, audioRegistry, sendWs);
     created.start();
     setActivePlaygroundSession(created);
     return () => {
       created.dispose();
       if (getActivePlaygroundSession() === created) setActivePlaygroundSession(null);
     };
-  }, [livekitRoom, conversationId, meId, meUserId, audioRegistry]);
+  }, [livekitRoom, conversationId, meId, meUserId, audioRegistry, sendWs]);
 
   // a new session (after a reconnect gives you a new id) hears the roster too
   useEffect(() => {

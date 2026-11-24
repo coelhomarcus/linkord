@@ -29,9 +29,10 @@ const NEGLIGIBLE_VELOCITY = 0.003;
 /** what a sneak refuses to drop off */
 const SNEAK_EDGE_DROP = 0.6;
 const SNEAK_EDGE_STEP = 0.05;
+const KNOCKBACK_UP = 0.4;
 
-const HALF_WIDTH = 0.3;
-const BODY_HEIGHT = 1.8;
+export const HALF_WIDTH = 0.3;
+export const BODY_HEIGHT = 1.8;
 export const STANDING_EYE_HEIGHT = 1.62;
 export const SNEAKING_EYE_HEIGHT = 1.27;
 const EPSILON = 1e-7;
@@ -66,10 +67,26 @@ export interface PhysicsBody {
   /** walked into a wall this tick: a sprint ends there */
   collidedHorizontally: boolean;
   jumpTicks: number;
+  /** how far it has dropped since it last stood on something (a punch on the way down is a critical) */
+  fallDistance: number;
 }
 
 export function createBody(x: number, y: number, z: number): PhysicsBody {
-  return { x, y, z, vx: 0, vy: 0, vz: 0, onGround: true, collidedHorizontally: false, jumpTicks: 0 };
+  return { x, y, z, vx: 0, vy: 0, vz: 0, onGround: true, collidedHorizontally: false, jumpTicks: 0, fallDistance: 0 };
+}
+
+/** A hit's knockback, the game's way: the speed halves, `push` is added across and 0.4 up (at most
+ * 0.4 up in all), then a sprinting attacker's `extra`. Blocks per tick. */
+export function applyKnockback(body: PhysicsBody, push: readonly [number, number], extra?: readonly [number, number, number]): void {
+  body.vx = body.vx / 2 + push[0];
+  body.vz = body.vz / 2 + push[1];
+  body.vy = Math.min(KNOCKBACK_UP, body.vy / 2 + KNOCKBACK_UP);
+  if (extra) {
+    body.vx += extra[0];
+    body.vy += extra[1];
+    body.vz += extra[2];
+  }
+  body.onGround = false;
 }
 
 type Axis = 0 | 1 | 2;
@@ -145,6 +162,8 @@ function move(terrain: Terrain, body: PhysicsBody, sneak: boolean, maxHeight: nu
   const dy = sweep(terrain, boxAt(body.x, body.y, body.z), 1, body.vy);
   body.y += dy;
   body.onGround = body.vy < 0 && dy !== body.vy;
+  if (body.onGround) body.fallDistance = 0;
+  else if (dy < 0) body.fallDistance -= dy;
   if (dy !== body.vy) body.vy = 0;
   if (body.y > maxHeight) {
     body.y = maxHeight;
