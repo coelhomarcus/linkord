@@ -28,9 +28,9 @@ export type ReactionEmoji = string;
 
 /** Wire protocol version this build speaks; the server refuses older ones
  * (client_outdated). Keep in sync with server/src/realtime/protocolVersion.ts
- * — version 36 moves a playground's skins to the playground service too, after its fighting (35): both
- * travel on its own socket, which `playground-token` opens (features/playground/playgroundLink.ts). */
-export const PROTOCOL_VERSION = 36;
+ * — version 37 adds `welcome.playgroundEnabled`: whether the server runs the playground service, without
+ * which a playground channel arrives as a plain voice channel and none can be created. */
+export const PROTOCOL_VERSION = 37;
 
 export interface LiveNotice {
   kind: 'friend_request' | 'friend_accepted' | 'server_invitation';
@@ -493,6 +493,8 @@ export type ServerMessage =
       mentionsByConversation?: Record<string, number>;
       // the largest file this server takes; absent from servers before protocol 8
       maxAttachmentBytes?: number;
+      // whether a new channel may be a playground; absent from servers before protocol 37, which all could
+      playgroundEnabled?: boolean;
       livekitUrl: string;
       // the call this connection is in server-side; absent from servers that predate it
       callConversationId?: string | null;

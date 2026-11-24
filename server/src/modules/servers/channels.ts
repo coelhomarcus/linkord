@@ -10,7 +10,7 @@ import { revokeCallAccess } from '../calls/callAccess.js';
 import { enforceCallPermissions } from '../calls/callPermissions.js';
 import { participants } from '../presence/participants.js';
 import { ALL_PERMISSIONS, canManageRole, hasPermission, outranks, PERMISSIONS } from './permissions.js';
-import { channelPermissionsIn, invalidateServer, memberInput, toVoiceMode, type ServerSnapshot } from './serverAccess.js';
+import { channelPermissionsIn, invalidateServer, memberInput, playgroundsEnabled, toVoiceMode, type ServerSnapshot } from './serverAccess.js';
 import { playgroundChatFrom } from './playgroundChat.js';
 import { sanitizeCategoryName, sanitizeChannelName, sanitizeTopic } from './serversRepository.js';
 import { sendServerUpdateToMembers } from './serverSummaries.js';
@@ -61,6 +61,7 @@ async function handleCreateChannel(request: FastifyRequest<{ Params: ServerParam
   const body = jsonBody(request.body);
   const type: ChannelType = body.type === 'voice' ? 'voice' : 'text';
   const voiceMode = type === 'voice' ? toVoiceMode(body.voiceMode) : 'standard';
+  if (voiceMode === 'playground' && !playgroundsEnabled()) return sendError(reply, 400, 'invalid_request', 'Este servidor não tem o playground ativado.');
   const name = sanitizeChannelName(body.name, type);
   if (!name) return sendError(reply, 400, 'invalid_name', 'Dê um nome ao canal.');
   if (actor.snapshot.channels.length >= config.MAX_CHANNELS_PER_SERVER) {
