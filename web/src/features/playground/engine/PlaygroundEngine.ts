@@ -81,8 +81,9 @@ export class PlaygroundEngine {
   /** where the avatar is drawn this frame, between the last two ticks */
   private readonly position = new THREE.Vector3();
   private tickTime = 0;
-  /** the body's heading; the head's is the camera's */
+  /** the body's heading at the last tick and the one before; the head's is the camera's */
   private facing: number;
+  private previousFacing: number;
   private eyeHeight = STANDING_EYE_HEIGHT;
   private previousEyeHeight = STANDING_EYE_HEIGHT;
   private readonly bob = createBobState();
@@ -116,6 +117,7 @@ export class PlaygroundEngine {
     this.previous.set(this.body.x, this.body.y, this.body.z);
     this.position.copy(this.previous);
     this.facing = start.yaw;
+    this.previousFacing = start.yaw;
     const skin = this.skinOf(options.localUserId);
     this.local = new BlockAvatar(skin, '');
     this.local.showLabel(false);
@@ -265,7 +267,7 @@ export class PlaygroundEngine {
       this.previous.z + (this.body.z - this.previous.z) * partial,
     );
 
-    this.drawLocal(dt);
+    this.drawLocal(dt, partial);
     this.moveRemotes(dt);
     this.placeCamera(partial);
     this.screen.update();
@@ -297,6 +299,7 @@ export class PlaygroundEngine {
     this.speed = moved / TICK_SECONDS;
     tickBob(this.bob, moved, this.body.onGround);
     if (this.attackTicks > 0) this.attackTicks--;
+    this.previousFacing = this.facing;
     this.facing = turnBody(this.facing, this.headYaw(), movedX, movedZ, this.attackTicks > 0);
     this.eyeHeight += ((this.sneaking ? SNEAKING_EYE_HEIGHT : STANDING_EYE_HEIGHT) - this.eyeHeight) * 0.5;
     this.motion = !this.body.onGround ? 'jump' : this.speed > STILL_SPEED ? (this.sprinting ? 'run' : 'walk') : 'idle';
@@ -307,18 +310,20 @@ export class PlaygroundEngine {
     return this.controls.yaw + Math.PI;
   }
 
-  private drawLocal(dt: number): void {
+  private drawLocal(dt: number, partial: number): void {
     const headYaw = this.headYaw();
     const pitch = this.controls.pitch;
+    // the body turns once a tick: drawn in between, like the position, or it would turn in steps
+    const facing = this.previousFacing + angleDelta(this.previousFacing, this.facing) * partial;
     this.local.root.position.copy(this.position);
-    this.local.root.rotation.y = this.facing;
-    this.local.update(dt, { speed: this.speed, headYaw: angleDelta(this.facing, headYaw), headPitch: pitch, crouching: this.sneaking });
+    this.local.root.rotation.y = facing;
+    this.local.update(dt, { speed: this.speed, headYaw: angleDelta(facing, headYaw), headPitch: pitch, crouching: this.sneaking });
     // the body would fill the view from inside it; the first-person arm stands in
     this.local.root.visible = this.controls.mode !== 'first';
 
     const state: PlayerState = {
       x: this.position.x, y: this.position.y, z: this.position.z,
-      yaw: this.facing, pitch, motion: this.motion, headYaw, crouch: this.sneaking, swings: this.swings,
+      yaw: facing, pitch, motion: this.motion, headYaw, crouch: this.sneaking, swings: this.swings,
     };
     this.session.setLocal(state);
   }
