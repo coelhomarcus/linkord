@@ -1,5 +1,6 @@
 import fs from 'fs';
 import path from 'path';
+import { searchForWorkspaceRoot } from 'vite';
 import type { Plugin } from 'vite';
 import { defineConfig } from 'vitest/config';
 import react, { reactCompilerPreset } from '@vitejs/plugin-react';
@@ -7,6 +8,8 @@ import babel from '@rolldown/plugin-babel';
 import tailwindcss from '@tailwindcss/vite';
 import Icons from 'unplugin-icons/vite';
 import { reactEasyCropStyleSource } from './scripts/cspStyleSources.ts';
+
+const GAME_DIR = path.resolve(import.meta.dirname, '../playground/src/game');
 
 // Twemoji's SVGs, the same emoji pictures on every system (Discord's own
 // package). Served from /assets/twemoji/<version>/, so the server caches them
@@ -83,10 +86,14 @@ export default defineConfig({
     alias: {
       '@': path.resolve(import.meta.dirname, './src'),
       '@tests': path.resolve(import.meta.dirname, './tests'),
+      // the playground's game rules, shared with the playground service (playground/src/game)
+      '@game': GAME_DIR,
     },
   },
   server: {
     port: 5173,
+    // the shared game rules live outside web/
+    fs: { allow: [searchForWorkspaceRoot(process.cwd()), GAME_DIR] },
     proxy: {
       '/ws': { target: 'http://localhost:3000', ws: true },
       // the playground service (npm run dev:playground), as a proxy on the app's domain would route it

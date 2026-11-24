@@ -333,7 +333,7 @@ describe('a call follows the permissions in force (real Postgres)', () => {
 });
 
 describe('playground channels and the playground service (real Postgres)', () => {
-  it('while the service is off one cannot be created, and one made before shows as a voice channel', async () => {
+  it('one per server; while the service is off one cannot be created, and one made before shows as a voice channel', async () => {
     const saved = config.PLAYGROUND_URL;
     const owner = await actor('pgmode');
     const { serverId } = await makeServerWithMembers(owner.id, []);
@@ -345,6 +345,9 @@ describe('playground channels and the playground service (real Postgres)', () =>
       const channelId = created.body.channelId as string;
       const shown = async () => (await listServersForUser(owner.id)).find((s) => s.id === serverId)!.channels.find((c) => c.id === channelId)!;
       assert.equal((await shown()).voiceMode, 'playground');
+      const second = await call(owner, 'POST', `/api/servers/${serverId}/channels`, { name: 'Segunda', type: 'voice', voiceMode: 'playground' });
+      assert.deepEqual([second.status, second.code], [409, 'playground_exists'], 'one playground a server');
+      assert.equal((await call(owner, 'POST', `/api/servers/${serverId}/channels`, { name: 'Voz', type: 'voice' })).status, 201, 'other voice channels still go');
 
       config.PLAYGROUND_URL = '';
       invalidateAllServers();

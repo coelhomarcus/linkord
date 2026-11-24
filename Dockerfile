@@ -3,6 +3,8 @@ WORKDIR /app/web
 COPY web/package.json web/package-lock.json ./
 RUN npm ci --no-audit --no-fund
 COPY web/ ./
+# the playground's game rules, which the web app shares with the playground service (`@game/`)
+COPY playground/src/game/ /app/playground/src/game/
 RUN npm run build
 
 FROM node:22-alpine AS server-build

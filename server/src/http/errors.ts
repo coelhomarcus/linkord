@@ -98,6 +98,8 @@ export const ERROR_REGISTRY = {
 
   // servers, channels, roles and invitations
   server_full: { statuses: [409], channel: 'http' },
+  // a server has one playground at most
+  playground_exists: { statuses: [409], channel: 'http' },
   banned: { statuses: [403], channel: 'http' },
   too_many_invitees: { statuses: [400], channel: 'http' },
   invalid_name: { statuses: [400], channel: 'http' },

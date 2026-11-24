@@ -28,4 +28,11 @@ describe('CreateChannelDialog', () => {
     expect(screen.getByRole('radio', { name: /Voz/ })).toBeInTheDocument();
     expect(screen.queryByRole('radio', { name: /Playground/ })).not.toBeInTheDocument();
   });
+
+  it('offers no second playground in a server that has one', () => {
+    const withPlayground = { ...server, channels: [{ id: 'p', type: 'voice', voiceMode: 'playground' }] } as unknown as ServerSummary;
+    render(<MemoryRouter><CreateChannelDialog server={withPlayground} target={{ kind: 'channel', categoryId: null }} onClose={() => {}} /></MemoryRouter>);
+    expect(screen.getByRole('radio', { name: /Voz/ })).toBeInTheDocument();
+    expect(screen.queryByRole('radio', { name: /Playground/ })).not.toBeInTheDocument();
+  });
 });
