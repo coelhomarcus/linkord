@@ -36,7 +36,9 @@
     "players_other": "Players ({{count}})...",
     "devices": "Devices",
     "done": "Done",
-    "autoFullscreen": "Fullscreen when playing"
+    "autoFullscreen": "Fullscreen when playing",
+    "dock": "Call",
+    "taken": "taken"
   },
   "skin": {
     "title": "Your skin",

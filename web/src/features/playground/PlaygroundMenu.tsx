@@ -2,7 +2,6 @@ import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import type { KeyboardEvent, ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { cn } from '@/shared/lib/utils';
-import { MicrophoneIcon, MonitorIcon, SpeakerHighIcon } from '@/shared/ui/icons';
 import { useCallControls } from '@/features/calls/useCallControls';
 import { MicQuickMenu, ScreenShareQuickMenu, SpeakerQuickMenu } from '@/features/calls/CallDeviceMenus';
 import { SoundboardButton } from '@/features/soundboard/SoundboardButton';
@@ -13,6 +12,8 @@ import type { CameraMode } from './engine/controls';
 import { defaultSkin } from './skins/defaultSkins';
 import { decodeSkin, encodeSkin, SkinError } from './skins/skins';
 import { SkinPreview } from './skins/SkinPreview';
+import { PixelIcon } from './PixelIcon';
+import type { PixelIconName } from './PixelIcon';
 import type { Skin } from './skins/skins';
 import { PIXEL_TEXT } from './pixelFont';
 import { PIXEL_BUTTON, PIXEL_BUTTON_DANGER, PIXEL_PANEL, PIXEL_SHADOW } from './pixelUi';
@@ -40,6 +41,27 @@ function Setting({ label, state }: { label: string; state?: string }) {
       {label}
       {state && <span className="text-white/75">: {state}</span>}
     </span>
+  );
+}
+
+const DOCK_SLAB = [
+  'relative flex min-h-16 flex-col items-center justify-center gap-1 border-2 border-black/80 bg-[#5b5f69] px-1 py-1.5 text-white outline-none',
+  'shadow-[inset_2px_2px_0_rgb(255_255_255/0.22),inset_-2px_-3px_0_rgb(0_0_0/0.45)] active:translate-y-px',
+  'transition-colors duration-100 hover:border-white/90 focus-visible:border-white',
+  'aria-disabled:cursor-not-allowed aria-disabled:bg-[#3c3f46] aria-disabled:text-white/45 aria-disabled:hover:border-black/80',
+].join(' ');
+
+/** One of the dock's switches: a pixel icon over its name and state, red while off, green while on air. */
+function DockToggle({ icon, label, state, tone, ...props }: {
+  icon: PixelIconName; label: string; state?: string; tone: 'off' | 'live' | 'plain';
+} & React.ButtonHTMLAttributes<HTMLButtonElement>) {
+  return (
+    <button type="button" data-menu-item {...props}
+      className={cn(DOCK_SLAB, tone === 'off' ? 'bg-[#8a3232] hover:bg-[#a33b3b]' : tone === 'live' ? 'bg-[#2f6b3a] hover:bg-[#3a8048]' : 'hover:bg-[#6f7480]')}>
+      <PixelIcon name={icon} off={tone === 'off'} glass={tone === 'live' ? '#7ec8ff' : undefined} className="size-8" />
+      <span className={`${PIXEL_TEXT.sm} leading-none ${PIXEL_SHADOW}`}>{label}</span>
+      {state && <span className={`${PIXEL_TEXT.xs} leading-none text-white/75 ${PIXEL_SHADOW}`}>{state}</span>}
+    </button>
   );
 }
 
@@ -134,31 +156,23 @@ export function PlaygroundMenu({ session, localId, localUserId, players, present
         {page === 'main' && (
           <div className="grid grid-cols-2 gap-2">
             <MenuButton wide onClick={onResume}>{t('menu.resume')}</MenuButton>
-            <MenuButton onClick={controls.mic.toggle} aria-disabled={controls.mic.locked || undefined} aria-label={controls.mic.label}>
-              <Setting label={t('menu.mic')} state={controls.mic.locked ? undefined : controls.mic.muted ? t('menu.muted') : t('menu.on')} />
-            </MenuButton>
-            <MenuButton onClick={controls.deafen.toggle} aria-label={controls.deafen.label}>
-              <Setting label={t('menu.sound')} state={onOff(!controls.deafen.on)} />
-            </MenuButton>
-            <MenuButton onClick={onToggleView}>
-              <Setting label={t('menu.view')} state={t(CAMERA_LABEL[cameraMode])} />
-            </MenuButton>
-            <MenuButton onClick={controls.fullscreen.toggle}>
-              <Setting label={t('menu.fullscreen')} state={onOff(controls.fullscreen.on)} />
-            </MenuButton>
-            <MenuButton wide onClick={onToggleAutoFullscreen}>
-              <Setting label={t('menu.autoFullscreen')} state={onOff(autoFullscreen)} />
-            </MenuButton>
-            <MenuButton wide onClick={controls.share.toggle} aria-disabled={controls.share.locked || undefined} aria-label={controls.share.label}>
-              <Setting label={t('menu.share')} state={controls.share.locked ? controls.share.label : onOff(controls.share.on)} />
-            </MenuButton>
-            <MenuButton onClick={() => setPage('skin')}>{t('menu.skin')}</MenuButton>
-            <MenuButton onClick={() => setPage('players')}>{t('menu.players', { count: players.length })}</MenuButton>
+            {/* the call's switches, as the floating call bar has them */}
+            <div role="group" aria-label={t('menu.dock')} className={cn('col-span-2 grid grid-cols-3 gap-2 p-2', PIXEL_PANEL)}>
+              <DockToggle icon="mic" label={t('menu.mic')} onClick={controls.mic.toggle} aria-label={controls.mic.label}
+                aria-disabled={controls.mic.locked || undefined} aria-pressed={!controls.mic.muted}
+                tone={controls.mic.muted || controls.mic.locked ? 'off' : 'plain'}
+                state={controls.mic.locked ? undefined : controls.mic.muted ? t('menu.muted') : t('menu.on')} />
+              <DockToggle icon="speaker" label={t('menu.sound')} onClick={controls.deafen.toggle} aria-label={controls.deafen.label}
+                aria-pressed={!controls.deafen.on} tone={controls.deafen.on ? 'off' : 'plain'} state={onOff(!controls.deafen.on)} />
+              <DockToggle icon="screen" label={t('menu.share')} onClick={controls.share.toggle} aria-label={controls.share.label}
+                aria-disabled={controls.share.locked || undefined} aria-pressed={controls.share.on}
+                tone={controls.share.on ? 'live' : 'plain'} state={controls.share.locked ? t('menu.taken') : onOff(controls.share.on)} />
+            </div>
             <div className={cn('col-span-2 flex items-center gap-2 px-3 py-1.5', PIXEL_PANEL)}>
               <span className={`mr-auto ${PIXEL_TEXT.md} leading-none text-white/85 ${PIXEL_SHADOW}`}>{t('menu.devices')}</span>
-              <DeviceSlab icon={<MicrophoneIcon size={18} />}><MicQuickMenu className={DEVICE_TRIGGER} /></DeviceSlab>
-              <DeviceSlab icon={<SpeakerHighIcon size={18} />}><SpeakerQuickMenu className={DEVICE_TRIGGER} /></DeviceSlab>
-              <DeviceSlab icon={<MonitorIcon size={18} />}><ScreenShareQuickMenu className={DEVICE_TRIGGER} /></DeviceSlab>
+              <DeviceSlab icon={<PixelIcon name="mic" className="size-5" />}><MicQuickMenu className={DEVICE_TRIGGER} /></DeviceSlab>
+              <DeviceSlab icon={<PixelIcon name="speaker" className="size-5" />}><SpeakerQuickMenu className={DEVICE_TRIGGER} /></DeviceSlab>
+              <DeviceSlab icon={<PixelIcon name="screen" className="size-5" />}><ScreenShareQuickMenu className={DEVICE_TRIGGER} /></DeviceSlab>
               {controls.soundboard && (
                 <SoundboardButton
                   conversationId={controls.soundboard.conversationId}
@@ -169,6 +183,17 @@ export function PlaygroundMenu({ session, localId, localUserId, players, present
                 />
               )}
             </div>
+            <MenuButton onClick={onToggleView}>
+              <Setting label={t('menu.view')} state={t(CAMERA_LABEL[cameraMode])} />
+            </MenuButton>
+            <MenuButton onClick={controls.fullscreen.toggle}>
+              <Setting label={t('menu.fullscreen')} state={onOff(controls.fullscreen.on)} />
+            </MenuButton>
+            <MenuButton wide onClick={onToggleAutoFullscreen}>
+              <Setting label={t('menu.autoFullscreen')} state={onOff(autoFullscreen)} />
+            </MenuButton>
+            <MenuButton onClick={() => setPage('skin')}>{t('menu.skin')}</MenuButton>
+            <MenuButton onClick={() => setPage('players')}>{t('menu.players', { count: players.length })}</MenuButton>
             <MenuButton wide danger onClick={controls.leave} className="mt-2">{controls.leaveLabel}</MenuButton>
           </div>
         )}

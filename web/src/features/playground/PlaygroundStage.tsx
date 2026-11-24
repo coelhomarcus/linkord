@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ArrowLeftIcon, CaretUpIcon, MicrophoneSlashIcon, MonitorIcon, SpeakerSlashIcon } from '@/shared/ui/icons';
+import { ArrowLeftIcon, CaretUpIcon } from '@/shared/ui/icons';
 import { useMediaQuery } from '@/shared/hooks/useMediaQuery';
 import { TOUCH_FIRST_QUERY } from '@/shared/hooks/useLongPress';
 import { cn } from '@/shared/lib/utils';
@@ -16,6 +16,7 @@ import type { CameraMode } from './engine/controls';
 import { PlaygroundMenu } from './PlaygroundMenu';
 import { PlaygroundChat } from './PlaygroundChat';
 import { PlaygroundDeathScreen } from './PlaygroundDeathScreen';
+import { PixelIcon } from './PixelIcon';
 import { useVitals } from './playgroundCombat';
 import { PlaygroundHud } from './hud/PlaygroundHud';
 import { useGuiScale } from './hud/gui';
@@ -298,9 +299,9 @@ export default function PlaygroundStage({ allIds, onBack }: { allIds: string[]; 
 
   const chips = [
     controls.reconnecting && <span key="reconnecting" className={CHIP}>{tc('controls.statusReconnecting')}</span>,
-    controls.mic.muted && <span key="muted" className={CHIP}><MicrophoneSlashIcon size={16} className="text-red" />{t('hud.muted')}</span>,
-    controls.deafen.on && <span key="deafened" className={CHIP}><SpeakerSlashIcon size={16} className="text-red" />{t('hud.deafened')}</span>,
-    controls.share.on && <span key="sharing" className={CHIP}><MonitorIcon size={16} className="text-green" />{t('hud.sharing')}</span>,
+    controls.mic.muted && <span key="muted" className={CHIP}><PixelIcon name="mic" off className="size-4" />{t('hud.muted')}</span>,
+    controls.deafen.on && <span key="deafened" className={CHIP}><PixelIcon name="speaker" off className="size-4" />{t('hud.deafened')}</span>,
+    controls.share.on && <span key="sharing" className={CHIP}><PixelIcon name="screen" glass="#7ec8ff" className="size-4" />{t('hud.sharing')}</span>,
   ].filter(Boolean);
 
   return (
