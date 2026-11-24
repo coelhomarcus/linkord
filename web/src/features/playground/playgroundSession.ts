@@ -70,6 +70,8 @@ export class PlaygroundSession {
   private readonly skinVersions = new Map<string, number>();
   private readonly retryTimers = new Set<ReturnType<typeof setTimeout>>();
   private localSkinBytes: Uint8Array<ArrayBuffer> | null = null;
+  /** your own skin was read or picked: until then nothing is sent, since an empty packet means "default" */
+  private localSkinKnown = false;
   private localSkinChange = 0;
   private disposed = false;
   private lastSentAt = 0;
@@ -193,6 +195,7 @@ export class PlaygroundSession {
 
   private wearLocal(bytes: Uint8Array<ArrayBuffer> | null, skin: Skin | null): void {
     this.localSkinBytes = bytes;
+    this.localSkinKnown = true;
     this.setSkin(this.localUserId, skin);
   }
 
@@ -225,7 +228,8 @@ export class PlaygroundSession {
     try {
       stored = await fetchAccountSkin(userId, this.link);
     } catch {
-      if (this.isCurrent(userId, version)) this.retry(() => void this.loadLocalSkin());
+      // asked again only if nothing changed it since: a skin picked meanwhile is newer than any read
+      if (this.isCurrent(userId, version)) this.retry(() => { if (this.isCurrent(userId, version)) void this.loadLocalSkin(); });
       return;
     }
     if (!this.isCurrent(userId, version)) return;
@@ -293,7 +297,7 @@ export class PlaygroundSession {
   }
 
   private sendSkin(to?: string): void {
-    if (this.room.state !== ConnectionState.Connected) return;
+    if (!this.localSkinKnown || this.room.state !== ConnectionState.Connected) return;
     const payload = this.localSkinBytes ?? new Uint8Array(0);
     this.room.localParticipant.publishData(payload, { reliable: true, topic: SKIN_TOPIC, ...(to ? { destinationIdentities: [to] } : {}) }).catch(() => {});
   }

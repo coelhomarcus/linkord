@@ -138,6 +138,36 @@ describe('PlaygroundSession skins', () => {
     expect(skinPackets()).toHaveLength(1);
   });
 
+  it('a read of your own skin asked again after failing does not undo one you picked meanwhile', async () => {
+    vi.useFakeTimers();
+    try {
+      account.fetchAccountSkin.mockRejectedValueOnce(new Error('not connected yet'));
+      const { session } = startSession();
+      await vi.advanceTimersByTimeAsync(0);
+      // the account still has nothing: the save has not landed when the retry reads it
+      account.saveAccountSkin.mockImplementation(() => new Promise(() => {}));
+      void session.setLocalSkin(png(5), { pixels: new Uint8ClampedArray([5]), slim: false });
+      await vi.advanceTimersByTimeAsync(10_000);
+      expect(worn(session, 'me')).toEqual([5]);
+      session.dispose();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('tells nobody it wears the default before its own skin was read', async () => {
+    let answer: (bytes: Uint8Array | null) => void = () => {};
+    account.fetchAccountSkin.mockImplementation(() => new Promise((resolve) => { answer = resolve; }));
+    const { session, emit, skinPackets } = startSession();
+    emit(RoomEvent.Connected);
+    emit(RoomEvent.ParticipantConnected, { identity: 'conn-bia' });
+    expect(skinPackets()).toEqual([]);
+    answer(png(7));
+    await flush();
+    expect(skinPackets()).toEqual([{ payload: [7], to: undefined }]);
+    session.dispose();
+  });
+
   it('moves a skin only this browser had to the account, then forgets it', async () => {
     localStorage.setItem(LOCAL_STORAGE_KEYS.legacyPlaygroundSkin, btoa(String.fromCharCode(6)));
     const { session } = startSession();
