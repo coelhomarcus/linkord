@@ -5,6 +5,7 @@ import { describe, expect, it, vi } from 'vitest';
 import * as serversApi from '@/features/servers/serversApi';
 import { CreateChannelDialog } from '@/features/servers/CreateChannelDialog';
 import type { ServerSummary } from '@/shared/types/protocol';
+import { renderWithRoom } from '@tests/fixtures/roomContextFixture';
 
 vi.mock('@/features/servers/serversApi', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@/features/servers/serversApi')>()),
@@ -20,5 +21,11 @@ describe('CreateChannelDialog', () => {
     await userEvent.type(screen.getByLabelText('Nome do canal'), 'Praça');
     await userEvent.click(screen.getByRole('button', { name: 'Criar canal' }));
     expect(serversApi.createChannel).toHaveBeenCalledWith('s1', { name: 'Praça', type: 'voice', voiceMode: 'playground', categoryId: null });
+  });
+
+  it('offers no playground when the server has the playground service off', () => {
+    renderWithRoom(<MemoryRouter><CreateChannelDialog server={server} target={{ kind: 'channel', categoryId: null }} onClose={() => {}} /></MemoryRouter>, { playgroundEnabled: false });
+    expect(screen.getByRole('radio', { name: /Voz/ })).toBeInTheDocument();
+    expect(screen.queryByRole('radio', { name: /Playground/ })).not.toBeInTheDocument();
   });
 });

@@ -1,6 +1,7 @@
 import { config } from '../../config/env.js';
 import { getConversationForUser } from '../conversations/conversationsRepository.js';
 import { PERMISSIONS } from '../servers/permissions.js';
+import { shownVoiceMode } from '../servers/serverAccess.js';
 import { participants, send } from '../presence/participants.js';
 import { signPlaygroundToken } from './playgroundToken.js';
 import type { AppSocket, HandlerTable } from '../../types.js';
@@ -20,7 +21,7 @@ let settings: PlaygroundSettings = { url: config.PLAYGROUND_URL, secret: config.
 /** May this account connect to this call, and is it a playground? Read through the access gate. */
 let isPlayground = async (conversationId: string, userId: string): Promise<boolean> => {
   const conversation = await getConversationForUser(conversationId, userId, PERMISSIONS.CONNECT);
-  return conversation?.voiceMode === 'playground';
+  return !!conversation && shownVoiceMode(conversation.voiceMode) === 'playground';
 };
 
 /** Tests choose the service's address and secret, and answer the access check themselves. */

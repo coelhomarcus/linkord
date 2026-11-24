@@ -331,3 +331,31 @@ describe('a call follows the permissions in force (real Postgres)', () => {
     }
   });
 });
+
+describe('playground channels and the playground service (real Postgres)', () => {
+  it('while the service is off one cannot be created, and one made before shows as a voice channel', async () => {
+    const saved = config.PLAYGROUND_URL;
+    const owner = await actor('pgmode');
+    const { serverId } = await makeServerWithMembers(owner.id, []);
+    try {
+      config.PLAYGROUND_URL = 'https://chat.example.test';
+      invalidateAllServers();
+      const created = await call(owner, 'POST', `/api/servers/${serverId}/channels`, { name: 'Praça', type: 'voice', voiceMode: 'playground' });
+      assert.equal(created.status, 201);
+      const channelId = created.body.channelId as string;
+      const shown = async () => (await listServersForUser(owner.id)).find((s) => s.id === serverId)!.channels.find((c) => c.id === channelId)!;
+      assert.equal((await shown()).voiceMode, 'playground');
+
+      config.PLAYGROUND_URL = '';
+      invalidateAllServers();
+      assert.equal((await call(owner, 'POST', `/api/servers/${serverId}/channels`, { name: 'Outra', type: 'voice', voiceMode: 'playground' })).status, 400);
+      assert.equal((await shown()).voiceMode, 'standard');
+      assert.equal('playgroundChatId' in (await shown()), false);
+      const [row] = await db.select({ voiceMode: conversations.voiceMode }).from(conversations).where(eq(conversations.id, channelId));
+      assert.equal(row!.voiceMode, 'playground', 'the row keeps its mode for when the service is back');
+    } finally {
+      config.PLAYGROUND_URL = saved;
+      invalidateAllServers();
+    }
+  });
+});

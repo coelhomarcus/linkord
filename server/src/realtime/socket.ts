@@ -29,7 +29,7 @@ import * as dmCalls from '../modules/calls/dmCalls.js';
 import * as playgroundAccess from '../modules/playground/playgroundAccess.js';
 import { refusesImmediateJoin } from '../modules/calls/dmCallMachine.js';
 import { notePublishRights, publishRightsFor } from '../modules/calls/callPermissions.js';
-import { channelPermissions, toVoiceMode } from '../modules/servers/serverAccess.js';
+import { channelPermissions, playgroundsEnabled, shownVoiceMode } from '../modules/servers/serverAccess.js';
 import { parseCookies } from '../http/cookies.js';
 import { resolveSession } from '../modules/auth/session.js';
 import { isSocketOriginAllowed } from '../http/originGuard.js';
@@ -225,6 +225,8 @@ async function handleJoin(socket: AppSocket, msg: JoinMessage): Promise<void> {
     preferences: await getPreferences(p.userId),
     // the largest file this server takes, so the composer refuses a bigger one before uploading it
     maxAttachmentBytes: config.MAX_ATTACHMENT_BYTES,
+    // whether a new channel may be a playground (protocol 37); while off, existing ones arrive as voice channels
+    playgroundEnabled: playgroundsEnabled(),
     // tabs from before accounts lost their storage quota (protocol 7) read this; nothing counts it any more
     storageUsage: { totalBytes: 0, totalFiles: 0, maxBytes: 0 },
     livekitUrl: config.LIVEKIT_URL,
@@ -275,7 +277,7 @@ export async function handleCallJoin(socket: AppSocket, msg: { conversationId?: 
     return;
   }
   // only voice channels get here, and they always belong to a server
-  const rights = publishRightsFor(conversation.serverId ? await channelPermissions(conversation.serverId, conversationId, p.userId) : 0, toVoiceMode(conversation.voiceMode));
+  const rights = publishRightsFor(conversation.serverId ? await channelPermissions(conversation.serverId, conversationId, p.userId) : 0, shownVoiceMode(conversation.voiceMode));
   let livekitToken: string;
   try {
     livekitToken = await livekit.createToken(p, livekit.roomNameFor(conversationId), rights);
