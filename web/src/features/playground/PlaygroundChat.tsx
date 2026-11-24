@@ -2,12 +2,10 @@ import { useEffect, useRef, useState } from 'react';
 import type { KeyboardEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { cn } from '@/shared/lib/utils';
-import { useLanguage } from '@/shared/i18n/useLanguage';
-import type { Language } from '@/shared/i18n/languages';
 import { useRoom, useRoomSelector, useRoomState } from '@/state/RoomContext';
 import { hasPermission, PERMISSIONS } from '@/features/servers/permissionBits';
-import { messagePreviewText } from '@/features/chat/messagePreview';
-import type { ChatMessage, PublicUser, ServerSummary } from '@/shared/types/protocol';
+import type { ChatMessage, PublicUser, RoleSummary } from '@/shared/types/protocol';
+import { GameChatContent } from './GameChatContent';
 import { PIXEL_TEXT } from './pixelFont';
 import { PIXEL_SHADOW } from './pixelUi';
 
@@ -32,8 +30,18 @@ const MAX_MESSAGE_LENGTH = 2000;
 interface Line {
   key: string;
   author: string;
-  text: string;
+  /** a message from the channel, drawn whole (GameChatContent) */
+  message?: ChatMessage;
+  /** a line of plain text: a message of yours on its way */
+  text?: string;
   state?: 'pending' | 'failed';
+}
+
+/** What draws a message: who is who for mentions, and the channel's server's roles. */
+interface LineContext {
+  users: Map<string, PublicUser>;
+  myUserId: string | null;
+  roles?: readonly RoleSummary[];
 }
 
 function authorName(message: ChatMessage, users: ReadonlyMap<string, PublicUser>): string {
@@ -41,19 +49,18 @@ function authorName(message: ChatMessage, users: ReadonlyMap<string, PublicUser>
   return user?.displayName || user?.username || message.name;
 }
 
-/** A message as one line of plain text. `language` is a parameter so the line is
- * written again when the language changes (the React Compiler keeps it otherwise). */
-function lineOf(message: ChatMessage, users: ReadonlyMap<string, PublicUser>, myId: string | null, servers: readonly ServerSummary[], _language: Language): Line {
-  return { key: String(message.msgId), author: authorName(message, users), text: messagePreviewText(message, myId, servers) };
+function lineOf(message: ChatMessage, users: ReadonlyMap<string, PublicUser>): Line {
+  return { key: String(message.msgId), author: authorName(message, users), message };
 }
 
-function ChatLine({ line, fading }: { line: Line; fading?: boolean }) {
+function ChatLine({ line, context, fading }: { line: Line; context: LineContext; fading?: boolean }) {
   return (
     <li
       className={cn('break-words bg-black/45 px-2 py-0.5', line.state === 'pending' && 'text-white/55', line.state === 'failed' && 'text-red-text')}
       style={fading ? { animation: `playground-chat-fade 1s linear ${LINE_SECONDS - 1}s forwards` } : undefined}
     >
-      <span className="text-white/75">&lt;{line.author}&gt;</span> {line.text}
+      <span className="text-white/75">&lt;{line.author}&gt;</span>{' '}
+      {line.message ? <GameChatContent message={line.message} mentionLookup={context.users} myUserId={context.myUserId} roles={context.roles} /> : line.text}
     </li>
   );
 }
@@ -61,7 +68,6 @@ function ChatLine({ line, fading }: { line: Line; fading?: boolean }) {
 /** `hudHeight`: the hearts and hotbar's height in pixels, which the new lines stay above. */
 export function PlaygroundChat({ callConversationId, open, hudHeight = 0, onClose }: { callConversationId: string; open: boolean; hudHeight?: number; onClose: () => void }) {
   const { t } = useTranslation('playground');
-  const language = useLanguage();
   const { sendChatMessage, sendWs, servers, allUsers } = useRoom('sendChatMessage', 'sendWs', 'servers', 'allUsers');
   const { me } = useRoomState('me');
   const chatId = useRoomSelector((room) => {
@@ -76,6 +82,8 @@ export function PlaygroundChat({ callConversationId, open, hudHeight = 0, onClos
   const messages = useRoomSelector((room) => (chatId ? room.messagesByConversation.get(chatId) : undefined));
   const pending = useRoomSelector((room) => (chatId ? room.pendingByConversation.get(chatId) : undefined));
   const canSend = !!channel && hasPermission(channel.permissions, PERMISSIONS.SEND_MESSAGES);
+  const roles = servers.find((server) => server.channels.some((c) => c.id === chatId))?.roles;
+  const lineContext: LineContext = { users: allUsers, myUserId: me.userId ?? null, roles };
 
   const [draft, setDraft] = useState('');
   const [recent, setRecent] = useState<Line[]>([]);
@@ -104,7 +112,7 @@ export function PlaygroundChat({ callConversationId, open, hudHeight = 0, onClos
     const arrived = messages.filter((m) => !seen.has(m.msgId));
     if (!arrived.length) return;
     for (const message of arrived) seen.add(message.msgId);
-    const lines = arrived.map((message) => lineOf(message, allUsers, me.userId ?? null, servers, language));
+    const lines = arrived.map((message) => lineOf(message, allUsers));
     setRecent((prev) => [...prev, ...lines].slice(-HISTORY_LINES));
     const timers = timersRef.current;
     const timer = setTimeout(() => {
@@ -112,7 +120,7 @@ export function PlaygroundChat({ callConversationId, open, hudHeight = 0, onClos
       setRecent((prev) => prev.filter((line) => !lines.includes(line)));
     }, LINE_SECONDS * 1000);
     timers.add(timer);
-  }, [messages, allUsers, me.userId, servers, language]);
+  }, [messages, allUsers]);
 
   useEffect(() => {
     const timers = timersRef.current;
@@ -132,7 +140,7 @@ export function PlaygroundChat({ callConversationId, open, hudHeight = 0, onClos
   }
 
   const history: Line[] = [
-    ...(messages ?? []).slice(-HISTORY_LINES).map((message) => lineOf(message, allUsers, me.userId ?? null, servers, language)),
+    ...(messages ?? []).slice(-HISTORY_LINES).map((message) => lineOf(message, allUsers)),
     ...(pending ?? []).filter((entry) => entry.text).map((entry): Line => ({
       key: entry.clientMessageId,
       author: me.displayName || me.name,
@@ -196,8 +204,8 @@ export function PlaygroundChat({ callConversationId, open, hudHeight = 0, onClos
     if (!recent.length) return null;
     return (
       <ol aria-hidden style={{ bottom: `calc(0.75rem + ${hudHeight}px + env(safe-area-inset-bottom))` }}
-        className={cn('pointer-events-none absolute left-3 z-20 flex w-[min(30rem,calc(100%-1.5rem))] flex-col', text)}>
-        {recent.slice(-10).map((line) => <ChatLine key={line.key} line={line} fading />)}
+        className={cn('pointer-events-none absolute left-3 z-20 flex max-h-[50vh] w-[min(30rem,calc(100%-1.5rem))] flex-col justify-end overflow-hidden', text)}>
+        {recent.slice(-10).map((line) => <ChatLine key={line.key} line={line} context={lineContext} fading />)}
       </ol>
     );
   }
@@ -207,9 +215,12 @@ export function PlaygroundChat({ callConversationId, open, hudHeight = 0, onClos
       onWheel={(event) => { if (event.deltaY) scrollBy((event.deltaY < 0 ? 1 : -1) * (event.shiftKey ? 1 : WHEEL_LINES)); }}>
       <div className="relative w-[min(30rem,100%)]">
         {/* no browser scrollbar: the wheel moves by lines, and a thin bar says where you are */}
-        <ol role="log" aria-label={t('chat.label', { channel: channel?.name ?? '' })} className={cn('flex flex-col overflow-hidden', text)}>
+        {/* a click on a link or a picture keeps the line focused: leaving it empty would close the chat
+            before the click lands */}
+        <ol role="log" aria-label={t('chat.label', { channel: channel?.name ?? '' })} onMouseDown={(event) => event.preventDefault()}
+          className={cn('flex max-h-[60vh] flex-col justify-end overflow-hidden', text)}>
           {notice && <li className="bg-black/45 px-2 py-0.5 text-white/75">{notice}</li>}
-          {shown.map((line) => <ChatLine key={line.key} line={line} />)}
+          {shown.map((line) => <ChatLine key={line.key} line={line} context={lineContext} />)}
         </ol>
         {total > VISIBLE_LINES && (
           <span aria-hidden className="absolute -left-1.5 w-1 bg-white/70"
