@@ -86,8 +86,14 @@ export class Controls {
   private jumpQueued = false;
   private sprinting = false;
   private lastForwardPress = -Infinity;
-  /** the browser said no to locking the mouse: clicks punch without it */
+  /** the browser said no to a click's request for the mouse: clicks punch without it */
   private lockRefused = false;
+  /** what asked for the mouse last: only a click's refusal means it is not to be had, since taking it
+   * back as a screen closes is refused when that came from Esc (not a gesture to the browser) */
+  private lockRequest: 'click' | 'resume' | null = null;
+  /** a screen closed and its attempt to take the mouse back was refused: the next walking key or
+   * click takes it, so the game goes on without a click into the world first */
+  private resumePending = false;
   /** the wheel's travel not yet counted as a notch (a trackpad scrolls in small steps) */
   private wheelTravel = 0;
   private joystick: Drag | null = null;
@@ -188,7 +194,10 @@ export class Controls {
 
   set enabled(value: boolean) {
     this.isEnabled = value;
-    if (!value) this.clear();
+    if (!value) {
+      this.resumePending = false;
+      this.clear();
+    }
   }
 
   private isEnabled = true;
@@ -265,6 +274,8 @@ export class Controls {
     const sprintHeld = event.ctrlKey && !event.metaKey && !event.altKey;
     if ((event.ctrlKey || event.metaKey || event.altKey) && !sprintHeld) return;
     if (!MOVE_KEYS.has(event.code)) return;
+    // a walking key is a gesture the browser takes the mouse on, where Esc closing a screen was not
+    if (this.resumePending) this.lock('resume');
     // Space and the arrows would scroll or press the focused button otherwise
     event.preventDefault();
     if (event.code === 'Space' && !event.repeat) this.jumpQueued = true;
@@ -291,7 +302,11 @@ export class Controls {
   };
 
   private onPointerLockChange = (): void => {
-    if (this.locked) return;
+    if (this.locked) {
+      this.lockRequest = null;
+      this.resumePending = false;
+      return;
+    }
     this.keys.clear();
     this.sprinting = false;
     this.primaryDown = false;
@@ -299,18 +314,31 @@ export class Controls {
   };
 
   private onPointerLockError = (): void => {
-    this.lockRefused = true;
+    this.lockFailed();
   };
+
+  private lockFailed(): void {
+    if (this.lockRequest === 'click') this.lockRefused = true;
+    this.lockRequest = null;
+  }
 
   private onMouseMove = (event: MouseEvent): void => {
     if (this.locked) this.turn(event.movementX, event.movementY, MOUSE_SENSITIVITY);
   };
 
-  /** Asks for the mouse; browsers grant it only during a click or key press. */
+  /** Takes the mouse back as a screen closes. Browsers grant it only shortly after a click or key press,
+   * and Esc is not one: refused, the next walking key or click takes it. */
   requestLock(): void {
     if (this.locked) return;
+    this.resumePending = true;
+    this.lock('resume');
+  }
+
+  private lock(from: 'click' | 'resume'): void {
+    if (this.locked) return;
+    this.lockRequest = from;
     const request = this.canvas.requestPointerLock() as unknown;
-    if (request instanceof Promise) request.catch(() => { this.lockRefused = true; });
+    if (request instanceof Promise) request.catch(() => this.lockFailed());
   }
 
   private onPointerDown = (event: PointerEvent): void => {
@@ -325,7 +353,7 @@ export class Controls {
       // where the mouse cannot be locked, holding the left button digs while it turns the view
       if (event.button === 0 && this.lockRefused) this.primaryDown = true;
       this.canvas.setPointerCapture(event.pointerId);
-      if (event.button === 0 && !this.lockRefused) this.requestLock();
+      if ((event.button === 0 || this.resumePending) && !this.lockRefused) this.lock('click');
       return;
     }
     const rect = this.canvas.getBoundingClientRect();

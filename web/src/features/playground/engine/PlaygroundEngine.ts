@@ -272,7 +272,8 @@ export class PlaygroundEngine {
     if (!open && (!focused || focused === document.body || this.container.contains(focused))) this.focus();
   }
 
-  /** Locks the mouse again; only works from a click or a key press. */
+  /** Takes the mouse again as a screen closes; where the browser refuses it then, the next walking key
+   * or click does. */
   lockPointer(): void {
     this.controls.requestLock();
   }

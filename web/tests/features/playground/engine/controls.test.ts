@@ -87,6 +87,32 @@ describe('Controls', () => {
     controls.dispose();
   });
 
+  it('takes the mouse on the next walking key or click when a closing screen\'s request is refused', async () => {
+    const { controls, canvas } = setupPointer();
+    const requests = vi.fn(() => Promise.reject(new Error('no gesture')));
+    Object.assign(canvas, { requestPointerLock: requests });
+    // Esc closed the furnace: not a gesture, so the browser says no
+    controls.requestLock();
+    await settle();
+    expect(requests).toHaveBeenCalledTimes(1);
+    press('KeyW');
+    expect(requests).toHaveBeenCalledTimes(2);
+    await settle();
+    // that refusal did not take the lock away from clicks
+    pointer(canvas, 'pointerdown');
+    expect(requests).toHaveBeenCalledTimes(3);
+    controls.dispose();
+  });
+
+  it('does not ask for the mouse on walking keys when no screen closed', () => {
+    const { controls, canvas } = setupPointer();
+    const requests = vi.fn(() => Promise.reject(new Error('no gesture')));
+    Object.assign(canvas, { requestPointerLock: requests });
+    press('KeyW');
+    expect(requests).not.toHaveBeenCalled();
+    controls.dispose();
+  });
+
   it('punches with a tap on a touch screen, and looks around with a drag', () => {
     const { controls, canvas, onAction } = setupPointer();
     pointer(canvas, 'pointerdown', { pointerType: 'touch' });
