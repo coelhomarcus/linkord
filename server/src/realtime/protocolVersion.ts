@@ -96,9 +96,11 @@
 // from the client, `playground-hit` and `playground-health` from the server (modules/playground/combat.ts).
 // An old tab never reports a position, so it can be neither hit nor hit anyone, and it ignores the new
 // messages, so the minimum stays at 7.
+// Version 34 adds experience in a playground: `playground-xp` (your total points there) after a kill and
+// in answer to a session's first position report. An old tab ignores it, so the minimum stays at 7.
 // Raising MIN_PROTOCOL_VERSION also drops open tabs out of their calls (they are refused and
 // disconnect), so keep it for changes an old client cannot tolerate.
-export const PROTOCOL_VERSION = 33;
+export const PROTOCOL_VERSION = 34;
 export const MIN_PROTOCOL_VERSION = 7;
 export const MIC_STARTING_PROTOCOL_VERSION = 18;
 export const CALL_ELSEWHERE_PROTOCOL_VERSION = 20;
