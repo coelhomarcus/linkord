@@ -5,6 +5,7 @@ import { PlaygroundSession } from '@/features/playground/playgroundSession';
 import { SKIN_TOPIC } from '@/features/playground/playgroundProtocol';
 import { LOCAL_STORAGE_KEYS } from '@/shared/lib/localStorage';
 import type { ClientMessage } from '@/shared/types/protocol';
+import type { CombatLinkOptions, PlaygroundClientMessage } from '@/features/playground/playgroundLink';
 
 const account = vi.hoisted(() => ({
   stored: new Map<string, Uint8Array | null>(),
@@ -172,20 +173,25 @@ describe('PlaygroundSession skins', () => {
 });
 
 describe('PlaygroundSession fighting', () => {
-  function sessionWithSocket() {
+  function sessionWithLink() {
     const fake = fakeRoom();
     const sendWs = vi.fn((_msg: ClientMessage) => true);
-    const session = new PlaygroundSession(fake.room, 'conv', 'conn-me', 'me', { current: new Map() }, sendWs);
-    const sent = (t: ClientMessage['t']) => sendWs.mock.calls.map(([msg]) => msg).filter((msg) => msg.t === t);
-    return { session, sendWs, sent };
+    const link = { start: vi.fn(), dispose: vi.fn(), receiveToken: vi.fn(), send: vi.fn((_msg: PlaygroundClientMessage) => true) };
+    let options: CombatLinkOptions | null = null;
+    const session = new PlaygroundSession(fake.room, 'conv', 'conn-me', 'me', { current: new Map() }, sendWs, (given) => {
+      options = given;
+      return link;
+    });
+    const sent = (t: PlaygroundClientMessage['t']) => link.send.mock.calls.map(([msg]) => msg).filter((msg) => msg.t === t);
+    return { session, link, sendWs, sent, options: () => options! };
   }
 
   beforeEach(() => {
     account.fetchAccountSkin.mockReset().mockResolvedValue(null);
   });
 
-  it('reports the position to the server, asking for everyone\'s health the first time', () => {
-    const { session, sent } = sessionWithSocket();
+  it('reports the position to the service, asking for everyone\'s health the first time', () => {
+    const { session, sent } = sessionWithLink();
     session.start();
     expect(sent('playground-pos')).toEqual([{ t: 'playground-pos', x: session.local.x, y: session.local.y, z: session.local.z, yaw: session.local.headYaw, first: true }]);
     // too soon after the last one
@@ -194,8 +200,29 @@ describe('PlaygroundSession fighting', () => {
     session.dispose();
   });
 
+  it('asks for everyone\'s health again on every new connection to the service', () => {
+    const { session, sent, options } = sessionWithLink();
+    session.start();
+    options().onConnect();
+    expect(sent('playground-pos').map((msg) => 'first' in msg && msg.first)).toEqual([true, true]);
+    session.dispose();
+  });
+
+  it('asks the app for passes over its socket, and hands the answers to the link', () => {
+    const { session, link, sendWs, options } = sessionWithLink();
+    session.start();
+    expect(link.start).toHaveBeenCalledOnce();
+    expect(options().requestToken()).toBe(true);
+    expect(sendWs).toHaveBeenCalledWith({ t: 'playground-token', conversationId: 'conv' });
+    const reply = { t: 'playground-token' as const, conversationId: 'conv', url: 'https://chat.example.com', token: 'pass' };
+    session.receiveToken(reply);
+    expect(link.receiveToken).toHaveBeenCalledWith(reply);
+    session.dispose();
+    expect(link.dispose).toHaveBeenCalledOnce();
+  });
+
   it('sends a punch from where you stand, and none while dead', () => {
-    const { session, sent } = sessionWithSocket();
+    const { session, sent } = sessionWithLink();
     session.attack('conn-bia', true, false);
     expect(sent('playground-attack')).toEqual([{ t: 'playground-attack', targetId: 'conn-bia', x: session.local.x, y: session.local.y, z: session.local.z, yaw: session.local.headYaw, crit: true, sprint: false }]);
     session.receive({ t: 'playground-hit', conversationId: 'conv', attackerId: 'conn-bia', targetId: 'conn-me', damage: 1, health: 0, crit: false, hurt: true });
@@ -205,10 +232,9 @@ describe('PlaygroundSession fighting', () => {
   });
 
   it('only listens to its own call', () => {
-    const { session } = sessionWithSocket();
+    const { session } = sessionWithLink();
     session.receive({ t: 'playground-health', conversationId: 'another', players: [{ id: 'conn-me', health: 3 }] });
     expect(session.combat.getVitals().health).toBe(20);
     session.dispose();
   });
 });
-

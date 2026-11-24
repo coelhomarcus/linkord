@@ -2,7 +2,7 @@ import { useSyncExternalStore } from 'react';
 import { ConnectionState, RoomEvent } from 'livekit-client';
 import type { RemoteParticipant, Room } from 'livekit-client';
 import type { AudioHandle } from '@/state/RoomContext';
-import type { ClientMessage, ServerMessage } from '@/shared/types/protocol';
+import type { ClientMessage } from '@/shared/types/protocol';
 import { clearSpatialGain, setSpatialGain } from '@/features/calls/participantVolume';
 import { decodeState, encodeState, PLAYGROUND_TOPIC, SKIN_TOPIC } from './playgroundProtocol';
 import { fetchAccountSkin, forgetLegacySkin, saveAccountSkin, takeLegacySkin } from './skins/accountSkin';
@@ -12,6 +12,8 @@ import type { PlayerState } from './playgroundProtocol';
 import { proximityGain } from './proximity';
 import { spawnPoint } from './playgroundWorld';
 import { PlaygroundCombat } from './playgroundCombat';
+import { PlaygroundLink } from './playgroundLink';
+import type { CombatLink, CombatLinkOptions, PlaygroundServerMessage, PlaygroundTokenReply } from './playgroundLink';
 import { InventoryStore } from './inventory/inventory';
 
 // Everything a playground call needs while you are in it, whether or not its
@@ -28,9 +30,9 @@ import { InventoryStore } from './inventory/inventory';
 // MAX_SKIN_BYTES (an empty one meaning "my account's default"), after it is
 // saved: that is only the fast path, and what older tabs still listen for.
 //
-// Fighting is the server's (playgroundCombat.ts): the session also reports
-// your position to it over the socket, less often than to the others, sends
-// your punches and passes on what the server says about health.
+// Fighting is the playground service's (playgroundCombat.ts, playgroundLink.ts):
+// the session also reports your position to it, less often than to the others,
+// sends your punches and passes on what it says about health.
 
 // a moving avatar is sent at most this often...
 const SEND_INTERVAL_MS = 66;
@@ -39,7 +41,7 @@ const HEARTBEAT_MS = 1000;
 const AUDIO_TICK_MS = 100;
 // a skin that could not be read (a network blip) is asked for again after this
 const SKIN_RETRY_MS = 5000;
-// the server only needs your position to measure a punch's reach (6 blocks of leeway)
+// the playground service only needs your position to measure a punch's reach (6 blocks of leeway)
 const SERVER_REPORT_MS = 150;
 
 /** Someone in the call, by connection and by account. */
@@ -73,8 +75,9 @@ export class PlaygroundSession {
   private lastSentKey = '';
   private lastReportedAt = 0;
   private lastReportedKey = '';
-  /** the next report asks the server for everyone's health, until one goes out */
+  /** the next report asks the service for everyone's health, until one goes out */
   private askHealth = true;
+  private readonly link: CombatLink;
   readonly combat: PlaygroundCombat;
   /** what you carry; kept in this browser for as long as you are in the call */
   readonly inventory = new InventoryStore();
@@ -85,19 +88,28 @@ export class PlaygroundSession {
   readonly localId: string;
   readonly localUserId: string;
   private readonly audio: { current: Map<string, AudioHandle> };
-  private readonly sendWs: (msg: ClientMessage) => boolean;
 
   constructor(
     room: Room, conversationId: string, localId: string, localUserId: string, audio: { current: Map<string, AudioHandle> },
     sendWs: (msg: ClientMessage) => boolean = () => false,
+    createLink: (options: CombatLinkOptions) => CombatLink = (options) => new PlaygroundLink(options),
   ) {
     this.room = room;
     this.conversationId = conversationId;
     this.localId = localId;
     this.localUserId = localUserId;
     this.audio = audio;
-    this.sendWs = sendWs;
     this.combat = new PlaygroundCombat(localId);
+    this.link = createLink({
+      conversationId,
+      requestToken: () => sendWs({ t: 'playground-token', conversationId }),
+      onMessage: (message) => this.receive(message),
+      // a new connection to the service (a first one, or after it restarted) hears everyone's health again
+      onConnect: () => {
+        this.askHealth = true;
+        this.report();
+      },
+    });
     const spawn = spawnPoint(localId);
     this.local = { ...spawn, pitch: 0, motion: 'idle', headYaw: spawn.yaw, crouch: false, swings: 0 };
   }
@@ -108,6 +120,7 @@ export class PlaygroundSession {
     this.room.on(RoomEvent.Connected, this.onConnected);
     this.room.on(RoomEvent.Reconnected, this.onConnected);
     this.timer = setInterval(this.tick, AUDIO_TICK_MS);
+    this.link.start();
     this.send(true);
     this.report();
     void this.loadLocalSkin();
@@ -125,24 +138,30 @@ export class PlaygroundSession {
     this.retryTimers.clear();
     for (const handle of this.audio.current.values()) clearSpatialGain(handle.element);
     this.skinListeners.clear();
+    this.link.dispose();
     this.combat.dispose();
   }
 
-  /** A punch that landed on someone, as this client saw it; the server decides whether it counts. */
+  /** A punch that landed on someone, as this client saw it; the service decides whether it counts. */
   attack(targetId: string, crit: boolean, sprint: boolean): void {
     if (this.combat.isDead) return;
     const { x, y, z, headYaw } = this.local;
-    this.sendWs({ t: 'playground-attack', targetId, x, y, z, yaw: headYaw, crit, sprint });
+    this.link.send({ t: 'playground-attack', targetId, x, y, z, yaw: headYaw, crit, sprint });
   }
 
-  /** Back to life, once dead; the server answers with the health. */
+  /** Back to life, once dead; the service answers with the health. */
   respawn(): void {
-    this.sendWs({ t: 'playground-respawn' });
+    this.link.send({ t: 'playground-respawn' });
   }
 
-  /** What the server says about this call's fighting (RoomProvider passes it on). */
-  receive(message: Extract<ServerMessage, { t: 'playground-hit' | 'playground-health' | 'playground-xp' }>): void {
+  /** What the playground service says about this call's fighting. */
+  receive(message: PlaygroundServerMessage): void {
     if (message.conversationId === this.conversationId && !this.disposed) this.combat.receive(message);
+  }
+
+  /** The app's answer to a pass request (RoomProvider passes it on). */
+  receiveToken(reply: PlaygroundTokenReply): void {
+    if (!this.disposed) this.link.receiveToken(reply);
   }
 
   /** The skin an account chose, or null for its default. */
@@ -322,7 +341,7 @@ export class PlaygroundSession {
     const key = `${x.toFixed(2)},${y.toFixed(2)},${z.toFixed(2)},${headYaw.toFixed(2)}`;
     const due = this.askHealth || now - this.lastReportedAt >= HEARTBEAT_MS || (key !== this.lastReportedKey && now - this.lastReportedAt >= SERVER_REPORT_MS);
     if (!due) return;
-    const sent = this.sendWs({ t: 'playground-pos', x, y, z, yaw: headYaw, ...(this.askHealth ? { first: true } : {}) });
+    const sent = this.link.send({ t: 'playground-pos', x, y, z, yaw: headYaw, ...(this.askHealth ? { first: true } : {}) });
     if (!sent) return;
     this.lastReportedAt = now;
     this.lastReportedKey = key;

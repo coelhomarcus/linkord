@@ -1,8 +1,8 @@
 import { useSyncExternalStore } from 'react';
-import type { ServerMessage } from '@/shared/types/protocol';
+import type { PlaygroundServerMessage } from './playgroundLink';
 
-// What this client knows of the fighting in a playground. The server decides
-// every hit and every point of health (server/src/modules/playground/combat.ts);
+// What this client knows of the fighting in a playground. The playground service
+// decides every hit and every point of health (playground/src/combat.ts);
 // this keeps the last word it said, counts the regeneration it will do in the
 // meantime with the same rule (1 point every 4 s, from when the health last
 // changed), hands each hit to the 3D view for its effects, and remembers who is
@@ -11,9 +11,7 @@ import type { ServerMessage } from '@/shared/types/protocol';
 export const MAX_HEALTH = 20;
 const REGEN_INTERVAL_MS = 4000;
 
-export type PlaygroundHit = Extract<ServerMessage, { t: 'playground-hit' }>;
-type PlaygroundHealth = Extract<ServerMessage, { t: 'playground-health' }>;
-type PlaygroundXp = Extract<ServerMessage, { t: 'playground-xp' }>;
+export type PlaygroundHit = Extract<PlaygroundServerMessage, { t: 'playground-hit' }>;
 
 /** The local player's health as the HUD shows it. */
 export interface Vitals {
@@ -81,7 +79,7 @@ export class PlaygroundCombat {
   }
 
   /** A message from the server about this call's fighting. */
-  receive(message: PlaygroundHit | PlaygroundHealth | PlaygroundXp, now = performance.now()): void {
+  receive(message: PlaygroundServerMessage, now = performance.now()): void {
     if (message.t === 'playground-xp') {
       if (Number.isFinite(message.xp) && message.xp >= 0 && message.xp !== this.vitals.xp) {
         this.vitals = { ...this.vitals, xp: message.xp };

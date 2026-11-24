@@ -7,7 +7,7 @@ import { after, before, describe, it } from 'node:test';
 import Fastify, { type FastifyInstance } from 'fastify';
 import fastifyStatic from '@fastify/static';
 import {
-  buildContentSecurityPolicy, inlineScriptHashes, inlineStyleHashes, livekitSources, readBuildScriptHashes,
+  buildContentSecurityPolicy, inlineScriptHashes, inlineStyleHashes, livekitSources, playgroundSources, readBuildScriptHashes,
   readBuildStyleHashes, securityHeaders, themeBootstrapStyleHashes, type PolicyInput,
 } from '../../src/http/securityHeaders.js';
 import { PLAYER_HOSTS } from '../../src/modules/link-preview/playerHosts.js';
@@ -116,6 +116,20 @@ describe('livekitSources', () => {
 
   it('nothing when LiveKit is not configured', () => {
     assert.deepEqual(livekitSources(''), []);
+  });
+});
+
+describe('playgroundSources', () => {
+  it('the playground service on another origin is allowed by its websocket', () => {
+    assert.deepEqual(playgroundSources('https://play.example.com'), ['wss://play.example.com']);
+    assert.deepEqual(playgroundSources('http://localhost:3100'), ['ws://localhost:3100']);
+    const connect = directives(buildContentSecurityPolicy({ ...base, playgroundUrl: 'https://play.example.com' })).get('connect-src');
+    assert.ok(connect!.includes('wss://play.example.com'));
+  });
+
+  it('nothing when the playground is off', () => {
+    assert.deepEqual(playgroundSources(''), []);
+    assert.deepEqual(playgroundSources(undefined), []);
   });
 });
 

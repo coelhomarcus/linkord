@@ -1,6 +1,6 @@
 // Experience as the block game counts it: 7 points to level 1, then 2 more for
-// each level, 5 more from level 15 and 9 more from level 30. The server gives the
-// points (server/src/modules/playground/combat.ts, which mirrors this curve to
+// each level, 5 more from level 15 and 9 more from level 30. The playground service gives the
+// points (playground/src/combat.ts at the repo root, which mirrors this curve to
 // reward a kill); this turns them into the level and how full the bar is.
 
 function pointsToNextLevel(level: number): number {

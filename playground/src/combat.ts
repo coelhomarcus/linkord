@@ -1,19 +1,16 @@
-import { eq } from 'drizzle-orm';
-import { db } from '../../db/client.js';
-import { conversations } from '../../db/schema.js';
-import { participants, send } from '../presence/participants.js';
-import type { AppSocket, HandlerTable, Participant } from '../../types.js';
-import { logger } from '../../lib/logger.js';
+import { isCurrent, playerById, playersIn, send, sendToCall, type Player } from './roster.js';
+import { memoryExperienceStore, type ExperienceStore } from './experience.js';
+import { logger } from './logger.js';
 
-const log = logger.child({ component: 'playground-combat' });
+const log = logger.child({ component: 'combat' });
 
 // Fighting in a playground: health, hits, knockback, death and respawn, decided
 // here so no client can heal itself, hit harder, from across the island, or
-// through a hit's immunity. Avatars still move peer to peer over LiveKit (the
-// server never reads that channel); for this, each client also reports its own
-// position here a few times a second, and an attack carries the attacker's.
-// Reach is measured between those reports, so a cheat would have to lie about
-// where it stands, which everyone sees.
+// through a hit's immunity. Avatars still move peer to peer over LiveKit (nobody
+// here reads that channel); for this, each client also reports its own position
+// here a few times a second, and an attack carries the attacker's. Reach is
+// measured between those reports, so a cheat would have to lie about where it
+// stands, which everyone sees.
 //
 // The rules are the block game's 1.8 combat, as its server applies them: a
 // bare hand deals 1 (half a heart) of 20; a hit while falling is a critical
@@ -25,16 +22,18 @@ const log = logger.child({ component: 'playground-combat' });
 // client's word, like its position. Health comes back 1 every 4 s, as with a
 // full hunger bar.
 //
-// Kept in memory with the connection: a restart heals everyone, and the first
-// report after it starts each player again at full health.
+// Health is kept in memory by connection (the app's participant id), through a
+// reconnect to this service but not through its restart: the first report after
+// one starts each player again at full health. A restart of the app itself
+// changes nothing here.
 //
 // A kill earns experience, which fills the bar under the hearts and counts up
 // levels with the game's curve (7 points to level 1, then 2 more for each level,
 // 5 more from level 15, 9 more from 30). The game drops 7 points per level of the
 // one killed, at most 100; here a kill always earns at least 7, so the first one
-// already reaches level 1. Experience stays through a death and belongs to the
-// account in that playground (leaving and coming back keeps it), in memory: a
-// restart starts everyone from zero.
+// already reaches level 1. Experience belongs to the account in that playground
+// and is kept in this service's database (experience.ts), through deaths, rejoins
+// and restarts.
 
 export const MAX_HEALTH = 20;
 const FIST_DAMAGE = 1;
@@ -51,6 +50,8 @@ const MIN_KILL_XP = 7;
 const MAX_KILL_XP = 100;
 /** far past any island; a report beyond it is garbage */
 const MAX_COORDINATE = 4096;
+/** how long the health of a connection that dropped is kept for it to come back */
+export const FIGHTER_KEEP_MS = 2 * 60 * 1000;
 
 interface Fighter {
   conversationId: string;
@@ -66,10 +67,12 @@ interface Fighter {
   /** where the head faces, radians around +y; the look is (sin yaw, cos yaw) */
   yaw: number;
   positionAt: number;
+  /** when its connection left this service, or null while connected */
+  leftAt: number | null;
 }
 
 export function createFighter(conversationId: string, now: number): Fighter {
-  return { conversationId, health: MAX_HEALTH, healthAt: now, hurtAt: -Infinity, hurtDamage: 0, x: 0, y: 0, z: 0, yaw: 0, positionAt: 0 };
+  return { conversationId, health: MAX_HEALTH, healthAt: now, hurtAt: -Infinity, hurtDamage: 0, x: 0, y: 0, z: 0, yaw: 0, positionAt: 0, leftAt: null };
 }
 
 /** Health now, with what came back since the last change. The dead stay at 0. */
@@ -184,115 +187,111 @@ function place(fighter: Fighter, position: Position, now: number): void {
   fighter.positionAt = now;
 }
 
-// ---- the connections ----
+// ---- the players ----
 
-const fighters = new WeakMap<Participant, Fighter>();
-/** experience points by playground and account (`conversationId:userId`) */
+/** by participant id; kept for FIGHTER_KEEP_MS after the connection leaves, so a reconnect is no free heal */
+const fighters = new Map<string, Fighter>();
+/** experience points by playground and account (`conversationId:userId`), as last read or written */
 const experience = new Map<string, number>();
+const loadingExperience = new Map<string, Promise<void>>();
+let experienceStore: ExperienceStore = memoryExperienceStore();
+
 const xpKey = (conversationId: string, userId: string) => `${conversationId}:${userId}`;
 const xpOf = (conversationId: string, userId: string) => experience.get(xpKey(conversationId, userId)) ?? 0;
 
-function sendXp(p: Participant, conversationId: string): void {
-  send(p.socket, { t: 'playground-xp', conversationId, xp: xpOf(conversationId, p.userId) });
+/** index.ts hands in the database; tests keep the memory one, and start over with a fresh one. */
+export function setExperienceStore(store: ExperienceStore): void {
+  experienceStore = store;
+  experience.clear();
+  loadingExperience.clear();
 }
 
-/** Whether a call is a playground's; voice channels never change mode, so an answer is kept. */
-const playgroundChecks = new Map<string, Promise<boolean>>();
-let isPlayground = async (conversationId: string): Promise<boolean> => {
-  const [row] = await db.select({ voiceMode: conversations.voiceMode }).from(conversations).where(eq(conversations.id, conversationId)).limit(1);
-  return row?.voiceMode === 'playground';
-};
-
-/** Tests answer the playground check themselves instead of the database. */
-export function setPlaygroundCheck(check: (conversationId: string) => Promise<boolean>): void {
-  isPlayground = check;
-  playgroundChecks.clear();
-}
-
-function checkPlayground(conversationId: string): Promise<boolean> {
-  let check = playgroundChecks.get(conversationId);
-  if (!check) {
-    check = isPlayground(conversationId);
-    playgroundChecks.set(conversationId, check);
-    check.catch(() => { if (playgroundChecks.get(conversationId) === check) playgroundChecks.delete(conversationId); });
+/** Reads an account's experience once; a failed read is tried again on the next need. */
+function loadExperience(conversationId: string, userId: string): Promise<void> {
+  const key = xpKey(conversationId, userId);
+  if (experience.has(key)) return Promise.resolve();
+  let loading = loadingExperience.get(key);
+  if (!loading) {
+    loading = experienceStore.load(conversationId, userId)
+      .then((points) => { if (!experience.has(key)) experience.set(key, points); })
+      .catch((err: unknown) => { log.warn('could not read experience', { conversationId, err: err instanceof Error ? err.message : String(err) }); })
+      .finally(() => { loadingExperience.delete(key); });
+    loadingExperience.set(key, loading);
   }
-  return check;
+  return loading;
 }
 
-function participantOf(socket: AppSocket): Participant | null {
-  const p = participants.get(socket.participantId ?? '');
-  return p && p.socket === socket ? p : null;
+function sendXp(player: Player): void {
+  send(player, { t: 'playground-xp', conversationId: player.conversationId, xp: xpOf(player.conversationId, player.userId) });
 }
 
-/** The fighter of a connection in a playground call; created (at full health) on its first report there. */
-async function fighterOf(p: Participant): Promise<Fighter | null> {
-  const conversationId = p.callConversationId;
-  if (!conversationId) return null;
-  const known = fighters.get(p);
-  if (known?.conversationId === conversationId) return known;
-  let playground: boolean;
-  try {
-    playground = await checkPlayground(conversationId);
-  } catch (err) {
-    log.warn('could not tell whether a call is a playground', { conversationId, err: err instanceof Error ? err.message : String(err) });
-    return null;
+/** A connection that just arrived: its experience starts loading, and the health it had (if it was here
+ * moments ago, in the same call) is still its own. */
+export function playerJoined(player: Player): void {
+  const fighter = fighters.get(player.id);
+  if (fighter) fighter.leftAt = null;
+  void loadExperience(player.conversationId, player.userId);
+}
+
+export function playerLeft(player: Player, now: number): void {
+  const fighter = fighters.get(player.id);
+  if (fighter) fighter.leftAt = now;
+}
+
+/** Forgets the health of connections gone for longer than FIGHTER_KEEP_MS. */
+export function sweepFighters(now: number): void {
+  for (const [id, fighter] of fighters) {
+    if (fighter.leftAt !== null && now - fighter.leftAt > FIGHTER_KEEP_MS) fighters.delete(id);
   }
-  // the call may have changed while the check ran
-  if (!playground || p.callConversationId !== conversationId) return null;
-  const current = fighters.get(p);
-  if (current?.conversationId === conversationId) return current;
-  const fighter = createFighter(conversationId, Date.now());
-  fighters.set(p, fighter);
+}
+
+/** The fighter of a player; created (at full health) on its first report in that call. */
+function fighterOf(player: Player): Fighter {
+  const known = fighters.get(player.id);
+  if (known?.conversationId === player.conversationId) return known;
+  const fighter = createFighter(player.conversationId, Date.now());
+  fighters.set(player.id, fighter);
   return fighter;
 }
 
-/** Everyone in the call who has a fighter, with it. */
-function fightersIn(conversationId: string): [Participant, Fighter][] {
-  const found: [Participant, Fighter][] = [];
-  for (const p of participants.values()) {
-    if (p.callConversationId !== conversationId) continue;
-    const fighter = fighters.get(p);
-    if (fighter?.conversationId === conversationId) found.push([p, fighter]);
+/** Everyone connected in the call who has a fighter there, with it. */
+function fightersIn(conversationId: string): [Player, Fighter][] {
+  const found: [Player, Fighter][] = [];
+  for (const player of playersIn(conversationId)) {
+    const fighter = fighters.get(player.id);
+    if (fighter?.conversationId === conversationId) found.push([player, fighter]);
   }
   return found;
 }
 
-function sendToCall(conversationId: string, message: { t: string; [key: string]: unknown }): void {
-  for (const p of participants.values()) if (p.callConversationId === conversationId) send(p.socket, message);
+function healthEntry(player: Player, fighter: Fighter, now: number) {
+  return { id: player.id, health: healthOf(fighter, now) };
 }
 
-function healthEntry(p: Participant, fighter: Fighter, now: number) {
-  return { id: p.id, health: healthOf(fighter, now) };
-}
-
-/** `playground-pos`: where this connection's avatar stands. The first report of a session (`first`)
- * is answered with everyone's health, its own included. */
-async function handlePosition(socket: AppSocket, msg: { x?: unknown; y?: unknown; z?: unknown; yaw?: unknown; first?: unknown }): Promise<void> {
-  const p = participantOf(socket);
-  const position = p && readPosition(msg);
-  if (!p || !position) return;
-  const fighter = await fighterOf(p);
-  if (!fighter) return;
+/** `playground-pos`: where this connection's avatar stands. The first report of a connection (`first`)
+ * is answered with everyone's health, its own included, and its experience. */
+export async function handlePosition(player: Player, msg: { x?: unknown; y?: unknown; z?: unknown; yaw?: unknown; first?: unknown }): Promise<void> {
+  const position = readPosition(msg);
+  if (!position || !isCurrent(player)) return;
+  const fighter = fighterOf(player);
   const now = Date.now();
   place(fighter, position, now);
-  if (msg.first === true) {
-    send(p.socket, { t: 'playground-health', conversationId: fighter.conversationId, players: fightersIn(fighter.conversationId).map(([q, f]) => healthEntry(q, f, now)) });
-    sendXp(p, fighter.conversationId);
-  }
+  if (msg.first !== true) return;
+  send(player, { t: 'playground-health', conversationId: player.conversationId, players: fightersIn(player.conversationId).map(([p, f]) => healthEntry(p, f, now)) });
+  await loadExperience(player.conversationId, player.userId);
+  if (isCurrent(player)) sendXp(player);
 }
 
 /** `playground-attack`: a punch that landed on `targetId` as the attacker saw it, from where it stood. */
-async function handleAttack(socket: AppSocket, msg: { targetId?: unknown; x?: unknown; y?: unknown; z?: unknown; yaw?: unknown; crit?: unknown; sprint?: unknown }): Promise<void> {
-  const p = participantOf(socket);
-  const position = p && readPosition(msg);
-  if (!p || !position) return;
-  const attacker = await fighterOf(p);
-  if (!attacker) return;
+export async function handleAttack(player: Player, msg: { targetId?: unknown; x?: unknown; y?: unknown; z?: unknown; yaw?: unknown; crit?: unknown; sprint?: unknown }): Promise<void> {
+  const position = readPosition(msg);
+  if (!position || !isCurrent(player)) return;
+  const attacker = fighterOf(player);
   const now = Date.now();
   place(attacker, position, now);
-  const targetP = participants.get(String(msg.targetId ?? ''));
-  const target = targetP && targetP !== p ? fighters.get(targetP) : undefined;
-  if (!targetP || !target || target.conversationId !== attacker.conversationId || targetP.callConversationId !== attacker.conversationId) return;
+  const targetPlayer = playerById(String(msg.targetId ?? ''));
+  const target = targetPlayer && targetPlayer.id !== player.id ? fighters.get(targetPlayer.id) : undefined;
+  if (!targetPlayer || !target || targetPlayer.conversationId !== player.conversationId || target.conversationId !== player.conversationId) return;
   // an old report still counts: a player whose tab is in the background (its timers slowed to once a
   // minute) stands still where it last said, for everyone
   if (healthOf(attacker, now) <= 0 || target.positionAt === 0 || !withinReach(attacker, target)) return;
@@ -300,40 +299,51 @@ async function handleAttack(socket: AppSocket, msg: { targetId?: unknown; x?: un
   const outcome = landHit(target, attackDamage(crit), now);
   if (!outcome) return;
   const knockback = outcome.hurt ? knockbackFor(attacker, target, msg.sprint === true) : null;
-  sendToCall(attacker.conversationId, {
+  sendToCall(player.conversationId, {
     t: 'playground-hit',
-    conversationId: attacker.conversationId,
-    attackerId: p.id,
-    targetId: targetP.id,
+    conversationId: player.conversationId,
+    attackerId: player.id,
+    targetId: targetPlayer.id,
     damage: outcome.dealt,
     health: outcome.health,
     crit,
     hurt: outcome.hurt,
     ...(knockback ? { push: knockback.push, ...(knockback.extra ? { extra: knockback.extra } : {}) } : {}),
   });
-  if (outcome.health > 0 || targetP.userId === p.userId) return;
-  const key = xpKey(attacker.conversationId, p.userId);
-  experience.set(key, xpOf(attacker.conversationId, p.userId) + killReward(xpOf(attacker.conversationId, targetP.userId)));
-  sendXp(p, attacker.conversationId);
+  if (outcome.health > 0 || targetPlayer.userId === player.userId) return;
+  await rewardKill(player, xpOf(player.conversationId, targetPlayer.userId));
+}
+
+async function rewardKill(player: Player, victimPoints: number): Promise<void> {
+  const { conversationId, userId } = player;
+  const key = xpKey(conversationId, userId);
+  const reward = killReward(victimPoints);
+  await loadExperience(conversationId, userId);
+  try {
+    experience.set(key, await experienceStore.add(conversationId, userId, reward));
+  } catch (err) {
+    // shown all the same; only a restart of this service forgets it
+    log.warn('could not save experience', { conversationId, err: err instanceof Error ? err.message : String(err) });
+    experience.set(key, xpOf(conversationId, userId) + reward);
+  }
+  if (isCurrent(player)) sendXp(player);
 }
 
 /** `playground-respawn`: back at full health after dying. Answered with the health either way, so a
  * client that thought it was dead (from before a restart) learns otherwise. */
-async function handleRespawn(socket: AppSocket): Promise<void> {
-  const p = participantOf(socket);
-  if (!p) return;
-  const fighter = await fighterOf(p);
-  if (!fighter) return;
+export function handleRespawn(player: Player): void {
+  if (!isCurrent(player)) return;
+  const fighter = fighterOf(player);
   const now = Date.now();
   if (healthOf(fighter, now) <= 0) {
     setHealth(fighter, MAX_HEALTH, now);
     fighter.hurtAt = -Infinity;
   }
-  sendToCall(fighter.conversationId, { t: 'playground-health', conversationId: fighter.conversationId, players: [healthEntry(p, fighter, now)] });
+  sendToCall(player.conversationId, { t: 'playground-health', conversationId: player.conversationId, players: [healthEntry(player, fighter, now)] });
 }
 
-export const handlers: HandlerTable = {
-  'playground-pos': handlePosition,
-  'playground-attack': handleAttack,
-  'playground-respawn': handleRespawn,
-};
+/** Tests start from an empty arena. */
+export function clearCombat(): void {
+  fighters.clear();
+  setExperienceStore(memoryExperienceStore());
+}

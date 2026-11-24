@@ -375,10 +375,8 @@ export function RoomProvider({ children }: { children: ReactNode }) {
       case 'soundboard-play':
         soundboardEvents.onSoundboardPlay(m);
         break;
-      case 'playground-hit':
-      case 'playground-health':
-      case 'playground-xp':
-        getActivePlaygroundSession()?.receive(m);
+      case 'playground-token':
+        getActivePlaygroundSession()?.receiveToken(m);
         break;
       case 'server-sounds-changed':
         soundboardEvents.onServerSoundsChanged(m);

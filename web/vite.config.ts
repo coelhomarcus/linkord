@@ -89,6 +89,8 @@ export default defineConfig({
     port: 5173,
     proxy: {
       '/ws': { target: 'http://localhost:3000', ws: true },
+      // the playground service (npm run dev:playground), as a proxy on the app's domain would route it
+      '/playground': { target: 'http://localhost:3100', ws: true },
       '/api': { target: 'http://localhost:3000' },
       '/uploads': { target: 'http://localhost:3000' },
     },

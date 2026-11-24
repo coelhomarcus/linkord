@@ -1,0 +1,114 @@
+import type { Server as HttpServer } from 'node:http';
+import { Server, type Socket } from 'socket.io';
+import { verifyPlaygroundToken } from './access.js';
+import { admit, allPlayers, isCurrent, playerFor, remove, type Player } from './roster.js';
+import { handleAttack, handlePosition, handleRespawn, playerJoined, playerLeft, sweepFighters } from './combat.js';
+import { logger } from './logger.js';
+
+const log = logger.child({ component: 'socket' });
+
+/** Where browsers connect; a proxy on the app's own domain sends this path here. */
+const SOCKET_PATH = '/playground/ws';
+// game messages are a few numbers each
+const MAX_MESSAGE_BYTES = 4 * 1024;
+const SWEEP_MS = 5000;
+
+// Per connection: a client reports its position at most ~7 times a second and punches once per click;
+// a dropped one is replaced by the next. Renewal is twice a minute.
+interface Limit { windowMs: number; max: number }
+const LIMITS: Record<string, Limit> = {
+  'playground-pos': { windowMs: 10_000, max: 120 },
+  'playground-attack': { windowMs: 10_000, max: 120 },
+  'playground-respawn': { windowMs: 10_000, max: 10 },
+  renew: { windowMs: 60_000, max: 10 },
+};
+
+type Handler = (player: Player, payload: Record<string, unknown>) => unknown;
+const HANDLERS: Record<string, Handler> = {
+  'playground-pos': handlePosition,
+  'playground-attack': handleAttack,
+  'playground-respawn': (player) => handleRespawn(player),
+};
+
+interface Window { start: number; count: number }
+
+function allow(windows: Map<string, Window>, event: string, now: number): boolean {
+  const limit = LIMITS[event];
+  if (!limit) return true;
+  const window = windows.get(event);
+  if (!window || now - window.start >= limit.windowMs) {
+    windows.set(event, { start: now, count: 1 });
+    return true;
+  }
+  window.count++;
+  return window.count <= limit.max;
+}
+
+function run(event: string, fn: () => unknown): void {
+  try {
+    const result = fn();
+    if (result instanceof Promise) result.catch((err: unknown) => log.error('error in socket handler', err, { event }));
+  } catch (err) {
+    log.error('error in socket handler', err, { event });
+  }
+}
+
+/** A new pass for the same connection in the same call pushes its expiry back; anything else is ignored. */
+function renew(player: Player, token: unknown, secret: string): void {
+  const claims = verifyPlaygroundToken(token, secret, Date.now());
+  if (!claims || claims.pid !== player.id || claims.uid !== player.userId || claims.cid !== player.conversationId) return;
+  player.expiresAt = Math.max(player.expiresAt, claims.exp);
+}
+
+/** Closes connections whose pass ran out: the app stopped renewing it, so they left the call or lost the
+ * channel. Their client asks the app for a new one and, if it still may, comes back. */
+function sweep(now: number): void {
+  for (const player of allPlayers()) {
+    if (player.expiresAt > now) continue;
+    log.debug('pass expired', { participantId: player.id });
+    try { player.socket.disconnect(true); } catch { /* already gone */ }
+  }
+  sweepFighters(now);
+}
+
+export function createPlaygroundSocket(httpServer: HttpServer, secret: string): { io: Server; stop: () => void } {
+  const io = new Server(httpServer, {
+    path: SOCKET_PATH,
+    // websocket only: no long-polling requests, so another origin needs no CORS, and the pass in the
+    // handshake (not a cookie) is what authenticates
+    transports: ['websocket'],
+    maxHttpBufferSize: MAX_MESSAGE_BYTES,
+  });
+
+  io.use((socket: Socket, next) => {
+    const claims = verifyPlaygroundToken((socket.handshake.auth as { token?: unknown } | undefined)?.token, secret, Date.now());
+    if (!claims) return next(Object.assign(new Error('unauthorized'), { data: { code: 'unauthorized' } }));
+    socket.data.claims = claims;
+    next();
+  });
+
+  io.on('connection', (socket: Socket) => {
+    const player = playerFor(socket.data.claims, socket);
+    admit(player);
+    playerJoined(player);
+    log.debug('joined', { participantId: player.id, conversationId: player.conversationId });
+    const windows = new Map<string, Window>();
+
+    socket.onAny((event: string, payload: unknown) => {
+      if (!isCurrent(player) || !allow(windows, event, Date.now())) return;
+      const msg = (payload && typeof payload === 'object' ? payload : {}) as Record<string, unknown>;
+      if (event === 'renew') return run(event, () => renew(player, msg.token, secret));
+      const handler = HANDLERS[event];
+      if (handler) run(event, () => handler(player, msg));
+    });
+
+    socket.on('disconnect', (reason) => {
+      if (remove(player)) playerLeft(player, Date.now());
+      log.debug('left', { participantId: player.id, reason });
+    });
+  });
+
+  const timer = setInterval(() => sweep(Date.now()), SWEEP_MS);
+  timer.unref();
+  return { io, stop: () => clearInterval(timer) };
+}
