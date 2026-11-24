@@ -114,6 +114,7 @@ export class BlockAvatar {
   private age = Math.random() * 10;
   /** seconds into a punch, or null */
   private punch: number | null = null;
+  private light = 1;
 
   constructor(skin: Skin, name: string) {
     this.nameplate = new Nameplate(name);
@@ -138,11 +139,25 @@ export class BlockAvatar {
       const mesh = partMesh(part, skin, materials);
       const [x, y, z] = partOffset(part, skin.slim);
       mesh.position.set(x * PX, y * PX, z * PX);
+      mesh.traverse((node) => { node.castShadow = true; });
       pivot.add(mesh);
       this.body.add(pivot);
       this.parts.set(part, pivot);
     }
+    this.applyLight();
     this.pose({ speed: 0, headYaw: 0, headPitch: 0, crouching: false }, 0);
+  }
+
+  /** How lit the spot it stands on is (0..1, lighting.ts's lightmap): dimmer under trees and overhangs. */
+  setLight(brightness: number): void {
+    if (brightness === this.light) return;
+    this.light = brightness;
+    this.applyLight();
+  }
+
+  private applyLight(): void {
+    this.materials?.inner.color.setScalar(this.light);
+    this.materials?.outer.color.setScalar(this.light);
   }
 
   setLabel(name: string, speaking: boolean): void {
@@ -317,6 +332,12 @@ export class FirstPersonArm {
     const origin: [number, number, number] = [skin.slim ? -2 : -3, -2, -2];
     this.arm.add(new THREE.Mesh(vanillaCube(40, 16, origin, [width, 12, 4], 0), this.materials.inner));
     this.arm.add(new THREE.Mesh(vanillaCube(40, 32, origin, [width, 12, 4], 0.25), this.materials.outer));
+  }
+
+  /** The light where the player stands, as BlockAvatar.setLight. */
+  setLight(brightness: number): void {
+    this.materials?.inner.color.setScalar(brightness);
+    this.materials?.outer.color.setScalar(brightness);
   }
 
   /** A click: the punch starts over once it is past its middle. */

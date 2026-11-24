@@ -8,6 +8,7 @@ import type { Skin } from '../skins/skins';
 import { BlockAvatar, FirstPersonArm } from './blockAvatar';
 import { angleDelta, turnBody } from './bipedPose';
 import { cameraDistance } from './cameraCollision';
+import { lightmap, MAX_LIGHT } from './lighting';
 import { Controls, nextCameraMode } from './controls';
 import type { CameraMode } from './controls';
 import { createBody, groundUnder, SNEAKING_EYE_HEIGHT, STANDING_EYE_HEIGHT, stepBody, TICK_SECONDS } from './playerPhysics';
@@ -104,6 +105,8 @@ export class PlaygroundEngine {
     this.options = options;
     this.renderer = new THREE.WebGLRenderer({ antialias: false, powerPreference: 'high-performance' });
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    this.renderer.shadowMap.enabled = true;
+    this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     const canvas = this.renderer.domElement;
     canvas.className = 'block size-full touch-none outline-none';
     container.prepend(canvas);
@@ -305,6 +308,11 @@ export class PlaygroundEngine {
     this.motion = !this.body.onGround ? 'jump' : this.speed > STILL_SPEED ? (this.sprinting ? 'run' : 'walk') : 'idle';
   }
 
+  /** How lit someone standing at `at` is: the sky light in the cell at their chest. */
+  private lightAt(at: THREE.Vector3): number {
+    return lightmap(this.world.skyLightAt(at.x, at.y + 1, at.z) / MAX_LIGHT);
+  }
+
   /** Where the head faces: where the camera looks. */
   private headYaw(): number {
     return this.controls.yaw + Math.PI;
@@ -317,6 +325,9 @@ export class PlaygroundEngine {
     const facing = this.previousFacing + angleDelta(this.previousFacing, this.facing) * partial;
     this.local.root.position.copy(this.position);
     this.local.root.rotation.y = facing;
+    const light = this.lightAt(this.position);
+    this.local.setLight(light);
+    this.arm.setLight(light);
     this.local.update(dt, { speed: this.speed, headYaw: angleDelta(facing, headYaw), headPitch: pitch, crouching: this.sneaking });
     // the body would fill the view from inside it; the first-person arm stands in
     this.local.root.visible = this.controls.mode !== 'first';
@@ -358,6 +369,7 @@ export class PlaygroundEngine {
       }
       remote.avatar.root.position.copy(remote.position);
       remote.avatar.root.rotation.y = remote.yaw;
+      remote.avatar.setLight(this.lightAt(remote.position));
       remote.avatar.update(dt, { speed, headYaw: angleDelta(remote.yaw, remote.headYaw), headPitch: state.pitch, crouching: state.crouch });
     }
   }
