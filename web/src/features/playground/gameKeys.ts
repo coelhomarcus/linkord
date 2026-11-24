@@ -6,7 +6,7 @@
 // The block game's keys: Esc and Tab open the menu, T, Enter and / open the
 // chat, E the inventory, 1 to 9 pick a hotbar slot, Q throws what the hand
 // holds (Ctrl+Q all of it), F1 hides the HUD, F5
-// changes the camera (V too), F11 is fullscreen. Alt lets go of the mouse
+// changes the camera (V too), F11 and F are fullscreen. Alt lets go of the mouse
 // without pausing, to use another window or monitor while the game goes on.
 // Anything else the browser would act on is swallowed: reload (F5, Ctrl+R),
 // find (F3, /, '), the address bar (F6), page zoom, saving, printing, Alt's
@@ -99,6 +99,7 @@ export function gameKeyAction(key: GameKey, state: GameKeyState): GameKeyAction 
   if (code === 'Enter' && state.onControl) return null;
   if (code === 'KeyT' || code === 'Enter' || code === 'NumpadEnter' || code === 'Slash') return key.repeat ? 'swallow' : 'chat';
   if (code === 'KeyV') return key.repeat ? 'swallow' : 'camera';
+  if (code === 'KeyF') return key.repeat ? 'swallow' : 'fullscreen';
   if (code === 'KeyE') return key.repeat ? 'swallow' : 'inventory';
   if (code === 'KeyQ') return 'drop';
   if (/^Digit[1-9]$/.test(code)) return 'hotbar';

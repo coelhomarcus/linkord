@@ -33,6 +33,13 @@ describe('gameKeyAction', () => {
     expect(gameKeyAction(key('F12'), playing)).toBeNull();
   });
 
+  it('toggles fullscreen with F too, but not while typing or with a screen open', () => {
+    expect(gameKeyAction(key('KeyF'), playing)).toBe('fullscreen');
+    expect(gameKeyAction(key('KeyF', { repeat: true }), playing)).toBe('swallow');
+    expect(gameKeyAction(key('KeyF'), { ...playing, chatOpen: true, typing: true })).toBeNull();
+    expect(gameKeyAction(key('KeyF'), { ...playing, inventoryOpen: true })).toBeNull();
+  });
+
   it('keeps Ctrl with a walking key for the sprint, and swallows every other shortcut', () => {
     expect(gameKeyAction(key('KeyW', { ctrlKey: true }), playing)).toBeNull();
     expect(gameKeyAction(key('KeyR', { ctrlKey: true }), playing)).toBe('swallow');
