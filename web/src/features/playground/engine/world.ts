@@ -1,5 +1,7 @@
 import * as THREE from 'three';
 import { SCREEN, WORLD_RADIUS } from '../playgroundWorld';
+import { NO_OUTLINE_LAYER } from './outlineRenderer';
+import { toon } from './toon';
 
 // The first map: a clearing in a pine wood, a stone plaza in the middle, the
 // big screen at its north end with benches facing it, lamp posts around the
@@ -11,6 +13,8 @@ export type Collider =
   | { kind: 'box'; minX: number; maxX: number; minZ: number; maxZ: number };
 
 export const SKY_COLOR = 0xa9d6ee;
+const SKY_TOP = 0x5ea8e6;
+export const FOG = { near: 38, far: 90 } as const;
 const PLAZA_RADIUS = 9;
 
 /** A seeded random source, so everyone's world has its trees in the same places. */
@@ -24,18 +28,18 @@ function random(seed: number): () => number {
   };
 }
 
-const standard = (color: number, extra: THREE.MeshStandardMaterialParameters = {}) =>
-  new THREE.MeshStandardMaterial({ color, flatShading: true, roughness: 0.9, ...extra });
 
 export function buildWorld(scene: THREE.Scene): Collider[] {
   const colliders: Collider[] = [];
   const rand = random(20261123);
 
   scene.background = new THREE.Color(SKY_COLOR);
-  scene.fog = new THREE.Fog(SKY_COLOR, 38, 90);
+  scene.fog = new THREE.Fog(SKY_COLOR, FOG.near, FOG.far);
+  scene.add(buildSky());
 
-  scene.add(new THREE.HemisphereLight(0xdff1ff, 0x5d7c3d, 1.25));
-  const sun = new THREE.DirectionalLight(0xfff0d8, 2.4);
+  // toon bands come from the sun alone; the hemisphere evenly lifts the shadow side
+  scene.add(new THREE.HemisphereLight(0xe4f2ff, 0x6f8f52, 1.1));
+  const sun = new THREE.DirectionalLight(0xfff3e0, 1.9);
   sun.position.set(20, 32, 14);
   sun.castShadow = true;
   sun.shadow.mapSize.set(2048, 2048);
@@ -53,16 +57,16 @@ export function buildWorld(scene: THREE.Scene): Collider[] {
     colors.push(grass.r, grass.g, grass.b);
   }
   groundGeometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
-  const ground = new THREE.Mesh(groundGeometry, standard(0xffffff, { vertexColors: true }));
+  const ground = new THREE.Mesh(groundGeometry, toon(0xffffff, { vertexColors: true }));
   ground.rotation.x = -Math.PI / 2;
   ground.receiveShadow = true;
   scene.add(ground);
 
-  const plaza = new THREE.Mesh(new THREE.CylinderGeometry(PLAZA_RADIUS, PLAZA_RADIUS + 0.15, 0.04, 48), standard(0xcbbd9f));
+  const plaza = new THREE.Mesh(new THREE.CylinderGeometry(PLAZA_RADIUS, PLAZA_RADIUS + 0.15, 0.04, 48), toon(0xcbbd9f));
   plaza.position.y = 0.02;
   plaza.receiveShadow = true;
   scene.add(plaza);
-  const path = new THREE.Mesh(new THREE.BoxGeometry(3.4, 0.04, 8), standard(0xbfb193));
+  const path = new THREE.Mesh(new THREE.BoxGeometry(3.4, 0.04, 8), toon(0xbfb193));
   path.position.set(0, 0.02, -PLAZA_RADIUS - 3);
   path.receiveShadow = true;
   scene.add(path);
@@ -75,8 +79,28 @@ export function buildWorld(scene: THREE.Scene): Collider[] {
   return colliders;
 }
 
+/** A dome fading from the horizon's haze to a deeper blue overhead. */
+function buildSky(): THREE.Mesh {
+  const geometry = new THREE.SphereGeometry(150, 32, 16);
+  const position = geometry.attributes.position!;
+  const horizon = new THREE.Color(SKY_COLOR);
+  const top = new THREE.Color(SKY_TOP);
+  const colors: number[] = [];
+  const c = new THREE.Color();
+  for (let i = 0; i < position.count; i++) {
+    const height = Math.max(position.getY(i) / 150, 0);
+    c.copy(horizon).lerp(top, Math.pow(height, 0.6));
+    colors.push(c.r, c.g, c.b);
+  }
+  geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
+  const sky = new THREE.Mesh(geometry, new THREE.MeshBasicMaterial({ vertexColors: true, side: THREE.BackSide, fog: false, depthWrite: false }));
+  sky.layers.set(NO_OUTLINE_LAYER);
+  sky.renderOrder = -1;
+  return sky;
+}
+
 function buildScreenStand(scene: THREE.Scene, colliders: Collider[]): void {
-  const dark = standard(0x232428, { roughness: 0.6 });
+  const dark = toon(0x2b2d33);
   const frame = new THREE.Mesh(new THREE.BoxGeometry(SCREEN.width + 0.7, SCREEN.height + 0.7, 0.4), dark);
   frame.position.set(SCREEN.x, SCREEN.y, SCREEN.z - 0.2);
   frame.castShadow = true;
@@ -88,7 +112,7 @@ function buildScreenStand(scene: THREE.Scene, colliders: Collider[]): void {
     leg.castShadow = true;
     scene.add(leg);
   }
-  const stage = new THREE.Mesh(new THREE.BoxGeometry(SCREEN.width + 3, 0.5, 3), standard(0x8a6a4a));
+  const stage = new THREE.Mesh(new THREE.BoxGeometry(SCREEN.width + 3, 0.5, 3), toon(0x8a6a4a));
   stage.position.set(SCREEN.x, 0.25, SCREEN.z - 0.4);
   stage.castShadow = true;
   stage.receiveShadow = true;
@@ -97,7 +121,7 @@ function buildScreenStand(scene: THREE.Scene, colliders: Collider[]): void {
 }
 
 function buildBenches(scene: THREE.Scene, colliders: Collider[]): void {
-  const wood = standard(0x9c6b3f);
+  const wood = toon(0x9c6b3f);
   const seats: [number, number][] = [[-3, -8.5], [3, -8.5], [-3, -5.5], [3, -5.5]];
   const seat = new THREE.InstancedMesh(new THREE.BoxGeometry(3.4, 0.12, 0.7), wood, seats.length);
   const back = new THREE.InstancedMesh(new THREE.BoxGeometry(3.4, 0.6, 0.1), wood, seats.length);
@@ -119,8 +143,8 @@ function buildBenches(scene: THREE.Scene, colliders: Collider[]): void {
 
 function buildLamps(scene: THREE.Scene, colliders: Collider[]): void {
   const count = 6;
-  const posts = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.08, 0.12, 3.2, 8), standard(0x2f3136), count);
-  const bulbs = new THREE.InstancedMesh(new THREE.SphereGeometry(0.22, 12, 8), new THREE.MeshStandardMaterial({ color: 0xfff1c7, emissive: 0xffd98a, emissiveIntensity: 1.6 }), count);
+  const posts = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.08, 0.12, 3.2, 8), toon(0x2f3136), count);
+  const bulbs = new THREE.InstancedMesh(new THREE.SphereGeometry(0.22, 12, 8), toon(0xfff1c7, { emissive: 0xffd98a, emissiveIntensity: 0.8 }), count);
   const m = new THREE.Matrix4();
   for (let i = 0; i < count; i++) {
     // leave the screen's side of the ring open
@@ -154,9 +178,9 @@ function buildTrees(scene: THREE.Scene, colliders: Collider[], rand: () => numbe
     const r = WORLD_RADIUS + 1.5 + rand() * 14;
     spots.push({ x: Math.cos(angle) * r, z: Math.sin(angle) * r, s: 1 + rand() * 0.8 });
   }
-  const trunks = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.18, 0.28, 1.4, 6), standard(0x6b4a2f), spots.length);
-  const lower = new THREE.InstancedMesh(new THREE.ConeGeometry(1.3, 2.4, 7), standard(0x3f7a3a), spots.length);
-  const upper = new THREE.InstancedMesh(new THREE.ConeGeometry(0.9, 1.8, 7), standard(0x4d8c42), spots.length);
+  const trunks = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.18, 0.28, 1.4, 6), toon(0x6b4a2f), spots.length);
+  const lower = new THREE.InstancedMesh(new THREE.ConeGeometry(1.3, 2.4, 7), toon(0x3f7a3a), spots.length);
+  const upper = new THREE.InstancedMesh(new THREE.ConeGeometry(0.9, 1.8, 7), toon(0x4d8c42), spots.length);
   const m = new THREE.Matrix4();
   const q = new THREE.Quaternion();
   const up = new THREE.Vector3(0, 1, 0);
@@ -176,7 +200,7 @@ function buildTrees(scene: THREE.Scene, colliders: Collider[], rand: () => numbe
 
 function buildRocks(scene: THREE.Scene, colliders: Collider[], rand: () => number): void {
   const count = 16;
-  const rocks = new THREE.InstancedMesh(new THREE.DodecahedronGeometry(0.6, 0), standard(0x8d9097), count);
+  const rocks = new THREE.InstancedMesh(new THREE.DodecahedronGeometry(0.6, 0), toon(0x8d9097), count);
   const m = new THREE.Matrix4();
   const q = new THREE.Quaternion();
   for (let i = 0; i < count; i++) {

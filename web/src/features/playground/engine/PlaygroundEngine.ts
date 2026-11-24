@@ -8,7 +8,8 @@ import { Controls } from './controls';
 import type { CameraMode } from './controls';
 import { ScreenDisplay } from './screen';
 import type { ScreenLabels } from './screen';
-import { buildWorld, resolveCollisions } from './world';
+import { buildWorld, FOG, resolveCollisions } from './world';
+import { OutlineRenderer } from './outlineRenderer';
 import type { Collider } from './world';
 
 // The 3D view of a playground. Plain three.js driven by its own animation
@@ -66,6 +67,7 @@ export class PlaygroundEngine {
   private readonly colliders: Collider[];
   private readonly screen: ScreenDisplay;
   private readonly resizeObserver: ResizeObserver;
+  private readonly outlines: OutlineRenderer;
   private readonly local: Avatar;
   private readonly position = new THREE.Vector3();
   private readonly velocity = new THREE.Vector3();
@@ -87,7 +89,9 @@ export class PlaygroundEngine {
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     this.renderer.shadowMap.enabled = true;
     this.renderer.shadowMap.type = THREE.PCFShadowMap;
-    this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    // flat toon colours read as painted only without a filmic curve bending them
+    this.renderer.toneMapping = THREE.NoToneMapping;
+    this.outlines = new OutlineRenderer(this.renderer, FOG);
     const canvas = this.renderer.domElement;
     canvas.className = 'block size-full touch-none outline-none';
     container.prepend(canvas);
@@ -177,6 +181,7 @@ export class PlaygroundEngine {
       mesh.geometry?.dispose();
       for (const material of Array.isArray(mesh.material) ? mesh.material : [mesh.material]) material?.dispose();
     });
+    this.outlines.dispose();
     this.renderer.dispose();
     this.renderer.domElement.remove();
   }
@@ -185,6 +190,7 @@ export class PlaygroundEngine {
     const { clientWidth: width, clientHeight: height } = this.container;
     if (!width || !height) return;
     this.renderer.setSize(width, height, false);
+    this.outlines.setSize(width, height, this.renderer.getPixelRatio());
     this.camera.aspect = width / height;
     this.camera.updateProjectionMatrix();
   }
@@ -198,7 +204,7 @@ export class PlaygroundEngine {
     this.moveRemotes(dt);
     this.placeCamera();
     this.screen.update();
-    this.renderer.render(this.scene, this.camera);
+    this.outlines.render(this.scene, this.camera);
   };
 
   private moveLocal(dt: number): void {

@@ -3,6 +3,7 @@ import type { CharacterId } from '../characters';
 import type { Motion } from '../playgroundProtocol';
 import { AVATAR_HEIGHT, createCharacterModel, loadMotionClips } from './assets';
 import { Nameplate } from './nameplate';
+import { toon } from './toon';
 
 const FADE_SECONDS = 0.2;
 
@@ -80,7 +81,7 @@ export class Avatar {
 
 /** A capsule standing in for a character that failed to load. */
 function placeholderModel(): THREE.Object3D {
-  const mesh = new THREE.Mesh(new THREE.CapsuleGeometry(0.35, AVATAR_HEIGHT - 0.7, 6, 12), new THREE.MeshStandardMaterial({ color: 0x8a8f98 }));
+  const mesh = new THREE.Mesh(new THREE.CapsuleGeometry(0.35, AVATAR_HEIGHT - 0.7, 6, 12), toon(0x8a8f98));
   mesh.position.y = AVATAR_HEIGHT / 2;
   mesh.castShadow = true;
   return mesh;

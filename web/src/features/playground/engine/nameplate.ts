@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { NO_OUTLINE_LAYER } from './outlineRenderer';
 
 // A name floating over an avatar, drawn on a canvas so it is one sprite (one
 // draw call) and always faces the camera. A green ring while they speak, as on
@@ -25,6 +26,7 @@ export class Nameplate {
     const material = new THREE.SpriteMaterial({ map: this.texture, transparent: true, depthWrite: false });
     this.sprite = new THREE.Sprite(material);
     this.sprite.renderOrder = 10;
+    this.sprite.layers.set(NO_OUTLINE_LAYER);
     this.set(name, false);
   }
 

@@ -3,6 +3,7 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import type { GLTF } from 'three/addons/loaders/GLTFLoader.js';
 import { clone as cloneSkinned } from 'three/addons/utils/SkeletonUtils.js';
 import type { CharacterId } from '../characters';
+import { toToon } from './toon';
 import type { Motion } from '../playgroundProtocol';
 import knightUrl from '../assets/Knight.glb?url';
 import barbarianUrl from '../assets/Barbarian.glb?url';
@@ -38,6 +39,11 @@ function loadCharacter(id: CharacterId) {
   let entry = characters.get(id);
   if (!entry) {
     entry = loader.loadAsync(CHARACTER_URLS[id]).then((gltf: GLTF) => {
+      // banded once on the cached original; every clone shares these materials
+      gltf.scene.traverse((node) => {
+        const mesh = node as THREE.Mesh;
+        if (mesh.isMesh) mesh.material = Array.isArray(mesh.material) ? mesh.material.map(toToon) : toToon(mesh.material);
+      });
       const size = new THREE.Box3().setFromObject(gltf.scene).getSize(new THREE.Vector3());
       return { scene: gltf.scene, scale: size.y > 0 ? AVATAR_HEIGHT / size.y : 1 };
     });
