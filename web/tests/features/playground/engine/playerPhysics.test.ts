@@ -4,10 +4,11 @@ import type { PhysicsBody, PhysicsInput, Terrain } from '@/features/playground/e
 
 const MAX_HEIGHT = 24;
 
-/** flat ground at 5, a one-block step from x = 3, a two-block wall from x = 6, sea from z = 8 */
+const groundAt = (x: number) => (x >= 6 ? 8 : x >= 3 ? 6 : 5);
+/** flat ground at 5, a one-block step from x = 3, a two-block wall from x = 6, sea (a wall) from z = 8,
+ * and one block of leaves hanging at head height over x = -10 */
 const terrain: Terrain = {
-  groundAt: (x, z) => (z >= 8 ? 2 : x >= 6 ? 8 : x >= 3 ? 6 : 5),
-  isWater: (_x, z) => z >= 8,
+  isSolid: (x, y, z) => z >= 8 || y < groundAt(x) || (x === -10 && y === 6 && z === 0),
 };
 
 // yaw -π/2 looks toward +x
@@ -79,6 +80,33 @@ describe('playerPhysics', () => {
     expect(sneaking.x).toBeGreaterThan(3 - 0.3);
     const walking = run(createBody(4, 6, 0), 40, input({ yaw: Math.PI / 2 }));
     expect(walking.y).toBe(5);
+  });
+
+  it('bumps into a block hanging at head height, and walks under nothing', () => {
+    const body = run(createBody(-14, 5, 0.5), 40, input());
+    expect(body.x).toBeLessThan(-10 - 0.29);
+    expect(body.collidedHorizontally).toBe(true);
+  });
+
+  it('stands on top of the leaves it lands on', () => {
+    const body = createBody(-9.5, 7.5, 0.5);
+    run(body, 20, input({ forward: 0 }));
+    expect(body.y).toBe(7);
+    expect(body.onGround).toBe(true);
+  });
+
+  it('hits its head on a ceiling and falls back', () => {
+    const ceiling: Terrain = { isSolid: (_x, y) => y < 5 || y === 7 };
+    const body = createBody(0.5, 5, 0.5);
+    stepBody(ceiling, body, input({ forward: 0, jump: true }), MAX_HEIGHT);
+    let peak = body.y;
+    for (let i = 0; i < 20; i++) {
+      stepBody(ceiling, body, input({ forward: 0 }), MAX_HEIGHT);
+      peak = Math.max(peak, body.y);
+    }
+    // the ceiling's underside is 7: the head (1.8 tall) stops the feet at 5.2
+    expect(peak).toBeCloseTo(5.2, 5);
+    expect(body.y).toBe(5);
   });
 
   it('carries a sprint jump further than a walking one', () => {

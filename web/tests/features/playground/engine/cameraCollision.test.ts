@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { cameraDistance } from '@/features/playground/engine/cameraCollision';
 
-const terrain = { groundAt: (x: number) => (x < -2 ? 10 : 5), isWater: () => false };
+const terrain = { isSolid: (x: number, y: number) => y < (x < -2 ? 10 : 5) };
 
 describe('cameraDistance', () => {
   it('keeps the full distance over open ground', () => {

@@ -11,7 +11,7 @@ import { cameraDistance } from './cameraCollision';
 import { lightmap, MAX_LIGHT } from './lighting';
 import { Controls, nextCameraMode } from './controls';
 import type { CameraMode } from './controls';
-import { createBody, groundUnder, SNEAKING_EYE_HEIGHT, STANDING_EYE_HEIGHT, stepBody, TICK_SECONDS } from './playerPhysics';
+import { createBody, SNEAKING_EYE_HEIGHT, STANDING_EYE_HEIGHT, stepBody, TICK_SECONDS } from './playerPhysics';
 import type { PhysicsBody } from './playerPhysics';
 import { computeBob, createBobState, tickBob } from './viewBob';
 import { ScreenDisplay } from './screen';
@@ -114,7 +114,7 @@ export class PlaygroundEngine {
     this.scene.add(this.screen.group);
 
     const start = session.local;
-    this.body = createBody(start.x, Math.max(start.y, groundUnder(this.island, start.x, start.z)), start.z);
+    this.body = createBody(start.x, Math.max(start.y, this.island.groundAt(start.x, start.z)), start.z);
     this.previous.set(this.body.x, this.body.y, this.body.z);
     this.position.copy(this.previous);
     this.facing = start.yaw;

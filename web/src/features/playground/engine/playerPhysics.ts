@@ -5,8 +5,9 @@
 // jump that carries forward, a sneak that stops at edges.
 //
 // Ported from prismarine-physics (github.com/zardoy/prismarine-physics, MIT,
-// Copyright (c) 2020 PrismarineJS), reduced to our world: columns of blocks
-// with one ground height each, and a sea nobody can walk into.
+// Copyright (c) 2020 PrismarineJS): the body is a 0.6 × 1.8 box that collides
+// with every solid block cell, one axis at a time, and stops flush against it.
+// Our world adds a sea nobody can walk into (Terrain.isSolid says so).
 
 /** Seconds per physics tick. */
 export const TICK_SECONDS = 0.05;
@@ -30,14 +31,14 @@ const SNEAK_EDGE_DROP = 0.6;
 const SNEAK_EDGE_STEP = 0.05;
 
 export const HALF_WIDTH = 0.3;
+export const BODY_HEIGHT = 1.8;
 export const STANDING_EYE_HEIGHT = 1.62;
 export const SNEAKING_EYE_HEIGHT = 1.27;
 const EPSILON = 1e-7;
 
-/** The ground: where feet rest in each column, and which columns are sea. */
+/** The world as the body collides with it: which block cells are solid (leaves too, as in the game). */
 export interface Terrain {
-  groundAt(x: number, z: number): number;
-  isWater(x: number, z: number): boolean;
+  isSolid(x: number, y: number, z: number): boolean;
 }
 
 export interface PhysicsInput {
@@ -71,47 +72,60 @@ export function createBody(x: number, y: number, z: number): PhysicsBody {
   return { x, y, z, vx: 0, vy: 0, vz: 0, onGround: true, collidedHorizontally: false, jumpTicks: 0 };
 }
 
-/** The cells a body standing at (x, z) covers. */
-function forEachCell(x: number, z: number, visit: (cx: number, cz: number) => boolean | void): boolean {
-  const x0 = Math.floor(x - HALF_WIDTH);
-  const x1 = Math.floor(x + HALF_WIDTH - EPSILON);
-  const z0 = Math.floor(z - HALF_WIDTH);
-  const z1 = Math.floor(z + HALF_WIDTH - EPSILON);
-  for (let cx = x0; cx <= x1; cx++) for (let cz = z0; cz <= z1; cz++) if (visit(cx + 0.5, cz + 0.5)) return true;
+type Axis = 0 | 1 | 2;
+
+/** The body's box: min and max corners, feet at y. */
+interface Box { min: [number, number, number]; max: [number, number, number] }
+
+function boxAt(x: number, y: number, z: number): Box {
+  return { min: [x - HALF_WIDTH, y, z - HALF_WIDTH], max: [x + HALF_WIDTH, y + BODY_HEIGHT, z + HALF_WIDTH] };
+}
+
+/** The cells a span covers along one axis, its faces exactly on a border not counting. */
+const cellsOf = (min: number, max: number): [number, number] => [Math.floor(min + EPSILON), Math.floor(max - EPSILON)];
+
+/** Whether any solid cell overlaps the box. */
+function overlapsSolid(terrain: Terrain, box: Box): boolean {
+  const [x0, x1] = cellsOf(box.min[0], box.max[0]);
+  const [y0, y1] = cellsOf(box.min[1], box.max[1]);
+  const [z0, z1] = cellsOf(box.min[2], box.max[2]);
+  for (let x = x0; x <= x1; x++) for (let y = y0; y <= y1; y++) for (let z = z0; z <= z1; z++) if (terrain.isSolid(x, y, z)) return true;
   return false;
 }
 
-/** The highest ground under any part of a body at (x, z). */
-export function groundUnder(terrain: Terrain, x: number, z: number): number {
-  let ground = 0;
-  forEachCell(x, z, (cx, cz) => { ground = Math.max(ground, terrain.groundAt(cx, cz)); });
-  return ground;
-}
-
-/** A body with its feet at y does not fit at (x, z): a column above its feet, or the sea. */
-function blocked(terrain: Terrain, x: number, z: number, y: number): boolean {
-  return forEachCell(x, z, (cx, cz) => terrain.isWater(cx, cz) || terrain.groundAt(cx, cz) > y + EPSILON);
-}
-
-/** Moves along one horizontal axis, stopping flush against the first column in the way. */
-function moveAxis(terrain: Terrain, body: PhysicsBody, axis: 'x' | 'z', delta: number): boolean {
-  if (delta === 0) return false;
-  const nx = axis === 'x' ? body.x + delta : body.x;
-  const nz = axis === 'z' ? body.z + delta : body.z;
-  if (!blocked(terrain, nx, nz, body.y)) {
-    body[axis] += delta;
+/** How far the box can move along `axis` (up to `delta`) before a solid cell stops it, flush against it. */
+function sweep(terrain: Terrain, box: Box, axis: Axis, delta: number): number {
+  if (delta === 0) return 0;
+  const [a, b] = ([0, 1, 2] as Axis[]).filter((other) => other !== axis) as [Axis, Axis];
+  const [a0, a1] = cellsOf(box.min[a], box.max[a]);
+  const [b0, b1] = cellsOf(box.min[b], box.max[b]);
+  const blocked = (cell: number) => {
+    for (let i = a0; i <= a1; i++) {
+      for (let j = b0; j <= b1; j++) {
+        const at: [number, number, number] = [0, 0, 0];
+        at[axis] = cell; at[a] = i; at[b] = j;
+        if (terrain.isSolid(at[0], at[1], at[2])) return true;
+      }
+    }
     return false;
+  };
+  if (delta > 0) {
+    const edge = box.max[axis];
+    for (let cell = Math.floor(edge + EPSILON); cell <= Math.floor(edge + delta - EPSILON); cell++) {
+      if (cell + EPSILON >= edge && blocked(cell)) return Math.max(0, cell - edge);
+    }
+  } else {
+    const edge = box.min[axis];
+    for (let cell = Math.floor(edge - EPSILON); cell >= Math.floor(edge + delta + EPSILON); cell--) {
+      if (cell + 1 - EPSILON <= edge && blocked(cell)) return Math.min(0, cell + 1 - edge);
+    }
   }
-  const at = body[axis];
-  // one tick never crosses more than one cell border, so the wall starts at the next one
-  const flush = delta > 0 ? Math.floor(at + HALF_WIDTH + delta) - HALF_WIDTH - EPSILON : Math.floor(at - HALF_WIDTH + delta) + 1 + HALF_WIDTH + EPSILON;
-  body[axis] = delta > 0 ? Math.max(at, Math.min(flush, at + delta)) : Math.min(at, Math.max(flush, at + delta));
-  return true;
+  return delta;
 }
 
 /** Sneaking on the ground backs a step off until it would not drop more than SNEAK_EDGE_DROP. */
 function backOffEdge(terrain: Terrain, body: PhysicsBody, dx: number, dz: number): [number, number] {
-  const falls = (mx: number, mz: number) => groundUnder(terrain, body.x + mx, body.z + mz) < body.y - SNEAK_EDGE_DROP;
+  const falls = (mx: number, mz: number) => !overlapsSolid(terrain, boxAt(body.x + mx, body.y - SNEAK_EDGE_DROP, body.z + mz));
   const shrink = (d: number) => (Math.abs(d) < SNEAK_EDGE_STEP ? 0 : d - Math.sign(d) * SNEAK_EDGE_STEP);
   while (dx !== 0 && falls(dx, 0)) dx = shrink(dx);
   while (dz !== 0 && falls(0, dz)) dz = shrink(dz);
@@ -128,27 +142,24 @@ function move(terrain: Terrain, body: PhysicsBody, sneak: boolean, maxHeight: nu
   if (sneak && body.onGround) [dx, dz] = backOffEdge(terrain, body, dx, dz);
 
   // vertical first, then x, then z, as the original does
-  const floor = groundUnder(terrain, body.x, body.z);
-  body.y += body.vy;
-  if (body.y <= floor) {
-    body.y = floor;
-    body.onGround = body.vy <= 0;
-    body.vy = 0;
-  } else {
-    body.onGround = false;
-  }
+  const dy = sweep(terrain, boxAt(body.x, body.y, body.z), 1, body.vy);
+  body.y += dy;
+  body.onGround = body.vy < 0 && dy !== body.vy;
+  if (dy !== body.vy) body.vy = 0;
   if (body.y > maxHeight) {
     body.y = maxHeight;
     body.vy = Math.min(body.vy, 0);
   }
 
-  const hitX = moveAxis(terrain, body, 'x', dx);
-  const hitZ = moveAxis(terrain, body, 'z', dz);
+  const mx = sweep(terrain, boxAt(body.x, body.y, body.z), 0, dx);
+  body.x += mx;
+  const mz = sweep(terrain, boxAt(body.x, body.y, body.z), 2, dz);
+  body.z += mz;
+  const hitX = mx !== dx;
+  const hitZ = mz !== dz;
   if (hitX) body.vx = 0;
   if (hitZ) body.vz = 0;
   body.collidedHorizontally = hitX || hitZ;
-  // walking off a ledge starts the fall from the next tick
-  if (body.onGround && body.y > groundUnder(terrain, body.x, body.z) + EPSILON) body.onGround = false;
 }
 
 /** Pushes the body along its input, relative to the camera's heading. */
@@ -163,17 +174,16 @@ function applyHeading(body: PhysicsBody, input: PhysicsInput, strafe: number, fo
   body.vz += -Math.cos(input.yaw) * f - Math.sin(input.yaw) * s;
 }
 
-/** Whether a wall just walked into is one block a jump clears. */
+/** Whether a wall just walked into is one block a jump clears: solid at the feet, free above it. */
 function stepAhead(terrain: Terrain, body: PhysicsBody, input: PhysicsInput): boolean {
   const length = Math.hypot(input.forward, input.right);
   if (length < 0.1) return false;
   const dirX = (-Math.sin(input.yaw) * input.forward + Math.cos(input.yaw) * input.right) / length;
   const dirZ = (-Math.cos(input.yaw) * input.forward - Math.sin(input.yaw) * input.right) / length;
-  const aheadX = body.x + dirX * (HALF_WIDTH + 0.2);
-  const aheadZ = body.z + dirZ * (HALF_WIDTH + 0.2);
-  if (terrain.isWater(aheadX, aheadZ)) return false;
-  const rise = terrain.groundAt(aheadX, aheadZ) - body.y;
-  return rise > EPSILON && rise <= 1 + EPSILON;
+  const ahead = boxAt(body.x + dirX * 0.2, body.y, body.z + dirZ * 0.2);
+  const step: Box = { min: [ahead.min[0], body.y, ahead.min[2]], max: [ahead.max[0], body.y + 1, ahead.max[2]] };
+  const above: Box = { min: [ahead.min[0], body.y + 1, ahead.min[2]], max: [ahead.max[0], body.y + 1 + BODY_HEIGHT, ahead.max[2]] };
+  return overlapsSolid(terrain, step) && !overlapsSolid(terrain, above);
 }
 
 /** One tick of movement. */

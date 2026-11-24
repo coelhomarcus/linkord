@@ -108,6 +108,15 @@ export class IslandMap {
     return this.ground[(bx + HALF) * SIZE + (bz + HALF)]!;
   }
 
+  /** Whether the cell (x, y, z) stops a body: any block (leaves too), the ground under the map, and
+   * the sea and anything past the map's edge as a wall, since nobody swims (yet). */
+  isSolid(x: number, y: number, z: number): boolean {
+    if (y < 0) return true;
+    if (x < -HALF || x >= HALF || z < -HALF || z >= HALF) return true;
+    if (this.isWater(x + 0.5, z + 0.5)) return true;
+    return this.get(x, y, z) !== BLOCK.air;
+  }
+
   /** The sea: ground at or under the water line. Nobody swims (yet). */
   isWater(x: number, z: number): boolean {
     return this.groundAt(x, z) <= SEA_LEVEL;

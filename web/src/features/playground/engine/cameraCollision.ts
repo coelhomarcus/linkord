@@ -1,11 +1,11 @@
 import type { Terrain } from './playerPhysics';
 
 // A third-person camera sits on the line through the eyes, behind (or in front
-// of) the head, and moves in when the ground or a hill is in the way, so the
-// view never ends up inside a block. Same distances as minecraft-renderer's
-// getThirdPersonCamera (github.com/zardoy/minecraft-web-client, MIT, Copyright
-// (c) 2020 PrismarineJS); we march along the line against our terrain's
-// columns instead of traversing a voxel grid.
+// of) the head, and moves in when a block is in the way, so the view never ends
+// up inside one. Same distances as minecraft-renderer's getThirdPersonCamera
+// (github.com/zardoy/minecraft-web-client, MIT, Copyright (c) 2020
+// PrismarineJS); we march along the line against the block cells instead of
+// traversing a voxel grid.
 
 /** the lens keeps this far from any block face */
 const CAMERA_RADIUS = 0.25;
@@ -15,8 +15,10 @@ const STEP = 0.05;
 
 function solidAt(terrain: Terrain, x: number, y: number, z: number): boolean {
   for (const dx of [-CAMERA_RADIUS, CAMERA_RADIUS]) {
-    for (const dz of [-CAMERA_RADIUS, CAMERA_RADIUS]) {
-      if (y - CAMERA_RADIUS < terrain.groundAt(x + dx, z + dz)) return true;
+    for (const dy of [-CAMERA_RADIUS, CAMERA_RADIUS]) {
+      for (const dz of [-CAMERA_RADIUS, CAMERA_RADIUS]) {
+        if (terrain.isSolid(Math.floor(x + dx), Math.floor(y + dy), Math.floor(z + dz))) return true;
+      }
     }
   }
   return false;
