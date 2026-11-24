@@ -24,6 +24,8 @@ contextBridge.exposeInMainWorld('linkordDesktop', Object.freeze({
   platform: process.platform,
   version: flag('linkord-desktop-version') ?? '',
   focusWindow: () => ipcRenderer.invoke('linkord:window:focus'),
+  // The window's fullscreen, which Esc does not leave: the page uses Esc for itself
+  setFullScreen: (on: boolean) => ipcRenderer.invoke('linkord:window:set-full-screen', on === true),
   // The unread count on the taskbar button; 0 clears it
   setBadgeCount: (count: number) => ipcRenderer.invoke('linkord:badge:set', Number(count)),
   // The system's own notifications (src/main/notificationBridge.ts); a click names the one clicked

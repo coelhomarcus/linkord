@@ -1,6 +1,6 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { TITLE_BAR_HEIGHT, titleBarOptions, titleBarStyle, windowState } from '../../src/main/titleBar.js';
+import { parseFullScreenRequest, TITLE_BAR_HEIGHT, titleBarOptions, titleBarStyle, windowState } from '../../src/main/titleBar.js';
 
 describe('titleBarOptions', () => {
   it('hides the system title bar everywhere', () => {
@@ -19,6 +19,14 @@ describe('windowState', () => {
   it('reads what the page bar shows', () => {
     const window = { isMaximized: () => true, isFullScreen: () => false, isFocused: () => true };
     assert.deepEqual(windowState(window), { maximized: true, fullScreen: false, focused: true });
+  });
+});
+
+describe('parseFullScreenRequest', () => {
+  it('takes only a yes or a no', () => {
+    assert.equal(parseFullScreenRequest(true), true);
+    assert.equal(parseFullScreenRequest(false), false);
+    for (const value of [undefined, null, 1, 'true', {}]) assert.equal(parseFullScreenRequest(value), null);
   });
 });
 

@@ -159,7 +159,7 @@ export function Tile({ participantId, kind, isMine, loading = false, paused = fa
           className={cn(
             'relative h-full w-full bg-bg-call',
             // Fullscreen must show the entire source even for a cropped PiP preview.
-            fit === 'contain' ? 'object-contain' : 'object-cover [:fullscreen_&]:object-contain',
+            fit === 'contain' ? 'object-contain' : 'object-cover [:is(:fullscreen,[data-window-fullscreen])_&]:object-contain',
           )}
           // presentation only — the track actually published/sent is never touched
           style={isMine && kind === 'camera' && mirrorCameraPreview ? { transform: 'scaleX(-1)' } : undefined}

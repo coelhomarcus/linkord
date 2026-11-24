@@ -94,7 +94,7 @@ describe('Tile — media aspect ratio', () => {
       state: { ...initialRoomState, me: { ...initialRoomState.me, id: 'p-1' } },
     });
     expect(cover.container.querySelector('video')).toHaveClass('object-cover');
-    expect(cover.container.querySelector('video')?.className).toContain('[:fullscreen_&]:object-contain');
+    expect(cover.container.querySelector('video')?.className).toContain('[:is(:fullscreen,[data-window-fullscreen])_&]:object-contain');
   });
 });
 
