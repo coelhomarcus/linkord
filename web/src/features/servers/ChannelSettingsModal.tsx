@@ -9,6 +9,7 @@ import { FloatingBar } from '@/shared/FloatingBar';
 import { Button } from '@/shared/ui/primitives/button';
 import { Input } from '@/shared/ui/primitives/input';
 import { Textarea } from '@/shared/ui/primitives/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/primitives/select';
 import { describeApiError } from '@/shared/api/errorText';
 import { ROUTES } from '@/shared/lib/routes';
 import { cn } from '@/shared/lib/utils';
@@ -30,6 +31,8 @@ import { channelSettingsTabs, type ChannelSettingsTab } from './serverUtils';
 import { useSaveBar } from '@/shared/hooks/useSaveBar';
 
 type TabKey = ChannelSettingsTab;
+/** the game chat select's "none": Select values are strings */
+const NO_CHAT = 'none';
 type Tri = 'allow' | 'inherit' | 'deny';
 
 function TriState({ value, onChange, disabled }: { value: Tri; onChange: (next: Tri) => void; disabled?: boolean }) {
@@ -227,10 +230,20 @@ export function ChannelSettingsModal({ server, channel, onClose }: { server: Ser
   const navigate = useNavigate();
   const [name, setName] = useState(channel.name);
   const [topic, setTopic] = useState(channel.topic);
+  const savedChat = channel.playgroundChatId ?? null;
+  const [gameChat, setGameChat] = useState<string | null>(savedChat);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [error, setError] = useState<string | null>(null);
   useEffect(() => { setName(channel.name); setTopic(channel.topic); }, [channel.name, channel.topic]);
-  const bar = useSaveBar({ name, topic }, name !== channel.name || topic !== channel.topic);
+  // a change saved elsewhere (another tab, another manager) replaces the pick
+  const [lastSavedChat, setLastSavedChat] = useState(savedChat);
+  if (lastSavedChat !== savedChat) {
+    setLastSavedChat(savedChat);
+    setGameChat(savedChat);
+  }
+  const isPlayground = channel.type === 'voice' && channel.voiceMode === 'playground';
+  const textChannels = server.channels.filter((c) => c.type === 'text');
+  const bar = useSaveBar({ name, topic, gameChat }, name !== channel.name || topic !== channel.topic || gameChat !== savedChat);
   const tabs: (SettingsTab & { key: TabKey })[] = channelSettingsTabs(server, channel)
     .map((key) => ({ key, label: t(`channelSettings.${key}`), danger: key === 'delete' || undefined }));
   const [tab, setTab] = useState<TabKey>(tabs[0]?.key ?? 'overview');
@@ -241,7 +254,7 @@ export function ChannelSettingsModal({ server, channel, onClose }: { server: Ser
       {tab === 'overview' && (
         <form className="flex flex-col gap-4" onSubmit={(e) => {
           e.preventDefault();
-          void bar.save(() => updateChannel(channel.id, { name, topic }));
+          void bar.save(() => updateChannel(channel.id, { name, topic, ...(isPlayground && gameChat !== savedChat && { playgroundChatId: gameChat }) }));
         }}>
           <SectionTitle>{t('channelSettings.overview')}</SectionTitle>
           <label className="flex flex-col gap-1.5">
@@ -254,8 +267,25 @@ export function ChannelSettingsModal({ server, channel, onClose }: { server: Ser
               <Textarea value={topic} maxLength={1024} rows={3} placeholder={t('channelSettings.topicPlaceholder')} onChange={(e) => setTopic(e.target.value)} />
             </label>
           )}
+          {isPlayground && (
+            <div className="flex flex-col gap-1.5">
+              <span id="game-chat-label" className="text-body font-medium text-text-primary">{t('channelSettings.gameChat')}</span>
+              <Select value={gameChat ?? NO_CHAT} onValueChange={(value) => setGameChat(value && value !== NO_CHAT ? value : null)}>
+                <SelectTrigger aria-labelledby="game-chat-label" className="h-10 w-full text-body">
+                  <SelectValue>
+                    {(value: string) => (value === NO_CHAT ? t('channelSettings.gameChatNone') : `# ${textChannels.find((c) => c.id === value)?.name ?? ''}`)}
+                  </SelectValue>
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={NO_CHAT}>{t('channelSettings.gameChatNone')}</SelectItem>
+                  {textChannels.map((c) => <SelectItem key={c.id} value={c.id}># {c.name}</SelectItem>)}
+                </SelectContent>
+              </Select>
+              <span className="text-caption text-text-muted">{t('channelSettings.gameChatHint')}</span>
+            </div>
+          )}
           <FloatingBar open={bar.visible} label={t('bar.channel', { name: channel.name })} status={bar.status} error={bar.error} saveDisabled={!name.trim()}
-            onReset={() => { setName(channel.name); setTopic(channel.topic); bar.clearError(); }} />
+            onReset={() => { setName(channel.name); setTopic(channel.topic); setGameChat(savedChat); bar.clearError(); }} />
         </form>
       )}
       {tab === 'permissions' && <Permissions server={server} channel={channel} />}

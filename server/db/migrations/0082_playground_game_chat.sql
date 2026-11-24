@@ -1,0 +1,3 @@
+ALTER TABLE "conversations" ADD COLUMN "playground_chat_id" text;--> statement-breakpoint
+ALTER TABLE "conversations" ADD CONSTRAINT "conversations_playground_chat_id_conversations_id_fk" FOREIGN KEY ("playground_chat_id") REFERENCES "public"."conversations"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "conversations" ADD CONSTRAINT "conversations_playground_chat_check" CHECK ("conversations"."playground_chat_id" IS NULL OR "conversations"."voice_mode" = 'playground');

@@ -29,7 +29,7 @@ Linkord is a self-hosted place to chat and call with friends. Talk in direct mes
 
 **Voice and video**
 - Voice channels and one-to-one DM calls, with camera and screen sharing.
-- Playground channels: a voice channel shown as a small island of blocks, where everyone walks around in their own skin (first or third person), voices fade with distance, and one person at a time streams to a big screen everyone watches together.
+- Playground channels: a voice channel shown as a small island of blocks, where everyone walks around in their own skin (first or third person), voices fade with distance, one person at a time streams to a big screen everyone watches together, and a game chat (T) is one of the server's text channels, so what is said in the game and in the channel is the same conversation.
 - One call per account: every tab and device shows the call you are in, and can take it over after asking.
 - A soundboard per server, usable in any call.
 

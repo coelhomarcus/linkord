@@ -28,8 +28,8 @@ export type ReactionEmoji = string;
 
 /** Wire protocol version this build speaks; the server refuses older ones
  * (client_outdated). Keep in sync with server/src/realtime/protocolVersion.ts
- * — version 31 adds `voiceMode` to server channels (playground voice channels). */
-export const PROTOCOL_VERSION = 31;
+ * — version 32 adds `playgroundChatId` to playground channels (the game chat's text channel). */
+export const PROTOCOL_VERSION = 32;
 
 export interface LiveNotice {
   kind: 'friend_request' | 'friend_accepted' | 'server_invitation';
@@ -350,6 +350,8 @@ export interface ChannelSummary {
   type: 'text' | 'voice';
   /** absent from a server older than protocol 31, which has no playgrounds */
   voiceMode?: VoiceMode;
+  /** a playground's game chat: the text channel its players talk in from the game (protocol 32) */
+  playgroundChatId?: string | null;
   name: string;
   topic: string;
   categoryId: string | null;
