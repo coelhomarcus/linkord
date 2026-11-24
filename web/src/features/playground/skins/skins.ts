@@ -1,4 +1,3 @@
-import { LOCAL_STORAGE_KEYS, localStorageStore } from '@/shared/lib/localStorage';
 import { isSlimSkin, LEGACY_SKIN_HEIGHT, SKIN_HEIGHT, SKIN_WIDTH, upgradeLegacySkin } from './skinFormat';
 
 // Reading a skin file into the pixels the model is painted from, and the PNG
@@ -71,25 +70,17 @@ export async function encodeSkin(pixels: Uint8ClampedArray): Promise<Uint8Array<
   return bytes;
 }
 
-// The chosen skin stays in this browser; the account default is drawn from its id.
-const KEY = LOCAL_STORAGE_KEYS.playgroundSkin;
+/** A PNG as it travels over HTTP and was once kept in this browser. */
+export function skinToBase64(bytes: Uint8Array): string {
+  let binary = '';
+  for (const byte of bytes) binary += String.fromCharCode(byte);
+  return btoa(binary);
+}
 
-export function loadSavedSkin(): Uint8Array<ArrayBuffer> | null {
-  const stored = localStorageStore.get(KEY);
-  if (!stored) return null;
+export function skinFromBase64(value: string): Uint8Array<ArrayBuffer> | null {
   try {
-    return Uint8Array.from(atob(stored), (c) => c.charCodeAt(0));
+    return Uint8Array.from(atob(value), (c) => c.charCodeAt(0));
   } catch {
     return null;
   }
-}
-
-export function saveSkin(bytes: Uint8Array | null): void {
-  if (!bytes) {
-    localStorageStore.remove(KEY);
-    return;
-  }
-  let binary = '';
-  for (const byte of bytes) binary += String.fromCharCode(byte);
-  localStorageStore.set(KEY, btoa(binary));
 }

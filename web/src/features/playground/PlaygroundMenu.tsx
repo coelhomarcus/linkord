@@ -78,7 +78,7 @@ export function PlaygroundMenu({ session, localId, localUserId, players, present
   const [skinError, setSkinError] = useState<string | null>(null);
   const customSkin = useSyncExternalStore(
     (listener) => session.onSkinsChange(listener),
-    () => session.skinOf(localId),
+    () => session.skinOf(localUserId),
   );
   const skin = customSkin ?? defaultSkin(localUserId);
 
@@ -105,9 +105,18 @@ export function PlaygroundMenu({ session, localId, localUserId, players, present
     setSkinError(null);
     try {
       const picked = await decodeSkin(file);
-      session.setLocalSkin(await encodeSkin(picked.pixels), picked);
+      await wear(await encodeSkin(picked.pixels), picked);
     } catch (err) {
       setSkinError(t(`skin.errors.${err instanceof SkinError ? err.reason : 'unreadable'}`));
+    }
+  }
+
+  async function wear(bytes: Uint8Array<ArrayBuffer> | null, picked: Skin | null) {
+    setSkinError(null);
+    try {
+      await session.setLocalSkin(bytes, picked);
+    } catch {
+      setSkinError(t('skin.errors.save'));
     }
   }
 
@@ -165,7 +174,7 @@ export function PlaygroundMenu({ session, localId, localUserId, players, present
                 <span>{customSkin ? t('skin.custom') : t('skin.default')}</span>
                 <span className="text-white/60">{skin.slim ? t('skin.slim') : t('skin.classic')}</span>
                 <Row onClick={() => fileRef.current?.click()} className={`mt-1 ${PIXEL_TEXT.sm}`}>{t('skin.choose')}</Row>
-                {customSkin && <Row onClick={() => session.setLocalSkin(null, null)} className={PIXEL_TEXT.sm}>{t('skin.reset')}</Row>}
+                {customSkin && <Row onClick={() => void wear(null, null)} className={PIXEL_TEXT.sm}>{t('skin.reset')}</Row>}
                 <input ref={fileRef} type="file" accept="image/png" hidden
                   onChange={(event) => { void pickSkin(event.target.files?.[0]); event.target.value = ''; }} />
                 {skinError && <p role="alert" className="text-red-text">{skinError}</p>}

@@ -4,7 +4,8 @@ import type { RemoteParticipant, Room } from 'livekit-client';
 import type { AudioHandle } from '@/state/RoomContext';
 import { clearSpatialGain, setSpatialGain } from '@/features/calls/participantVolume';
 import { decodeState, encodeState, PLAYGROUND_TOPIC, SKIN_TOPIC } from './playgroundProtocol';
-import { decodeSkin, loadSavedSkin, MAX_SKIN_BYTES, saveSkin } from './skins/skins';
+import { fetchAccountSkin, forgetLegacySkin, saveAccountSkin, takeLegacySkin } from './skins/accountSkin';
+import { decodeSkin, MAX_SKIN_BYTES } from './skins/skins';
 import type { Skin } from './skins/skins';
 import type { PlayerState } from './playgroundProtocol';
 import { proximityGain } from './proximity';
@@ -17,15 +18,26 @@ import { spawnPoint } from './playgroundWorld';
 // the call (PlaygroundLayer), so walking off to read a channel neither freezes
 // you for the others nor turns everyone up to full volume.
 //
-// Skins travel the same way, as reliable packets of at most MAX_SKIN_BYTES:
-// yours to everyone when you arrive, again to each newcomer, and whenever you
-// change it. An empty packet means "my account's default".
+// Skins are kept with each account (skins/accountSkin.ts) and read from the
+// server for everyone who shows up in the call, so a reload, a late join or a
+// packet that never arrived cannot leave anyone in someone else's default.
+// A change is also sent to the others as a reliable packet of at most
+// MAX_SKIN_BYTES (an empty one meaning "my account's default"), after it is
+// saved: that is only the fast path, and what older tabs still listen for.
 
 // a moving avatar is sent at most this often...
 const SEND_INTERVAL_MS = 66;
 // ...and a still one this often, so someone who just arrived sees it
 const HEARTBEAT_MS = 1000;
 const AUDIO_TICK_MS = 100;
+// a skin that could not be read (a network blip) is asked for again after this
+const SKIN_RETRY_MS = 5000;
+
+/** Someone in the call, by connection and by account. */
+export interface PlaygroundMember {
+  id: string;
+  userId: string;
+}
 
 export interface RemotePlayer {
   state: PlayerState;
@@ -35,9 +47,19 @@ export interface RemotePlayer {
 export class PlaygroundSession {
   local: PlayerState;
   readonly remotes = new Map<string, RemotePlayer>();
+  /** chosen skins by account id; no entry is the account's default */
   private readonly skins = new Map<string, Skin>();
   private readonly skinListeners = new Set<() => void>();
-  private localSkinBytes: Uint8Array<ArrayBuffer> | null = loadSavedSkin();
+  /** which account each connection in the call belongs to */
+  private readonly members = new Map<string, string>();
+  /** accounts whose skin was read, or is being read */
+  private readonly skinRequested = new Set<string>();
+  /** bumped by every newer skin of an account, so an older read or decode that finishes late is dropped */
+  private readonly skinVersions = new Map<string, number>();
+  private readonly retryTimers = new Set<ReturnType<typeof setTimeout>>();
+  private localSkinBytes: Uint8Array<ArrayBuffer> | null = null;
+  private localSkinChange = 0;
+  private disposed = false;
   private lastSentAt = 0;
   private lastSentKey = '';
   private timer: ReturnType<typeof setInterval> | null = null;
@@ -45,38 +67,46 @@ export class PlaygroundSession {
   private readonly room: Room;
   readonly conversationId: string;
   readonly localId: string;
+  readonly localUserId: string;
   private readonly audio: { current: Map<string, AudioHandle> };
 
-  constructor(room: Room, conversationId: string, localId: string, audio: { current: Map<string, AudioHandle> }) {
+  constructor(room: Room, conversationId: string, localId: string, localUserId: string, audio: { current: Map<string, AudioHandle> }) {
     this.room = room;
     this.conversationId = conversationId;
     this.localId = localId;
+    this.localUserId = localUserId;
     this.audio = audio;
     const spawn = spawnPoint(localId);
     this.local = { ...spawn, pitch: 0, motion: 'idle' };
-    if (this.localSkinBytes) void this.adoptSkin(localId, this.localSkinBytes);
   }
 
   start(): void {
     this.room.on(RoomEvent.DataReceived, this.onData);
     this.room.on(RoomEvent.ParticipantConnected, this.onParticipantConnected);
+    this.room.on(RoomEvent.Connected, this.onConnected);
+    this.room.on(RoomEvent.Reconnected, this.onConnected);
     this.timer = setInterval(this.tick, AUDIO_TICK_MS);
     this.send(true);
-    this.sendSkin();
+    void this.loadLocalSkin();
   }
 
   dispose(): void {
+    this.disposed = true;
     this.room.off(RoomEvent.DataReceived, this.onData);
     this.room.off(RoomEvent.ParticipantConnected, this.onParticipantConnected);
+    this.room.off(RoomEvent.Connected, this.onConnected);
+    this.room.off(RoomEvent.Reconnected, this.onConnected);
     if (this.timer) clearInterval(this.timer);
     this.timer = null;
+    for (const timer of this.retryTimers) clearTimeout(timer);
+    this.retryTimers.clear();
     for (const handle of this.audio.current.values()) clearSpatialGain(handle.element);
     this.skinListeners.clear();
   }
 
-  /** The skin someone chose, or null for their account's default. */
-  skinOf(participantId: string): Skin | null {
-    return this.skins.get(participantId) ?? null;
+  /** The skin an account chose, or null for its default. */
+  skinOf(userId: string): Skin | null {
+    return this.skins.get(userId) ?? null;
   }
 
   onSkinsChange(listener: () => void): () => void {
@@ -84,18 +114,121 @@ export class PlaygroundSession {
     return () => { this.skinListeners.delete(listener); };
   }
 
-  /** Wears a skin (a PNG already checked by decodeSkin/encodeSkin), or the default with null. */
-  setLocalSkin(bytes: Uint8Array<ArrayBuffer> | null, skin: Skin | null): void {
+  /** Wears a skin (a PNG already checked by decodeSkin/encodeSkin), or the default with null. It shows
+   * at once and is saved to the account; if the server refuses, the previous one comes back and this throws. */
+  async setLocalSkin(bytes: Uint8Array<ArrayBuffer> | null, skin: Skin | null): Promise<void> {
+    const previous = { bytes: this.localSkinBytes, skin: this.skins.get(this.localUserId) ?? null };
+    const change = ++this.localSkinChange;
+    this.bumpSkinVersion(this.localUserId);
+    this.wearLocal(bytes, skin);
+    try {
+      await saveAccountSkin(bytes);
+    } catch (err) {
+      if (change === this.localSkinChange && !this.disposed) this.wearLocal(previous.bytes, previous.skin);
+      throw err;
+    }
+    if (change === this.localSkinChange) this.sendSkin();
+  }
+
+  private wearLocal(bytes: Uint8Array<ArrayBuffer> | null, skin: Skin | null): void {
     this.localSkinBytes = bytes;
-    saveSkin(bytes);
-    if (skin) this.skins.set(this.localId, skin);
-    else this.skins.delete(this.localId);
+    this.setSkin(this.localUserId, skin);
+  }
+
+  private setSkin(userId: string, skin: Skin | null): void {
+    if (skin) this.skins.set(userId, skin);
+    else if (!this.skins.delete(userId)) return;
     this.notifySkins();
-    this.sendSkin();
   }
 
   private notifySkins(): void {
     for (const listener of this.skinListeners) listener();
+  }
+
+  private bumpSkinVersion(userId: string): number {
+    const version = (this.skinVersions.get(userId) ?? 0) + 1;
+    this.skinVersions.set(userId, version);
+    return version;
+  }
+
+  private isCurrent(userId: string, version: number): boolean {
+    return !this.disposed && this.skinVersions.get(userId) === version;
+  }
+
+  /** Your own skin, from the account; one only this browser had (from before) is moved there. */
+  private async loadLocalSkin(): Promise<void> {
+    const userId = this.localUserId;
+    const version = this.bumpSkinVersion(userId);
+    const legacy = takeLegacySkin();
+    let stored: Uint8Array<ArrayBuffer> | null;
+    try {
+      stored = await fetchAccountSkin(userId);
+    } catch {
+      if (this.isCurrent(userId, version)) this.retry(() => void this.loadLocalSkin());
+      return;
+    }
+    if (!this.isCurrent(userId, version)) return;
+    if (!stored && legacy) {
+      const skin = await this.decode(legacy);
+      if (!this.isCurrent(userId, version)) return;
+      if (!skin) {
+        forgetLegacySkin();
+        return;
+      }
+      try {
+        await this.setLocalSkin(legacy, skin);
+        forgetLegacySkin();
+      } catch {
+        // kept in this browser, to be moved on the next try
+      }
+      return;
+    }
+    if (legacy) forgetLegacySkin();
+    const skin = stored ? await this.decode(stored) : null;
+    if (!this.isCurrent(userId, version)) return;
+    this.wearLocal(skin ? stored : null, skin);
+    this.sendSkin();
+  }
+
+  /** Someone else's skin, from their account. */
+  private async loadSkin(userId: string): Promise<void> {
+    const version = this.bumpSkinVersion(userId);
+    this.skinRequested.add(userId);
+    let stored: Uint8Array<ArrayBuffer> | null;
+    try {
+      stored = await fetchAccountSkin(userId);
+    } catch {
+      if (!this.isCurrent(userId, version)) return;
+      // asked for again by the next roster change, or by the retry if none comes
+      this.skinRequested.delete(userId);
+      this.retry(() => { if (this.isMember(userId) && !this.skinRequested.has(userId)) void this.loadSkin(userId); });
+      return;
+    }
+    const skin = stored ? await this.decode(stored) : null;
+    if (this.isCurrent(userId, version)) this.setSkin(userId, skin);
+  }
+
+  private retry(run: () => void): void {
+    if (this.disposed) return;
+    const timer = setTimeout(() => {
+      this.retryTimers.delete(timer);
+      if (!this.disposed) run();
+    }, SKIN_RETRY_MS);
+    this.retryTimers.add(timer);
+  }
+
+  private isMember(userId: string): boolean {
+    for (const id of this.members.values()) if (id === userId) return true;
+    return false;
+  }
+
+  private async decode(bytes: Uint8Array<ArrayBuffer>): Promise<Skin | null> {
+    try {
+      return await decodeSkin(new Blob([bytes], { type: 'image/png' }));
+    } catch {
+      // not a skin after all: the default stands in
+      return null;
+    }
   }
 
   private sendSkin(to?: string): void {
@@ -104,27 +237,29 @@ export class PlaygroundSession {
     this.room.localParticipant.publishData(payload, { reliable: true, topic: SKIN_TOPIC, ...(to ? { destinationIdentities: [to] } : {}) }).catch(() => {});
   }
 
-  private async adoptSkin(participantId: string, bytes: Uint8Array<ArrayBuffer>): Promise<void> {
-    try {
-      const skin = await decodeSkin(new Blob([bytes], { type: 'image/png' }));
-      this.skins.set(participantId, skin);
-      this.notifySkins();
-    } catch {
-      // not a skin after all: they keep their default
-    }
-  }
-
   /** The 3D view reports the local avatar every frame; sending is throttled here. */
   setLocal(state: PlayerState): void {
     this.local = state;
     this.send(false);
   }
 
-  /** Drops what is known about anyone no longer in the call. */
-  retain(participantIds: readonly string[]): void {
-    const keep = new Set(participantIds);
+  /** Who is in the call now: reads the skin of anyone new and drops what is known about anyone gone. */
+  retain(members: readonly PlaygroundMember[]): void {
+    const keep = new Set(members.map((member) => member.id));
     for (const id of this.remotes.keys()) if (!keep.has(id)) this.remotes.delete(id);
-    for (const id of this.skins.keys()) if (id !== this.localId && !keep.has(id)) this.skins.delete(id);
+    this.members.clear();
+    for (const member of members) if (member.id !== this.localId) this.members.set(member.id, member.userId);
+    const accounts = new Set(this.members.values());
+    for (const userId of accounts) {
+      if (userId !== this.localUserId && !this.skinRequested.has(userId)) void this.loadSkin(userId);
+    }
+    for (const userId of [...this.skinRequested]) {
+      if (accounts.has(userId)) continue;
+      this.skinRequested.delete(userId);
+      // a read still on its way is dropped too
+      this.bumpSkinVersion(userId);
+      this.setSkin(userId, null);
+    }
   }
 
   private send(force: boolean): void {
@@ -138,19 +273,21 @@ export class PlaygroundSession {
     this.room.localParticipant.publishData(encodeState(this.local), { reliable: false, topic: PLAYGROUND_TOPIC }).catch(() => {});
   }
 
-  private onSkinPacket(participantId: string, payload: Uint8Array): void {
-    if (payload.byteLength === 0) {
-      if (this.skins.delete(participantId)) this.notifySkins();
-      return;
-    }
-    if (payload.byteLength > MAX_SKIN_BYTES) return;
-    void this.adoptSkin(participantId, new Uint8Array(payload));
+  /** A change someone just saved. From a connection not yet in the roster it is ignored: the read
+   * when they show up there finds the same skin, since it is saved before it is sent. */
+  private async onSkinPacket(participantId: string, payload: Uint8Array): Promise<void> {
+    const userId = this.members.get(participantId);
+    if (!userId || userId === this.localUserId || payload.byteLength > MAX_SKIN_BYTES) return;
+    const version = this.bumpSkinVersion(userId);
+    this.skinRequested.add(userId);
+    const skin = payload.byteLength === 0 ? null : await this.decode(new Uint8Array(payload));
+    if (this.isCurrent(userId, version)) this.setSkin(userId, skin);
   }
 
   private onData = (payload: Uint8Array, participant?: RemoteParticipant, _kind?: unknown, topic?: string): void => {
     if (!participant) return;
     if (topic === SKIN_TOPIC) {
-      this.onSkinPacket(participant.identity, payload);
+      void this.onSkinPacket(participant.identity, payload);
       return;
     }
     if (topic !== PLAYGROUND_TOPIC) return;
@@ -160,7 +297,14 @@ export class PlaygroundSession {
 
   private onParticipantConnected = (participant: RemoteParticipant): void => {
     this.send(true);
+    // newer tabs read it from the server; older ones still wait for this
     this.sendSkin(participant.identity);
+  };
+
+  // the data channel only opens once connected: what was due before then goes out now
+  private onConnected = (): void => {
+    this.send(true);
+    this.sendSkin();
   };
 
   private tick = (): void => {

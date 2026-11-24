@@ -1111,3 +1111,11 @@ export const userPreferences = pgTable('user_preferences', {
   data: jsonb('data').$type<Record<string, unknown>>().notNull().default({}),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 });
+
+/** The skin an account wears in playground calls (modules/playground): a 64×64 or 64×32 PNG, base64,
+ * at most 14 kB. No row means the default skin drawn from the account's id. */
+export const playgroundSkins = pgTable('playground_skins', {
+  userId: text('user_id').primaryKey().references(() => users.id, { onDelete: 'cascade' }),
+  png: text('png').notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+});

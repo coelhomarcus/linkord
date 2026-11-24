@@ -49,7 +49,8 @@
     "errors": {
       "dimensions": "A skin precisa ser um PNG de 64×64 (ou 64×32).",
       "size": "Esse arquivo é grande demais para uma skin.",
-      "unreadable": "Não deu para ler esse arquivo como imagem."
+      "unreadable": "Não deu para ler esse arquivo como imagem.",
+      "save": "Não deu para salvar a skin. Tente de novo."
     }
   },
   "hud": {

@@ -105,7 +105,7 @@ export class PlaygroundEngine {
     const start = session.local;
     this.position.set(start.x, Math.max(start.y, this.groundUnder(start.x, start.z)), start.z);
     this.facing = start.yaw;
-    const skin = this.skinOf(options.localId, options.localUserId);
+    const skin = this.skinOf(options.localUserId);
     this.local = new BlockAvatar(skin, '');
     this.local.showLabel(false);
     this.scene.add(this.local.root);
@@ -135,7 +135,7 @@ export class PlaygroundEngine {
       present.add(player.id);
       let remote = this.remotes.get(player.id);
       if (!remote) {
-        const avatar = new BlockAvatar(this.skinOf(player.id, player.userId), player.name);
+        const avatar = new BlockAvatar(this.skinOf(player.userId), player.name);
         avatar.root.visible = false;
         this.scene.add(avatar.root);
         remote = { userId: player.userId, avatar, position: new THREE.Vector3(), yaw: 0, placed: false };
@@ -209,15 +209,15 @@ export class PlaygroundEngine {
     this.renderer.domElement.remove();
   }
 
-  private skinOf(participantId: string, userId: string): Skin {
-    return this.session.skinOf(participantId) ?? defaultSkin(userId);
+  private skinOf(userId: string): Skin {
+    return this.session.skinOf(userId) ?? defaultSkin(userId);
   }
 
   private refreshSkins(): void {
-    const local = this.skinOf(this.options.localId, this.options.localUserId);
+    const local = this.skinOf(this.options.localUserId);
     this.local.setSkin(local);
     this.arm.setSkin(local);
-    for (const [id, remote] of this.remotes) remote.avatar.setSkin(this.skinOf(id, remote.userId));
+    for (const remote of this.remotes.values()) remote.avatar.setSkin(this.skinOf(remote.userId));
   }
 
   private resize(): void {
