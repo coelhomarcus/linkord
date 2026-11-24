@@ -28,8 +28,8 @@ export type ReactionEmoji = string;
 
 /** Wire protocol version this build speaks; the server refuses older ones
  * (client_outdated). Keep in sync with server/src/realtime/protocolVersion.ts
- * — version 32 adds `playgroundChatId` to playground channels (the game chat's text channel). */
-export const PROTOCOL_VERSION = 32;
+ * — version 34 adds `playground-xp` (experience from kills in a playground). */
+export const PROTOCOL_VERSION = 34;
 
 export interface LiveNotice {
   kind: 'friend_request' | 'friend_accepted' | 'server_invitation';
@@ -458,6 +458,11 @@ export type ClientMessage =
   // answers a `stream-preview-capture`: a JPEG data URL of the shared screen
   | { t: 'stream-preview-frame'; image: string }
   | { t: 'soundboard-play'; conversationId: string; serverId?: string; soundId: string }
+  /** where your playground avatar stands (feet), and where its head faces; `first` asks for everyone's health */
+  | { t: 'playground-pos'; x: number; y: number; z: number; yaw: number; first?: boolean }
+  /** a punch that landed on `targetId` (a connection id), from where you stood */
+  | { t: 'playground-attack'; targetId: string; x: number; y: number; z: number; yaw: number; crit: boolean; sprint: boolean }
+  | { t: 'playground-respawn' }
   | { t: 'leave' }
   | { t: 'ping' };
 
@@ -539,6 +544,12 @@ export type ServerMessage =
   | { t: 'participant-updated'; participant: Participant }
   | { t: 'participant-left'; id: string }
   | { t: 'soundboard-play'; conversationId: string; serverId: string; soundId: string; participantId: string; emoji: string; volume: number; fileToken?: string }
+  /** a hit in a playground (server/src/modules/playground/combat.ts): `health` is the target's after it;
+   * a fresh hit (`hurt`) knocks the target back by `push` (and `extra` from a sprinting attacker) */
+  | { t: 'playground-hit'; conversationId: string; attackerId: string; targetId: string; damage: number; health: number; crit: boolean; hurt: boolean; push?: [number, number]; extra?: [number, number, number] }
+  | { t: 'playground-health'; conversationId: string; players: { id: string; health: number }[] }
+  /** your experience points in that playground, after a kill or when you arrive */
+  | { t: 'playground-xp'; conversationId: string; xp: number }
   // payload-free like social-changed: the list itself comes from GET /api/servers/:id/sounds
   | { t: 'server-sounds-changed'; serverId: string }
   | { t: 'server-emojis-changed'; serverId: string }
