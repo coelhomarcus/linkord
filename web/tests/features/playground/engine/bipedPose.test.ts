@@ -35,6 +35,14 @@ describe('bipedPose', () => {
     expect(pose.drop).toBeGreaterThan(0);
   });
 
+  it('holds the right arm a little forward while it holds something, swinging half as much', () => {
+    expect(bipedPose({ ...still, holding: true }).rightArm.rotation[0]).toBeCloseTo(-Math.PI / 10);
+    expect(bipedPose({ ...still, holding: true }).leftArm.rotation[0]).toBeCloseTo(bipedPose(still).leftArm.rotation[0]);
+    const walking = { ...still, limbSwing: 0, limbAmount: 1 };
+    const swing = bipedPose(walking).rightArm.rotation[0];
+    expect(bipedPose({ ...walking, holding: true }).rightArm.rotation[0]).toBeCloseTo(swing * 0.5 - Math.PI / 10);
+  });
+
   it('raises the right arm forward through a punch', () => {
     expect(bipedPose({ ...still, attack: 0.5 }).rightArm.rotation[0]).toBeLessThan(bipedPose(still).rightArm.rotation[0] - 0.5);
   });

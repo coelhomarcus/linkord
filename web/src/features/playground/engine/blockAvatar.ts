@@ -110,21 +110,21 @@ function partOffset(part: PartName, slim: boolean): [number, number, number] {
 
 const PARTS: PartName[] = ['head', 'body', 'rightArm', 'leftArm', 'rightLeg', 'leftLeg'];
 
-/** An item held in the right hand of a third-person model, as the game holds it: a tool's picture side on,
- * its tip forward and up, its handle in the fist; a block small, turned to show three faces. */
+/** An item held in the right hand of a third-person model, as the game holds it: a block small, turned to
+ * show three faces; a picture as the game places it (thirdPersonItemMatrix). */
 function placeInHand(hand: THREE.Group, model: ItemModel, slim: boolean): void {
-  const arm = slim ? 0.5 : 1;
-  hand.position.set(-arm * PX, -10 * PX, 0);
   const { object } = model;
   if (model.shape === 'block') {
+    const arm = slim ? 0.5 : 1;
+    hand.position.set(-arm * PX, -10 * PX, 0);
     object.scale.setScalar(0.34);
     object.position.set(0, -0.05, 0.08);
     object.rotation.set(0.17, Math.PI / 4, 0);
   } else {
-    object.scale.setScalar(0.75);
-    // the picture's right is forward, its handle (bottom left) in the fist
-    object.rotation.set(-0.6, -Math.PI / 2, 0, 'YXZ');
-    object.position.set(0, 0.12, 0.2);
+    hand.position.set(0, 0, 0);
+    object.matrixAutoUpdate = false;
+    object.matrix.copy(thirdPersonItemMatrix(model.handheld, slim));
+    object.matrixWorldNeedsUpdate = true;
   }
 }
 const PUNCH_SECONDS = 0.3;
@@ -281,6 +281,7 @@ export class BlockAvatar {
       crouching: motion.crouching,
       attack,
       slim: this.slim,
+      holding: !!this.held,
     });
     for (const part of PARTS) {
       const pivot = this.parts.get(part)!;
@@ -367,6 +368,35 @@ function vanillaCube(texU: number, texV: number, origin: [number, number, number
 
 const scratch = new THREE.Matrix4();
 
+/** The game's thirdperson_righthand display of a picture: item/handheld.json (a tool, a stick) and
+ * item/generated.json (anything else). Rotations in degrees, translations in pixels. */
+const THIRD_PERSON_DISPLAY = {
+  handheld: { rotation: [0, -90, 55], translation: [0, 4, 0.5], scale: 0.85 },
+  generated: { rotation: [0, 0, 0], translation: [0, 3, 1], scale: 0.55 },
+} as const;
+
+/** A picture in the right hand of a third-person model, in the arm's frame: the game's
+ * ItemInHandLayer.renderArmWithItem (translateToHand, a quarter turn back and a half turn to face along the
+ * fist, a step to it) then ItemTransform.apply with the model's display, worked out in the game's model
+ * space (y down, facing -z, a block 16 pixels) and turned into ours. */
+function thirdPersonItemMatrix(handheld: boolean, slim: boolean): THREE.Matrix4 {
+  const display = THIRD_PERSON_DISPLAY[handheld ? 'handheld' : 'generated'];
+  const matrix = new THREE.Matrix4().makeScale(16 * PX, 16 * PX, 16 * PX);
+  // the game's model space to ours: a half turn about x (as bipedPose converts the poses)
+  matrix.multiply(scratch.makeRotationX(Math.PI));
+  // a slim arm's hand is half a pixel further in
+  if (slim) matrix.multiply(scratch.makeTranslation(0.5 / 16, 0, 0));
+  matrix.multiply(scratch.makeRotationX(-90 * DEG));
+  matrix.multiply(scratch.makeRotationY(180 * DEG));
+  matrix.multiply(scratch.makeTranslation(1 / 16, 0.125, -0.625));
+  const [tx, ty, tz] = display.translation;
+  matrix.multiply(scratch.makeTranslation(tx / 16, ty / 16, tz / 16));
+  const [rx, ry, rz] = display.rotation;
+  matrix.multiply(scratch.makeRotationFromEuler(new THREE.Euler(rx * DEG, ry * DEG, rz * DEG, 'XYZ')));
+  matrix.multiply(scratch.makeScale(display.scale, display.scale, display.scale));
+  return matrix;
+}
+
 /** renderPlayerArm's transforms for the right hand, `swing` 0..1 through a punch. */
 function bareHandMatrix(swing: number, slim: boolean): THREE.Matrix4 {
   const matrix = new THREE.Matrix4();
@@ -406,9 +436,9 @@ function heldItemMatrix(swing: number, shape: ItemModel['shape']): THREE.Matrix4
     matrix.multiply(scratch.makeScale(0.4, 0.4, 0.4));
   } else {
     matrix.multiply(scratch.makeTranslation(1.13 / 16, 3.2 / 16, 1.13 / 16));
-    matrix.multiply(new THREE.Matrix4().makeRotationFromEuler(new THREE.Euler(0, -90 * DEG, 25 * DEG, 'XYZ')));
-    // the game's item model has its picture's right toward -x: ours is its mirror image
-    matrix.multiply(scratch.makeScale(-0.68, 0.68, 0.68));
+    matrix.multiply(scratch.makeRotationFromEuler(new THREE.Euler(0, -90 * DEG, 25 * DEG, 'XYZ')));
+    // the game's item model and ours both have the picture's right toward +x: no mirror for the right hand
+    matrix.multiply(scratch.makeScale(0.68, 0.68, 0.68));
   }
   return matrix;
 }

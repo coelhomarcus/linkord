@@ -43,6 +43,8 @@ export interface PoseInput {
   /** 0..1 through a punch, or 0 when not punching */
   attack: number;
   slim: boolean;
+  /** the right hand holds something: the arm is raised a little and swings half as much */
+  holding?: boolean;
 }
 
 const LIMB_FREQUENCY = 0.6662;
@@ -62,6 +64,9 @@ export function bipedPose(input: PoseInput): BipedPose {
   const leftArm = { x: 5, y: armY, z: 0, xRot: Math.cos(ls * LIMB_FREQUENCY) * 2 * la * 0.5, yRot: 0, zRot: 0 };
   const rightLeg = { x: -1.9, y: 12, z: 0.1, xRot: Math.cos(ls * LIMB_FREQUENCY) * LEG_AMPLITUDE * la, yRot: 0, zRot: 0 };
   const leftLeg = { x: 1.9, y: 12, z: 0.1, xRot: Math.cos(ls * LIMB_FREQUENCY + Math.PI) * LEG_AMPLITUDE * la, yRot: 0, zRot: 0 };
+
+  // the game's ArmPose.ITEM
+  if (input.holding) rightArm.xRot = rightArm.xRot * 0.5 - Math.PI / 10;
 
   if (input.attack > 0) {
     const t = input.attack;
