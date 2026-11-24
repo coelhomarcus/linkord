@@ -138,8 +138,10 @@ export function InventoryScreen({ window, furnaceAt, skin, scale, onOp, onClose 
   const layout = LAYOUTS[kind];
   const progress = useFurnaceProgress(window, furnaceAt);
 
+  // The panel takes focus, not a slot: a focused slot would look and act hovered (its wash, its tooltip,
+  // the target of a digit key) before the pointer has touched it. Tab still walks the slots.
   useEffect(() => {
-    panelRef.current?.querySelector<HTMLButtonElement>('[data-inventory-slot]')?.focus({ preventScroll: true });
+    panelRef.current?.focus({ preventScroll: true });
   }, [kind]);
 
   function onPointerMove(event: PointerEvent) {
@@ -200,12 +202,13 @@ export function InventoryScreen({ window, furnaceAt, skin, scale, onOp, onClose 
         role="dialog"
         aria-modal="true"
         aria-label={kind === 'inventory' ? t('inventory.title') : title}
+        tabIndex={-1}
         onKeyDown={onKeyDown}
         onPointerMove={onPointerMove}
         onPointerLeave={() => setPointer(null)}
         onWheel={onWheel}
         onContextMenu={(event) => event.preventDefault()}
-        className="relative"
+        className="relative outline-none"
         style={{ width: layout.width * scale, height: layout.height * scale }}
       >
         {layout.pieces.map((piece) => <GuiSprite key={`${piece.u},${piece.v}`} scale={scale} {...piece} />)}

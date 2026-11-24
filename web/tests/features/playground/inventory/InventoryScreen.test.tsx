@@ -43,6 +43,14 @@ describe('InventoryScreen', () => {
     expect(onClose).toHaveBeenCalledTimes(2);
   });
 
+  it('opens with the panel focused and no slot selected', () => {
+    setup();
+    expect(screen.getByRole('dialog')).toHaveFocus();
+    expect(document.activeElement?.hasAttribute('data-inventory-slot')).toBe(false);
+    fireEvent.keyDown(screen.getByRole('dialog'), { code: 'Digit4' });
+    expect(screen.queryByRole('tooltip')).toBeNull();
+  });
+
   it('crafts planks from a log in the 2×2 grid', () => {
     const { state } = setup({ inventory: addItem(createInventory(), { item: 'oak_log', count: 1 }).inventory, furnace: null, chest: null });
     fireEvent.click(screen.getByRole('button', { name: 'Tronco de carvalho (1)' }));
