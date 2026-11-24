@@ -1,0 +1,14 @@
+{
+  "name": "linkord-playground",
+  "private": true,
+  "description": "The playground service's runtime dependencies, for its image (playground/Dockerfile). Development, builds and tests use the root package.json; the versions here match the root lockfile (playground/tests/dependencies.test.ts).",
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "dependencies": {
+    "drizzle-orm": "0.45.2",
+    "pg": "8.23.0",
+    "socket.io": "4.8.4"
+  }
+}

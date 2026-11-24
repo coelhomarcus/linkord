@@ -17,7 +17,7 @@
     "build:web": "npm run build --prefix web",
     "package:desktop": "npm run package --prefix desktop",
     "check": "npm run typecheck:server:tests && npm run typecheck:playground:tests && npm run lint --prefix web && npm run check:audit && npm test && npm run build",
-    "check:audit": "npm audit --omit=dev --audit-level=high && npm audit --omit=dev --audit-level=high --prefix web",
+    "check:audit": "npm audit --omit=dev --audit-level=high && npm audit --omit=dev --audit-level=high --prefix web && npm audit --omit=dev --audit-level=high --prefix playground",
     "check:dead-code": "knip",
     "test": "npm run test:server && npm run test:playground && npm run test:web",
     "test:server": "node --env-file-if-exists=.env.test --import tsx --test \"server/tests/**/*.test.ts\"",
