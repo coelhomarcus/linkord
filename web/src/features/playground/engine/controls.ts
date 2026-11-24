@@ -91,6 +91,18 @@ export class Controls {
     this.joystickBase.remove();
   }
 
+  /** false while a menu covers the world: keys, drags and the wheel do nothing */
+  get enabled(): boolean {
+    return this.isEnabled;
+  }
+
+  set enabled(value: boolean) {
+    this.isEnabled = value;
+    if (!value) this.clear();
+  }
+
+  private isEnabled = true;
+
   get locked(): boolean {
     return document.pointerLockElement === this.canvas;
   }
@@ -148,8 +160,16 @@ export class Controls {
   }
 
   private onKeyDown = (event: KeyboardEvent): void => {
-    if (!this.active() || event.ctrlKey || event.metaKey || event.altKey) return;
+    if (!this.active() || !this.enabled) return;
     if (event.target instanceof HTMLElement && event.target.closest('input, textarea, [contenteditable="true"], select')) return;
+    if (event.ctrlKey || event.metaKey) {
+      // a finger on Ctrl beside WASD must not reload, save or bookmark the page
+      // (or reload the desktop app, which would drop the call). Ctrl+W, T and N
+      // only a fullscreen keyboard lock can hold (PlaygroundStage).
+      if (/^(Key[A-Z]|Digit\d)$/.test(event.code) && !['KeyC', 'KeyV', 'KeyX'].includes(event.code)) event.preventDefault();
+      return;
+    }
+    if (event.altKey) return;
     if (event.code === 'KeyV' && !event.repeat) {
       this.onToggleMode();
       return;
@@ -185,6 +205,7 @@ export class Controls {
   };
 
   private onPointerDown = (event: PointerEvent): void => {
+    if (!this.enabled) return;
     this.container.focus({ preventScroll: true });
     if (event.pointerType === 'mouse') {
       if (this.locked) return;
@@ -252,7 +273,7 @@ export class Controls {
   };
 
   private onWheel = (event: WheelEvent): void => {
-    if (this.mode !== 'third') return;
+    if (this.mode !== 'third' || !this.enabled) return;
     event.preventDefault();
     this.distance = Math.min(Math.max(this.distance + event.deltaY * 0.004, 2.2), 10);
   };
