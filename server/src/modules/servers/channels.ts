@@ -1,6 +1,6 @@
 import crypto from 'node:crypto';
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
-import { and, eq } from 'drizzle-orm';
+import { and, eq, sql } from 'drizzle-orm';
 import { config } from '../../config/env.js';
 import { db } from '../../db/client.js';
 import { channelPermissionOverwrites, conversations, serverCategories, users } from '../../db/schema.js';
@@ -70,11 +70,21 @@ async function handleCreateChannel(request: FastifyRequest<{ Params: ServerParam
   const categoryId = typeof body.categoryId === 'string' && actor.snapshot.categories.some((c) => c.id === body.categoryId) ? body.categoryId : null;
   const position = actor.snapshot.channels.filter((c) => c.categoryId === categoryId).reduce((max, c) => Math.max(max, c.position + 1), 0);
   const id = crypto.randomUUID();
-  await db.transaction(async (tx) => {
+  const created = await db.transaction(async (tx) => {
+    if (voiceMode === 'playground') {
+      // one playground a server: its world belongs to the server. Two creations at once wait for each
+      // other here, and the row is read raw, so one made while the service was off still counts.
+      await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtext(${`playground:${serverId}`}))`);
+      const [existing] = await tx.select({ id: conversations.id }).from(conversations)
+        .where(and(eq(conversations.serverId, serverId), eq(conversations.voiceMode, 'playground'))).limit(1);
+      if (existing) return false;
+    }
     await tx.insert(conversations).values({ id, type, voiceMode, title: name, createdBy: actor.userId, serverId, categoryId, position, updatedAt: new Date() });
     // the audit log names a playground as its own kind of channel
     await recordServerAudit(tx, { serverId, actorId: actor.userId, action: 'channel.create', targetType: 'channel', targetId: id, targetLabel: name, changes: createdFields({ name, type: voiceMode === 'playground' ? 'playground' : type }) });
+    return true;
   });
+  if (!created) return sendError(reply, 409, 'playground_exists', 'Este servidor já tem um playground.');
   await changed(serverId);
   log.info('channel created', { serverId, channelId: id, type, voiceMode });
   sendJson(reply, 201, { channelId: id });
