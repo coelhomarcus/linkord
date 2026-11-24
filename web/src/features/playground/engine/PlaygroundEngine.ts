@@ -212,6 +212,7 @@ export class PlaygroundEngine {
       const mesh = node as THREE.Mesh;
       if (!mesh.isMesh) return;
       mesh.geometry?.dispose();
+      mesh.customDepthMaterial?.dispose();
       for (const material of Array.isArray(mesh.material) ? mesh.material : [mesh.material]) {
         (material as THREE.MeshBasicMaterial | undefined)?.map?.dispose();
         material?.dispose();

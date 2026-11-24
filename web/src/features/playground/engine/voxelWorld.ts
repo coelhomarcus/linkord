@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { BLOCK, SEA_LEVEL, SIZE } from '../islandMap';
 import type { IslandMap } from '../islandMap';
-import { BLOCK_TILES, blockAtlas, tileUv, waterTexture } from './blockTextures';
+import { applyPackTiles, BLOCK_TILES, blockAtlas, packWater, tileUv, waterTexture } from './blockTextures';
 import { cornerBrightness, cornerOcclusion, MAX_LIGHT, sideShade, SkyLight } from './lighting';
 
 // The island as one mesh: only faces that touch air are built (the three.js
@@ -51,7 +51,8 @@ function islandGeometry(island: IslandMap, sky: SkyLight): THREE.BufferGeometry 
     const [top, side, bottom] = BLOCK_TILES[block];
     for (const face of FACES) {
       const [dx, dy, dz] = face.dir;
-      if (island.get(x + dx, y + dy, z + dz) !== BLOCK.air) continue;
+      // leaves have holes: what is behind them, other leaves included, is drawn too
+      if (opaque(island.get(x + dx, y + dy, z + dz))) continue;
       const tile = tileUv(face.side === 'top' ? top : face.side === 'bottom' ? bottom : side);
       const start = positions.length / 3;
       // the cell in front of the face, where its light comes from
@@ -144,6 +145,8 @@ function blockMaterial(atlas: THREE.Texture): THREE.ShaderMaterial {
       varying vec3 vWorldNormal;
       void main() {
         vec4 texel = texture2D(map, vUv);
+        // the holes in the leaves
+        if (texel.a < 0.5) discard;
         // a face turned away from the sun is in its own shadow; one side-on to it, half
         float facing = smoothstep(-0.15, 0.15, dot(vWorldNormal, sunDirection));
         float sunlit = facing * getShadowMask();
@@ -213,11 +216,16 @@ export function buildWorld(scene: THREE.Scene, island: IslandMap): World {
   const blocks = new THREE.Mesh(islandGeometry(island, sky), blockMaterial(atlas));
   blocks.castShadow = true;
   blocks.receiveShadow = true;
+  // the sun shines through the holes in the leaves too
+  blocks.customDepthMaterial = new THREE.MeshDepthMaterial({ depthPacking: THREE.RGBADepthPacking, map: atlas, alphaTest: 0.5 });
+  void applyPackTiles(atlas);
   scene.add(blocks);
   const sun = sunLight();
   scene.add(sun, sun.target);
 
   const water = waterTexture();
+  let stepWater = (_dt: number) => {};
+  void packWater(water).then((step) => { stepWater = step; });
   water.repeat.set(120, 120);
   const sea = new THREE.Mesh(
     new THREE.PlaneGeometry(240, 240),
@@ -236,6 +244,7 @@ export function buildWorld(scene: THREE.Scene, island: IslandMap): World {
   return {
     skyLightAt: (x, y, z) => sky.at(Math.floor(x), Math.floor(y), Math.floor(z)),
     update(dt) {
+      stepWater(dt);
       water.offset.x = (water.offset.x + dt * 0.04) % 1;
       water.offset.y = (water.offset.y + dt * 0.015) % 1;
       clouds.position.x = ((clouds.position.x + dt * 0.8 + cloudSpan / 2) % cloudSpan) - cloudSpan / 2;

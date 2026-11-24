@@ -116,4 +116,4 @@ Found a bug or have an idea? [Open an issue](https://github.com/coelhomarcus/Lin
 
 Emoji pictures are [Twemoji](https://github.com/discord/twemoji) by Twitter, Inc and other contributors, licensed under [CC-BY 4.0](https://creativecommons.org/licenses/by/4.0/).
 
-The playground builds on minecraft-web-client, minecraft-renderer and prismarine-physics (MIT) and the monogram font (CC0): see [CREDITS.md](CREDITS.md).
+The playground builds on minecraft-web-client, minecraft-renderer and prismarine-physics (MIT), Pixel Perfection's block textures (CC BY-SA 4.0) and the monogram font (CC0): see [CREDITS.md](CREDITS.md).

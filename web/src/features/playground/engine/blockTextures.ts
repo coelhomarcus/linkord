@@ -1,11 +1,25 @@
 import * as THREE from 'three';
 import { BLOCK } from '../islandMap';
 import type { Block } from '../islandMap';
+import dirtUrl from '../assets/pixel-perfection/dirt.png?url';
+import grassSideUrl from '../assets/pixel-perfection/grass_block_side.png?url';
+import grassSideOverlayUrl from '../assets/pixel-perfection/grass_block_side_overlay.png?url';
+import grassTopUrl from '../assets/pixel-perfection/grass_block_top.png?url';
+import leavesUrl from '../assets/pixel-perfection/oak_leaves.png?url';
+import logSideUrl from '../assets/pixel-perfection/oak_log.png?url';
+import logTopUrl from '../assets/pixel-perfection/oak_log_top.png?url';
+import planksUrl from '../assets/pixel-perfection/oak_planks.png?url';
+import frameUrl from '../assets/pixel-perfection/polished_blackstone.png?url';
+import sandUrl from '../assets/pixel-perfection/sand.png?url';
+import stoneUrl from '../assets/pixel-perfection/stone.png?url';
+import waterUrl from '../assets/pixel-perfection/water_still.png?url';
 
-// The island's pixel art, painted in code: 16×16 tiles on one 64×64 atlas,
-// read with nearest filtering so every texel stays a crisp square. Each tile
-// is a base colour broken up with seeded noise, plus a little structure (bark
-// stripes, board seams, a grass fringe) so blocks read at a glance.
+// The island's pixel art: 16×16 tiles on one 64×64 atlas, read with nearest
+// filtering so every texel stays a crisp square. The tiles are Pixel
+// Perfection's (assets/pixel-perfection, CC BY-SA 4.0), tinted where the pack
+// leaves them grey for the game to colour (grass, leaves, water). Until they
+// load, and if they ever fail to, the atlas shows tiles painted in code: a base
+// colour broken up with seeded noise, plus a little structure.
 
 export const TILE = 16;
 const COLUMNS = 4;
@@ -146,4 +160,114 @@ export function waterTexture(): THREE.CanvasTexture {
   texture.wrapS = THREE.RepeatWrapping;
   texture.wrapT = THREE.RepeatWrapping;
   return texture;
+}
+
+// The pack's tiles, and the colour each grey one takes on a sunny plain.
+const GRASS_TINT = hex(0x91bd59);
+const FOLIAGE_TINT = hex(0x77ab2f);
+const WATER_TINT = hex(0x3f76e4);
+/** water_still.png.mcmeta: a frame every two ticks */
+const WATER_FRAME_SECONDS = 0.1;
+
+interface PackTile {
+  url: string;
+  tint?: Rgb;
+  /** drawn over the tile, tinted: the grass hanging over a grass block's side */
+  overlay?: { url: string; tint: Rgb };
+}
+
+const PACK_TILES: Record<TileName, PackTile> = {
+  grassTop: { url: grassTopUrl, tint: GRASS_TINT },
+  grassSide: { url: grassSideUrl, overlay: { url: grassSideOverlayUrl, tint: GRASS_TINT } },
+  dirt: { url: dirtUrl },
+  stone: { url: stoneUrl },
+  sand: { url: sandUrl },
+  logSide: { url: logSideUrl },
+  logTop: { url: logTopUrl },
+  leaves: { url: leavesUrl, tint: FOLIAGE_TINT },
+  frame: { url: frameUrl },
+  planks: { url: planksUrl },
+};
+
+function loadImage(url: string): Promise<HTMLImageElement> {
+  return new Promise((resolve, reject) => {
+    const image = new Image();
+    image.onload = () => resolve(image);
+    image.onerror = () => reject(new Error(`could not load ${url}`));
+    image.src = url;
+  });
+}
+
+/** An image's pixels, multiplied by `tint` (the way the game colours grey textures). */
+function pixelsOf(image: HTMLImageElement, tint?: Rgb): ImageData {
+  const canvas = document.createElement('canvas');
+  canvas.width = image.width;
+  canvas.height = image.height;
+  const ctx = canvas.getContext('2d', { willReadFrequently: true })!;
+  ctx.drawImage(image, 0, 0);
+  const data = ctx.getImageData(0, 0, image.width, image.height);
+  if (tint) {
+    for (let i = 0; i < data.data.length; i += 4) {
+      data.data[i] = (data.data[i]! * tint[0]) / 255;
+      data.data[i + 1] = (data.data[i + 1]! * tint[1]) / 255;
+      data.data[i + 2] = (data.data[i + 2]! * tint[2]) / 255;
+    }
+  }
+  return data;
+}
+
+/** `top` laid over `base` where it is opaque, as the game draws a grass block's side. */
+function overlay(base: ImageData, top: ImageData): ImageData {
+  for (let i = 0; i < base.data.length; i += 4) {
+    const alpha = top.data[i + 3]! / 255;
+    for (let c = 0; c < 3; c++) base.data[i + c] = top.data[i + c]! * alpha + base.data[i + c]! * (1 - alpha);
+    base.data[i + 3] = Math.max(base.data[i + 3]!, top.data[i + 3]!);
+  }
+  return base;
+}
+
+/** Replaces the painted tiles with the pack's once they load. A tile that fails keeps its painting. */
+export async function applyPackTiles(atlas: THREE.CanvasTexture): Promise<void> {
+  const ctx = (atlas.image as HTMLCanvasElement).getContext('2d');
+  if (!ctx) return;
+  await Promise.all((Object.keys(PACK_TILES) as TileName[]).map(async (name) => {
+    const tile = PACK_TILES[name];
+    try {
+      const [base, top] = await Promise.all([loadImage(tile.url), tile.overlay ? loadImage(tile.overlay.url) : null]);
+      let pixels = pixelsOf(base, tile.tint);
+      if (top && tile.overlay) pixels = overlay(pixels, pixelsOf(top, tile.overlay.tint));
+      const index = TILES[name];
+      ctx.clearRect((index % COLUMNS) * TILE, Math.floor(index / COLUMNS) * TILE, TILE, TILE);
+      ctx.putImageData(pixels, (index % COLUMNS) * TILE, Math.floor(index / COLUMNS) * TILE);
+    } catch {
+      // the painted tile stands in
+    }
+  }));
+  atlas.needsUpdate = true;
+}
+
+/** Plays the pack's water on `water` (waterTexture's canvas), frame by frame. Resolves to the step to
+ * call every frame with the time passed; before then, and if the strip fails to load, the painted
+ * water stays still. */
+export async function packWater(water: THREE.CanvasTexture): Promise<(dt: number) => void> {
+  const ctx = (water.image as HTMLCanvasElement).getContext('2d');
+  if (!ctx) return () => {};
+  let strip: ImageData;
+  try {
+    strip = pixelsOf(await loadImage(waterUrl), WATER_TINT);
+  } catch {
+    return () => {};
+  }
+  const frames = Math.max(1, Math.floor(strip.height / TILE));
+  const frameSize = TILE * TILE * 4;
+  let time = 0;
+  let shown = -1;
+  return (dt) => {
+    time += dt;
+    const frame = Math.floor(time / WATER_FRAME_SECONDS) % frames;
+    if (frame === shown) return;
+    shown = frame;
+    ctx.putImageData(new ImageData(strip.data.slice(frame * frameSize, (frame + 1) * frameSize), TILE, TILE), 0, 0);
+    water.needsUpdate = true;
+  };
 }

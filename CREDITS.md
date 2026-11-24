@@ -4,13 +4,15 @@ Work by others that Linkord builds on, beyond the packages in `package.json`. Ea
 
 ## Playground
 
-The playground's movement, animation, lighting and game chat follow the block game's own rules as these open source projects reproduce them. Their code was read and ported to Linkord's engine (`web/src/features/playground/`). None of their assets (textures, models, sounds) are used: the island, skins and interface are painted in code by Linkord.
+The playground's movement, animation, lighting and game chat follow the block game's own rules as these open source projects reproduce them. Their code was read and ported to Linkord's engine (`web/src/features/playground/`). None of their assets (textures, models, sounds) are used.
 
 | Project | What was ported | License |
 | --- | --- | --- |
 | [minecraft-web-client](https://github.com/zardoy/minecraft-web-client) by zardoy | camera and hand bobbing state, movement animation states; the game chat follows its keys and fading lines | MIT, Copyright (c) 2020 PrismarineJS |
 | [minecraft-renderer](https://github.com/zardoy/minecraft-renderer) by zardoy | first-person arm transforms, humanoid pose and limb swing, view bobbing, third-person camera, sky light, smooth lighting, ambient occlusion, sun shadows | MIT |
 | [prismarine-physics](https://github.com/PrismarineJS/prismarine-physics) ([zardoy's fork](https://github.com/zardoy/prismarine-physics)) | walking, sprinting, sneaking, jumping and collisions at 20 ticks a second | MIT, Copyright (c) 2020 PrismarineJS |
+
+The island's block textures are from **[Pixel Perfection Community Edition](https://github.com/Athemis/PixelPerfectionCE)**, originally by XSSheep and updated by its community, under [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/). The files are unchanged copies in `web/src/features/playground/assets/pixel-perfection/` (with the license and where they come from); the game tints the grass, leaves and water as it draws them, and those tinted textures are under the same license. Default skins and the interface are Linkord's own.
 
 The HUD, menu and name labels use **monogram** by [datagoblin](https://datagoblin.itch.io/monogram), CC0.
 
