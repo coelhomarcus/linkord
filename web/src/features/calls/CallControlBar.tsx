@@ -3,7 +3,8 @@ import { forwardRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { CloseButton } from '@/shared/ui/primitives/close-button';
-import { useRoom, useRoomState } from '../../state/RoomContext';
+import { useRoom, useRoomSelector, useRoomState } from '../../state/RoomContext';
+import { screenPresenterId } from '@/features/playground/screenPresenter';
 import type { MicProblem } from '@/state/roomReducer';
 import { useOwnMic } from './micState';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/shared/ui/primitives/tooltip';
@@ -63,9 +64,17 @@ export const CallControlBar = forwardRef<HTMLDivElement>(function CallControlBar
   const [dismissedMicProblem, setDismissedMicProblem] = useState<MicProblem>(null);
   if (!micProblem && dismissedMicProblem) setDismissedMicProblem(null);
   const { canSpeak, canStream } = useCallPublishRights();
+  // a playground has one big screen: while someone else is on it, nobody else starts
+  const playground = callChannel?.voiceMode === 'playground';
+  const screenTaken = useRoomSelector((room) => {
+    if (!playground || !activeCallConversationId) return false;
+    const presenter = screenPresenterId(room, activeCallConversationId);
+    return presenter !== null && presenter !== room.state.me.id;
+  });
+  const canShare = canStream && !screenTaken;
   const micLabel = !canSpeak ? t('controls.noSpeakPermission') : micProblem ? t(MIC_PROBLEM_LABEL_KEY[micProblem]) : !myMic.activated && !myMic.starting ? t('controls.micActivate') : myMic.muted ? t('controls.micUnmute') : t('controls.micMute');
   const cameraLabel = !canStream ? t('controls.noStreamPermission') : cameraOn ? t('controls.cameraOff') : t('controls.cameraOn');
-  const shareLabel = !canStream ? t('controls.noStreamPermission') : sharing ? t('controls.shareStop') : t('controls.shareStart');
+  const shareLabel = !canStream ? t('controls.noStreamPermission') : sharing ? t('controls.shareStop') : screenTaken ? t('controls.screenTaken') : t('controls.shareStart');
 
   return (
     <div
@@ -144,10 +153,10 @@ export const CallControlBar = forwardRef<HTMLDivElement>(function CallControlBar
         <div className="relative">
           <Tooltip>
             <TooltipTrigger
-              onClick={() => { if (canStream || sharing) void (sharing ? stopSharing() : startSharing()); }}
+              onClick={() => { if (canShare || sharing) void (sharing ? stopSharing() : startSharing()); }}
               aria-label={shareLabel}
-              aria-disabled={(!canStream && !sharing) || undefined}
-              className={cn(BAR_BUTTON, sharing ? BAR_BUTTON_GREEN : !canStream ? BAR_BUTTON_LOCKED : BAR_BUTTON_NEUTRAL)}
+              aria-disabled={(!canShare && !sharing) || undefined}
+              className={cn(BAR_BUTTON, sharing ? BAR_BUTTON_GREEN : !canShare ? BAR_BUTTON_LOCKED : BAR_BUTTON_NEUTRAL)}
             >
               <MonitorIcon size={22} weight={iconWeight(sharing)} className={BAR_ICON} />
             </TooltipTrigger>

@@ -1,0 +1,2 @@
+ALTER TABLE "conversations" ADD COLUMN "voice_mode" varchar(12) DEFAULT 'standard' NOT NULL;--> statement-breakpoint
+ALTER TABLE "conversations" ADD CONSTRAINT "conversations_voice_mode_check" CHECK ("conversations"."voice_mode" IN ('standard','playground') AND ("conversations"."voice_mode" = 'standard' OR "conversations"."type" = 'voice'));

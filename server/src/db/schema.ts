@@ -160,6 +160,10 @@ export const conversations = pgTable('conversations', {
   // true: the channel follows its category's permission overwrites instead
   // of its own (Discord's "synced with category")
   permissionsSynced: boolean('permissions_synced').notNull().default(true),
+  // How a voice channel's call is shown: 'standard' (tiles) or 'playground'
+  // (a 3D space with proximity voice). Set when the channel is created; a
+  // text channel or DM keeps 'standard'.
+  voiceMode: varchar('voice_mode', { length: 12 }).notNull().default('standard'),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 }, (t) => [
@@ -168,6 +172,7 @@ export const conversations = pgTable('conversations', {
   index('conversations_type_idx').on(t.type),
   check('conversations_type_check', sql`${t.type} IN ('direct','text','voice')`),
   check('conversations_server_channel_check', sql`(${t.type} = 'direct') = (${t.serverId} IS NULL)`),
+  check('conversations_voice_mode_check', sql`${t.voiceMode} IN ('standard','playground') AND (${t.voiceMode} = 'standard' OR ${t.type} = 'voice')`),
 ]);
 
 /** The two members of a DM. Server channels have no rows here: who belongs
