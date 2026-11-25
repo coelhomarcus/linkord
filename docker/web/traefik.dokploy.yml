@@ -1,18 +1,19 @@
+# Substitute the public hostname and the two Dokploy service names before installing this file.
 http:
   routers:
     linkord-split-redirect:
-      rule: 'Host(`linkord.marcuscoelho.com`)'
+      rule: 'Host(`__APP_DOMAIN__`)'
       priority: 100
       entryPoints: [web]
       middlewares: [redirect-to-https@file]
       service: linkord-web
     linkord-split-backend:
-      rule: 'Host(`linkord.marcuscoelho.com`) && (PathRegexp(`^/(api|ws|uploads)(/|$)`) || Path(`/healthz`) || Path(`/readyz`))'
+      rule: 'Host(`__APP_DOMAIN__`) && (PathRegexp(`^/(api|ws|uploads)(/|$)`) || Path(`/healthz`) || Path(`/readyz`))'
       priority: 200
       entryPoints: [websecure]
       service: linkord-backend
     linkord-split-frontend:
-      rule: 'Host(`linkord.marcuscoelho.com`)'
+      rule: 'Host(`__APP_DOMAIN__`)'
       priority: 100
       entryPoints: [websecure]
       service: linkord-web
@@ -21,7 +22,7 @@ http:
       loadBalancer:
         passHostHeader: true
         servers:
-          - url: http://linkord-app-e2o2lh:3000
+          - url: http://__BACKEND_APP_NAME__:3000
     linkord-web:
       loadBalancer:
         passHostHeader: true

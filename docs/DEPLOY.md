@@ -4,7 +4,7 @@ How to run Linkord in production, what the container expects from the host, and 
 
 ## What gets deployed
 
-The [`Dockerfile`](../Dockerfile) has three targets. The default `monolith` image serves the web app, API, uploads and Socket.IO from Bun on port **3000**. Use this image for standalone installs. On [Dokploy](#dokploy), the `backend` target serves the API, uploads and Socket.IO on **3000**, and the `frontend` target serves the static site on **8080**. Both Bun images include the backup scripts and PostgreSQL client tools.
+The [`Dockerfile`](../Dockerfile) has three targets. The default `monolith` image serves the web app, API, uploads and Socket.IO from Bun on port **3000**. Use this image for standalone installs. For independent deploys, the `backend` target serves the API, uploads and Socket.IO on **3000**, and the `frontend` target serves the static site on **8080**. Both Bun images include the backup scripts and PostgreSQL client tools.
 
 - **Health checks:** both public, both answer only `{ ok: … }`.
   - `GET /healthz` (liveness): `200` while the process serves HTTP. The image's `HEALTHCHECK`, Dokploy and the end-to-end stack use it.
@@ -48,13 +48,47 @@ docker run -d --name linkord --restart unless-stopped --env-file .env \
   --log-opt max-size=10m --log-opt max-file=5 linkord
 ```
 
-The port stays on `127.0.0.1` because the image trusts `X-Forwarded-For`. Send the original host and HTTPS scheme from the proxy and forward WebSocket upgrades.
+Point the entire public HTTPS domain at `127.0.0.1:3000`. The port stays on loopback because the image trusts `X-Forwarded-For`. Send the original host and HTTPS scheme from the proxy and forward WebSocket upgrades.
 
 When migrating an older bundled installation, keep its PostgreSQL data and the upload and backup volumes. Take a [backup](#backups) before switching, then mount those volumes in place of the bind mounts above or restore into the new installation.
 
+## Routing a split deploy
+
+Point DNS at a reverse proxy serving a single public HTTPS origin, for example `https://chat.example.com`. The browser uses that origin for the page, session cookies, API and Socket.IO. The path determines which service receives the request.
+
+| Public paths | Destination |
+| --- | --- |
+| `/api`, `/ws` and `/uploads`, including their subpaths | Backend on port `3000` |
+| Exactly `/healthz` and `/readyz` | Backend on port `3000` |
+| All other paths, including `/`, `/assets/…` and `/sw.js` | Frontend on port `8080` |
+
+Keep both destination ports private. Forward the original `Host`, path and query string, and pass the public HTTPS scheme and client IP through trusted forwarding headers. `/ws` needs both HTTP polling and WebSocket upgrades. Run the proxy independently of the frontend so replacing the static site does not interrupt backend connections.
+
+The frontend image generates its Content Security Policy at build time. Set its `APP_URL` and `LIVEKIT_URL` build arguments to the same public URLs as the backend. Set `KLIPY_ENABLED=1` when the backend has a KLIPY key, and match its `MEDIA_PROXY` and `CSP_REPORT_ONLY` settings if they differ from the defaults (`1` and `0`). Rebuild the frontend when these public settings change. Database and integration credentials belong in the backend's runtime environment.
+
+### Split deploy with Caddy
+
+Provision PostgreSQL and LiveKit, then build the two targets. Replace the example URLs with the values in the backend's `.env`.
+
+```bash
+docker build --target backend -t linkord-backend .
+docker build --target frontend -t linkord-web \
+  --build-arg APP_URL=https://chat.example.com \
+  --build-arg LIVEKIT_URL=wss://livekit.example.com .
+```
+
+Start the backend with the [standalone `docker run` command](#the-image-on-its-own), using `linkord-backend` as the image. Start the frontend on loopback too.
+
+```bash
+docker run -d --name linkord-web --restart unless-stopped \
+  -p 127.0.0.1:8080:8080 linkord-web
+```
+
+Use the [example Caddyfile](../docker/web/Caddyfile) with your public hostname. It assumes Caddy terminates HTTPS directly and can reach both published loopback ports. If Caddy runs in Docker, put it on a shared network with both services and replace the loopback destinations with their Docker DNS names and ports. Point DNS at Caddy and allow inbound TCP ports `80` and `443` for [automatic HTTPS](https://caddyserver.com/docs/automatic-https).
+
 ## Dokploy
 
-Use two **Applications** in the same project and environment, both with the GitHub repository root as the build context, branch `main` and Dockerfile `./Dockerfile`.
+Use two **Applications** in the same project and environment, both with the GitHub repository root as the build context, branch `main` and Dockerfile `./Dockerfile`. Both applications must be reachable by service name from Traefik on the Dokploy network.
 
 | Application | Docker Build Stage | Port | Watch Paths |
 | --- | --- | --- | --- |
@@ -68,23 +102,23 @@ mkdir -p /srv/linkord/uploads /srv/linkord/backups
 chown -R 1000:1000 /srv/linkord/uploads /srv/linkord/backups
 ```
 
-In `linkord-web`, open **Environment → Build-time Arguments** and enter one assignment per line. The production settings are:
+In `linkord-web`, enter the [frontend build arguments](#routing-a-split-deploy) in **Environment → Build-time Arguments**, one assignment per line. Leave the runtime environment and volume settings empty and keep **Create .env File** off.
 
-```dotenv
-APP_URL=https://linkord.marcuscoelho.com
-LIVEKIT_URL=wss://livekit.marcuscoelho.com
-KLIPY_ENABLED=1
-MEDIA_PROXY=1
-CSP_REPORT_ONLY=0
-```
+Fill in the [Traefik template](../docker/web/traefik.dokploy.yml) and install it in `linkord-web` under **Advanced → Traefik**.
 
-Set `KLIPY_ENABLED=1` when the backend has a KLIPY key. The Dockerfile passes these public settings to the CSP generator so the Nginx headers match the web build. Redeploy `linkord-web` after changing them. Leave its runtime environment and volume settings empty and keep `Create .env File` off. Database and integration credentials belong in the backend's runtime environment.
+| Placeholder | Replace with |
+| --- | --- |
+| `__APP_DOMAIN__` | The hostname from `APP_URL`, such as `chat.example.com` |
+| `__BACKEND_APP_NAME__` | The internal Dokploy service name for the `backend` application |
+| `__FRONTEND_APP_NAME__` | The internal Dokploy service name for the `frontend` application |
 
-Install the [Traefik configuration](../docker/web/traefik.dokploy.yml) in the web Application's advanced Traefik settings. Replace `__FRONTEND_APP_NAME__` with its Dokploy service name. For another installation, also substitute the host, backend service name and TLS configuration. The priority-200 backend router matches `/api`, `/ws`, `/uploads` and their subpaths, plus `/healthz` and `/readyz`. The priority-100 router serves the web on the same host. Traefik retains the original path and `Host`. The checked-in TLS configuration uses the existing `websecure` entry point and certificate setup for this host. DNS points at the shared public endpoint. The web Application's **Domains** tab is empty because the custom Traefik file defines both routes. The original domain entry still appears in the backend's **Domains** tab, while its old catch-all router is disabled in its Traefik file.
+The backend router has higher priority than the frontend's catch-all. The template uses Dokploy's `web` and `websecure` entry points and its `redirect-to-https@file` middleware. Both HTTPS routers inherit TLS from `websecure`. If your installation configures TLS per router, add `tls.certResolver` to both HTTPS routers for a configured certificate resolver, or `tls: {}` to use a certificate already loaded in Traefik. [Traefik TLS settings](https://doc.traefik.io/traefik/reference/routing-configuration/http/tls/overview/)
+
+For a fresh split deploy, leave **Domains** empty on both applications. The installed Traefik file owns routing for the hostname. When migrating an existing monolith, check that its previous catch-all router is disabled after the cutover, even if the old domain record still appears in Dokploy.
 
 The web image sends `private, no-cache, no-store, max-age=0` for `/sw.js` so browsers can check for updates even behind a CDN. Verify that the CDN preserves those directives on the public domain. HTML still uses `no-cache` and versioned assets use immutable caching.
 
-**First split deploy.** Run `bun run --cwd e2e test:split` with Docker and Chrome. Before merging to `main`, pause Auto Deploy on the existing Application and record its deployed commit, build settings and Traefik configuration. Bring up the frontend and add its routing above the existing monolith route. Check HTTPS, a direct link, a signed-in session, `/readyz`, uploads and the socket. Then redeploy the existing Application with the `backend` target. After it is healthy, retire its old catch-all router, verify both route priorities and enable Auto Deploy with the listed Watch Paths.
+**Migrating a monolith on Dokploy.** Run `bun run --cwd e2e test:split` with Docker and Chrome. Before merging to `main`, pause Auto Deploy on the existing Application and record its deployed commit, build settings and Traefik configuration. Bring up the frontend and add its routing above the existing monolith route. Check HTTPS, a direct link, a signed-in session, `/readyz`, uploads and the socket. Then redeploy the existing Application with the `backend` target. After it is healthy, retire its old catch-all router, verify both route priorities and enable Auto Deploy with the listed Watch Paths.
 
 **Rollback.** Before the backend changes, restoring the previous Traefik configuration puts the monolith back in front immediately. After the switch, restore the old backend route and redeploy the saved commit as the default monolith image on the existing Application. Wait for readiness before removing the split routes. For a frontend-only rollback, point the web Application at a temporary branch at the last working frontend commit, deploy that Application, then restore its `main` source and Watch Paths. The backend remains connected during a frontend-only deploy or rollback.
 
@@ -144,7 +178,7 @@ What keeps this working, and the rules for changing it, is in [`AGENTS.md`](../A
 
 ## Security headers
 
-Fastify sets the backend headers. In the split deploy the frontend image generates its own headers from the same policy code and its own build files. Traefik should forward those headers as sent:
+Fastify sets the backend headers. In the split deploy the frontend image generates its own headers from the same policy code and its own build files. The reverse proxy should pass these headers through.
 
 - `Content-Security-Policy`, generated from the public origin, LiveKit URL, integration flags and the frontend build. A wrong `LIVEKIT_URL` blocks calls in the browser even when the server reaches LiveKit. How it is built and how to allow a new host: [DEVELOPMENT.md](DEVELOPMENT.md#content-security-policy).
 - `X-Frame-Options: DENY` and `frame-ancestors 'none'`: no other site can frame Linkord.

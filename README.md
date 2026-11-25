@@ -78,7 +78,7 @@ A Windows desktop app lives in `desktop/`: an Electron window that opens your Li
 
 ## 🐳 Deployment
 
-The Dockerfile builds the standalone Linkord image and the two images used on Dokploy. The [deployment guide](docs/DEPLOY.md) covers both setups, the shared public domain, environment variables, storage, backups and rollback.
+Deploy the [standalone image](docs/DEPLOY.md#the-image-on-its-own) or run [separate frontend and backend images](docs/DEPLOY.md#routing-a-split-deploy) behind one HTTPS proxy. The [deployment guide](docs/DEPLOY.md) also covers environment variables, storage, backups and rollback.
 
 ## 🧰 Commands
 
