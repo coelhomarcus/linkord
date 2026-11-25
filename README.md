@@ -59,25 +59,26 @@ Linkord is a self-hosted place to chat and call with friends. Talk in direct mes
 
 ## ⚡ Quick start
 
-All you need is Docker with the Compose plugin. This brings up the app, PostgreSQL and a LiveKit server for calls:
+Have a PostgreSQL database and a LiveKit server ready, then build Linkord's default image:
 
 ```bash
-git clone <this repository> && cd linkord
-cp .env.full.example .env.full   # fill in REGISTRATION_CODE, POSTGRES_PASSWORD, LIVEKIT_API_KEY and LIVEKIT_API_SECRET
-docker compose --env-file .env.full up -d --build
+git clone https://github.com/coelhomarcus/linkord.git
+cd linkord
+cp .env.example .env
+docker build -t linkord .
 ```
 
-Open [http://localhost:3000](http://localhost:3000) and create an account with the registration code. Emailed codes (account recovery, two-step login) are printed by `docker compose --env-file .env.full logs mailsink`. Data is kept in Docker volumes across `down` and `up`. More, including how to serve other machines over HTTPS, in [the whole stack in Docker](docs/DEVELOPMENT.md#the-whole-stack-in-docker).
+Set the database URL, public app URL, registration code and LiveKit credentials in `.env`. Follow the [standalone Docker instructions](docs/DEPLOY.md#the-image-on-its-own) to start the image with persistent uploads and backups, or [deploy on Dokploy](docs/DEPLOY.md#dokploy).
 
 ## 🚀 Development
 
-For local development, the frontend and backend run on the host, and `docker compose up -d` brings up the services they use (PostgreSQL, LiveKit and a mail sink). Follow the [local development guide](docs/DEVELOPMENT.md) for setup and run instructions.
+For local development, run the frontend and backend on the host. The [local development guide](docs/DEVELOPMENT.md) shows how to start PostgreSQL, LiveKit and a mail sink with `docker run`.
 
 A Windows desktop app lives in `desktop/`: an Electron window that opens your Linkord server, where `linkord://` links open invites and conversations. See [Desktop app](docs/DEVELOPMENT.md#desktop-app) for running it and [building its installer](docs/DEPLOY.md#desktop-app) for your server.
 
 ## 🐳 Deployment
 
-Linkord ships as one Docker image (web app, API and realtime server on port 3000) next to a PostgreSQL database and a LiveKit server. It runs on Dokploy, on its own with `docker run`, or with PostgreSQL and LiveKit bundled by the `full` profile of `docker-compose.yml`. The [deployment guide](docs/DEPLOY.md) covers its environment, storage, updates, backups and troubleshooting.
+The Dockerfile builds the standalone Linkord image and the two images used on Dokploy. The [deployment guide](docs/DEPLOY.md) covers both setups, the shared public domain, environment variables, storage, backups and rollback.
 
 ## 🧰 Commands
 

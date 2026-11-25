@@ -4,7 +4,7 @@ How to run Linkord in production, what the container expects from the host, and 
 
 ## What gets deployed
 
-The [`Dockerfile`](../Dockerfile) has three targets. The default `monolith` image serves the web app, API, uploads and Socket.IO from Bun on port **3000**. Docker Compose and standalone installs use this image. On [Dokploy](#dokploy), the `backend` target serves the API, uploads and Socket.IO on **3000**, and the `frontend` target serves the static site on **8080**. Both Bun images include the backup scripts and PostgreSQL client tools.
+The [`Dockerfile`](../Dockerfile) has three targets. The default `monolith` image serves the web app, API, uploads and Socket.IO from Bun on port **3000**. Use this image for standalone installs. On [Dokploy](#dokploy), the `backend` target serves the API, uploads and Socket.IO on **3000**, and the `frontend` target serves the static site on **8080**. Both Bun images include the backup scripts and PostgreSQL client tools.
 
 - **Health checks:** both public, both answer only `{ ok: … }`.
   - `GET /healthz` (liveness): `200` while the process serves HTTP. The image's `HEALTHCHECK`, Dokploy and the end-to-end stack use it.
@@ -34,47 +34,9 @@ The variables a production instance needs:
 
 Optional services and limits are in `.env.example`. Steam Wall connections use `STEAM_WEB_API_KEY`, and Twitch connections share the IGDB app credentials. Covers, connection avatars, link preview pictures and thumbnails are downloaded by the server and served from its own domain, which costs outbound bandwidth and up to 64 MB of memory for the cache (another 64 MB for the background loops of Steam mini profiles); `MEDIA_PROXY=0` sends browsers to those services instead ([media proxy](INTEGRATIONS.md#media-proxy)). After the first start, make yourself an administrator: `bun --no-env-file server/dist/scripts/adminRole.js grant <username>` inside the container (`bun run admin:grant <username>` from a checkout).
 
-## The complete stack on one server
-
-The `full` profile of [`docker-compose.yml`](../docker-compose.yml) runs the image next to PostgreSQL, LiveKit and a mail sink, so a single small server needs nothing else. How to start it (`docker compose --env-file .env.full up -d --build`) and what each service does is in [DEVELOPMENT.md](DEVELOPMENT.md#the-whole-stack-in-docker). Production keeps deploying through [Dokploy](#dokploy), with a managed database and LiveKit Cloud; the compose file fits a trial, a demo or a small private instance that accepts what comes with it: the database, the uploads and LiveKit share one machine and one disk, and nothing restarts the app on another host when that machine goes down. It runs one LiveKit node with no TURN server. To run the image against a database and LiveKit you already have, use [Dokploy](#dokploy) or [the image on its own](#the-image-on-its-own).
-
-On a server, fill in every required value of `.env.full`: left empty, the database password and the LiveKit key pair fall back to the development defaults, which anyone can look up.
-
-By default everything is published on `127.0.0.1` only, which serves browsers on that machine. To serve other machines:
-
-1. **DNS:** two names pointing at the server, one for the app and one for LiveKit's signalling (`linkord.example.com`, `livekit.example.com`).
-2. **`.env.full`:**
-
-```dotenv
-COMPOSE_PROFILES=full,https
-APP_DOMAIN=linkord.example.com
-LIVEKIT_DOMAIN=livekit.example.com
-APP_URL=https://linkord.example.com
-LIVEKIT_URL=wss://livekit.example.com
-LIVEKIT_NODE_IP=<the server's public IPv4>
-LIVEKIT_RTC_BIND=0.0.0.0
-```
-
-3. **Start it.** The `https` profile adds Caddy in front of the app and LiveKit's signalling, with Let's Encrypt certificates kept in the `linkord_caddy_data` volume:
-
-```bash
-docker compose --env-file .env.full up -d --build
-```
-
-4. **Firewall:** open `80/tcp` and `443/tcp` (Caddy; `443/udp` too for HTTP/3), `7881/tcp` and `7882/udp` (LiveKit media). Keep `3000`, `3100`, `5432`, `5433`, `7880` and `8025` closed; the file publishes them on `127.0.0.1` only.
-
-Why this shape:
-
-- **The app's port stays on loopback**, because the image trusts `X-Forwarded-For`; Caddy replaces whatever a client sends with the address it saw.
-- **HTTPS is required off `localhost`:** browsers give the microphone and camera only to a secure context, and Web Push and the `Secure` cookie need it.
-- **LiveKit media goes straight to the server**, not through Caddy, on `7881/tcp` and the single UDP port `7882` ([`docker/livekit.yaml`](../docker/livekit.yaml)). Behind NAT, `LIVEKIT_NODE_IP` is the public address and those ports are forwarded.
-- **No TURN:** browsers behind a firewall that blocks both UDP and TCP to `7881` cannot join calls (chat still works). LiveKit's embedded TURN server (`turn:` in `livekit.yaml`) would fix it; LiveKit Cloud includes one.
-
-Backups: add `backup` to `COMPOSE_PROFILES` (see [Backups](#backups)), and keep `.env.full` with them, since the database and LiveKit secrets are only there.
-
 ## The image on its own
 
-Without Compose or Dokploy, build the image and run it with your `.env` (`DATABASE_URL`, `APP_URL`, `LIVEKIT_*` and the rest), behind the TLS proxy you already have:
+Provision PostgreSQL and LiveKit, then build the image and run it behind a TLS reverse proxy. Start from `.env.example` and set `DATABASE_URL`, the public HTTPS `APP_URL`, and the `LIVEKIT_*` values. The addresses must be reachable from the container. If PostgreSQL is on a Docker network, attach Linkord to that network with `--network <name>` and use the database service name in `DATABASE_URL`.
 
 ```bash
 docker build -t linkord .
@@ -86,7 +48,9 @@ docker run -d --name linkord --restart unless-stopped --env-file .env \
   --log-opt max-size=10m --log-opt max-file=5 linkord
 ```
 
-The port stays on `127.0.0.1` for the same reason as above: the image trusts `X-Forwarded-For`, so only the proxy may reach it.
+The port stays on `127.0.0.1` because the image trusts `X-Forwarded-For`. Send the original host and HTTPS scheme from the proxy and forward WebSocket upgrades.
+
+When migrating an older bundled installation, keep its PostgreSQL data and the upload and backup volumes. Take a [backup](#backups) before switching, then mount those volumes in place of the bind mounts above or restore into the new installation.
 
 ## Dokploy
 
@@ -94,7 +58,7 @@ Use two **Applications** in the same project and environment, both with the GitH
 
 | Application | Docker Build Stage | Port | Watch Paths |
 | --- | --- | --- | --- |
-| Existing Linkord app | `backend` | `3000` | `server/**`, `package.json`, `bun.lock`, `bunfig.toml`, `Dockerfile`, `.dockerignore` |
+| `linkord-backend` | `backend` | `3000` | `server/**`, `package.json`, `bun.lock`, `bunfig.toml`, `Dockerfile`, `.dockerignore` |
 | `linkord-web` | `frontend` | `8080` | `web/**`, `docker/web/generate-headers.ts`, `docker/web/nginx.conf`, `server/src/http/pageSecurityPolicy.ts`, `server/src/modules/link-preview/playerHosts.ts`, `Dockerfile`, `.dockerignore` |
 
 Keep one replica of the backend. Its environment holds the database and integration settings above. Keep the existing bind mounts for `/app/uploads` and `/app/backups`. For a new installation, create the source folders on the host as root for uid 1000:
@@ -104,9 +68,19 @@ mkdir -p /srv/linkord/uploads /srv/linkord/backups
 chown -R 1000:1000 /srv/linkord/uploads /srv/linkord/backups
 ```
 
-Set the web Application's **Build-time Arguments** to `APP_URL` (the public HTTPS origin), `LIVEKIT_URL` (the public signalling URL), `KLIPY_ENABLED` (`1` when the backend has a KLIPY key), `MEDIA_PROXY` (default `1`) and `CSP_REPORT_ONLY` (default `0`). Update the arguments and rebuild the frontend when these settings change. The web container needs no runtime environment, port mapping or data volume.
+In `linkord-web`, open **Environment → Build-time Arguments** and enter one assignment per line. The production settings are:
 
-Install the [Traefik configuration](../docker/web/traefik.dokploy.yml) in the web Application's advanced Traefik settings. Replace `__FRONTEND_APP_NAME__` with its Dokploy service name. For another installation, also substitute the host, backend service name and TLS configuration. The priority-200 backend router matches `/api`, `/ws`, `/uploads` and their subpaths, plus `/healthz` and `/readyz`. The priority-100 router serves the web on the same host. Traefik retains the original path and `Host`. The checked-in TLS configuration uses the existing `websecure` entry point and certificate setup for this host.
+```dotenv
+APP_URL=https://linkord.marcuscoelho.com
+LIVEKIT_URL=wss://livekit.marcuscoelho.com
+KLIPY_ENABLED=1
+MEDIA_PROXY=1
+CSP_REPORT_ONLY=0
+```
+
+Set `KLIPY_ENABLED=1` when the backend has a KLIPY key. The Dockerfile passes these public settings to the CSP generator so the Nginx headers match the web build. Redeploy `linkord-web` after changing them. Leave its runtime environment and volume settings empty and keep `Create .env File` off. Database and integration credentials belong in the backend's runtime environment.
+
+Install the [Traefik configuration](../docker/web/traefik.dokploy.yml) in the web Application's advanced Traefik settings. Replace `__FRONTEND_APP_NAME__` with its Dokploy service name. For another installation, also substitute the host, backend service name and TLS configuration. The priority-200 backend router matches `/api`, `/ws`, `/uploads` and their subpaths, plus `/healthz` and `/readyz`. The priority-100 router serves the web on the same host. Traefik retains the original path and `Host`. The checked-in TLS configuration uses the existing `websecure` entry point and certificate setup for this host. DNS points at the shared public endpoint. The web Application's **Domains** tab is empty because the custom Traefik file defines both routes. The original domain entry still appears in the backend's **Domains** tab, while its old catch-all router is disabled in its Traefik file.
 
 The web image sends `private, no-cache, no-store, max-age=0` for `/sw.js` so browsers can check for updates even behind a CDN. Verify that the CDN preserves those directives on the public domain. HTML still uses `no-cache` and versioned assets use immutable caching.
 
@@ -114,7 +88,7 @@ The web image sends `private, no-cache, no-store, max-age=0` for `/sw.js` so bro
 
 **Rollback.** Before the backend changes, restoring the previous Traefik configuration puts the monolith back in front immediately. After the switch, restore the old backend route and redeploy the saved commit as the default monolith image on the existing Application. Wait for readiness before removing the split routes. For a frontend-only rollback, point the web Application at a temporary branch at the last working frontend commit, deploy that Application, then restore its `main` source and Watch Paths. The backend remains connected during a frontend-only deploy or rollback.
 
-**Restart policy.** The app relies on being restarted when it exits: an uncaught exception or an unhandled promise rejection is logged as `fatal uncaughtException, shutting down` (or `unhandledRejection`), the server shuts down the same way as for a deploy (calls are restored by the next process) and exits with code 1. The compose file and the `docker run` above set `restart: unless-stopped`. On Dokploy, the Swarm service's default restart policy (`condition: any`) already restarts it; if you changed it under the application's Swarm settings, keep the condition at `any` or `on-failure`. To check:
+**Restart policy.** The app relies on being restarted when it exits: an uncaught exception or an unhandled promise rejection is logged as `fatal uncaughtException, shutting down` (or `unhandledRejection`), the server shuts down the same way as for a deploy (calls are restored by the next process) and exits with code 1. The standalone `docker run` command uses `--restart unless-stopped`. On Dokploy, the Swarm service's default restart policy (`condition: any`) already restarts it; if you changed it under the application's Swarm settings, keep the condition at `any` or `on-failure`. To check:
 
 ```bash
 docker service inspect <app-name> --format '{{json .Spec.TaskTemplate.RestartPolicy}}'
@@ -190,8 +164,8 @@ linkord-backup-20261108T015300Z/
 ```
 
 ```bash
-# the complete stack on one server
-docker compose --env-file .env.full exec app bun --no-env-file server/dist/scripts/backup.js
+# standalone Docker
+docker exec linkord bun --no-env-file server/dist/scripts/backup.js
 # Dokploy (from the host)
 docker exec $(docker ps -qf name=<app-name>) bun --no-env-file server/dist/scripts/backup.js
 ```
@@ -200,13 +174,12 @@ docker exec $(docker ps -qf name=<app-name>) bun --no-env-file server/dist/scrip
 | --- | --- | --- |
 | `BACKUP_DIR` | `./backups` | Where backups are written and read. Not inside `UPLOAD_DIR`. |
 | `BACKUP_KEEP` | `7` | How many backups rotation keeps (at least 1). |
-| `BACKUP_INTERVAL_SECONDS` | `86400` | Only for the compose `backup` service. |
 | `PG_DUMP_BIN`, `PG_RESTORE_BIN` | `pg_dump`, `pg_restore` | The PostgreSQL client tools, at least as new as the server. |
 
 - **Safe to interrupt:** a backup is written as `<name>.partial` and renamed when complete. Rotation runs only after a successful backup and only deletes folders it made.
 - **Consistent:** the dump and the file list come from one database snapshot, and files are archived after it, so every row in the dump has its file. A file deleted while the archive runs is reported as a warning (that message shows a broken attachment). Uploads still in progress are left out.
-- **Scheduling:** on the complete stack, add `backup` to `COMPOSE_PROFILES` for a service that backs up at start and every `BACKUP_INTERVAL_SECONDS`. Otherwise use the host's cron, for example `0 3 * * * cd /srv/linkord && flock -n .backup.lock docker compose --env-file .env.full exec -T app bun --no-env-file server/dist/scripts/backup.js >> backup.log 2>&1`.
-- **Off the machine:** a backup on the same disk does not survive that disk. Copy the folder elsewhere after each run (`rclone copy`, `aws s3 sync`, `rsync`; from a compose volume, `docker compose --env-file .env.full cp app:/app/backups ./backups`) and set a lifecycle rule there, since rotation only prunes the local folder.
+- For scheduled backups, run the appropriate `docker exec` command from the host's scheduler.
+- Copy completed backups off the host after each run with a tool such as `rclone` or `rsync`. Set retention on the destination too, since rotation prunes only the local backup directory.
 - **Not in the backup:** the `.env` (database credentials, `LIVEKIT_*` and the Web Push VAPID keys, without which every push subscription breaks) and LiveKit. Keep the `.env` in a secrets store. A backup holds password hashes, sessions and every message: treat it like the database, and encrypt it when it leaves the machine.
 
 ### Restoring
@@ -217,9 +190,14 @@ docker exec $(docker ps -qf name=<app-name>) bun --no-env-file server/dist/scrip
 
 ```bash
 bun run restore latest --confirm linkord
-# the complete stack (after `docker compose --env-file .env.full stop app`):
-docker compose --env-file .env.full run --rm --no-deps app bun --no-env-file server/dist/scripts/restore.js latest --confirm linkord
+
+# standalone Docker, after stopping the app
+docker run --rm --env-file .env \
+  -v "$PWD/uploads:/app/uploads" -v "$PWD/backups:/app/backups" \
+  linkord bun --no-env-file server/dist/scripts/restore.js latest --confirm linkord
 ```
+
+For Docker, use the same database network settings as the intended Linkord container.
 
 4. Start the app. A newer app applies its newer migrations as on any upgrade; an older app cannot read a newer database.
 
@@ -239,7 +217,7 @@ The server writes one JSON line per record to stdout and stderr (`LOG_FORMAT=jso
 - **Failed logins never carry the typed username**, since people type their password there by mistake. A name that matched an account is logged as that account's `userId`; any other as `usernameTag`, a 12-character keyed hash that repeats for the same name until the next restart and cannot be reversed from the log.
 - **Browser errors** (`POST /api/client-logs`) are always under the `client` component with the reporting `userId`, or `null` when signed out. A signed-out page can only produce `warn` records (an `error` it sent is kept as `warn` with `reportedLevel: "error"`), so alerts on `error` only see the server and signed-in clients, and control characters in the message are replaced with spaces.
 
-Keep logs for at most **30 days**. The compose file and the `docker run` above rotate them at 5 files of 10 MB, which on a small instance is days to a few weeks; with Dokploy, or any other log collector, set the same bound in its log settings. The addresses stored with each login session (Settings → Security) are database data and follow the session, not this policy.
+Keep logs for at most **30 days**. The standalone `docker run` command rotates them at 5 files of 10 MB, which on a small instance is days to a few weeks; with Dokploy, or any other log collector, set the same bound in its log settings. The addresses stored with each login session (Settings → Security) are database data and follow the session, not this policy.
 
 ## Desktop app
 
@@ -316,7 +294,7 @@ The app keeps its session and window state in `%APPDATA%\Linkord`.
 
 - **Attachments and voice messages fail, profile pictures work.** `POST /api/attachments/init` answers 500 and the log shows `EACCES: permission denied, mkdir '/app/uploads/tmp/…'`. A folder under the uploads mount is still owned by root: see [Folders and permissions](#folders-and-permissions). The 429s that follow are the browser retrying.
 - **Backups fail with `EACCES`.** The same, for the folder mounted on `/app/backups`, or nothing is mounted there.
-- **Calls connect but nobody hears anyone, on the complete stack.** `LIVEKIT_NODE_IP` is still `127.0.0.1`, or `7881/tcp` and `7882/udp` are closed or published on loopback (`LIVEKIT_RTC_BIND`). See [The complete stack on one server](#the-complete-stack-on-one-server).
+- **Calls connect but nobody hears anyone.** On a self-hosted LiveKit instance, check the advertised media address and published TCP and UDP ports. See [LiveKit](INTEGRATIONS.md#livekit).
 - **Calls do not connect, chat works.** Check `LIVEKIT_URL`: it must be the address browsers use, and the browser console names it in a Content-Security-Policy error if the policy blocked it. Without `LIVEKIT_*` the server logs `LiveKit is not configured` at startup.
 - **Covers, avatars or link preview pictures are missing.** The server downloads them itself, so the container needs outbound HTTPS to `images.igdb.com`, `cdn.myanimelist.net`, `avatars.githubusercontent.com`, `i.ytimg.com` and the sites people link to. The browser's network tab shows the reason on the `/api/media-proxy/...` request (`502 image_unavailable`, `429 rate_limited`, `415 not_an_image`).
 - **"Origem não permitida." (403) on every change, or the socket refuses to connect.** That is the app's own Portuguese error for a request from an origin it does not know. `APP_URL` must match the address in the browser; other addresses go in `ALLOWED_ORIGINS`.
