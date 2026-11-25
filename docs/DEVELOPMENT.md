@@ -185,7 +185,7 @@ The scripts behind `db:*`, `admin:*`, `backup*`, `restore` and `test:integration
 
 ## End-to-end tests
 
-`e2e/` drives the real app in Chrome with several accounts at once. The Docker stack runs the app behind Traefik alongside the profile sync worker, a LiveKit dev server, a disposable in-memory Postgres and a mail sink. Stop `linkord-dev-livekit` and `linkord-dev-mailsink` before the standard tests if they are running, since those ports overlap. The split deploy test uses separate ports.
+`e2e/` drives the real app in Chrome with several accounts at once. The Docker stack runs the app behind Traefik alongside the profile sync worker, a LiveKit dev server, a disposable in-memory Postgres and a mail sink. Chrome connects to LiveKit through a published port, while the backend reaches the room management API on the Compose network. Stop `linkord-dev-livekit` and `linkord-dev-mailsink` before the standard tests if they are running, since those ports overlap. The split deploy test uses separate ports.
 
 ```bash
 PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1 bun install --frozen-lockfile --cwd e2e   # once; uses the installed Chrome

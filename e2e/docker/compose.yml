@@ -47,10 +47,10 @@ services:
     env_file: ../.e2e.env
     environment:
       DATABASE_URL: postgres://linkord:linkord@postgres:5432/linkord
-      # The browser reaches LiveKit at lk.localhost (Chrome resolves any
-      # *.localhost to this machine); inside the container the same name
-      # has to point at the host, where LiveKit's port is published.
+      # Chrome resolves lk.localhost to the published port on the host.
+      # The server uses Compose DNS for LiveKit's room management API.
       LIVEKIT_URL: ws://lk.localhost:7880
+      LIVEKIT_SERVER_URL: ws://livekit:7880
       LIVEKIT_API_KEY: devkey
       LIVEKIT_API_SECRET: secret
       LIVEKIT_ROOM_NAME: e2e
@@ -67,6 +67,7 @@ services:
       RESEND_API_KEY: e2e-not-a-real-key
       RESEND_FROM_EMAIL: Linkord <noreply@example.test>
     extra_hosts:
+      # Older images under the upgrade test only read LIVEKIT_URL.
       - "lk.localhost:host-gateway"
     volumes:
       - uploads:/app/uploads
