@@ -332,19 +332,13 @@ describe('a call follows the permissions in force (real Postgres)', () => {
   });
 });
 
-describe('former playground channels (real Postgres)', () => {
-  it('are plain voice channels, and asking for a playground makes one too', async () => {
+describe('legacy voice channel creation (real Postgres)', () => {
+  it('creates a plain voice channel for a request from an old client', async () => {
     const owner = await actor('pgmode');
     const { serverId } = await makeServerWithMembers(owner.id, []);
     const created = await call(owner, 'POST', `/api/servers/${serverId}/channels`, { name: 'Praça', type: 'voice', voiceMode: 'playground' });
     assert.equal(created.status, 201);
     const channelId = created.body.channelId as string;
-    const [row] = await db.select({ voiceMode: conversations.voiceMode }).from(conversations).where(eq(conversations.id, channelId));
-    assert.equal(row!.voiceMode, 'standard');
-
-    // one made before the game left keeps its row as it was, and is shown as any voice channel
-    await db.update(conversations).set({ voiceMode: 'playground' }).where(eq(conversations.id, channelId));
-    invalidateAllServers();
     const shown = (await listServersForUser(owner.id)).find((s) => s.id === serverId)!.channels.find((c) => c.id === channelId)!;
     assert.equal(shown.type, 'voice');
     assert.equal('voiceMode' in shown, false);

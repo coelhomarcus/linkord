@@ -15,7 +15,6 @@ import { SOCIAL_PAGE_SIZE, decodeTimeCursor, encodeTimeCursor } from '../friends
 import { dropUserConnections } from './accountEnforcement.js';
 import { decideAdminRoleChange, decideUserAction, pickSuccessor, type AdminRoleAction, type AdminRoleDecision, type UserActionDecision } from './adminPolicy.js';
 import { listAudit, recordAudit, recordAuditFailure, type AuditActor } from './auditLog.js';
-import { queueAccountDeletionForGames } from '../games/accountDeletions.js';
 import { logger } from '../../lib/logger.js';
 
 const log = logger.child({ component: 'admin' });
@@ -169,7 +168,6 @@ export async function purgeUserAccount(ctx: PurgeCtx, targetId: string, check: P
     // the rows cascade with the account; their files are removed after the commit
     const exportIds = (await tx.select({ id: dataExports.id }).from(dataExports).where(eq(dataExports.userId, targetId))).map((r) => r.id);
     await tx.delete(users).where(eq(users.id, targetId));
-    await queueAccountDeletionForGames(tx, targetId);
     await recordAudit({
       actor: ctx.actor, action: 'user.delete', targetType: 'user', targetId, targetLabel: target.username, reason: ctx.reason,
       detail: { servers: memberships.length, successions: successions.length }, requestId: ctx.requestId,

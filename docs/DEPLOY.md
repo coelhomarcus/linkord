@@ -114,7 +114,7 @@ docker ps --format '{{.Names}}' | grep <app-name>
 
 ## Upgrading from a version with playgrounds
 
-Playground channels and their game left Linkord (protocol 38). The app no longer talks to the playground service, the former playground channels are ordinary voice channels, and `PLAYGROUND_URL`, `PLAYGROUND_INTERNAL_URL` and `PLAYGROUND_SECRET` are ignored, so they can be removed from the app's environment. Stop the playground service's container, but keep its database if the game will run again: its worlds, inventories, skins and experience are keyed by the same channel and account ids. Accounts deleted meanwhile are queued in the app's database for the game to forget.
+Stop the retired playground service's container and remove `PLAYGROUND_URL`, `PLAYGROUND_INTERNAL_URL` and `PLAYGROUND_SECRET` from the app's environment. Migration `0084` removes the playground mode, chat links, stored skins and account deletion queue from the Linkord database. Former playground channels keep their IDs and work as ordinary voice channels.
 
 ## Folders and permissions
 
