@@ -160,12 +160,11 @@ export const conversations = pgTable('conversations', {
   // true: the channel follows its category's permission overwrites instead
   // of its own (Discord's "synced with category")
   permissionsSynced: boolean('permissions_synced').notNull().default(true),
-  // How a voice channel's call is shown: 'standard' (tiles) or 'playground'
-  // (a 3D space with proximity voice). Set when the channel is created; a
-  // text channel or DM keeps 'standard'.
+  // 'playground' on the voice channels that were playgrounds (the built-in block
+  // game, since removed); nothing reads it any more. Kept, with
+  // playgroundChatId, until the game chat link moves to the server and both go.
   voiceMode: varchar('voice_mode', { length: 12 }).notNull().default('standard'),
-  // A playground's game chat: the server's text channel its players talk in from
-  // inside the game (features/playground). Null on anything else, or when unset.
+  // The text channel a former playground linked as its game chat; see voiceMode.
   playgroundChatId: text('playground_chat_id').references((): AnyPgColumn => conversations.id, { onDelete: 'set null' }),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
@@ -1116,17 +1115,16 @@ export const userPreferences = pgTable('user_preferences', {
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 });
 
-/** Skins saved before the playground service kept them (it does now: playground/src/skins.ts). Each row
- * is handed to the service by modules/playground/playgroundSync.ts and deleted once it took it; nothing
- * writes here any more, and the table goes once every instance has been through that. */
+/** Skins saved before the block game's service kept them, not yet handed over to it. Nothing reads or
+ * writes here any more; kept for the game to take once it plugs in again, then dropped. */
 export const playgroundSkins = pgTable('playground_skins', {
   userId: text('user_id').primaryKey().references(() => users.id, { onDelete: 'cascade' }),
   png: text('png').notNull(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 });
 
-/** Accounts deleted here whose skin and experience the playground service still has to drop
- * (modules/playground/playgroundSync.ts). No foreign key: the account is gone. */
+/** Accounts deleted here that games still have to forget (modules/games/accountDeletions.ts); they
+ * wait here until games can be told. No foreign key: the account is gone. */
 export const playgroundForgottenAccounts = pgTable('playground_forgotten_accounts', {
   userId: text('user_id').primaryKey(),
   queuedAt: timestamp('queued_at', { withTimezone: true }).notNull().defaultNow(),

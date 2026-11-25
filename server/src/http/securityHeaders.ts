@@ -31,8 +31,6 @@ const API_POLICY = "default-src 'none'; frame-ancestors 'none'";
 export interface PolicyInput {
   appUrl: string;
   livekitUrl: string;
-  /** the playground service's origin (PLAYGROUND_URL), when it is on */
-  playgroundUrl?: string;
   klipyEnabled: boolean;
   /** MEDIA_PROXY=0 answers the proxy's addresses with a redirect to the
    * picture's own host, so pictures must then load from anywhere */
@@ -65,14 +63,6 @@ export function livekitSources(livekitUrl: string): string[] {
   const cloud = LIVEKIT_CLOUD_DOMAINS.find((domain) => url.hostname.endsWith(`.${domain}`));
   const host = cloud ? `*.${cloud}` : url.host;
   return [`${ws}://${host}`, `${http}://${host}`];
-}
-
-/** The playground service's websocket, when it lives on another origin than the page (on the
- * page's own, 'self' and socketSources already cover it). */
-export function playgroundSources(playgroundUrl: string | undefined): string[] {
-  const url = originOf(playgroundUrl ?? '');
-  if (!url || (url.protocol !== 'http:' && url.protocol !== 'https:')) return [];
-  return [`${url.protocol === 'https:' ? 'wss' : 'ws'}://${url.host}`];
 }
 
 /** Chrome only accepts a Reporting-Endpoints header from an https page, and a
@@ -111,7 +101,7 @@ export function buildContentSecurityPolicy(input: PolicyInput): string {
     ['img-src', ["'self'", 'data:', 'blob:', ...remoteImages]],
     ['media-src', ["'self'", 'data:', 'blob:', ...remoteMedia]],
     ['font-src', ["'self'", 'data:']],
-    ['connect-src', ["'self'", ...socketSources(input.appUrl), ...livekitSources(input.livekitUrl), ...playgroundSources(input.playgroundUrl), ...(input.klipyEnabled ? [KLIPY_API] : [])]],
+    ['connect-src', ["'self'", ...socketSources(input.appUrl), ...livekitSources(input.livekitUrl), ...(input.klipyEnabled ? [KLIPY_API] : [])]],
     ['frame-src', EMBED_FRAMES],
     ['worker-src', ["'self'", 'blob:']],
     ['manifest-src', ["'self'"]],
@@ -214,7 +204,6 @@ export function securityHeaders(publicDir: string) {
   const appPolicy = buildContentSecurityPolicy({
     appUrl: config.APP_URL,
     livekitUrl: config.LIVEKIT_URL,
-    playgroundUrl: config.PLAYGROUND_URL,
     klipyEnabled: !!config.KLIPY_API_KEY,
     mediaProxyEnabled: config.MEDIA_PROXY_ENABLED,
     scriptHashes: readBuildScriptHashes(publicDir),

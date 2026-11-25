@@ -36,7 +36,7 @@ export function installAppBridge(appOrigin: string, strings: Strings): void {
   });
   // The window's close handler decides what closing means (hide to the tray)
   ipcMain.handle(CLOSE, (event) => { appWindow(event)?.close(); });
-  // The call stage and the playground fill a fullscreen window (web/src/shared/lib/fullscreen.ts)
+  // The call stage and a tile fill a fullscreen window (web/src/shared/lib/fullscreen.ts)
   ipcMain.handle(SET_FULL_SCREEN, (event, value: unknown) => {
     const window = appWindow(event);
     const on = parseFullScreenRequest(value);

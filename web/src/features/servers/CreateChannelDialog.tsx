@@ -1,4 +1,4 @@
-import { GameControllerIcon, HashIcon, SpeakerHighIcon } from '@/shared/ui/icons';
+import { HashIcon, SpeakerHighIcon } from '@/shared/ui/icons';
 import { useState } from 'react';
 import { useNavigate } from 'react-router';
 import { useTranslation } from 'react-i18next';
@@ -8,17 +8,16 @@ import { Label } from '@/shared/ui/primitives/label';
 import { describeApiError } from '@/shared/api/errorText';
 import { ROUTES } from '@/shared/lib/routes';
 import { cn } from '@/shared/lib/utils';
-import { useOptionalRoomSelector } from '@/state/RoomContext';
 import type { ServerSummary } from '@/shared/types/protocol';
 import { createCategory, createChannel } from './serversApi';
 
 export type CreateTarget = { kind: 'channel'; categoryId: string | null; type?: 'text' | 'voice' } | { kind: 'category' };
 
-/** What the dialog offers. A playground is a voice channel shown as a 3D world (`voiceMode`). */
-type ChannelKind = 'text' | 'voice' | 'playground';
-const KIND_ICON = { text: HashIcon, voice: SpeakerHighIcon, playground: GameControllerIcon } as const;
+type ChannelKind = 'text' | 'voice';
+const KIND_ICON = { text: HashIcon, voice: SpeakerHighIcon } as const;
+const KINDS: ChannelKind[] = ['text', 'voice'];
 
-/** Creating a channel (text, voice or playground, optionally in a category) or a category. */
+/** Creating a channel (text or voice, optionally in a category) or a category. */
 export function CreateChannelDialog({ server, target, onClose }: { server: ServerSummary; target: CreateTarget | null; onClose: () => void }) {
   const { t } = useTranslation('servers');
   const navigate = useNavigate();
@@ -27,11 +26,6 @@ export function CreateChannelDialog({ server, target, onClose }: { server: Serve
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const category = target?.kind === 'channel' && target.categoryId ? server.categories.find((c) => c.id === target.categoryId) : null;
-  // a playground needs the server's playground service (outside RoomProvider it is offered), and a
-  // server has one at most: its world is the server's
-  const servicePresent = useOptionalRoomSelector((room) => room.playgroundEnabled) !== false;
-  const hasPlayground = server.channels.some((channel) => channel.voiceMode === 'playground');
-  const kinds: ChannelKind[] = servicePresent && !hasPlayground ? ['text', 'voice', 'playground'] : ['text', 'voice'];
   const isCategory = target?.kind === 'category';
 
   function close() {
@@ -46,9 +40,7 @@ export function CreateChannelDialog({ server, target, onClose }: { server: Serve
       if (target.kind === 'category') {
         await createCategory(server.id, name);
       } else {
-        const { channelId } = await createChannel(server.id, type === 'playground'
-          ? { name, type: 'voice', voiceMode: 'playground', categoryId: target.categoryId }
-          : { name, type, categoryId: target.categoryId });
+        const { channelId } = await createChannel(server.id, { name, type, categoryId: target.categoryId });
         if (type === 'text') navigate(ROUTES.channel(server.id, channelId));
       }
       close();
@@ -72,7 +64,7 @@ export function CreateChannelDialog({ server, target, onClose }: { server: Serve
           {!isCategory && (
             <div role="radiogroup" aria-label={t('channel.type')} className="flex flex-col gap-3">
               <span className="text-body font-medium text-text-primary">{t('channel.type')}</span>
-              {kinds.map((option) => {
+              {KINDS.map((option) => {
                 const checked = type === option;
                 const Icon = KIND_ICON[option];
                 return (

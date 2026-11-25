@@ -78,13 +78,11 @@
     "type": "Channel Type",
     "types": {
       "text": "Text",
-      "voice": "Voice",
-      "playground": "Playground"
+      "voice": "Voice"
     },
     "typeHint": {
       "text": "Send messages, images, GIFs, emoji, opinions, and puns",
-      "voice": "Hang out together with voice, video, and screen share",
-      "playground": "A 3D world: everyone is a character, voices fade with distance and a big screen to watch together"
+      "voice": "Hang out together with voice, video, and screen share"
     },
     "name": "Channel Name",
     "namePlaceholder": "new-channel",
@@ -216,10 +214,7 @@
     "topic": "Channel Topic",
     "topicPlaceholder": "Let everyone know how to use this channel",
     "synced": "This channel follows its category's permissions. Changing anything here stops that.",
-    "sync": "Sync with Category",
-    "gameChat": "Game chat",
-    "gameChatNone": "None",
-    "gameChatHint": "Messages in this text channel show inside the game (T opens the chat), and what players type in the game is posted to it."
+    "sync": "Sync with Category"
   },
   "deleteChannel": {
     "title": "Delete #{{name}}",

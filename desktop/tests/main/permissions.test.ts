@@ -8,14 +8,14 @@ const granted = (permission: string, requestingUrl = `${APP}/channels/1`, mediaT
 
 describe('isPermissionGranted', () => {
   it('grants what the app uses to its own origin', () => {
-    for (const permission of ['media', 'display-capture', 'speaker-selection', 'notifications', 'clipboard-sanitized-write', 'fullscreen', 'pointerLock']) {
+    for (const permission of ['media', 'display-capture', 'speaker-selection', 'notifications', 'clipboard-sanitized-write', 'fullscreen']) {
       assert.equal(granted(permission), true, permission);
     }
     assert.equal(granted('notifications', APP), true, 'a bare origin from the check handler');
   });
 
   it('denies everything else', () => {
-    for (const permission of ['geolocation', 'clipboard-read', 'midiSysex', 'openExternal', 'unknown']) {
+    for (const permission of ['geolocation', 'clipboard-read', 'midiSysex', 'openExternal', 'pointerLock', 'unknown']) {
       assert.equal(granted(permission), false, permission);
     }
   });

@@ -29,7 +29,6 @@ Linkord is a self-hosted place to chat and call with friends. Talk in direct mes
 
 **Voice and video**
 - Voice channels and one-to-one DM calls, with camera and screen sharing.
-- Playground channels (one per server): a voice channel shown as an island of blocks, where everyone walks around in their own skin (first or third person), voices fade with distance, one person at a time streams to a big screen everyone watches together (which lights the plaza in the colours of what is on it), and a game chat (T) is one of the server's text channels, so what is said in the game and in the channel is the same conversation. Players can fight: punches (critical when falling) knock each other back, health shows as hearts, falls hurt, water drowns, and hunger means eating apples and cooked meat to heal; a playground service of its own (optional, with its own database, and without which playground channels are plain voice channels) decides every hit and keeps experience and skins. The island is a planned world (a lobby with the big screen, a mountain with a cave and ores, a lake, a forest) with days and nights under a painted sky, that players change and that stays changed: dig blocks and pick up what they drop, place them, swim, craft in a 2×2 grid or on a crafting table, smelt in a furnace, light caves and nights with torches, lanterns and glowstone, keep things in chests, take any item from a creative chest by the plaza, and hold the tools and swords they make, all kept by the service and seen by everyone at once.
 - One call per account: every tab and device shows the call you are in, and can take it over after asking.
 - A soundboard per server, usable in any call.
 
@@ -116,4 +115,3 @@ Found a bug or have an idea? [Open an issue](https://github.com/coelhomarcus/Lin
 
 Emoji pictures are [Twemoji](https://github.com/discord/twemoji) by Twitter, Inc and other contributors, licensed under [CC-BY 4.0](https://creativecommons.org/licenses/by/4.0/).
 
-The playground builds on minecraft-web-client, minecraft-renderer and prismarine-physics (MIT), Kenui's Default's textures (MIT), Pixel Perfection's particles (CC BY-SA 4.0), Mandala's GUI and Enhanced Audio's sounds (used for now) and the monogram font (CC0): see [CREDITS.md](CREDITS.md).

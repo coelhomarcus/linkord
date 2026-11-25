@@ -1,4 +1,4 @@
-import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Navigate, Route, Routes, RouterProvider, useLocation, useNavigate, useParams } from 'react-router';
 import type { CSSProperties } from 'react';
 import type { Location } from 'react-router';
@@ -35,7 +35,6 @@ import { rememberSearch } from '@/features/search/searchHistory';
 import { sameScope, searchScopeOf } from '@/features/search/searchScope';
 import { EMPTY_QUERY, type SearchQuery } from '@/features/search/searchQuery';
 import { Stage } from '@/features/calls/Stage';
-import { PlaygroundLayer } from '@/features/playground/PlaygroundLayer';
 import { DmCallOverlay } from '@/features/calls/DmCallOverlay';
 import { CallMoveDialog } from '@/features/calls/CallMoveDialog';
 import { DesktopSourcePicker } from '@/features/calls/DesktopSourcePicker';
@@ -84,9 +83,6 @@ import { TooltipProvider } from '@/shared/ui/primitives/tooltip';
 
 // where the content area sits when the very first URL already names a modal
 // (a refresh on /app/settings/av): behind it, home
-// three.js and the models are most of its weight: fetched only when someone opens a playground
-const PlaygroundStage = lazy(() => import('@/features/playground/PlaygroundStage'));
-
 const DEFAULT_CONTENT_LOCATION: Location = { pathname: ROUTES.home, search: '', hash: '', state: null, key: 'default' };
 
 /** A link from before servers: a group's id is now its first text channel's,
@@ -179,7 +175,6 @@ function Shell() {
   // Not tied to having a published mic: joining with no mic plugged in (or
   // mic permission blocked) still has to show the call and play everyone else.
   const inCall = !!activeCallConversationId;
-  const callIsPlayground = conversations.some((c) => c.id === activeCallConversationId && c.voiceMode === 'playground');
   const myMedia = useParticipantMedia(state.me.id ?? '');
   useCallMediaSession({
     inCall,
@@ -330,10 +325,9 @@ function Shell() {
   }, [tabTitle]);
 
   useEffect(() => {
-    // holds the page open while it would cost something to lose: a stream, or a
-    // playground, where Ctrl+W is one key away from walking forward
+    // holds the page open while it would cost something to lose: a stream
     function onBeforeUnload(e: BeforeUnloadEvent) {
-      if (publishing || callIsPlayground) { e.preventDefault(); e.returnValue = ''; }
+      if (publishing) { e.preventDefault(); e.returnValue = ''; }
     }
     function onPageHide() {
       sendWs({ t: 'leave' });
@@ -352,7 +346,7 @@ function Shell() {
       window.removeEventListener('pagehide', onPageHide);
       document.removeEventListener('keydown', onKeyDown);
     };
-  }, [publishing, callIsPlayground, livekitRoom, closeTileMenu, state.focusedId, dispatch, sendWs]);
+  }, [publishing, livekitRoom, closeTileMenu, state.focusedId, dispatch, sendWs]);
 
   if (state.clientOutdated) return <OutdatedClientScreen />;
   if (roomError) return <RoomErrorScreen message={roomError} />;
@@ -391,13 +385,7 @@ function Shell() {
               path="/app/channels/:serverId/:conversationId"
               element={voiceChannelOnPath ? (
                 showStage
-                  ? voiceChannelOnPath.voiceMode === 'playground'
-                    ? (
-                      <Suspense fallback={<CallConnectingScreen onCancel={() => navigate(ROUTES.server(voiceChannelOnPath.serverId!))} />}>
-                        <PlaygroundStage allIds={callIds} onBack={() => navigate(ROUTES.server(voiceChannelOnPath.serverId!))} />
-                      </Suspense>
-                    )
-                    : <Stage allIds={callIds} onBack={() => navigate(ROUTES.server(voiceChannelOnPath.serverId!))} />
+                  ? <Stage allIds={callIds} onBack={() => navigate(ROUTES.server(voiceChannelOnPath.serverId!))} />
                   : joiningStage ? <CallConnectingScreen onCancel={cancelPendingCall} /> : <VoiceChannelLobby channel={voiceChannelOnPath} onJoin={() => handleOpenCall(voiceChannelOnPath.id)} />
               ) : (
                 <ConversationPanel
@@ -425,7 +413,6 @@ function Shell() {
           </Routes>
           </div>
           {inCall && <ParticipantAudioLayer participantIds={callIds} />}
-          {inCall && callIsPlayground && <PlaygroundLayer conversationId={activeCallConversationId} participantIds={callIds} />}
           {inCall && !showStage && !viewingDmCall && (
             <FloatingPip
               allIds={callIds}

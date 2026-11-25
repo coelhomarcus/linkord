@@ -1,5 +1,4 @@
 import { asc, eq, inArray } from 'drizzle-orm';
-import { config } from '../../config/env.js';
 import { db } from '../../db/client.js';
 import {
   channelPermissionOverwrites, conversations, serverCategories, serverMemberRoles, serverMembers, serverRoles, servers,
@@ -15,35 +14,12 @@ import {
 // The server runs as a single process, so dropping the snapshot on every
 // write that changes it (invalidateServer) keeps it exact. A leaf module on
 // purpose: everything that gates a channel imports it, and it imports
-// nothing back but the database and the configuration.
-
-/** How a voice channel's call is shown (db/schema.ts#conversations.voiceMode). */
-export type VoiceMode = 'standard' | 'playground';
-
-export function toVoiceMode(value: unknown): VoiceMode {
-  return value === 'playground' ? 'playground' : 'standard';
-}
-
-/** Whether playground channels are on: they need the playground service (PLAYGROUND_URL). */
-export function playgroundsEnabled(): boolean {
-  return !!config.PLAYGROUND_URL;
-}
-
-/** How a voice channel's call is shown now. While the playground service is off, a playground is
- * shown, joined and permitted as an ordinary voice channel (no 3D world, no data channel, no game
- * chat), and it is a playground again once the service is back: the row keeps its mode. */
-export function shownVoiceMode(value: unknown): VoiceMode {
-  const mode = toVoiceMode(value);
-  return mode === 'playground' && !playgroundsEnabled() ? 'standard' : mode;
-}
+// nothing back but the database.
 
 interface ChannelShape {
   id: string;
   serverId: string;
   type: 'text' | 'voice';
-  voiceMode: VoiceMode;
-  /** a playground's game chat (a text channel of the same server), or null */
-  playgroundChatId: string | null;
   title: string;
   topic: string;
   categoryId: string | null;
@@ -86,7 +62,7 @@ async function loadSnapshot(serverId: string): Promise<ServerSnapshot | null> {
     overwrites.set(target, list);
   }
   const channels = channelRows.map((row) => ({
-    id: row.id, serverId, type: row.type === 'voice' ? 'voice' as const : 'text' as const, voiceMode: shownVoiceMode(row.voiceMode), playgroundChatId: row.playgroundChatId, title: row.title, topic: row.topic,
+    id: row.id, serverId, type: row.type === 'voice' ? 'voice' as const : 'text' as const, title: row.title, topic: row.topic,
     categoryId: row.categoryId, position: row.position, permissionsSynced: row.permissionsSynced, createdAt: row.createdAt,
   }));
   return { server, roles, members, categories, channels, overwrites };

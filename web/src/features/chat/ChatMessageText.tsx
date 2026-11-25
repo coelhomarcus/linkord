@@ -30,8 +30,6 @@ interface RenderContext {
   mentionEveryone?: boolean;
   /** a search's terms (matchTerms), marked where they start a word */
   terms?: readonly string[];
-  /** only links can be clicked (the playground's game chat) */
-  linksOnly?: boolean;
 }
 
 /** `text` with the search's matches in marks; each piece drawn by `draw`. */
@@ -75,14 +73,6 @@ function Mention({ name, ctx }: { name: string; ctx: RenderContext }) {
   const user = ctx.mentionLookup?.get(name.toLowerCase());
   if (!user) return <>@{name}</>;
   const isMe = ctx.myUserId != null && user.id === ctx.myUserId;
-  if (ctx.linksOnly) {
-    return (
-      <span className={cn(CHIP, 'gap-1 select-text', isMe ? 'bg-yellow/25 text-yellow' : 'bg-primary/15 text-accent-text')}>
-        <span>@{user.displayName}</span>
-        <Avatar id={user.id} name={user.displayName} avatar={user.avatar} avatarColor={user.avatarColor} size={16} />
-      </span>
-    );
-  }
   return (
     <button
       type="button"
@@ -110,14 +100,14 @@ function Mention({ name, ctx }: { name: string; ctx: RenderContext }) {
 function renderInline(nodes: Inline[], ctx: RenderContext): ReactNode[] {
   return nodes.map((node, index) => {
     switch (node.type) {
-      case 'text': return <Fragment key={index}>{marked(node.text, ctx, (piece) => <EmojiText text={piece} emojiClassName={ctx.jumbo ? undefined : 'size-[1.375em] align-[-0.3em]'} details={!ctx.linksOnly} />)}</Fragment>;
+      case 'text': return <Fragment key={index}>{marked(node.text, ctx, (piece) => <EmojiText text={piece} emojiClassName={ctx.jumbo ? undefined : 'size-[1.375em] align-[-0.3em]'} details />)}</Fragment>;
       case 'code': return <code key={index} className="rounded-sm bg-fill-code px-1 py-0.5 font-mono text-[0.875em]">{marked(node.text, ctx, (piece) => piece)}</code>;
       case 'link': return <a key={index} href={node.url} target="_blank" rel="noopener noreferrer" className="break-all text-link hover:underline">{marked(node.url, ctx, (piece) => piece)}</a>;
       case 'mention': return GROUP_MENTION_NAMES.includes(node.name.toLowerCase())
         ? <GroupMention key={index} name={node.name} ctx={ctx} />
         : <Mention key={index} name={node.name} ctx={ctx} />;
       case 'roleMention': return <RoleMention key={index} roleId={node.roleId} ctx={ctx} />;
-      case 'customEmoji': return <CustomEmojiImage key={index} id={node.id} name={node.name} size={ctx.jumbo ? 'jumbo' : 'inline'} details={!ctx.linksOnly} />;
+      case 'customEmoji': return <CustomEmojiImage key={index} id={node.id} name={node.name} size={ctx.jumbo ? 'jumbo' : 'inline'} details />;
       case 'bold': return <strong key={index} className="font-semibold text-text-primary">{renderInline(node.children, ctx)}</strong>;
       case 'italic': return <em key={index}>{renderInline(node.children, ctx)}</em>;
       case 'strike': return <s key={index}>{renderInline(node.children, ctx)}</s>;
@@ -197,7 +187,7 @@ function CopyCodeButton({ code }: { code: string }) {
   );
 }
 
-function CodeBlock({ code, lang, copyable }: { code: string; lang: string | null; copyable: boolean }) {
+function CodeBlock({ code, lang }: { code: string; lang: string | null }) {
   const cacheKey = `${lang}\u0000${code}`;
   const [html, setHtml] = useState<string | null>(() => highlightCache.get(cacheKey) ?? null);
   useEffect(() => {
@@ -221,7 +211,7 @@ function CodeBlock({ code, lang, copyable }: { code: string; lang: string | null
       {html
         ? <div className={cn(frame, '[&_pre]:bg-transparent! [&_pre]:p-3')} dangerouslySetInnerHTML={{ __html: html }} />
         : <pre className={cn(frame, 'p-3 font-mono')}><code>{code}</code></pre>}
-      {copyable && <CopyCodeButton code={code} />}
+      <CopyCodeButton code={code} />
     </div>
   );
 }
@@ -245,21 +235,18 @@ interface ChatMessageTextProps {
   mentionEveryone?: boolean;
   /** a search's words, marked where the message has them (search results) */
   highlight?: readonly string[];
-  /** nothing but links can be clicked: no profile, emoji details, copy button or GIF viewer (the
-   * playground's game chat, where a click should not take the player out of the game) */
-  linksOnly?: boolean;
 }
 
-export function ChatMessageText({ text, mentionLookup, myUserId, onOpenProfile, embeds: previews, suppressedEmbeds, noPreviews, roles, mentionEveryone, highlight, linksOnly }: ChatMessageTextProps) {
+export function ChatMessageText({ text, mentionLookup, myUserId, onOpenProfile, embeds: previews, suppressedEmbeds, noPreviews, roles, mentionEveryone, highlight }: ChatMessageTextProps) {
   const blocks = useMemo(() => parseMessage(text), [text]);
   const embeds = useMemo(() => (noPreviews ? [] : messageEmbedLinks(blocks, suppressedEmbeds)), [blocks, suppressedEmbeds, noPreviews]);
   const spoilered = useMemo(() => spoileredLinks(blocks), [blocks]);
   const jumbo = useMemo(() => isSingleEmoji(text) || isServerEmojiOnly(blocks), [text, blocks]);
   const terms = highlight ? matchTerms(highlight) : undefined;
-  const ctx: RenderContext = { jumbo, mentionLookup, myUserId, onOpenProfile, roles, mentionEveryone, terms, linksOnly };
+  const ctx: RenderContext = { jumbo, mentionLookup, myUserId, onOpenProfile, roles, mentionEveryone, terms };
   // a GIF message is only its KLIPY URL: show the GIF, not the link and a preview of it
   const gifUrl = gifMessageUrl(text);
-  if (gifUrl) return <GifMessage url={gifUrl} openable={!linksOnly} />;
+  if (gifUrl) return <GifMessage url={gifUrl} />;
 
   return (
     <>
@@ -269,7 +256,7 @@ export function ChatMessageText({ text, mentionLookup, myUserId, onOpenProfile, 
             // off-scale: a jumbo emoji-only message, glyphs rather than type
             return <p key={index} className={cn('whitespace-pre-wrap wrap-break-word', jumbo && 'text-[48px] leading-none')}>{renderInline(block.children, ctx)}</p>;
           case 'code':
-            return <CodeBlock key={index} code={block.code} lang={block.lang} copyable={!linksOnly} />;
+            return <CodeBlock key={index} code={block.code} lang={block.lang} />;
           case 'quote':
             return <blockquote key={index} className="my-0.5 whitespace-pre-wrap wrap-break-word border-l-4 border-border-strong pl-3 text-text-muted">{renderInline(block.children, ctx)}</blockquote>;
           case 'list': {

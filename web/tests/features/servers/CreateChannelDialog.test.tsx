@@ -5,7 +5,6 @@ import { describe, expect, it, vi } from 'vitest';
 import * as serversApi from '@/features/servers/serversApi';
 import { CreateChannelDialog } from '@/features/servers/CreateChannelDialog';
 import type { ServerSummary } from '@/shared/types/protocol';
-import { renderWithRoom } from '@tests/fixtures/roomContextFixture';
 
 vi.mock('@/features/servers/serversApi', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@/features/servers/serversApi')>()),
@@ -15,24 +14,17 @@ vi.mock('@/features/servers/serversApi', async (importOriginal) => ({
 const server = { id: 's1', categories: [], channels: [] } as unknown as ServerSummary;
 
 describe('CreateChannelDialog', () => {
-  it('creates a playground as a voice channel in playground mode', async () => {
+  it('creates a voice channel', async () => {
     render(<MemoryRouter><CreateChannelDialog server={server} target={{ kind: 'channel', categoryId: null }} onClose={() => {}} /></MemoryRouter>);
-    await userEvent.click(screen.getByRole('radio', { name: /Playground/ }));
+    await userEvent.click(screen.getByRole('radio', { name: /Voz/ }));
     await userEvent.type(screen.getByLabelText('Nome do canal'), 'Praça');
     await userEvent.click(screen.getByRole('button', { name: 'Criar canal' }));
-    expect(serversApi.createChannel).toHaveBeenCalledWith('s1', { name: 'Praça', type: 'voice', voiceMode: 'playground', categoryId: null });
+    expect(serversApi.createChannel).toHaveBeenCalledWith('s1', { name: 'Praça', type: 'voice', categoryId: null });
   });
 
-  it('offers no playground when the server has the playground service off', () => {
-    renderWithRoom(<MemoryRouter><CreateChannelDialog server={server} target={{ kind: 'channel', categoryId: null }} onClose={() => {}} /></MemoryRouter>, { playgroundEnabled: false });
-    expect(screen.getByRole('radio', { name: /Voz/ })).toBeInTheDocument();
-    expect(screen.queryByRole('radio', { name: /Playground/ })).not.toBeInTheDocument();
-  });
-
-  it('offers no second playground in a server that has one', () => {
-    const withPlayground = { ...server, channels: [{ id: 'p', type: 'voice', voiceMode: 'playground' }] } as unknown as ServerSummary;
-    render(<MemoryRouter><CreateChannelDialog server={withPlayground} target={{ kind: 'channel', categoryId: null }} onClose={() => {}} /></MemoryRouter>);
-    expect(screen.getByRole('radio', { name: /Voz/ })).toBeInTheDocument();
+  it('offers text and voice channels only', () => {
+    render(<MemoryRouter><CreateChannelDialog server={server} target={{ kind: 'channel', categoryId: null }} onClose={() => {}} /></MemoryRouter>);
+    expect(screen.getAllByRole('radio')).toHaveLength(2);
     expect(screen.queryByRole('radio', { name: /Playground/ })).not.toBeInTheDocument();
   });
 });
