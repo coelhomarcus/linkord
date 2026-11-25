@@ -1,1 +1,0 @@
-ALTER TABLE "playground_worlds" ADD COLUMN "chests" jsonb DEFAULT '[]'::jsonb NOT NULL;

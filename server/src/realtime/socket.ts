@@ -26,10 +26,9 @@ import { type ErrorCode } from '../http/errors.js';
 import * as moderation from '../modules/moderation/moderation.js';
 import * as streamPreview from '../modules/calls/streamPreview.js';
 import * as dmCalls from '../modules/calls/dmCalls.js';
-import * as playgroundAccess from '../modules/playground/playgroundAccess.js';
 import { refusesImmediateJoin } from '../modules/calls/dmCallMachine.js';
 import { notePublishRights, publishRightsFor } from '../modules/calls/callPermissions.js';
-import { channelPermissions, playgroundsEnabled, shownVoiceMode } from '../modules/servers/serverAccess.js';
+import { channelPermissions } from '../modules/servers/serverAccess.js';
 import { parseCookies } from '../http/cookies.js';
 import { resolveSession } from '../modules/auth/session.js';
 import { isSocketOriginAllowed } from '../http/originGuard.js';
@@ -56,7 +55,6 @@ export const handlers: HandlerTable = Object.assign(
   moderation.handlers,
   streamPreview.handlers,
   dmCalls.handlers,
-  playgroundAccess.handlers,
 );
 
 interface JoinMessage {
@@ -115,9 +113,6 @@ export const ACTION_LIMITS: Record<string, ActionLimit> = {
   // report is never sent again, so this leaves room for both at once and for two of the account's computers
   'activity-set': { windowMs: 60_000, max: 60, silent: true },
   'activity-settings-set': { windowMs: 60_000, max: 20 },
-  // a pass into the playground service: one to connect and one every 30 s while playing, plus
-  // reconnects; an unanswered request is asked again (modules/playground/playgroundAccess.ts)
-  'playground-token': { windowMs: 60_000, max: 20, silent: true },
 };
 
 // call-join and call-leave bypass the handler table; each one persists call membership.
@@ -225,8 +220,8 @@ async function handleJoin(socket: AppSocket, msg: JoinMessage): Promise<void> {
     preferences: await getPreferences(p.userId),
     // the largest file this server takes, so the composer refuses a bigger one before uploading it
     maxAttachmentBytes: config.MAX_ATTACHMENT_BYTES,
-    // whether a new channel may be a playground (protocol 37); while off, existing ones arrive as voice channels
-    playgroundEnabled: playgroundsEnabled(),
+    // tabs from protocol 37 offer to create a playground unless this says no; there are none any more
+    playgroundEnabled: false,
     // tabs from before accounts lost their storage quota (protocol 7) read this; nothing counts it any more
     storageUsage: { totalBytes: 0, totalFiles: 0, maxBytes: 0 },
     livekitUrl: config.LIVEKIT_URL,
@@ -277,7 +272,7 @@ export async function handleCallJoin(socket: AppSocket, msg: { conversationId?: 
     return;
   }
   // only voice channels get here, and they always belong to a server
-  const rights = publishRightsFor(conversation.serverId ? await channelPermissions(conversation.serverId, conversationId, p.userId) : 0, shownVoiceMode(conversation.voiceMode));
+  const rights = publishRightsFor(conversation.serverId ? await channelPermissions(conversation.serverId, conversationId, p.userId) : 0);
   let livekitToken: string;
   try {
     livekitToken = await livekit.createToken(p, livekit.roomNameFor(conversationId), rights);

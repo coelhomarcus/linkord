@@ -276,8 +276,6 @@ export interface RoomContextValue {
   closeMessageSearch: () => void;
   /** the largest file the server takes, from `welcome` */
   maxAttachmentBytes: number;
-  /** whether the server runs the playground service, so a new channel may be a playground (`welcome`) */
-  playgroundEnabled: boolean;
 }
 
 /**

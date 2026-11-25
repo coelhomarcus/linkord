@@ -1,6 +1,6 @@
 import crypto from 'node:crypto';
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
-import { and, eq, sql } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 import { config } from '../../config/env.js';
 import { db } from '../../db/client.js';
 import { channelPermissionOverwrites, conversations, serverCategories, users } from '../../db/schema.js';
@@ -10,8 +10,7 @@ import { revokeCallAccess } from '../calls/callAccess.js';
 import { enforceCallPermissions } from '../calls/callPermissions.js';
 import { participants } from '../presence/participants.js';
 import { ALL_PERMISSIONS, canManageRole, hasPermission, outranks, PERMISSIONS } from './permissions.js';
-import { channelPermissionsIn, invalidateServer, memberInput, playgroundsEnabled, toVoiceMode, type ServerSnapshot } from './serverAccess.js';
-import { playgroundChatFrom } from './playgroundChat.js';
+import { channelPermissionsIn, invalidateServer, memberInput, type ServerSnapshot } from './serverAccess.js';
 import { sanitizeCategoryName, sanitizeChannelName, sanitizeTopic } from './serversRepository.js';
 import { sendServerUpdateToMembers } from './serverSummaries.js';
 import { requireServerMember, requireSession, type ServerActor } from './serverHttp.js';
@@ -60,8 +59,6 @@ async function handleCreateChannel(request: FastifyRequest<{ Params: ServerParam
   if (!actor) return;
   const body = jsonBody(request.body);
   const type: ChannelType = body.type === 'voice' ? 'voice' : 'text';
-  const voiceMode = type === 'voice' ? toVoiceMode(body.voiceMode) : 'standard';
-  if (voiceMode === 'playground' && !playgroundsEnabled()) return sendError(reply, 400, 'invalid_request', 'Este servidor não tem o playground ativado.');
   const name = sanitizeChannelName(body.name, type);
   if (!name) return sendError(reply, 400, 'invalid_name', 'Dê um nome ao canal.');
   if (actor.snapshot.channels.length >= config.MAX_CHANNELS_PER_SERVER) {
@@ -70,23 +67,12 @@ async function handleCreateChannel(request: FastifyRequest<{ Params: ServerParam
   const categoryId = typeof body.categoryId === 'string' && actor.snapshot.categories.some((c) => c.id === body.categoryId) ? body.categoryId : null;
   const position = actor.snapshot.channels.filter((c) => c.categoryId === categoryId).reduce((max, c) => Math.max(max, c.position + 1), 0);
   const id = crypto.randomUUID();
-  const created = await db.transaction(async (tx) => {
-    if (voiceMode === 'playground') {
-      // one playground a server: its world belongs to the server. Two creations at once wait for each
-      // other here, and the row is read raw, so one made while the service was off still counts.
-      await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtext(${`playground:${serverId}`}))`);
-      const [existing] = await tx.select({ id: conversations.id }).from(conversations)
-        .where(and(eq(conversations.serverId, serverId), eq(conversations.voiceMode, 'playground'))).limit(1);
-      if (existing) return false;
-    }
-    await tx.insert(conversations).values({ id, type, voiceMode, title: name, createdBy: actor.userId, serverId, categoryId, position, updatedAt: new Date() });
-    // the audit log names a playground as its own kind of channel
-    await recordServerAudit(tx, { serverId, actorId: actor.userId, action: 'channel.create', targetType: 'channel', targetId: id, targetLabel: name, changes: createdFields({ name, type: voiceMode === 'playground' ? 'playground' : type }) });
-    return true;
+  await db.transaction(async (tx) => {
+    await tx.insert(conversations).values({ id, type, title: name, createdBy: actor.userId, serverId, categoryId, position, updatedAt: new Date() });
+    await recordServerAudit(tx, { serverId, actorId: actor.userId, action: 'channel.create', targetType: 'channel', targetId: id, targetLabel: name, changes: createdFields({ name, type }) });
   });
-  if (!created) return sendError(reply, 409, 'playground_exists', 'Este servidor já tem um playground.');
   await changed(serverId);
-  log.info('channel created', { serverId, channelId: id, type, voiceMode });
+  log.info('channel created', { serverId, channelId: id, type });
   sendJson(reply, 201, { channelId: id });
 }
 
@@ -96,7 +82,7 @@ async function handleUpdateChannel(request: FastifyRequest<{ Params: ChannelPara
   const { actor, channelId } = target;
   const channel = actor.snapshot.channels.find((c) => c.id === channelId)!;
   const body = jsonBody(request.body);
-  const updates: { title?: string; topic?: string; permissionsSynced?: boolean; playgroundChatId?: string | null; updatedAt: Date } = { updatedAt: new Date() };
+  const updates: { title?: string; topic?: string; permissionsSynced?: boolean; updatedAt: Date } = { updatedAt: new Date() };
   if (body.name !== undefined) {
     const name = sanitizeChannelName(body.name, channel.type);
     if (!name) return sendError(reply, 400, 'invalid_name', 'Dê um nome ao canal.');
@@ -104,14 +90,8 @@ async function handleUpdateChannel(request: FastifyRequest<{ Params: ChannelPara
   }
   if (body.topic !== undefined) updates.topic = sanitizeTopic(body.topic);
   if (body.permissionsSynced === true) updates.permissionsSynced = true;
-  if (body.playgroundChatId !== undefined) {
-    const chatId = playgroundChatFrom(actor.snapshot.channels, channel, body.playgroundChatId);
-    if (chatId === 'invalid') return sendError(reply, 400, 'invalid_request', 'Escolha um canal de texto deste servidor.');
-    updates.playgroundChatId = chatId;
-  }
-  const titleOf = (id: string | null | undefined) => (id ? actor.snapshot.channels.find((c) => c.id === id)?.title ?? id : id);
-  const changes = diffFields({ name: channel.title, topic: channel.topic, permissionsSynced: channel.permissionsSynced, gameChat: titleOf(channel.playgroundChatId) },
-    { name: updates.title, topic: updates.topic, permissionsSynced: updates.permissionsSynced, gameChat: titleOf(updates.playgroundChatId) }, ['name', 'topic', 'permissionsSynced', 'gameChat']);
+  const changes = diffFields({ name: channel.title, topic: channel.topic, permissionsSynced: channel.permissionsSynced },
+    { name: updates.title, topic: updates.topic, permissionsSynced: updates.permissionsSynced }, ['name', 'topic', 'permissionsSynced']);
   await db.transaction(async (tx) => {
     await tx.update(conversations).set(updates).where(eq(conversations.id, channelId));
     // following the category again drops the channel's own rules

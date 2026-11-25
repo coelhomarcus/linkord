@@ -111,9 +111,14 @@
 // is off, playground channels arrive as plain voice channels (`voiceMode: 'standard'`, no `playgroundChatId`)
 // and creating one is refused. An old tab ignores the flag and still offers to create one, which fails, so
 // the minimum stays at 7.
+// Version 38 removes playgrounds (the block game left Linkord): `playground-token` is gone, channels no
+// longer carry `voiceMode` or `playgroundChatId`, no token may publish data, and `welcome.playgroundEnabled`
+// is always false. An old tab already shows a channel without `voiceMode` as a voice channel and, told
+// false, no longer offers to create a playground (one asked for anyway is made a plain voice channel), so
+// the minimum stays at 7.
 // Raising MIN_PROTOCOL_VERSION also drops open tabs out of their calls (they are refused and
 // disconnect), so keep it for changes an old client cannot tolerate.
-export const PROTOCOL_VERSION = 37;
+export const PROTOCOL_VERSION = 38;
 export const MIN_PROTOCOL_VERSION = 7;
 export const MIC_STARTING_PROTOCOL_VERSION = 18;
 export const CALL_ELSEWHERE_PROTOCOL_VERSION = 20;

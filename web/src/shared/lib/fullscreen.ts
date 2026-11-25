@@ -1,11 +1,11 @@
 import { desktopApp } from '@/shared/desktop';
 
-// Showing an element fullscreen: the call stage, one tile, the playground.
+// Showing an element fullscreen: the call stage or one tile.
 //
 // In a browser it is the Fullscreen API. In the desktop app it is the window's fullscreen instead,
 // with the element filling the window ([data-window-fullscreen] in styles/index.css): Chromium leaves
 // an element's fullscreen on Esc, and inside Electron no Keyboard Lock keeps Esc for the page, so
-// every Esc in the playground (closing a screen, the pause menu) threw the player out. Esc leaves
+// every Esc that closes a menu or dialog on the stage would also leave fullscreen. Esc leaves
 // the window's fullscreen only when nothing on the page used it; F11 and the page's own buttons
 // leave it too, and so does the element leaving the page, as with the Fullscreen API.
 
@@ -98,8 +98,8 @@ function letGo() {
   notify();
 }
 
-// In the bubble phase on the window, after the page's own handlers: a menu or dialog Esc closes,
-// or a playground screen, marks the key as used (preventDefault), and fullscreen stays
+// In the bubble phase on the window, after the page's own handlers: a menu or dialog Esc closes
+// marks the key as used (preventDefault), and fullscreen stays
 function onKeyDown(event: KeyboardEvent) {
   if (event.key !== 'Escape' || event.defaultPrevented || event.repeat) return;
   event.preventDefault();

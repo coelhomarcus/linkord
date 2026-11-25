@@ -1,1 +1,0 @@
-ALTER TABLE "playground_worlds" ADD COLUMN "states" "bytea";

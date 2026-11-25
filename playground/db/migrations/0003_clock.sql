@@ -1,1 +1,0 @@
-ALTER TABLE "playground_worlds" ADD COLUMN "clock" integer DEFAULT 1000 NOT NULL;

@@ -3,14 +3,7 @@
 # so a stack reached by anything but localhost needs this. Caddy replaces any X-Forwarded-For a client
 # sends with the address it saw, which is what the app's TRUST_PROXY=1 (one hop) expects.
 {$APP_DOMAIN} {
-	# the playground service (the `playground` profile); without it this path answers 502, and the app
-	# never sends anyone here (PLAYGROUND_URL unset)
-	handle /playground/* {
-		reverse_proxy playground:3000
-	}
-	handle {
-		reverse_proxy app:3000
-	}
+	reverse_proxy app:3000
 }
 
 {$LIVEKIT_DOMAIN} {
