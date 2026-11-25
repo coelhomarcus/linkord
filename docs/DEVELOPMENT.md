@@ -1,6 +1,6 @@
 # Local development
 
-Run the frontend and backend on your machine. PostgreSQL is required, and LiveKit and the mail sink are useful when testing calls or email.
+Run the frontend, backend and profile sync worker on your machine. PostgreSQL is required, and LiveKit and the mail sink are useful when testing calls or email.
 
 ## Prerequisites
 
@@ -43,7 +43,7 @@ bun run db:migrate
 bun run dev
 ```
 
-Vite serves the web app at [http://localhost:5173](http://localhost:5173) and Fastify the API at [http://localhost:3000](http://localhost:3000).
+Vite serves the web app at [http://localhost:5173](http://localhost:5173) and Fastify the API at [http://localhost:3000](http://localhost:3000). `bun run dev` also starts the profile sync worker as a separate Bun process.
 
 Stop any local dependency with `docker stop <container-name>` and resume it with `docker start <container-name>`. PostgreSQL data stays in its named volume.
 
@@ -151,10 +151,12 @@ Every script runs from the repository root.
 
 | Script | What it does |
 | --- | --- |
-| `bun run dev` | API (`:3000`) and web (`:5173`) in watch mode. |
+| `bun run dev` | API (`:3000`), web (`:5173`) and the profile sync worker in separate watch processes. |
+| `bun run dev:connection-sync` | Runs the profile sync worker alone in watch mode. |
 | `bun run dev:desktop` | The [desktop app](#desktop-app) against `LINKORD_URL` (default `http://localhost:5173`). Needs `npm install --prefix desktop`. |
 | `bun run package:desktop` | The Windows installer, see [DEPLOY.md](DEPLOY.md#building-the-installer). |
 | `bun run build` / `bun run start` | Production build of the server and the web app, and the built server. |
+| `bun run start:connection-sync` | Runs the built profile sync worker alongside the built server. |
 | `bun run check` | Everything that should pass before pushing ([Run the checks](#run-the-checks)). |
 | `bun run test` | `test:server` and `test:web`. |
 | `bun run test:server` / `test:web` / `test:desktop` | Unit tests of one side (`bun test`, Vitest, `node --test`). `test:desktop` needs `desktop/` installed and is not part of `bun run test`. |
@@ -177,13 +179,13 @@ Every script runs from the repository root.
 | `bun run emoji:data` | Rebuilds `web/public/emoji-data/<lang>/emojis.json` from the pinned `emojibase-data`, leaving out what the pinned `@discordapp/twemoji` cannot draw. Run it after bumping either. |
 | `bun run icons` | Rebuilds `web/src/shared/ui/icons/fluent.ts` from `@fluentui/svg-icons` for every icon imported from `@/shared/ui/icons`. A new icon needs a line in `FLUENT_ICONS` (`web/scripts/buildIcons.ts`) first; a test fails while the file is stale. |
 
-`build:server`/`build:web` and `dev:server`/`dev:web` are the parts of `build` and `dev`. The root calls scripts in `web/` (`dev`, `build`, `lint`, `preview`, `test`, `test:coverage`), `desktop/` (`start`, `build`, `typecheck`, `test`, `package`) and `e2e/` (`test`, `test:features`, `test:restart`, `test:upgrade`, `report`, `typecheck`). Run web and E2E scripts with `bun run --cwd <package> <script>`, and desktop scripts with `npm run <script> --prefix desktop`.
+`build` runs `build:server` and `build:web`. `dev` runs `dev:server`, `dev:web` and `dev:connection-sync`. The root calls scripts in `web/` (`dev`, `build`, `lint`, `preview`, `test`, `test:coverage`), `desktop/` (`start`, `build`, `typecheck`, `test`, `package`) and `e2e/` (`test`, `test:features`, `test:restart`, `test:upgrade`, `report`, `typecheck`). Run web and E2E scripts with `bun run --cwd <package> <script>`, and desktop scripts with `npm run <script> --prefix desktop`.
 
 The scripts behind `db:*`, `admin:*`, `backup*`, `restore` and `test:integration` live in `server/src/scripts/`, each with a header comment on how to call it.
 
 ## End-to-end tests
 
-`e2e/` drives the real app in Chrome with several accounts at once, against a production-shaped Docker stack (`e2e/docker/compose.yml`: the app image behind Traefik, a LiveKit dev server, a throwaway in-memory Postgres and a mail sink). The standard test stack uses its own disposable database. Stop `linkord-dev-livekit` and `linkord-dev-mailsink` before the standard tests if they are running, since those ports overlap. The split deploy test uses separate ports.
+`e2e/` drives the real app in Chrome with several accounts at once. The Docker stack runs the app behind Traefik alongside the profile sync worker, a LiveKit dev server, a disposable in-memory Postgres and a mail sink. Stop `linkord-dev-livekit` and `linkord-dev-mailsink` before the standard tests if they are running, since those ports overlap. The split deploy test uses separate ports.
 
 ```bash
 PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1 bun install --frozen-lockfile --cwd e2e   # once; uses the installed Chrome
@@ -192,7 +194,7 @@ bun run test:e2e
 
 - `test:e2e:features`: every feature on the working tree's build.
 - `test:e2e:restart`: what a redeploy of the same build must survive.
-- `bun run --cwd e2e test:split` checks routing, cache headers and a call through a frontend-only deploy.
+- `bun run --cwd e2e test:split` checks routing, cache headers, a call through a frontend-only deploy and queued profile sync during a worker restart.
 - `test:e2e:upgrade`: tabs opened on the production version (`origin/main`, or `E2E_BASE_REF`) while the server is upgraded to the working tree. It adapts to what the base version supports and says so in the report's annotations.
 
 Each run builds `linkord-e2e:head` from the working tree (uncommitted changes included), starts the stack, runs and removes it. `E2E_KEEP_STACK=1` leaves it up at `http://localhost:8080`, `E2E_HEADED=1` shows the browsers, `E2E_RETRIES=0` turns retries off, and `E2E_HEAD_IMAGE=<tag>` tests an image you built yourself. A failure keeps a trace, video and screenshot: `bun run --cwd e2e report` opens the report, `bun --bun playwright show-trace <trace.zip>` (from `e2e/`) replays it.
@@ -365,7 +367,7 @@ To develop the widgets locally:
 
 - GitHub needs no setup.
 - MyAnimeList needs `MAL_CLIENT_ID`; Steam needs `STEAM_WEB_API_KEY`; Twitch and game search need `IGDB_CLIENT_ID` and `IGDB_CLIENT_SECRET`. How to get each is in [INTEGRATIONS.md](INTEGRATIONS.md).
-- Steam and Twitch profiles are checked when connected; MyAnimeList and GitHub sync in the background. Snapshots refresh every 24 hours, and Twitch's live widget keeps a short cache of its own. When a widget stays empty, check the `connection-sync` logs.
+- Steam and Twitch profiles are checked when connected. The [profile sync worker](DEPLOY.md#profile-sync-worker) refreshes snapshots for all four providers. Twitch's live widget keeps a short cache of its own. When a widget stays empty, check the worker's `connection-sync` logs.
 
 API: connections at `/api/me/connections` (`PATCH /api/me/connections/:id` with `{ "showOnProfile": boolean }`), the Wall layout at `PUT /api/me/wall`, another person's Wall at `/api/users/:userId/wall`. Add `?catalog=2` to the connections and Wall routes for the activity, Steam and Twitch widgets; without it a client sees and edits only the original catalog, and saving does not drop the newer widgets.
 

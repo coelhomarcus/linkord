@@ -10,12 +10,12 @@ Every external service Linkord talks to, including where its calls originate, wh
 | [Resend](#resend) | Codes for recovery, email changes, two-step login and security changes; sign-in alerts and account notices; data export links | Server | `RESEND_*` | For email flows and two-step login |
 | [Web Push](#web-push) | Browser push notifications | Server | `PUSH_VAPID_*` | No |
 | [KLIPY](#klipy) | GIF picker | Browser | `KLIPY_API_KEY` | No |
-| [MyAnimeList](#myanimelist) | Wall widget | Server (background) | `MAL_CLIENT_ID` | No |
-| [GitHub](#github) | Wall widgets | Server (background) | None | No |
+| [MyAnimeList](#myanimelist) | Wall widget | Profile sync worker | `MAL_CLIENT_ID` | No |
+| [GitHub](#github) | Wall widgets | Profile sync worker | None | No |
 | [GitHub Releases](#github-releases) | The desktop installer the web app offers | Server (on demand, cached) | `DESKTOP_RELEASES_REPO` | No |
 | [IGDB](#igdb) | Game search for the Wall; names of games someone is playing | Server (on demand) | `IGDB_CLIENT_ID`, `IGDB_CLIENT_SECRET` | No |
-| [Steam](#steam) | Public profile, recent games and playtime on the Wall | Server (on connect and in the background) | `STEAM_WEB_API_KEY` | No |
-| [Twitch](#twitch) | Live streams and recent VODs on the Wall | Server; browser for the player | `IGDB_CLIENT_ID`, `IGDB_CLIENT_SECRET` | No |
+| [Steam](#steam) | Public profile, recent games and playtime on the Wall | API on connect, profile sync worker for refreshes | `STEAM_WEB_API_KEY` | No |
+| [Twitch](#twitch) | Live streams and recent VODs on the Wall | API for setup and live status, profile sync worker for refreshes, browser for the player | `IGDB_CLIENT_ID`, `IGDB_CLIENT_SECRET` | No |
 | [SteamGridDB](#steamgriddb) (and Steam's CDN) | Activity icons and fallback banners for Steam games on the Wall | Server (on demand; icons stored and banners cached by us) | `STEAMGRIDDB_API_KEY` | No |
 | [Discord application API](#discord-application-api) | Name and pictures of a game reporting through Discord Rich Presence | Server (on demand, cached) | None | No |
 | [Link previews](#link-previews) | Cards for links pasted in chat | Server | None | Built in |
@@ -95,9 +95,9 @@ The "GitHub profile" and "Contributions" Wall widgets (`server/src/integrations/
 
 ### How connection syncing works
 
-MyAnimeList, GitHub, Steam and Twitch snapshots are refreshed by one background worker (`server/src/modules/connections/syncWorker.ts`); viewing a profile only reads stored snapshots (except Twitch's live status, below).
+The [profile sync worker](DEPLOY.md#profile-sync-worker) refreshes MyAnimeList, GitHub, Steam and Twitch snapshots in a separate process. Viewing a profile reads the snapshots from PostgreSQL. Twitch's live status is checked by the API on its own cache schedule.
 
-- Due connections are claimed with a lease every minute, so instances never sync the same one twice. Each refreshes every 24 hours; MyAnimeList requests are spaced 1.1 seconds apart.
+- The worker checks for due connections on startup and waits five seconds between batches. It claims each connection with a lease and refreshes it every 24 hours. MyAnimeList requests are spaced 1.1 seconds apart.
 - A failed sync keeps the last good snapshot. `not_found`, `private` and `invalid_response` wait for the next day; `rate_limited` and `unavailable` retry with backoff, honouring `Retry-After` and `X-RateLimit-Reset`.
 - Requests time out after 10 seconds, refuse redirects and cap bodies at 2 MB (`server/src/integrations/connectionHttp.ts`).
 

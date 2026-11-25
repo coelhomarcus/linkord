@@ -59,16 +59,17 @@ Linkord is a self-hosted place to chat and call with friends. Talk in direct mes
 
 ## ⚡ Quick start
 
-Have a PostgreSQL database and a LiveKit server ready, then build Linkord's default image:
+Have PostgreSQL and LiveKit ready, then build the app and its profile sync worker.
 
 ```bash
 git clone https://github.com/coelhomarcus/linkord.git
 cd linkord
 cp .env.example .env
 docker build -t linkord .
+docker build --target connection-sync -t linkord-connection-sync .
 ```
 
-Set the database URL, public app URL and LiveKit credentials in `.env`. Set a registration code to let people sign up. Follow the [standalone Docker instructions](docs/DEPLOY.md#the-image-on-its-own) to start the image with persistent uploads and backups, or [deploy on Dokploy](docs/DEPLOY.md#dokploy). For email, push and other settings, copy the entries you need from [`.env.optional.example`](.env.optional.example).
+Set the database URL, public app URL and LiveKit credentials in `.env`. Set a registration code to let people sign up. Follow the [standalone Docker instructions](docs/DEPLOY.md#docker-on-one-host) to start the app and worker, or [deploy on Dokploy](docs/DEPLOY.md#dokploy). For email, push and other settings, copy the entries you need from [`.env.optional.example`](.env.optional.example).
 
 ## 🚀 Development
 
@@ -78,7 +79,7 @@ A Windows desktop app lives in `desktop/`: an Electron window that opens your Li
 
 ## 🐳 Deployment
 
-Deploy the [standalone image](docs/DEPLOY.md#the-image-on-its-own) or run [separate frontend and backend images](docs/DEPLOY.md#routing-a-split-deploy) behind one HTTPS proxy. The [deployment guide](docs/DEPLOY.md) also covers environment variables, storage, backups and rollback.
+Deploy with [Docker on one host](docs/DEPLOY.md#docker-on-one-host) or [release the frontend and backend independently](docs/DEPLOY.md#routing-a-split-deploy) behind one HTTPS proxy. The [deployment guide](docs/DEPLOY.md) also covers environment variables, storage, backups and rollback.
 
 ## 🧰 Commands
 

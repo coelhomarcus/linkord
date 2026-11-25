@@ -23,9 +23,7 @@ import { publishProfileConnections } from '../presence/participants.js';
 import { canViewProfile } from '../users/profileAccess.js';
 import { findById } from '../users/users.js';
 import { allow } from '../../realtime/floodControl.js';
-import { syncConnections } from './syncWorker.js';
 import { withProxiedImages } from './widgetImages.js';
-import { logger } from '../../lib/logger.js';
 
 export class ConnectionMutationError extends Error {
   readonly status: number;
@@ -237,7 +235,6 @@ export async function readWall(userId: string, owner = false, extended = true) {
   return { widgets, available, providers };
 }
 
-const log = logger.child({ component: 'connections' });
 async function session(request: FastifyRequest, reply: FastifyReply) {
   const result = await resolveSession(parseCookies(request.headers.cookie || '')[config.SESSION_COOKIE]);
   if (!result) sendError(reply, 401, 'unauthenticated', 'Não autenticado.');
@@ -284,7 +281,6 @@ export function registerConnectionRoutes(app: FastifyInstance): void {
       invalidateSessionsForUser(me.userId);
       publishProfileConnections(me.userId, publicLinks(connections));
       sendJson(reply, action === 'create' ? 201 : 200, connectionsResponse(connections, extendedCatalog(request)));
-      if (action !== 'delete') void syncConnections().catch((err) => log.error('failed to start connection sync', err));
     } catch (error) {
       if (error instanceof ConnectionMutationError) return sendError(reply, error.status, error.code, error.code === 'steam_profile_private'
         ? 'O perfil Steam e os detalhes de jogos precisam estar públicos.' : 'Não foi possível alterar a conexão.');

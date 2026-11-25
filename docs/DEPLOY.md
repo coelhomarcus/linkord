@@ -4,7 +4,7 @@ How to run Linkord in production, what the container expects from the host, and 
 
 ## What gets deployed
 
-The [`Dockerfile`](../Dockerfile) has three targets. The default `monolith` image serves the web app, API, uploads and Socket.IO from Bun on port **3000**. Use this image for standalone installs. For independent deploys, the `backend` target serves the API, uploads and Socket.IO on **3000**, and the `frontend` target serves the static site on **8080**. Both Bun images include the backup scripts and PostgreSQL client tools.
+The [`Dockerfile`](../Dockerfile) builds the app and its profile sync worker. The default `monolith` target serves the web app, API, uploads and Socket.IO on port **3000**. For independent web releases, use the `backend` target on **3000** and the `frontend` target on **8080**. Both app targets that serve the API include the backup scripts and PostgreSQL client tools. In every installation, run `connection-sync` as a separate service with access to the same PostgreSQL database.
 
 - **Health checks:** both public, both answer only `{ ok: … }`.
   - `GET /healthz` (liveness): `200` while the process serves HTTP. The image's `HEALTHCHECK`, Dokploy and the end-to-end stack use it.
@@ -34,12 +34,13 @@ For optional settings, copy the entries you need from [`.env.optional.example`](
 
 After the first start, make yourself an administrator by running `bun --no-env-file server/dist/scripts/adminRole.js grant <username>` inside the container or `bun run admin:grant <username>` from a checkout.
 
-## The image on its own
+## Docker on one host
 
-Provision PostgreSQL and LiveKit, then build the image and run it behind a TLS reverse proxy. Start from `.env.example` and set `DATABASE_URL`, the public HTTPS `APP_URL`, and the `LIVEKIT_*` values. The addresses must be reachable from the container. If PostgreSQL is on a Docker network, attach Linkord to that network with `--network <name>` and use the database service name in `DATABASE_URL`.
+Provision PostgreSQL and LiveKit, then build the app and worker. Start from `.env.example` and set `DATABASE_URL`, the public HTTPS `APP_URL`, and the `LIVEKIT_*` values. The addresses must be reachable from the containers. If PostgreSQL is on a Docker network, attach Linkord to that network with `--network <name>` and use the database service name in `DATABASE_URL`.
 
 ```bash
 docker build -t linkord .
+docker build --target connection-sync -t linkord-connection-sync .
 mkdir -p uploads backups
 sudo chown -R 1000:1000 uploads backups
 docker run -d --name linkord --restart unless-stopped --env-file .env \
@@ -48,9 +49,28 @@ docker run -d --name linkord --restart unless-stopped --env-file .env \
   --log-opt max-size=10m --log-opt max-file=5 linkord
 ```
 
+Start the [profile sync worker](#profile-sync-worker) alongside the app.
+
 Point the entire public HTTPS domain at `127.0.0.1:3000`. The port stays on loopback because the image trusts `X-Forwarded-For`. Send the original host and HTTPS scheme from the proxy and forward WebSocket upgrades.
 
 When migrating an older bundled installation, keep its PostgreSQL data and the upload and backup volumes. Take a [backup](#backups) before switching, then mount those volumes in place of the bind mounts above or restore into the new installation.
+
+## Profile sync worker
+
+The backend applies database migrations and saves profile connections. The worker polls PostgreSQL and refreshes due GitHub, MyAnimeList, Steam and Twitch profiles. A worker outage leaves queued connections pending and existing snapshots available. [Integration and retry behavior](INTEGRATIONS.md#how-connection-syncing-works)
+
+For Docker installs, start the `connection-sync` image from the same revision as the app.
+
+```bash
+docker run -d --name linkord-connection-sync --restart unless-stopped \
+  --env-file .env linkord-connection-sync
+```
+
+If PostgreSQL is on a Docker network, add the same `--network <name>` option used by the backend. Both processes need the same database and TLS settings. Set `MAL_CLIENT_ID` in the worker for MyAnimeList. Set `STEAM_WEB_API_KEY` and the Twitch pair `IGDB_CLIENT_ID` and `IGDB_CLIENT_SECRET` in both processes when those integrations are enabled. The API uses them for connection setup, live status and game search. Budget `DATABASE_POOL_MAX` per process.
+
+The worker uses outgoing connections to PostgreSQL and the providers. It needs no domain, published port or volumes. Inspect the `connection-sync` logs for poll and provider errors. During a redeploy, the worker gets up to eight seconds to complete the connection it already claimed. PostgreSQL lets a new worker retry interrupted work when its lease expires.
+
+When upgrading from a version that synced inside the API, start the worker before updating the backend. Database leases coordinate any overlap during the rollout. If you roll back to an older backend that still syncs, stop the separate worker once the older backend is healthy.
 
 ## Routing a split deploy
 
@@ -68,16 +88,17 @@ The frontend image generates its Content Security Policy at build time. Set its 
 
 ### Split deploy with Caddy
 
-Provision PostgreSQL and LiveKit, then build the two targets. Replace the example URLs with the values in the backend's `.env`.
+Provision PostgreSQL and LiveKit, then build the images. Replace the example URLs with the values in the backend's `.env`.
 
 ```bash
 docker build --target backend -t linkord-backend .
+docker build --target connection-sync -t linkord-connection-sync .
 docker build --target frontend -t linkord-web \
   --build-arg APP_URL=https://chat.example.com \
   --build-arg LIVEKIT_URL=wss://livekit.example.com .
 ```
 
-Start the backend with the [standalone `docker run` command](#the-image-on-its-own), using `linkord-backend` as the image. Start the frontend on loopback too.
+Start the backend with the [standalone `docker run` command](#docker-on-one-host), using `linkord-backend` as the image. Start the [profile sync worker](#profile-sync-worker) alongside it. Start the frontend on loopback too.
 
 ```bash
 docker run -d --name linkord-web --restart unless-stopped \
@@ -88,12 +109,13 @@ Use the [example Caddyfile](../docker/web/Caddyfile) with your public hostname. 
 
 ## Dokploy
 
-Use two **Applications** in the same project and environment, both with the GitHub repository root as the build context, branch `main` and Dockerfile `./Dockerfile`. Both applications must be reachable by service name from Traefik on the Dokploy network.
+Use three **Applications** in the same project and environment with the GitHub repository root as the build context, branch `main` and Dockerfile `./Dockerfile`. Traefik needs access to the backend and frontend by service name. The backend and the worker both need access to PostgreSQL.
 
 | Application | Docker Build Stage | Port | Watch Paths |
 | --- | --- | --- | --- |
 | `linkord-backend` | `backend` | `3000` | `server/**`, `package.json`, `bun.lock`, `bunfig.toml`, `Dockerfile`, `.dockerignore` |
 | `linkord-web` | `frontend` | `8080` | `web/**`, `docker/web/generate-headers.ts`, `docker/web/nginx.conf`, `server/src/http/pageSecurityPolicy.ts`, `server/src/modules/link-preview/playerHosts.ts`, `Dockerfile`, `.dockerignore` |
+| `linkord-connection-sync` | `connection-sync` | None | `server/**`, `package.json`, `bun.lock`, `bunfig.toml`, `Dockerfile`, `.dockerignore` |
 
 Keep one replica of the backend. Its environment holds the database and integration settings above. Keep the existing bind mounts for `/app/uploads` and `/app/backups`. For a new installation, create the source folders on the host as root for uid 1000:
 
@@ -103,6 +125,8 @@ chown -R 1000:1000 /srv/linkord/uploads /srv/linkord/backups
 ```
 
 In `linkord-web`, enter the [frontend build arguments](#routing-a-split-deploy) in **Environment → Build-time Arguments**, one assignment per line. Leave the runtime environment and volume settings empty and keep **Create .env File** off.
+
+In `linkord-connection-sync`, set the database and provider variables in **Environment**. Use one replica and leave **Domains**, **Ports** and **Mounts** empty. For the first worker release on an existing installation, pause Auto Deploy on `linkord-backend` before the revision reaches `main`. Deploy the worker, then deploy the backend and resume Auto Deploy. [Worker rollout and rollback](#profile-sync-worker)
 
 Fill in the [Traefik template](../docker/web/traefik.dokploy.yml) and install it in `linkord-web` under **Advanced → Traefik**.
 
