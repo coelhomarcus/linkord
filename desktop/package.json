@@ -1,7 +1,7 @@
 {
   "name": "linkord-desktop",
   "productName": "Linkord",
-  "version": "0.9.2",
+  "version": "1.0.0",
   "description": "Linkord desktop app: an Electron window around the web app.",
   "author": "Linkord",
   "homepage": "https://github.com/coelhomarcus/Linkord",
