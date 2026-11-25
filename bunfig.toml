@@ -1,0 +1,2 @@
+# Server entry points and test commands load their own environment files.
+env = false

@@ -2,7 +2,7 @@ import { pool } from '../db/client.js';
 import { findByUsernameLower } from '../modules/users/users.js';
 import { CLI_ACTOR_ID, setAdminRole } from '../modules/admin/adminUsers.js';
 
-// `npm run admin:grant -- <username>` / `npm run admin:revoke -- <username>`
+// `bun run admin:grant <username>` / `bun run admin:revoke <username>`
 //
 // The way the first administrator is created (a sign-up never grants admin)
 // and the recovery path if every admin is locked out. Runs against

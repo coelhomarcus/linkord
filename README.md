@@ -82,12 +82,12 @@ Linkord ships as one Docker image (web app, API and realtime server on port 3000
 ## 🧰 Commands
 
 ```bash
-npm run dev           # API and web app in watch mode
-npm run dev:desktop   # the desktop app against the dev server (npm install --prefix desktop first)
-npm run db:seed       # sample accounts, DMs and a server in the local database
-npm run backup        # database dump + uploads archive in ./backups, with rotation
-npm run check         # typecheck, lint, unit tests and production build
-npm run test:e2e      # real browsers against a Docker stack (needs Docker and Chrome)
+bun run dev           # API and web app in watch mode
+bun run dev:desktop   # the desktop app against the dev server (npm install --prefix desktop first)
+bun run db:seed       # sample accounts, DMs and a server in the local database
+bun run backup        # database dump + uploads archive in ./backups, with rotation
+bun run check         # typecheck, lint, unit tests and production build
+bun run test:e2e      # real browsers against a Docker stack (needs Docker and Chrome)
 ```
 
 Unit tests use Node's test runner (backend) and Vitest with React Testing Library (frontend), and need neither a database nor LiveKit. The end-to-end suite (Playwright) drives several accounts through every feature, a redeploy and an upgrade from the production version. Every script, and what each end-to-end spec covers, is in [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md#scripts).
@@ -98,7 +98,7 @@ Unit tests use Node's test runner (backend) and Vitest with React Testing Librar
 [![Vite](https://img.shields.io/badge/Vite-646CFF?style=for-the-badge&logo=vite&logoColor=white)](https://vite.dev/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-06B6D4?style=for-the-badge&logo=tailwindcss&logoColor=white)](https://tailwindcss.com/)
-[![Node.js](https://img.shields.io/badge/Node.js-339933?style=for-the-badge&logo=nodedotjs&logoColor=white)](https://nodejs.org/)
+[![Bun](https://img.shields.io/badge/Bun-14151A?style=for-the-badge&logo=bun&logoColor=white)](https://bun.com/)
 [![Fastify](https://img.shields.io/badge/Fastify-000000?style=for-the-badge&logo=fastify&logoColor=white)](https://fastify.dev/)
 [![Drizzle](https://img.shields.io/badge/Drizzle-C5F74F?style=for-the-badge&logo=drizzle&logoColor=black)](https://orm.drizzle.team/)
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-4169E1?style=for-the-badge&logo=postgresql&logoColor=white)](https://www.postgresql.org/)
@@ -107,7 +107,7 @@ Unit tests use Node's test runner (backend) and Vitest with React Testing Librar
 
 ## 🤝 Contributing
 
-Found a bug or have an idea? [Open an issue](https://github.com/coelhomarcus/Linkord/issues). Before opening a pull request, run `npm run check`. See [AGENTS.md](AGENTS.md) for repository conventions.
+Found a bug or have an idea? [Open an issue](https://github.com/coelhomarcus/Linkord/issues). Before opening a pull request, run `bun run check`. See [AGENTS.md](AGENTS.md) for repository conventions.
 
 ## License
 

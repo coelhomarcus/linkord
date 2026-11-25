@@ -32,8 +32,6 @@ npm-debug.log*
 
 .claude
 
-bun.lock
-
 PLAN.md
 # docs/ also holds local notes, plans and QA screenshots; only these are part of the repository
 docs/*
@@ -48,7 +46,7 @@ e2e/test-results/
 e2e/.e2e.env
 e2e/.e2e-state.json
 
-# Backups written by `npm run backup`
+# Backups written by `bun run backup`
 /backups/
 
 # desktop installers built by `npm run package --prefix desktop`

@@ -19,7 +19,7 @@ export interface User {
 
 /** `phone`: the context is a touch phone (390x844, touch, mobile), so `(hover: none)` and
  * `(pointer: coarse)` match and the app shows its compact layout. */
-export interface DeviceOptions { device?: 'desktop' | 'phone' }
+interface DeviceOptions { device?: 'desktop' | 'phone' }
 
 export interface Users {
   /** A fresh account in its own browser context (own cookies, own storage),

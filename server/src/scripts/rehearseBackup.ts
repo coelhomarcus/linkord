@@ -18,7 +18,7 @@ import { createIsolatedDatabase, type IsolatedDatabase } from './rehearsal/isola
 import { makeMigrationsFolder } from './rehearsal/migrationFolders.js';
 import { migrateOn } from './rehearsal/migrateOn.js';
 
-// `npm run backup:rehearse [-- --keep]`
+// `bun run backup:rehearse [--keep]`
 //
 // Backup -> restore -> boot, end to end, on throwaway local databases:
 //   1. a migrated database with a conversation, messages, attachments (with a
@@ -136,7 +136,7 @@ async function bootApp(databaseUrl: string, uploadDir: string): Promise<{ origin
     MIGRATE_ON_BOOT: '1', COOKIE_SECURE: '0', NODE_ENV: 'development', DATABASE_SSL: '0',
   };
   delete env.TRUST_PROXY;
-  const child: ChildProcess = spawn(process.execPath, ['--import', 'tsx', entry], { env, stdio: ['ignore', 'pipe', 'pipe'] });
+  const child: ChildProcess = spawn(process.execPath, ['--no-env-file', entry], { env, stdio: ['ignore', 'pipe', 'pipe'] });
   let log = '';
   for (const stream of [child.stdout, child.stderr]) stream?.on('data', (chunk: Buffer) => { log = (log + chunk.toString('utf8')).slice(-20_000); });
   const origin = `http://127.0.0.1:${port}`;

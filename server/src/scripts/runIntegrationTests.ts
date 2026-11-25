@@ -5,7 +5,7 @@ import { createIsolatedDatabase } from './rehearsal/isolatedDb.js';
 import { makeMigrationsFolder } from './rehearsal/migrationFolders.js';
 import { migrateOn } from './rehearsal/migrateOn.js';
 
-// `npm run test:integration` (or `-- <name> ...` for only the files whose name contains one of them)
+// `bun run test:integration` (add file name fragments to run matching files only)
 //
 // Runs integration tests against a disposable local Postgres database.
 // The child process only receives the throwaway database URL.
@@ -37,7 +37,7 @@ async function main(): Promise<number> {
     console.log(`[integration] banco ${db.name} migrado; ${files.length} arquivo(s)`);
     const env = { ...process.env, DATABASE_URL: db.url, TEST_DATABASE_BASE_URL: baseUrl, MIGRATE_ON_BOOT: '0' } as NodeJS.ProcessEnv;
     delete env.DATABASE_URL_PROD;
-    const child = spawn(process.execPath, ['--import', 'tsx', '--test', '--test-concurrency=1', ...files], { env, stdio: 'inherit' });
+    const child = spawn(process.execPath, ['test', '--isolate', '--timeout=30000', '--no-env-file', ...files], { env, stdio: 'inherit' });
     return await new Promise<number>((resolve) => child.on('exit', (code) => resolve(code ?? 1)));
   } finally {
     await cleanup();

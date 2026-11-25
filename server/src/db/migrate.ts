@@ -9,7 +9,7 @@ import { assertMigrationsSafe, LegacyDataBlockedError, REPAIR_INSTRUCTIONS } fro
 const MIGRATIONS_FOLDER = path.join(import.meta.dirname, '..', '..', 'db', 'migrations');
 
 /** Applies pending migrations. Used both at server boot (src/index.ts) and
- * by `npm run db:migrate` — the runner lives in drizzle-orm (not
+ * by `bun run db:migrate` — the runner lives in drizzle-orm (not
  * drizzle-kit, a devDependency), so the production image (no
  * devDependencies) can still migrate. */
 export async function runMigrations(): Promise<void> {

@@ -3,15 +3,15 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "test": "playwright test",
-    "test:features": "playwright test --project=features",
-    "test:restart": "playwright test --project=restart",
-    "test:upgrade": "playwright test --project=upgrade",
-    "report": "playwright show-report report",
-    "typecheck": "tsc --noEmit"
+    "test": "bun --bun playwright test",
+    "test:features": "bun --bun playwright test --project=features",
+    "test:restart": "bun --bun playwright test --project=restart",
+    "test:upgrade": "bun --bun playwright test --project=upgrade",
+    "report": "bun --bun playwright show-report report",
+    "typecheck": "bun --bun tsc --noEmit"
   },
   "devDependencies": {
-    "@playwright/test": "1.49.1",
+    "@playwright/test": "1.65.0",
     "@types/node": "22.10.2",
     "livekit-client": "2.22.0",
     "typescript": "5.7.2"

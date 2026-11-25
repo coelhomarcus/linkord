@@ -13,7 +13,7 @@ import { EXPECTED_OWNER, EXPECTED_REVIEW, seedLegacyDataset, type SeedManifest }
 import { journalTags, makeMigrationsFolder } from './rehearsal/migrationFolders.js';
 import { migrateOn } from './rehearsal/migrateOn.js';
 
-// `npm run db:rehearse [-- --keep] [-- --json]`
+// `bun run db:rehearse [--keep] [--json]`
 //
 // Rehearses migration, repair, and validation against disposable databases.
 // It never touches production or development databases.

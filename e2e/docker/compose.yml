@@ -30,8 +30,8 @@ services:
   # Receives the app's code emails (password recovery, two-step login) so specs
   # can read the codes back: GET http://localhost:8025/emails?to=<address>.
   mailsink:
-    image: node:22-alpine
-    command: ["node", "/mailsink.mjs"]
+    image: oven/bun:1.4.5-alpine
+    command: ["bun", "--no-env-file", "/mailsink.mjs"]
     volumes:
       - ./mailsink.mjs:/mailsink.mjs:ro
     ports:

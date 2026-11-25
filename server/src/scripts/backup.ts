@@ -2,7 +2,7 @@ import { BackupError } from './backup/backupLayout.js';
 import { createBackup } from './backup/createBackup.js';
 import { backupSettings } from './backup/settings.js';
 
-// `npm run backup`
+// `bun run backup`
 //
 // One backup = one folder in BACKUP_DIR (default ./backups), named by UTC time:
 //   linkord-backup-20261108T015300Z/
