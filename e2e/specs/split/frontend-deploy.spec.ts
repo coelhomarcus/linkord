@@ -59,7 +59,8 @@ test('Traefik forwards backend routes while the web returns the right CSP and ca
   const asset = await request.get(assetPath!);
   expect(asset.ok()).toBe(true);
   expect(asset.headers()['cache-control']).toBe('public, max-age=31536000, immutable');
-  for (const path of ['/offline.html', '/sw.js']) expect((await request.get(path)).headers()['cache-control']).toBe('no-cache');
+  expect((await request.get('/offline.html')).headers()['cache-control']).toBe('no-cache');
+  expect((await request.get('/sw.js')).headers()['cache-control']).toBe('private, no-cache, no-store, max-age=0');
   expect((await request.get('/assets/deleted.js')).status()).toBe(404);
   expect((await request.get('/apiary')).headers()['content-type']).toContain('text/html');
   expect((await request.get('/api')).headers()['content-type']).toContain('application/json');
