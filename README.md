@@ -68,7 +68,7 @@ cp .env.example .env
 docker build -t linkord .
 ```
 
-Set the database URL, public app URL, registration code and LiveKit credentials in `.env`. Follow the [standalone Docker instructions](docs/DEPLOY.md#the-image-on-its-own) to start the image with persistent uploads and backups, or [deploy on Dokploy](docs/DEPLOY.md#dokploy).
+Set the database URL, public app URL and LiveKit credentials in `.env`. Set a registration code to let people sign up. Follow the [standalone Docker instructions](docs/DEPLOY.md#the-image-on-its-own) to start the image with persistent uploads and backups, or [deploy on Dokploy](docs/DEPLOY.md#dokploy). For email, push and other settings, copy the entries you need from [`.env.optional.example`](.env.optional.example).
 
 ## 🚀 Development
 

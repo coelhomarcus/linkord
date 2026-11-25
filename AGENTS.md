@@ -169,7 +169,7 @@ Docs are part of the change: when code changes what a doc describes, update that
 | Local setup, scripts, tests, the env needed to run, troubleshooting, server limits, notes for developing a feature | [`docs/DEVELOPMENT.md`](docs/DEVELOPMENT.md) |
 | What the product does | [`README.md`](README.md) |
 | How it is deployed and operated: the image, required env, folders and permissions, backups and restore, Dokploy, headers, the desktop installer, production troubleshooting | [`docs/DEPLOY.md`](docs/DEPLOY.md) |
-| Any new or changed environment variable | [`.env.example`](.env.example), plus the doc of the feature that uses it |
+| Any new or changed environment variable | [`.env.example`](.env.example) for setup or [`.env.optional.example`](.env.optional.example) for optional settings, plus the doc of the feature that uses it |
 
 - Edit the existing section instead of appending a note, and remove statements that are no longer true. Say each thing in one doc and link to it from the others.
 - Write for the reader (developer, operator, webhook user): what it does and why, not a walk through the code. Detail that only matters inside the code belongs in a code comment.

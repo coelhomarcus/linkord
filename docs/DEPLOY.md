@@ -1,6 +1,6 @@
 # Deployment
 
-How to run Linkord in production, what the container expects from the host, and what to look at when something breaks. For running it on your own machine see [DEVELOPMENT.md](DEVELOPMENT.md); every environment variable is described in [`.env.example`](../.env.example).
+How to run Linkord in production, what the container expects from the host, and what to look at when something breaks. For running it on your own machine, see [DEVELOPMENT.md](DEVELOPMENT.md).
 
 ## What gets deployed
 
@@ -21,7 +21,7 @@ To roll back a runtime upgrade, redeploy the previous image with the same Postgr
 - **LiveKit** for voice, video and screen sharing: LiveKit Cloud or a self-hosted server ([INTEGRATIONS.md](INTEGRATIONS.md#livekit)).
 - **A domain with HTTPS.** Web Push, the `Secure` cookie, `Strict-Transport-Security` and Chrome's CSP reports all need it.
 
-The variables a production instance needs:
+Start with [`.env.example`](../.env.example) and set the values for your production instance.
 
 | Variable | What to put there |
 | --- | --- |
@@ -29,10 +29,10 @@ The variables a production instance needs:
 | `APP_URL` | The public origin, `https://chat.example.com`, no trailing slash. Used in emails, push, the origin check and the Content-Security-Policy. |
 | `REGISTRATION_CODE` | Empty means nobody can sign up. Set a code and share it with the people you invite. |
 | `LIVEKIT_URL`, `LIVEKIT_API_KEY`, `LIVEKIT_API_SECRET` | The URL browsers really use to reach LiveKit (`wss://…`). The CSP only lets the browser connect there. |
-| `PUSH_VAPID_PUBLIC_KEY`, `PUSH_VAPID_PRIVATE_KEY`, `PUSH_VAPID_SUBJECT` | All three or none. Generate them once (`bunx --bun web-push generate-vapid-keys`) and keep them: new keys break every existing subscription. |
-| `RESEND_API_KEY`, `RESEND_FROM_EMAIL` | Optional. Without them, password recovery, email changes and two-step login are unavailable, and older accounts that still have no email cannot get past the screen asking them to link one. Once people turn two-step login on, removing them locks those accounts out ([Resend](INTEGRATIONS.md#resend)). |
 
-Optional services and limits are in `.env.example`. Steam Wall connections use `STEAM_WEB_API_KEY`, and Twitch connections share the IGDB app credentials. Covers, connection avatars, link preview pictures and thumbnails are downloaded by the server and served from its own domain, which costs outbound bandwidth and up to 64 MB of memory for the cache (another 64 MB for the background loops of Steam mini profiles); `MEDIA_PROXY=0` sends browsers to those services instead ([media proxy](INTEGRATIONS.md#media-proxy)). After the first start, make yourself an administrator: `bun --no-env-file server/dist/scripts/adminRole.js grant <username>` inside the container (`bun run admin:grant <username>` from a checkout).
+For optional settings, copy the entries you need from [`.env.optional.example`](../.env.optional.example) and uncomment them. Configure [Resend](INTEGRATIONS.md#resend) for password recovery and two-step login, and [Web Push](INTEGRATIONS.md#web-push) for browser push notifications.
+
+After the first start, make yourself an administrator by running `bun --no-env-file server/dist/scripts/adminRole.js grant <username>` inside the container or `bun run admin:grant <username>` from a checkout.
 
 ## The image on its own
 

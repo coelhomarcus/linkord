@@ -18,20 +18,9 @@ bun install --frozen-lockfile --cwd web
 cp .env.example .env
 ```
 
-Set `REGISTRATION_CODE` in `.env` to the code you will use to sign up. The commands below use the following local service settings.
-
-```dotenv
-DATABASE_URL=postgres://linkord:linkord@localhost:5432/linkord
-DATABASE_SSL=0
-COOKIE_SECURE=0
-LIVEKIT_URL=ws://localhost:7880
-LIVEKIT_API_KEY=devkey
-LIVEKIT_API_SECRET=secret
-```
+The [example](../.env.example) already points to the local database and web app. Set `REGISTRATION_CODE` in `.env` to the code you will use to sign up. To test calls, follow [Voice and video locally](#voice-and-video-locally). For other settings, copy the entries you need from [`.env.optional.example`](../.env.optional.example) into `.env` and uncomment them.
 
 The server reads the optional root `.env` with literal values. Shell environment variables take precedence. Unit tests load `.env.test` explicitly.
-
-The `LIVEKIT_*` values are only needed for calls ([Voice and video locally](#voice-and-video-locally)).
 
 ## Start the services
 
@@ -60,7 +49,15 @@ Stop any local dependency with `docker stop <container-name>` and resume it with
 
 ## Voice and video locally
 
-Start the LiveKit development server with the `devkey` and `secret` values above:
+Set these values in `.env`.
+
+```dotenv
+LIVEKIT_URL=ws://localhost:7880
+LIVEKIT_API_KEY=devkey
+LIVEKIT_API_SECRET=secret
+```
+
+Start the LiveKit development server.
 
 ```bash
 docker run -d --name linkord-dev-livekit --restart unless-stopped \
@@ -261,7 +258,7 @@ exec docker exec -i -e PGPASSWORD -e PGUSER -e PGDATABASE -e PGHOST -e PGPORT li
 
 ## Server limits and background jobs
 
-All the numbers below are in `server/src/config/env.ts`; the ones that can be set are in `.env.example`.
+The defaults below come from `server/src/config/env.ts`. The settings you can override are in [`.env.optional.example`](../.env.optional.example).
 
 ### Data retention
 
@@ -278,9 +275,11 @@ A daily sweep (`modules/retention/`, two minutes after boot, then every 24 hours
 
 Login sessions go when they expire (`SESSION_TTL_DAYS`, 30) or sit unused for `SESSION_IDLE_DAYS` (14; `0` turns it off), with the address and browser stored with them. Activity sessions are pruned 400 days after they were last seen. `/admin/system` shows each limit and what the last sweep deleted.
 
-A new table with retention gets an entry in `modules/retention/retentionTargets.ts` (or calls `registerRetentionTarget`) with its own variable read through `parseRetentionDays`, a row above, a line in `.env.example` and a label under `system.retentionTables` in the admin locales.
+A new table with retention gets an entry in `modules/retention/retentionTargets.ts` (or calls `registerRetentionTarget`) with its own variable read through `parseRetentionDays`, a row above, a line in `.env.optional.example` and a label under `system.retentionTables` in the admin locales.
 
 ### Upload limits
+
+`MAX_ATTACHMENT_BYTES` caps each attachment at 512 MiB by default. The composer reads the limit from the server, so changing it only requires a server restart.
 
 A chunked upload reserves its declared size against `MAX_STORAGE_BYTES` (30 GB) at `init`, so two uploads cannot both take the last free space. Because reserving is free, it is bounded:
 

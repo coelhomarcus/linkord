@@ -15,7 +15,7 @@ export function parseTrustedProxyHops(raw: string | undefined): number {
   const text = (raw ?? '').trim();
   if (text === '') return 1;
   const hops = Number(text);
-  if (!Number.isSafeInteger(hops) || hops < 1) throw new Error('TRUSTED_PROXY_HOPS must be a whole number of proxies, 1 or more (see .env.example).');
+  if (!Number.isSafeInteger(hops) || hops < 1) throw new Error('TRUSTED_PROXY_HOPS must be a whole number of proxies, 1 or more (see .env.optional.example).');
   return hops;
 }
 const TRUSTED_PROXY_HOPS = parseTrustedProxyHops(process.env.TRUSTED_PROXY_HOPS);
@@ -63,7 +63,7 @@ const UPLOAD_DIR = process.env.UPLOAD_DIR || path.join(import.meta.dirname, '..'
 // the largest single file anyone may upload; uploads are chunked, so this is bounded by disk, not by proxies
 const MAX_ATTACHMENT_BYTES = Number(process.env.MAX_ATTACHMENT_BYTES || 512 * 1024 * 1024);
 if (!Number.isSafeInteger(MAX_ATTACHMENT_BYTES) || MAX_ATTACHMENT_BYTES <= 0) {
-  throw new Error('MAX_ATTACHMENT_BYTES must be a positive whole number of bytes (see .env.example).');
+  throw new Error('MAX_ATTACHMENT_BYTES must be a positive whole number of bytes (see .env.optional.example).');
 }
 const MAX_STORAGE_BYTES = 30 * 1024 * 1024 * 1024;
 // comfortably under common proxy limits (e.g. Cloudflare Free/Pro caps
@@ -253,7 +253,7 @@ export function parseRetentionDays(name: string, raw: string | undefined, fallba
   const text = (raw ?? '').trim();
   if (text === '') return fallback;
   const days = Number(text);
-  if (!Number.isSafeInteger(days) || days < 0) throw new Error(`${name} must be a whole number of days, 0 or more (0 keeps the records forever; see .env.example).`);
+  if (!Number.isSafeInteger(days) || days < 0) throw new Error(`${name} must be a whole number of days, 0 or more (0 keeps the records forever; see .env.optional.example).`);
   return days;
 }
 // the audit trail and data_repairs are evidence: they are kept unless an operator opts in to expiry

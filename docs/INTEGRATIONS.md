@@ -1,6 +1,6 @@
 # Third-party integrations
 
-Every external service Linkord talks to: what it is for, who makes the call (our server or the user's browser), the credentials it needs, its limits, and what happens when it is missing or fails. Setup is in [DEVELOPMENT.md](DEVELOPMENT.md); every variable is in [`.env.example`](../.env.example).
+Every external service Linkord talks to, including where its calls originate, which credentials it needs, and what happens when it fails. LiveKit's credentials are in [`.env.example`](../.env.example). Find settings for email, push and other integrations in [`.env.optional.example`](../.env.optional.example).
 
 ## Overview
 
@@ -229,7 +229,7 @@ Serves the third-party pictures above, and the loop behind a Steam mini profile,
 
 1. **Decide who makes the call.** Prefer the server for anything with a secret or a rate limit. Call from the browser only when the provider's terms require it (as with KLIPY), and then serve the key through an authenticated endpoint, never the bundle.
 2. **Put it in the right place.** Adapters in `server/src/integrations/<name>/`, domain logic in `server/src/modules/<domain>/`, frontend-only integrations in their feature folder.
-3. **Make the credential optional.** Read it in `server/src/config/env.ts`, document it in `.env.example`, and degrade quietly when it is empty. Variables that only work together, like the VAPID trio, fail fast when partly set.
+3. **Make the credential optional.** Read it in `server/src/config/env.ts`, document it in `.env.optional.example`, and degrade quietly when it is empty. Variables that only work together, like the VAPID trio, fail fast when partly set.
 4. **Never trust the destination.** If any part of the URL comes from a user or a response, use `net/safeRequest.ts`, allowlist image hosts, and cap time and size.
 5. **Respect rate limits.** Background work reuses the connection-sync worker and its Postgres-coordinated limits, never a call per profile view.
 6. **Preserve good data.** A failed or malformed response never replaces a valid snapshot.
