@@ -179,7 +179,7 @@ Every script runs from the repository root.
 | `npm run test:server` / `test:web` / `test:desktop` | Unit tests of one side (`node --test`, Vitest, `node --test`). `test:desktop` needs `desktop/` installed and is not part of `npm test`. |
 | `npm run test:server:coverage` | Server unit tests with Node's coverage report. |
 | `npm run typecheck:server:tests` | Typechecks `server/tests/`. |
-| `npm run test:integration` | `server/tests/integration/*.itest.ts` against a throwaway database it creates and drops on your local Postgres. |
+| `npm run test:integration` | `server/tests/integration/*.itest.ts` against a throwaway database it creates and drops on your local Postgres. `-- <name>` runs only the files whose name contains it. |
 | `npm run test:e2e` (and `:features`, `:restart`, `:upgrade`) | The browser suite ([End-to-end tests](#end-to-end-tests)). Needs Docker and Chrome. |
 | `npm run check:audit` | The dependency audit, part of `npm run check`. |
 | `npm run check:dead-code` | `knip`: unused files, exports and dependencies across `server/`, `web/`, `e2e/` and `desktop/` (all four installed). Runs in CI, not in `npm run check`. |

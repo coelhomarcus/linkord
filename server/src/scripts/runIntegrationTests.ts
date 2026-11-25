@@ -5,7 +5,7 @@ import { createIsolatedDatabase } from './rehearsal/isolatedDb.js';
 import { makeMigrationsFolder } from './rehearsal/migrationFolders.js';
 import { migrateOn } from './rehearsal/migrateOn.js';
 
-// `npm run test:integration`
+// `npm run test:integration` (or `-- <name> ...` for only the files whose name contains one of them)
 //
 // Runs integration tests against a disposable local Postgres database.
 // The child process only receives the throwaway database URL.
@@ -24,7 +24,8 @@ async function main(): Promise<number> {
   const baseUrl = process.env.DATABASE_URL;
   if (!baseUrl) { console.error('DATABASE_URL não configurada'); return 2; }
   const root = path.join(import.meta.dirname, '..', '..', 'tests', 'integration');
-  const files = findTests(root);
+  const only = process.argv.slice(2);
+  const files = findTests(root).filter((file) => only.length === 0 || only.some((name) => path.basename(file).includes(name)));
   if (files.length === 0) { console.error('nenhum *.itest.ts encontrado'); return 2; }
 
   const db = await createIsolatedDatabase(baseUrl, 'test');

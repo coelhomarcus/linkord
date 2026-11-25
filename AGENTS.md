@@ -4,6 +4,10 @@ Instructions for agents (and humans) working in this repository. What the projec
 
 Monorepo: `web/` (React + Vite + Vitest), `server/` (Fastify + Drizzle/Postgres + Socket.IO + LiveKit, `node --test`) and `desktop/` (an Electron window around the web app, `node --test`). All TypeScript/ESM.
 
+## Branch workflow
+
+Do repository work and commit on `develop`. Promote changes to `main` through pull requests from `develop`.
+
 ## General rule: organize by feature, not by layer
 
 Code is grouped by **domain/feature**, not by technical type. Don't create a generic `hooks/`, `components/` or `handlers/` folder at the root: each feature has its own folder with everything only it uses.
