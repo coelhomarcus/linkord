@@ -1,6 +1,6 @@
 # Local development
 
-Run the frontend and backend on your machine. PostgreSQL is required, and LiveKit and the mail sink are useful when testing calls or email.
+Run the frontend, backend and profile sync worker on your machine. PostgreSQL is required, and LiveKit and the mail sink are useful when testing calls or email.
 
 ## Prerequisites
 
@@ -18,20 +18,9 @@ bun install --frozen-lockfile --cwd web
 cp .env.example .env
 ```
 
-Set `REGISTRATION_CODE` in `.env` to the code you will use to sign up. The commands below use the following local service settings.
-
-```dotenv
-DATABASE_URL=postgres://linkord:linkord@localhost:5432/linkord
-DATABASE_SSL=0
-COOKIE_SECURE=0
-LIVEKIT_URL=ws://localhost:7880
-LIVEKIT_API_KEY=devkey
-LIVEKIT_API_SECRET=secret
-```
+The [example](../.env.example) already points to the local database and web app. Set `REGISTRATION_CODE` in `.env` to the code you will use to sign up. To test calls, follow [Voice and video locally](#voice-and-video-locally). For other settings, copy the entries you need from [`.env.optional.example`](../.env.optional.example) into `.env` and uncomment them.
 
 The server reads the optional root `.env` with literal values. Shell environment variables take precedence. Unit tests load `.env.test` explicitly.
-
-The `LIVEKIT_*` values are only needed for calls ([Voice and video locally](#voice-and-video-locally)).
 
 ## Start the services
 
@@ -54,13 +43,21 @@ bun run db:migrate
 bun run dev
 ```
 
-Vite serves the web app at [http://localhost:5173](http://localhost:5173) and Fastify the API at [http://localhost:3000](http://localhost:3000).
+Vite serves the web app at [http://localhost:5173](http://localhost:5173) and Fastify the API at [http://localhost:3000](http://localhost:3000). `bun run dev` also starts the profile sync worker as a separate Bun process.
 
 Stop any local dependency with `docker stop <container-name>` and resume it with `docker start <container-name>`. PostgreSQL data stays in its named volume.
 
 ## Voice and video locally
 
-Start the LiveKit development server with the `devkey` and `secret` values above:
+Set these values in `.env`.
+
+```dotenv
+LIVEKIT_URL=ws://localhost:7880
+LIVEKIT_API_KEY=devkey
+LIVEKIT_API_SECRET=secret
+```
+
+Start the LiveKit development server.
 
 ```bash
 docker run -d --name linkord-dev-livekit --restart unless-stopped \
@@ -141,7 +138,7 @@ The server keeps the newest 20 activities per account (`activity_history`, for t
 bun run check
 ```
 
-Runs the server test typecheck, the web lint, the dependency audit, the server and web tests and the production build. None of the tests needs PostgreSQL (`.env.test` supplies a placeholder `DATABASE_URL`).
+Runs the server test typecheck, the web lint, the dependency audit, the server and web tests and the production build. None of these tests needs PostgreSQL (`.env.test` supplies a placeholder `DATABASE_URL`). For desktop changes, also run `npm run typecheck --prefix desktop` and `npm test --prefix desktop`. See [End-to-end tests](#end-to-end-tests) for browser verification.
 
 - **CI** (`.github/workflows/ci.yml`) runs the same on every push to `main` and `develop` and on pull requests, unless only Markdown changed, as four jobs: server, web, desktop, and one for the audit, `bun run check:dead-code` and the e2e typecheck.
 - **End-to-end** (`.github/workflows/e2e.yml`) runs the `features`, `restart` and `upgrade` projects in parallel on pull requests into `main`, and on demand from the Actions tab. A failed job uploads the Playwright report and traces.
@@ -154,10 +151,12 @@ Every script runs from the repository root.
 
 | Script | What it does |
 | --- | --- |
-| `bun run dev` | API (`:3000`) and web (`:5173`) in watch mode. |
+| `bun run dev` | API (`:3000`), web (`:5173`) and the profile sync worker in separate watch processes. |
+| `bun run dev:connection-sync` | Runs the profile sync worker alone in watch mode. |
 | `bun run dev:desktop` | The [desktop app](#desktop-app) against `LINKORD_URL` (default `http://localhost:5173`). Needs `npm install --prefix desktop`. |
 | `bun run package:desktop` | The Windows installer, see [DEPLOY.md](DEPLOY.md#building-the-installer). |
 | `bun run build` / `bun run start` | Production build of the server and the web app, and the built server. |
+| `bun run start:connection-sync` | Runs the built profile sync worker alongside the built server. |
 | `bun run check` | Everything that should pass before pushing ([Run the checks](#run-the-checks)). |
 | `bun run test` | `test:server` and `test:web`. |
 | `bun run test:server` / `test:web` / `test:desktop` | Unit tests of one side (`bun test`, Vitest, `node --test`). `test:desktop` needs `desktop/` installed and is not part of `bun run test`. |
@@ -180,13 +179,13 @@ Every script runs from the repository root.
 | `bun run emoji:data` | Rebuilds `web/public/emoji-data/<lang>/emojis.json` from the pinned `emojibase-data`, leaving out what the pinned `@discordapp/twemoji` cannot draw. Run it after bumping either. |
 | `bun run icons` | Rebuilds `web/src/shared/ui/icons/fluent.ts` from `@fluentui/svg-icons` for every icon imported from `@/shared/ui/icons`. A new icon needs a line in `FLUENT_ICONS` (`web/scripts/buildIcons.ts`) first; a test fails while the file is stale. |
 
-`build:server`/`build:web` and `dev:server`/`dev:web` are the parts of `build` and `dev`. The root calls scripts in `web/` (`dev`, `build`, `lint`, `preview`, `test`, `test:coverage`), `desktop/` (`start`, `build`, `typecheck`, `test`, `package`) and `e2e/` (`test`, `test:features`, `test:restart`, `test:upgrade`, `report`, `typecheck`). Run web and E2E scripts with `bun run --cwd <package> <script>`, and desktop scripts with `npm run <script> --prefix desktop`.
+`build` runs `build:server` and `build:web`. `dev` runs `dev:server`, `dev:web` and `dev:connection-sync`. The root calls scripts in `web/` (`dev`, `build`, `lint`, `preview`, `test`, `test:coverage`), `desktop/` (`start`, `build`, `typecheck`, `test`, `package`) and `e2e/` (`test`, `test:features`, `test:restart`, `test:upgrade`, `report`, `typecheck`). Run web and E2E scripts with `bun run --cwd <package> <script>`, and desktop scripts with `npm run <script> --prefix desktop`.
 
 The scripts behind `db:*`, `admin:*`, `backup*`, `restore` and `test:integration` live in `server/src/scripts/`, each with a header comment on how to call it.
 
 ## End-to-end tests
 
-`e2e/` drives the real app in Chrome with several accounts at once, against a production-shaped Docker stack (`e2e/docker/compose.yml`: the app image behind Traefik, a LiveKit dev server, a throwaway in-memory Postgres and a mail sink). The standard test stack uses its own disposable database. Stop `linkord-dev-livekit` and `linkord-dev-mailsink` before the standard tests if they are running, since those ports overlap. The split deploy test uses separate ports.
+`e2e/` drives the real app in Chrome with several accounts at once. The Docker stack runs the app behind Traefik alongside the profile sync worker, a LiveKit dev server, a disposable in-memory Postgres and a mail sink. Chrome connects to LiveKit through a published port, while the backend reaches the room management API on the Compose network. Stop `linkord-dev-livekit` and `linkord-dev-mailsink` before the standard tests if they are running, since those ports overlap. The split deploy test uses separate ports.
 
 ```bash
 PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1 bun install --frozen-lockfile --cwd e2e   # once; uses the installed Chrome
@@ -195,7 +194,7 @@ bun run test:e2e
 
 - `test:e2e:features`: every feature on the working tree's build.
 - `test:e2e:restart`: what a redeploy of the same build must survive.
-- `bun run --cwd e2e test:split` checks routing, cache headers and a call through a frontend-only deploy.
+- `bun run --cwd e2e test:split` checks routing, cache headers, a call through a frontend-only deploy and queued profile sync during a worker restart.
 - `test:e2e:upgrade`: tabs opened on the production version (`origin/main`, or `E2E_BASE_REF`) while the server is upgraded to the working tree. It adapts to what the base version supports and says so in the report's annotations.
 
 Each run builds `linkord-e2e:head` from the working tree (uncommitted changes included), starts the stack, runs and removes it. `E2E_KEEP_STACK=1` leaves it up at `http://localhost:8080`, `E2E_HEADED=1` shows the browsers, `E2E_RETRIES=0` turns retries off, and `E2E_HEAD_IMAGE=<tag>` tests an image you built yourself. A failure keeps a trace, video and screenshot: `bun run --cwd e2e report` opens the report, `bun --bun playwright show-trace <trace.zip>` (from `e2e/`) replays it.
@@ -261,7 +260,7 @@ exec docker exec -i -e PGPASSWORD -e PGUSER -e PGDATABASE -e PGHOST -e PGPORT li
 
 ## Server limits and background jobs
 
-All the numbers below are in `server/src/config/env.ts`; the ones that can be set are in `.env.example`.
+The defaults below come from `server/src/config/env.ts`. The settings you can override are in [`.env.optional.example`](../.env.optional.example).
 
 ### Data retention
 
@@ -278,9 +277,11 @@ A daily sweep (`modules/retention/`, two minutes after boot, then every 24 hours
 
 Login sessions go when they expire (`SESSION_TTL_DAYS`, 30) or sit unused for `SESSION_IDLE_DAYS` (14; `0` turns it off), with the address and browser stored with them. Activity sessions are pruned 400 days after they were last seen. `/admin/system` shows each limit and what the last sweep deleted.
 
-A new table with retention gets an entry in `modules/retention/retentionTargets.ts` (or calls `registerRetentionTarget`) with its own variable read through `parseRetentionDays`, a row above, a line in `.env.example` and a label under `system.retentionTables` in the admin locales.
+A new table with retention gets an entry in `modules/retention/retentionTargets.ts` (or calls `registerRetentionTarget`) with its own variable read through `parseRetentionDays`, a row above, a line in `.env.optional.example` and a label under `system.retentionTables` in the admin locales.
 
 ### Upload limits
+
+`MAX_ATTACHMENT_BYTES` caps each attachment at 512 MiB by default. The composer reads the limit from the server, so changing it only requires a server restart.
 
 A chunked upload reserves its declared size against `MAX_STORAGE_BYTES` (30 GB) at `init`, so two uploads cannot both take the last free space. Because reserving is free, it is bounded:
 
@@ -304,7 +305,23 @@ Failed logins, wrong reset codes, code requests, username checks, wrong invite c
 
 ## Restarting the server during a call
 
-Restarting `bun run dev` or deploying should leave a call running. To see it, join a voice channel with two accounts, restart `bun run dev`, and check that both stay connected without touching either tab. The rules that keep this working are in [AGENTS.md](../AGENTS.md) ("Realtime compatibility and deploys"), and the `restart` end-to-end specs check them.
+To verify recovery, join a voice channel with two accounts, restart `bun run dev`, and check that both stay connected without reloading either tab. Reloading a tab ends that tab's LiveKit connection. The [`restart` end-to-end specs](#end-to-end-tests) cover calls, chat and uploads through a backend restart. The [`upgrade` specs](#end-to-end-tests) keep an older tab open through the deploy.
+
+### How clients resume
+
+LiveKit carries the media independently of the Bun API. The API records participant call membership in PostgreSQL (`call_presence`) and ringing or active DM calls in `dm_calls_active`. On boot it restores participants without sockets, retaining the saved participant ID and resume token so the browser can reclaim the same LiveKit identity. Restored participants wait up to `CALL_RESTORE_GRACE_MS` for their original tab, even if another tab for the same account joins first. Persistence is injected into the call modules, and ordered writes log failures without interrupting a live call. [Server startup](../server/src/app/bootstrap.ts) · [Participant state](../server/src/modules/presence/participants.ts) · [DM call state](../server/src/modules/calls/dmCalls.ts)
+
+Restored connections count toward the one-call-per-account limit. A join from another tab or device receives `call-elsewhere` if the account already holds a call. If the user confirms the move, the new connection sends `replace: true` and the previous one receives `call-replaced`. [Call replacement](../server/src/modules/presence/participants.ts)
+
+On shutdown the API sends `server-restart` and closes the transports. Removing participants would also delete the rows the next process needs. Closing individual sockets can deliver an explicit server disconnect through the proxy that older clients cannot retry automatically. Current clients retry an explicit server disconnect after the restart notice. That condition prevents two tabs with the same identity from repeatedly disconnecting each other. [Socket reconnection](../web/src/state/hooks/useSocketConnection.ts)
+
+After `welcome`, the client reports media state such as microphone, camera and sharing again. If LiveKit is still connected but the API has lost the call, the client tries to rejoin a voice channel or leaves the stale DM call. A DM answer clicked while offline is sent after `welcome` if the same call is still ringing. Other one-shot socket actions need their own retry when they must survive disconnects. [Call lifecycle](../web/src/features/calls/useCallLifecycle.ts) · [DM call answers](../web/src/features/calls/useDmCall.ts)
+
+### How chat and uploads resume
+
+The chat outbox resends pending messages after `welcome` with the original `clientMessageId`. On a duplicate, the server returns the original message. Upload sessions survive on disk. During an upload retry, a proxy response such as a 404 or 502 without the app's error envelope counts as an outage. See the [deploy guide](DEPLOY.md#updating) for the retry window. [Chat outbox](../web/src/features/chat/useMessageOutbox.ts) · [Chunked uploads](../web/src/shared/lib/chunkedUpload.ts)
+
+See [AGENTS.md](../AGENTS.md#realtime-compatibility-and-deploys) for the rules to follow when changing these paths.
 
 ## Content-Security-Policy
 
@@ -350,7 +367,7 @@ To develop the widgets locally:
 
 - GitHub needs no setup.
 - MyAnimeList needs `MAL_CLIENT_ID`; Steam needs `STEAM_WEB_API_KEY`; Twitch and game search need `IGDB_CLIENT_ID` and `IGDB_CLIENT_SECRET`. How to get each is in [INTEGRATIONS.md](INTEGRATIONS.md).
-- Steam and Twitch profiles are checked when connected; MyAnimeList and GitHub sync in the background. Snapshots refresh every 24 hours, and Twitch's live widget keeps a short cache of its own. When a widget stays empty, check the `connection-sync` logs.
+- Steam and Twitch profiles are checked when connected. The [profile sync worker](DEPLOY.md#profile-sync-worker) refreshes snapshots for all four providers. Twitch's live widget keeps a short cache of its own. When a widget stays empty, check the worker's `connection-sync` logs.
 
 API: connections at `/api/me/connections` (`PATCH /api/me/connections/:id` with `{ "showOnProfile": boolean }`), the Wall layout at `PUT /api/me/wall`, another person's Wall at `/api/users/:userId/wall`. Add `?catalog=2` to the connections and Wall routes for the activity, Steam and Twitch widgets; without it a client sees and edits only the original catalog, and saving does not drop the newer widgets.
 

@@ -1,6 +1,6 @@
 # Third-party integrations
 
-Every external service Linkord talks to: what it is for, who makes the call (our server or the user's browser), the credentials it needs, its limits, and what happens when it is missing or fails. Setup is in [DEVELOPMENT.md](DEVELOPMENT.md); every variable is in [`.env.example`](../.env.example).
+Every external service Linkord talks to, including where its calls originate, which credentials it needs, and what happens when it fails. LiveKit's credentials are in [`.env.example`](../.env.example). Find settings for email, push and other integrations in [`.env.optional.example`](../.env.optional.example).
 
 ## Overview
 
@@ -10,12 +10,12 @@ Every external service Linkord talks to: what it is for, who makes the call (our
 | [Resend](#resend) | Codes for recovery, email changes, two-step login and security changes; sign-in alerts and account notices; data export links | Server | `RESEND_*` | For email flows and two-step login |
 | [Web Push](#web-push) | Browser push notifications | Server | `PUSH_VAPID_*` | No |
 | [KLIPY](#klipy) | GIF picker | Browser | `KLIPY_API_KEY` | No |
-| [MyAnimeList](#myanimelist) | Wall widget | Server (background) | `MAL_CLIENT_ID` | No |
-| [GitHub](#github) | Wall widgets | Server (background) | None | No |
+| [MyAnimeList](#myanimelist) | Wall widget | Profile sync worker | `MAL_CLIENT_ID` | No |
+| [GitHub](#github) | Wall widgets | Profile sync worker | None | No |
 | [GitHub Releases](#github-releases) | The desktop installer the web app offers | Server (on demand, cached) | `DESKTOP_RELEASES_REPO` | No |
 | [IGDB](#igdb) | Game search for the Wall; names of games someone is playing | Server (on demand) | `IGDB_CLIENT_ID`, `IGDB_CLIENT_SECRET` | No |
-| [Steam](#steam) | Public profile, recent games and playtime on the Wall | Server (on connect and in the background) | `STEAM_WEB_API_KEY` | No |
-| [Twitch](#twitch) | Live streams and recent VODs on the Wall | Server; browser for the player | `IGDB_CLIENT_ID`, `IGDB_CLIENT_SECRET` | No |
+| [Steam](#steam) | Public profile, recent games and playtime on the Wall | API on connect, profile sync worker for refreshes | `STEAM_WEB_API_KEY` | No |
+| [Twitch](#twitch) | Live streams and recent VODs on the Wall | API for setup and live status, profile sync worker for refreshes, browser for the player | `IGDB_CLIENT_ID`, `IGDB_CLIENT_SECRET` | No |
 | [SteamGridDB](#steamgriddb) (and Steam's CDN) | Activity icons and fallback banners for Steam games on the Wall | Server (on demand; icons stored and banners cached by us) | `STEAMGRIDDB_API_KEY` | No |
 | [Discord application API](#discord-application-api) | Name and pictures of a game reporting through Discord Rich Presence | Server (on demand, cached) | None | No |
 | [Link previews](#link-previews) | Cards for links pasted in chat | Server | None | Built in |
@@ -35,7 +35,7 @@ The SFU behind every voice channel and DM call.
 - **Rooms follow the server:** a connection that leaves a call is removed from its room, and every 15 s the server removes any identity it does not have in that call, since a token cannot be recalled. Each deployment sharing a LiveKit project therefore needs its own `LIVEKIT_ROOM_NAME`.
 - **Joining:** a voice channel's `call-join` returns `livekitUrl` and a token. A DM call rings first (`dm-call-start`), and tokens are minted only after `dm-call-accept`.
 - **Media:** the camera simulcasts up to the capture's resolution (ideal 1080p30, at most 3 Mbps); screen share is one layer at the chosen preset (1080p60 at 5 Mbps by default, up to 1440p60 at 6 Mbps). Shared window or screen audio is published only where the browser can leave out the call's own sound (Windows 11, macOS 14.2+); elsewhere those shares go without audio. A tab's audio is always published.
-- **Restarts and phones:** media flows between browsers and LiveKit, so a deploy does not cut it; the server restores who is in which call and waits `CALL_RESTORE_GRACE_MS` (90 s) for clients to resume ([AGENTS.md](../AGENTS.md), "Realtime compatibility and deploys"). A connection in a call is held for `CALL_RECONNECT_GRACE_MS` (3 min, instead of `RECONNECT_GRACE_MS`'s 30 s), so an Android phone that froze the page in the background resumes the same call.
+- **Restarts and phones.** LiveKit continues carrying media through a backend restart. A connection in a call is held for `CALL_RECONNECT_GRACE_MS` (3 min, compared with `RECONNECT_GRACE_MS` at 30 s), so an Android phone that froze the page in the background can resume the same call. [How clients resume after a restart](DEVELOPMENT.md#how-clients-resume)
 - **Configuration:** `LIVEKIT_URL`, `LIVEKIT_API_KEY`, `LIVEKIT_API_SECRET`, and optionally `LIVEKIT_SERVER_URL`, `LIVEKIT_ROOM_NAME`, `LIVEKIT_TOKEN_TTL_SECONDS`, `CALL_RECONNECT_GRACE_MS`, `CALL_RESTORE_GRACE_MS`. `LIVEKIT_URL` is what browsers use and what the Content-Security-Policy allows (any `*.livekit.cloud` host for LiveKit Cloud). `LIVEKIT_SERVER_URL` (default `LIVEKIT_URL`) is where the server calls LiveKit's API when it reaches it by another address, such as an internal Docker service (`http://livekit:7880`).
 - **When missing:** the server boots and logs `LiveKit is not configured`; calls, camera and screen sharing fail.
 
@@ -95,9 +95,9 @@ The "GitHub profile" and "Contributions" Wall widgets (`server/src/integrations/
 
 ### How connection syncing works
 
-MyAnimeList, GitHub, Steam and Twitch snapshots are refreshed by one background worker (`server/src/modules/connections/syncWorker.ts`); viewing a profile only reads stored snapshots (except Twitch's live status, below).
+The [profile sync worker](DEPLOY.md#profile-sync-worker) refreshes MyAnimeList, GitHub, Steam and Twitch snapshots in a separate process. Viewing a profile reads the snapshots from PostgreSQL. Twitch's live status is checked by the API on its own cache schedule.
 
-- Due connections are claimed with a lease every minute, so instances never sync the same one twice. Each refreshes every 24 hours; MyAnimeList requests are spaced 1.1 seconds apart.
+- The worker checks for due connections on startup and waits five seconds between batches. It claims each connection with a lease and refreshes it every 24 hours. MyAnimeList requests are spaced 1.1 seconds apart.
 - A failed sync keeps the last good snapshot. `not_found`, `private` and `invalid_response` wait for the next day; `rate_limited` and `unavailable` retry with backoff, honouring `Retry-After` and `X-RateLimit-Reset`.
 - Requests time out after 10 seconds, refuse redirects and cap bodies at 2 MB (`server/src/integrations/connectionHttp.ts`).
 
@@ -229,7 +229,7 @@ Serves the third-party pictures above, and the loop behind a Steam mini profile,
 
 1. **Decide who makes the call.** Prefer the server for anything with a secret or a rate limit. Call from the browser only when the provider's terms require it (as with KLIPY), and then serve the key through an authenticated endpoint, never the bundle.
 2. **Put it in the right place.** Adapters in `server/src/integrations/<name>/`, domain logic in `server/src/modules/<domain>/`, frontend-only integrations in their feature folder.
-3. **Make the credential optional.** Read it in `server/src/config/env.ts`, document it in `.env.example`, and degrade quietly when it is empty. Variables that only work together, like the VAPID trio, fail fast when partly set.
+3. **Make the credential optional.** Read it in `server/src/config/env.ts`, document it in `.env.optional.example`, and degrade quietly when it is empty. Variables that only work together, like the VAPID trio, fail fast when partly set.
 4. **Never trust the destination.** If any part of the URL comes from a user or a response, use `net/safeRequest.ts`, allowlist image hosts, and cap time and size.
 5. **Respect rate limits.** Background work reuses the connection-sync worker and its Postgres-coordinated limits, never a call per profile view.
 6. **Preserve good data.** A failed or malformed response never replaces a valid snapshot.

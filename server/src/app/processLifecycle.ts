@@ -1,13 +1,13 @@
 import type { Logger } from '../lib/logger.js';
 
-/** How long a shutdown may take before the process leaves anyway (a hung close, a socket that never drains). */
+/** How long a server shutdown may take before the process leaves anyway. */
 const SHUTDOWN_DEADLINE_MS = 3000;
 
 export interface ShutdownSteps {
-  /** Synchronous part: stop timers, tell clients a restart is coming, drop the socket transports. */
+  /** Stop scheduling work and signal any clients that need to reconnect. */
   stop(): void;
-  /** Stop accepting HTTP and wait for in-flight requests. */
-  closeHttp(): Promise<void>;
+  /** Close resources and wait for in-flight work. */
+  close(): Promise<void>;
 }
 
 /** The slice of `process` this module touches, so tests can drive it with an EventEmitter. */
@@ -18,7 +18,7 @@ export interface ProcessLike {
 }
 
 export interface ProcessLifecycle {
-  /** Called once the server is listening; before that a fatal error or a signal just exits. */
+  /** Register the shutdown steps once the process starts accepting work. */
   ready(steps: ShutdownSteps): void;
 }
 
@@ -49,11 +49,11 @@ export function installProcessLifecycle(proc: ProcessLike, log: Pick<Logger, 'in
     try {
       steps.stop();
     } catch (err) {
-      // state may be what is broken; closing HTTP and exiting still have to happen
+      // Broken state must not prevent resource cleanup or exit.
       log.error('shutdown step failed', err);
     }
-    steps.closeHttp().then(exit, (err: unknown) => {
-      log.error('failed to close the HTTP server', err);
+    steps.close().then(exit, (err: unknown) => {
+      log.error('failed to close process resources', err);
       exitCode = Math.max(exitCode, 1);
       exit();
     });
