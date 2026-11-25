@@ -160,12 +160,6 @@ export const conversations = pgTable('conversations', {
   // true: the channel follows its category's permission overwrites instead
   // of its own (Discord's "synced with category")
   permissionsSynced: boolean('permissions_synced').notNull().default(true),
-  // 'playground' on the voice channels that were playgrounds (the built-in block
-  // game, since removed); nothing reads it any more. Kept, with
-  // playgroundChatId, until the game chat link moves to the server and both go.
-  voiceMode: varchar('voice_mode', { length: 12 }).notNull().default('standard'),
-  // The text channel a former playground linked as its game chat; see voiceMode.
-  playgroundChatId: text('playground_chat_id').references((): AnyPgColumn => conversations.id, { onDelete: 'set null' }),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 }, (t) => [
@@ -174,8 +168,6 @@ export const conversations = pgTable('conversations', {
   index('conversations_type_idx').on(t.type),
   check('conversations_type_check', sql`${t.type} IN ('direct','text','voice')`),
   check('conversations_server_channel_check', sql`(${t.type} = 'direct') = (${t.serverId} IS NULL)`),
-  check('conversations_voice_mode_check', sql`${t.voiceMode} IN ('standard','playground') AND (${t.voiceMode} = 'standard' OR ${t.type} = 'voice')`),
-  check('conversations_playground_chat_check', sql`${t.playgroundChatId} IS NULL OR ${t.voiceMode} = 'playground'`),
 ]);
 
 /** The two members of a DM. Server channels have no rows here: who belongs
@@ -1113,19 +1105,4 @@ export const userPreferences = pgTable('user_preferences', {
   userId: text('user_id').primaryKey().references(() => users.id, { onDelete: 'cascade' }),
   data: jsonb('data').$type<Record<string, unknown>>().notNull().default({}),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
-});
-
-/** Skins saved before the block game's service kept them, not yet handed over to it. Nothing reads or
- * writes here any more; kept for the game to take once it plugs in again, then dropped. */
-export const playgroundSkins = pgTable('playground_skins', {
-  userId: text('user_id').primaryKey().references(() => users.id, { onDelete: 'cascade' }),
-  png: text('png').notNull(),
-  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
-});
-
-/** Accounts deleted here that games still have to forget (modules/games/accountDeletions.ts); they
- * wait here until games can be told. No foreign key: the account is gone. */
-export const playgroundForgottenAccounts = pgTable('playground_forgotten_accounts', {
-  userId: text('user_id').primaryKey(),
-  queuedAt: timestamp('queued_at', { withTimezone: true }).notNull().defaultNow(),
 });
