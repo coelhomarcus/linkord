@@ -1,12 +1,12 @@
 # Local development
 
-Run the frontend and backend on your machine, with the services they need (PostgreSQL, LiveKit and a mail sink) from [`docker-compose.yml`](../docker-compose.yml). The same file can also run the app itself in a container: see [the whole stack in Docker](#the-whole-stack-in-docker).
+Run the frontend and backend on your machine. PostgreSQL is required, and LiveKit and the mail sink are useful when testing calls or email.
 
 ## Prerequisites
 
 - Bun 1.4.5 for the server, web app and browser tests
 - Node.js 22 and npm for desktop development and packaging
-- Docker with the Compose plugin
+- Docker for running local dependencies in containers. The browser tests also need the Compose plugin.
 
 ## Set up the repository
 
@@ -18,7 +18,7 @@ bun install --frozen-lockfile --cwd web
 cp .env.example .env
 ```
 
-In `.env`, point the app at the services from `docker-compose.yml`, and set `REGISTRATION_CODE` to a code you will use to sign up:
+Set `REGISTRATION_CODE` in `.env` to the code you will use to sign up. The commands below use the following local service settings.
 
 ```dotenv
 DATABASE_URL=postgres://linkord:linkord@localhost:5432/linkord
@@ -35,18 +35,17 @@ The `LIVEKIT_*` values are only needed for calls ([Voice and video locally](#voi
 
 ## Start the services
 
+Start PostgreSQL once. The data is stored in the `linkord-dev_postgres_data` volume. If you already use PostgreSQL locally, point `DATABASE_URL` at your own Linkord database instead.
+
 ```bash
-docker compose up -d
-docker compose ps   # wait until they are healthy
+docker run -d --name linkord-dev-postgres --restart unless-stopped \
+  -e POSTGRES_USER=linkord -e POSTGRES_PASSWORD=linkord -e POSTGRES_DB=linkord \
+  -p 127.0.0.1:5432:5432 -v linkord-dev_postgres_data:/var/lib/postgresql/data \
+  postgres:17-alpine
+docker exec linkord-dev-postgres pg_isready -h 127.0.0.1 -U linkord -d linkord
 ```
 
-Published on `127.0.0.1` only:
-
-- `postgres` (17) on 5432, with a `linkord` database, user and password, kept in the `linkord-dev_postgres_data` volume.
-- `livekit` on 7880 (signalling), 7881/tcp and 7882/udp (media).
-- `mailsink` on 8025, which prints the emails the app would send ([Emailed codes locally](#emailed-codes-locally)).
-
-Compose also reads `.env`, which is how LiveKit gets the same `LIVEKIT_API_KEY` and `LIVEKIT_API_SECRET` the app signs tokens with (unset, `devkey` and `secret`).
+Repeat the readiness check until it accepts connections. If you previously used the bundled development stack, stop its database container before starting this one. The default development volume is reused with its existing credentials.
 
 ## Apply migrations and run the app
 
@@ -57,17 +56,31 @@ bun run dev
 
 Vite serves the web app at [http://localhost:5173](http://localhost:5173) and Fastify the API at [http://localhost:3000](http://localhost:3000).
 
-When you are done, `docker compose down` stops the services and keeps the database; `-v` would delete it.
+Stop any local dependency with `docker stop <container-name>` and resume it with `docker start <container-name>`. PostgreSQL data stays in its named volume.
 
 ## Voice and video locally
 
-The `livekit` service is enough (LiveKit Cloud works too). With the `LIVEKIT_*` values above, browsers on this machine connect to `ws://localhost:7880` and receive media from `127.0.0.1` (`LIVEKIT_NODE_IP`). A call needs two accounts in separate browser sessions (a normal and a private window, or [Sample data](#sample-data)).
+Start the LiveKit development server with the `devkey` and `secret` values above:
 
-LiveKit warns that `secret` is too short and starts anyway. To silence it, put a secret of 32 characters or more (`openssl rand -hex 32`) in `.env`, run `docker compose up -d` again and restart `bun run dev`.
+```bash
+docker run -d --name linkord-dev-livekit --restart unless-stopped \
+  -p 127.0.0.1:7880:7880 -p 127.0.0.1:7881:7881 -p 127.0.0.1:7882:7882/udp \
+  livekit/livekit-server:v1.13.11 --dev --bind 0.0.0.0 --node-ip 127.0.0.1
+```
+
+Browsers on this machine connect to `ws://localhost:7880` and receive media on ports 7881 and 7882. A call needs two accounts in separate browser sessions (a normal and a private window, or [Sample data](#sample-data)). You can also point the `LIVEKIT_*` values at a service you already have.
 
 ## Emailed codes locally
 
-Account recovery, email changes and two-step login send codes by email. Send them to the mail sink instead of Resend:
+Start the development mail sink from the repository root.
+
+```bash
+docker run -d --name linkord-dev-mailsink --restart unless-stopped \
+  -p 127.0.0.1:8025:8025 -v "$PWD/docker/mailsink.mjs:/mailsink.mjs:ro" \
+  oven/bun:1.4.5-alpine bun --no-env-file /mailsink.mjs
+```
+
+Use these settings in `.env` for account recovery, email changes and two-step login.
 
 ```dotenv
 RESEND_API_URL=http://localhost:8025
@@ -75,7 +88,7 @@ RESEND_API_KEY=mail-sink
 RESEND_FROM_EMAIL=Linkord <noreply@localhost>
 ```
 
-Restart `bun run dev` and read the codes with `docker compose logs -f mailsink`.
+Restart `bun run dev` and read the codes with `docker logs -f linkord-dev-mailsink`.
 
 ## Sample data
 
@@ -90,38 +103,6 @@ Creates four accounts (`ana`, `bruno`, `carla`, `davi`; the shared password is p
 ```bash
 bun run admin:grant <your-username>
 ```
-
-## The whole stack in Docker
-
-The `full` profile of `docker-compose.yml` adds the app, built from the `Dockerfile`, to the same three services. It needs only Docker.
-
-```bash
-cp .env.full.example .env.full
-```
-
-Fill in the required values:
-
-```dotenv
-REGISTRATION_CODE=<anything; people need it to sign up>
-POSTGRES_PASSWORD=<openssl rand -hex 24>
-LIVEKIT_API_KEY=<openssl rand -hex 8>
-LIVEKIT_API_SECRET=<openssl rand -hex 32>
-```
-
-```bash
-docker compose --env-file .env.full up -d --build
-```
-
-Open [http://localhost:3000](http://localhost:3000) and register with the code.
-
-- **`--env-file .env.full` goes on every command** (`ps`, `logs`, `exec`, `down`). The file sets `COMPOSE_PROFILES=full` (adds `app`) and `COMPOSE_PROJECT_NAME=linkord` (its own database and volumes); without it Compose acts on the development services. It is also the app's environment, so any variable from `.env.example` can go there.
-- **Not at the same time as development:** both use ports 3000, 5432, 7880–7882 and 8025. `docker compose down` one before starting the other.
-- **Data:** the `linkord_postgres_data` and `linkord_uploads` volumes. `down` keeps them, `down -v` deletes them.
-- **Network:** the app reaches LiveKit as `http://livekit:7880` (`LIVEKIT_SERVER_URL`); browsers use `LIVEKIT_URL` (`ws://localhost:7880`). Everything is published on `127.0.0.1` only, and the image trusts `X-Forwarded-For`, so serve other machines only as [DEPLOY.md](DEPLOY.md#the-complete-stack-on-one-server) describes.
-- **Emailed codes:** `docker compose --env-file .env.full logs mailsink`.
-- **Administrator:** `docker compose --env-file .env.full exec app bun --no-env-file server/dist/scripts/adminRole.js grant <username>`.
-- **Updating:** `git pull` and the same `up -d --build`; migrations run at startup.
-- **Backups:** see [DEPLOY.md](DEPLOY.md#backups).
 
 ## Desktop app
 
@@ -205,7 +186,7 @@ The scripts behind `db:*`, `admin:*`, `backup*`, `restore` and `test:integration
 
 ## End-to-end tests
 
-`e2e/` drives the real app in Chrome with several accounts at once, against a production-shaped Docker stack (`e2e/docker/compose.yml`: the app image behind Traefik, a LiveKit dev server, a throwaway in-memory Postgres and a mail sink). It is its own Compose project (`linkord-e2e`), so it never touches the dev database, but it publishes the same LiveKit ports and 8025: run `docker compose down` first.
+`e2e/` drives the real app in Chrome with several accounts at once, against a production-shaped Docker stack (`e2e/docker/compose.yml`: the app image behind Traefik, a LiveKit dev server, a throwaway in-memory Postgres and a mail sink). The standard test stack uses its own disposable database. Stop `linkord-dev-livekit` and `linkord-dev-mailsink` before the standard tests if they are running, since those ports overlap. The split deploy test uses separate ports.
 
 ```bash
 PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1 bun install --frozen-lockfile --cwd e2e   # once; uses the installed Chrome
@@ -214,6 +195,7 @@ bun run test:e2e
 
 - `test:e2e:features`: every feature on the working tree's build.
 - `test:e2e:restart`: what a redeploy of the same build must survive.
+- `bun run --cwd e2e test:split` checks routing, cache headers and a call through a frontend-only deploy.
 - `test:e2e:upgrade`: tabs opened on the production version (`origin/main`, or `E2E_BASE_REF`) while the server is upgraded to the working tree. It adapts to what the base version supports and says so in the report's annotations.
 
 Each run builds `linkord-e2e:head` from the working tree (uncommitted changes included), starts the stack, runs and removes it. `E2E_KEEP_STACK=1` leaves it up at `http://localhost:8080`, `E2E_HEADED=1` shows the browsers, `E2E_RETRIES=0` turns retries off, and `E2E_HEAD_IMAGE=<tag>` tests an image you built yourself. A failure keeps a trace, video and screenshot: `bun run --cwd e2e report` opens the report, `bun --bun playwright show-trace <trace.zip>` (from `e2e/`) replays it.
@@ -398,9 +380,5 @@ Providers' limits and failures are in [INTEGRATIONS.md](INTEGRATIONS.md#myanimel
 
 ## Troubleshooting
 
-- **Development services** (`docker compose up -d`):
-  - If one is not healthy, `docker compose ps` says which and `docker compose logs <service>` why.
-  - Port 5432, 7880–7882 or 8025 already in use: stop the other PostgreSQL, the full stack (`docker compose --env-file .env.full down`) or the end-to-end stack.
-- **The whole stack in Docker** (add `--env-file .env.full` to each command):
-  - `ps` shows which service is not healthy and `logs <service>` why. The app waits for `postgres`, `livekit` and `mailsink`.
-  - `ps` lists only `postgres`, `livekit` and `mailsink` and nothing answers on 3000: `.env.full` lacks `COMPOSE_PROFILES=full` (copy the `Compose` lines from `.env.full.example`).
+- Use `docker ps -a` to see which containers are running and `docker logs <container-name>` to investigate startup failures.
+- If port 5432, 7880–7882 or 8025 is already in use, check for another local service or a running end-to-end stack.
