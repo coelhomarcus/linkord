@@ -13,4 +13,6 @@ docs
 .env.*
 !.env.example
 backups
-/docker
+/docker/*
+!/docker/web
+/docker/web/traefik*.yml

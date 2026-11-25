@@ -1,5 +1,5 @@
 import { defineConfig } from '@playwright/test';
-import { BASE_URL } from './stack/stack';
+import { BASE_URL, SPLIT } from './stack/stack';
 
 // One shared Docker stack per run, so tests run one at a time: a spec that
 // restarts or redeploys the app would pull it from under any other.
@@ -28,7 +28,7 @@ export default defineConfig({
       args: ['--use-fake-device-for-media-stream', '--use-fake-ui-for-media-stream', '--autoplay-policy=no-user-gesture-required'],
     },
   },
-  projects: [
+  projects: SPLIT ? [{ name: 'split', testDir: './specs/split' }] : [
     { name: 'features', testDir: './specs/features' },
     { name: 'restart', testDir: './specs/restart' },
     { name: 'upgrade', testDir: './specs/upgrade', timeout: 900_000 },

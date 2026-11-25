@@ -2,7 +2,7 @@ import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import { logger } from '../../lib/logger.js';
 import * as floodControl from '../../realtime/floodControl.js';
 import { clientIpOf } from '../../http/clientInfo.js';
-import { CSP_REPORT_PATH } from '../../http/securityHeaders.js';
+import { CSP_REPORT_PATH } from '../../http/pageSecurityPolicy.js';
 
 // Content-Security-Policy violations the browser reports, written into the
 // server's log so a policy that blocks something real shows up. Anyone can

@@ -11,7 +11,7 @@ on:
       project:
         description: Playwright project to run
         type: choice
-        options: [all, features, restart, upgrade]
+        options: [all, features, restart, upgrade, split]
         default: features
 
 concurrency:
@@ -29,7 +29,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        project: ${{ fromJSON((github.event_name == 'workflow_dispatch' && inputs.project != 'all') && format('["{0}"]', inputs.project) || '["features","restart","upgrade"]') }}
+        project: ${{ fromJSON((github.event_name == 'workflow_dispatch' && inputs.project != 'all') && format('["{0}"]', inputs.project) || '["features","restart","upgrade","split"]') }}
     steps:
       - uses: actions/checkout@v7
         with:

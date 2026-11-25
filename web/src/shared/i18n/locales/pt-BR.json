@@ -29,6 +29,7 @@
     "tryAgain": "Tentar de novo",
     "settings": "Ajustes",
     "administration": "Administração",
+    "administrationUnavailable": "Não foi possível carregar a administração.",
     "loading": "Carregando…",
     "dismissNotice": "Dispensar aviso",
     "deletionCancelled": "Exclusão da conta cancelada. Que bom ter você de volta!",

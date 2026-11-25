@@ -4,7 +4,7 @@ How to run Linkord in production, what the container expects from the host, and 
 
 ## What gets deployed
 
-One Docker image, built by the [`Dockerfile`](../Dockerfile), holds everything: the web app (`web/dist`), the API, the realtime server (Socket.IO on the `/ws` path) and the backup scripts with the PostgreSQL client tools. A single Bun 1.4.5 process serves all of it on port **3000**, so the reverse proxy needs one route to one port, websockets included.
+The [`Dockerfile`](../Dockerfile) has three targets. The default `monolith` image serves the web app, API, uploads and Socket.IO from Bun on port **3000**. Docker Compose and standalone installs use this image. On [Dokploy](#dokploy), the `backend` target serves the API, uploads and Socket.IO on **3000**, and the `frontend` target serves the static site on **8080**. Both Bun images include the backup scripts and PostgreSQL client tools.
 
 - **Health checks:** both public, both answer only `{ ok: … }`.
   - `GET /healthz` (liveness): `200` while the process serves HTTP. The image's `HEALTHCHECK`, Dokploy and the end-to-end stack use it.
@@ -90,17 +90,27 @@ The port stays on `127.0.0.1` for the same reason as above: the image trusts `X-
 
 ## Dokploy
 
-Create an **application** built from the repository's `Dockerfile` (not a Compose service: `docker-compose.yml` is for development and the single-server stack). Then:
+Use two **Applications** in the same project and environment, both with the GitHub repository root as the build context, branch `main` and Dockerfile `./Dockerfile`.
 
-1. **Environment:** paste the variables above. `TRUST_PROXY` is already set by the image.
-2. **Database:** a PostgreSQL service in Dokploy works; use the internal host name Dokploy shows for it in `DATABASE_URL`.
-3. **Domain:** point it at container port `3000` with HTTPS. Websockets need nothing extra.
-4. **Mounts:** two bind mounts, a host folder on `/app/uploads` and another on `/app/backups`. Without the second one, backups are written inside the container and disappear on the next deploy. Before the first deploy, create both folders on the host, as root, for uid 1000 (the paths are examples):
+| Application | Docker Build Stage | Port | Watch Paths |
+| --- | --- | --- | --- |
+| Existing Linkord app | `backend` | `3000` | `server/**`, `package.json`, `bun.lock`, `bunfig.toml`, `Dockerfile`, `.dockerignore` |
+| `linkord-web` | `frontend` | `8080` | `web/**`, `docker/web/generate-headers.ts`, `docker/web/nginx.conf`, `server/src/http/pageSecurityPolicy.ts`, `server/src/modules/link-preview/playerHosts.ts`, `Dockerfile`, `.dockerignore` |
+
+Keep one replica of the backend. Its environment holds the database and integration settings above. Keep the existing bind mounts for `/app/uploads` and `/app/backups`. For a new installation, create the source folders on the host as root for uid 1000:
 
 ```bash
 mkdir -p /srv/linkord/uploads /srv/linkord/backups
 chown -R 1000:1000 /srv/linkord/uploads /srv/linkord/backups
 ```
+
+Set the web Application's **Build-time Arguments** to `APP_URL` (the public HTTPS origin), `LIVEKIT_URL` (the public signalling URL), `KLIPY_ENABLED` (`1` when the backend has a KLIPY key), `MEDIA_PROXY` (default `1`) and `CSP_REPORT_ONLY` (default `0`). Update the arguments and rebuild the frontend when these settings change. The web container needs no runtime environment, port mapping or data volume.
+
+Install the [Traefik configuration](../docker/web/traefik.dokploy.yml) in the web Application's advanced Traefik settings. Replace `__FRONTEND_APP_NAME__` with its Dokploy service name. For another installation, also substitute the host, backend service name and TLS configuration. The priority-200 backend router matches `/api`, `/ws`, `/uploads` and their subpaths, plus `/healthz` and `/readyz`. The priority-100 router serves the web on the same host. Traefik retains the original path and `Host`. The checked-in TLS configuration uses the existing `websecure` entry point and certificate setup for this host.
+
+**First split deploy.** Run `bun run --cwd e2e test:split` with Docker and Chrome. Before merging to `main`, pause Auto Deploy on the existing Application and record its deployed commit, build settings and Traefik configuration. Bring up the frontend and add its routing above the existing monolith route. Check HTTPS, a direct link, a signed-in session, `/readyz`, uploads and the socket. Then redeploy the existing Application with the `backend` target. After it is healthy, retire its old catch-all router, verify both route priorities and enable Auto Deploy with the listed Watch Paths.
+
+**Rollback.** Before the backend changes, restoring the previous Traefik configuration puts the monolith back in front immediately. After the switch, restore the old backend route and redeploy the saved commit as the default monolith image on the existing Application. Wait for readiness before removing the split routes. For a frontend-only rollback, point the web Application at a temporary branch at the last working frontend commit, deploy that Application, then restore its `main` source and Watch Paths. The backend remains connected during a frontend-only deploy or rollback.
 
 **Restart policy.** The app relies on being restarted when it exits: an uncaught exception or an unhandled promise rejection is logged as `fatal uncaughtException, shutting down` (or `unhandledRejection`), the server shuts down the same way as for a deploy (calls are restored by the next process) and exits with code 1. The compose file and the `docker run` above set `restart: unless-stopped`. On Dokploy, the Swarm service's default restart policy (`condition: any`) already restarts it; if you changed it under the application's Swarm settings, keep the condition at `any` or `on-failure`. To check:
 
@@ -148,7 +158,7 @@ Every folder listed must belong to UID/GID 1000. When one does not, the server l
 
 ## Updating
 
-A deploy replaces the container while people are connected, and is meant to be safe:
+On Dokploy, frontend releases replace only the static service. Existing sockets and calls keep their backend connection. Changes touching API or realtime contracts need to work across versions while the two builds deploy independently. A backend release replaces the Bun container while people are connected:
 
 - **Calls continue.** Audio and video flow between the browsers and LiveKit, and the server keeps who is in which call in PostgreSQL, so after the restart it waits `CALL_RESTORE_GRACE_MS` (90 s by default) for everyone to reconnect to the same call.
 - **Messages and uploads wait.** A message sent while the server is down is sent again once it is back, and an upload retries for up to 60 seconds of outage.
@@ -158,9 +168,9 @@ What keeps this working, and the rules for changing it, is in [`AGENTS.md`](../A
 
 ## Security headers
 
-The server sets its own security headers, so the proxy needs to add none (and must not add a second `Content-Security-Policy`, which browsers would enforce on top):
+Fastify sets the backend headers. In the split deploy the frontend image generates its own headers from the same policy code and its own build files. Traefik should forward those headers as sent:
 
-- `Content-Security-Policy`, built at startup from `APP_URL`, `LIVEKIT_URL`, `KLIPY_API_KEY`, `MEDIA_PROXY` and the frontend build. A wrong `LIVEKIT_URL` blocks calls in the browser even when the server reaches LiveKit. How it is built and how to allow a new host: [DEVELOPMENT.md](DEVELOPMENT.md#content-security-policy).
+- `Content-Security-Policy`, generated from the public origin, LiveKit URL, integration flags and the frontend build. A wrong `LIVEKIT_URL` blocks calls in the browser even when the server reaches LiveKit. How it is built and how to allow a new host: [DEVELOPMENT.md](DEVELOPMENT.md#content-security-policy).
 - `X-Frame-Options: DENY` and `frame-ancestors 'none'`: no other site can frame Linkord.
 - `Strict-Transport-Security` (one year, without `includeSubDomains`) on HTTPS requests.
 

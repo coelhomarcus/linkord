@@ -8,8 +8,9 @@ import Fastify, { type FastifyInstance } from 'fastify';
 import fastifyStatic from '@fastify/static';
 import {
   buildContentSecurityPolicy, inlineScriptHashes, inlineStyleHashes, livekitSources, readBuildScriptHashes,
-  readBuildStyleHashes, securityHeaders, themeBootstrapStyleHashes, type PolicyInput,
-} from '../../src/http/securityHeaders.js';
+  readBuildStyleHashes, themeBootstrapStyleHashes, type PolicyInput,
+} from '../../src/http/pageSecurityPolicy.js';
+import { securityHeaders } from '../../src/http/securityHeaders.js';
 import { PLAYER_HOSTS } from '../../src/modules/link-preview/playerHosts.js';
 
 const base: PolicyInput = { appUrl: 'https://chat.example.com', livekitUrl: '', klipyEnabled: false, mediaProxyEnabled: true, scriptHashes: [], styleHashes: [] };

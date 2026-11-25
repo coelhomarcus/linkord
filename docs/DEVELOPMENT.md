@@ -326,10 +326,10 @@ Restarting `bun run dev` or deploying should leave a call running. To see it, jo
 
 ## Content-Security-Policy
 
-The server builds the policy in `server/src/http/securityHeaders.ts`; what operators see is in [DEPLOY.md](DEPLOY.md#security-headers). The Vite dev server does not send it, so to see it run the production build (`bun run build`, then `bun run start` on port 3000) or the end-to-end suite.
+The page policy lives in `server/src/http/pageSecurityPolicy.ts`. Fastify uses it at startup when serving the monolith. In the split deploy, `docker/web/generate-headers.ts` uses it when building the Nginx image. To see the policy, run the production build (`bun run build`, then `bun run start` on port 3000) or the end-to-end suite. The Vite dev server serves without this policy.
 
-- **Scripts** only from our origin. The inline scripts in `web/index.html` and `web/public/offline.html` are allowed by SHA-256 hashes computed at boot, so editing them needs nothing else. Inline event handlers cannot be hashed (use `addEventListener`), and `eval`, `new Function` and WebAssembly stay blocked. A library that injects a third-party script (YouTube's iframe API, for one) is not allowed: embed the provider's player as an iframe.
-- **Styles:** stylesheets from our origin, and `<style>` elements only when their text matches a hash computed at boot (the offline page, the theme bootstrap, and the crop dialog's sheet in `csp-style-sources.json`). Style attributes stay allowed, since React, Motion and Base UI set them while rendering.
+- **Scripts** only from our origin. The SHA-256 hashes are computed from the built versions of `web/index.html` and `web/public/offline.html`. Inline event handlers cannot be hashed (use `addEventListener`), and `eval`, `new Function` and WebAssembly stay blocked. Embed a provider's player as an iframe to avoid loading its third-party script.
+- **Styles:** stylesheets from our origin, and `<style>` elements only when their text matches a hash from the build (the offline page, the theme bootstrap, and the crop dialog's sheet in `csp-style-sources.json`). Style attributes stay allowed, since React, Motion and Base UI set them while rendering.
 - **Images** from our origin and `https://*.klipy.com`; every other third-party picture goes through the [media proxy](INTEGRATIONS.md#media-proxy), unless `MEDIA_PROXY=0`. **Media** from any `https:` host. **Connections** to our origin, `LIVEKIT_URL` (any `*.livekit.cloud` host for LiveKit Cloud), and KLIPY's API when it is configured.
 - **Frames** only from the link-preview player hosts (`PLAYER_HOSTS` in `server/src/modules/link-preview/playerHosts.ts`), which the client mirrors in `web/src/features/media/linkPlayer.ts`: a new player host goes into both.
 
