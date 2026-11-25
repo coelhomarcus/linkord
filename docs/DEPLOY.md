@@ -174,7 +174,7 @@ On Dokploy, frontend releases replace only the static service. Existing sockets 
 - **Messages and uploads wait.** A message sent while the server is down is sent again once it is back, and an upload retries for up to 60 seconds of outage.
 - **Old tabs** keep running the previous build until they reload. If the new version changed the realtime protocol in a way old tabs cannot handle, they are shown a "reload the page" screen and leave any call they were in. That only happens when a release says so.
 
-What keeps this working, and the rules for changing it, is in [`AGENTS.md`](../AGENTS.md) ("Realtime compatibility and deploys").
+See [Restarting the server during a call](DEVELOPMENT.md#restarting-the-server-during-a-call) for how clients recover and how to verify it.
 
 ## Security headers
 

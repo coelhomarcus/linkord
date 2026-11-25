@@ -138,7 +138,7 @@ The server keeps the newest 20 activities per account (`activity_history`, for t
 bun run check
 ```
 
-Runs the server test typecheck, the web lint, the dependency audit, the server and web tests and the production build. None of the tests needs PostgreSQL (`.env.test` supplies a placeholder `DATABASE_URL`).
+Runs the server test typecheck, the web lint, the dependency audit, the server and web tests and the production build. None of these tests needs PostgreSQL (`.env.test` supplies a placeholder `DATABASE_URL`). For desktop changes, also run `npm run typecheck --prefix desktop` and `npm test --prefix desktop`. See [End-to-end tests](#end-to-end-tests) for browser verification.
 
 - **CI** (`.github/workflows/ci.yml`) runs the same on every push to `main` and `develop` and on pull requests, unless only Markdown changed, as four jobs: server, web, desktop, and one for the audit, `bun run check:dead-code` and the e2e typecheck.
 - **End-to-end** (`.github/workflows/e2e.yml`) runs the `features`, `restart` and `upgrade` projects in parallel on pull requests into `main`, and on demand from the Actions tab. A failed job uploads the Playwright report and traces.
@@ -303,7 +303,23 @@ Failed logins, wrong reset codes, code requests, username checks, wrong invite c
 
 ## Restarting the server during a call
 
-Restarting `bun run dev` or deploying should leave a call running. To see it, join a voice channel with two accounts, restart `bun run dev`, and check that both stay connected without touching either tab. The rules that keep this working are in [AGENTS.md](../AGENTS.md) ("Realtime compatibility and deploys"), and the `restart` end-to-end specs check them.
+To verify recovery, join a voice channel with two accounts, restart `bun run dev`, and check that both stay connected without reloading either tab. Reloading a tab ends that tab's LiveKit connection. The [`restart` end-to-end specs](#end-to-end-tests) cover calls, chat and uploads through a backend restart. The [`upgrade` specs](#end-to-end-tests) keep an older tab open through the deploy.
+
+### How clients resume
+
+LiveKit carries the media independently of the Bun API. The API records participant call membership in PostgreSQL (`call_presence`) and ringing or active DM calls in `dm_calls_active`. On boot it restores participants without sockets, retaining the saved participant ID and resume token so the browser can reclaim the same LiveKit identity. Restored participants wait up to `CALL_RESTORE_GRACE_MS` for their original tab, even if another tab for the same account joins first. Persistence is injected into the call modules, and ordered writes log failures without interrupting a live call. [Server startup](../server/src/app/bootstrap.ts) · [Participant state](../server/src/modules/presence/participants.ts) · [DM call state](../server/src/modules/calls/dmCalls.ts)
+
+Restored connections count toward the one-call-per-account limit. A join from another tab or device receives `call-elsewhere` if the account already holds a call. If the user confirms the move, the new connection sends `replace: true` and the previous one receives `call-replaced`. [Call replacement](../server/src/modules/presence/participants.ts)
+
+On shutdown the API sends `server-restart` and closes the transports. Removing participants would also delete the rows the next process needs. Closing individual sockets can deliver an explicit server disconnect through the proxy that older clients cannot retry automatically. Current clients retry an explicit server disconnect after the restart notice. That condition prevents two tabs with the same identity from repeatedly disconnecting each other. [Socket reconnection](../web/src/state/hooks/useSocketConnection.ts)
+
+After `welcome`, the client reports media state such as microphone, camera and sharing again. If LiveKit is still connected but the API has lost the call, the client tries to rejoin a voice channel or leaves the stale DM call. A DM answer clicked while offline is sent after `welcome` if the same call is still ringing. Other one-shot socket actions need their own retry when they must survive disconnects. [Call lifecycle](../web/src/features/calls/useCallLifecycle.ts) · [DM call answers](../web/src/features/calls/useDmCall.ts)
+
+### How chat and uploads resume
+
+The chat outbox resends pending messages after `welcome` with the original `clientMessageId`. On a duplicate, the server returns the original message. Upload sessions survive on disk. During an upload retry, a proxy response such as a 404 or 502 without the app's error envelope counts as an outage. See the [deploy guide](DEPLOY.md#updating) for the retry window. [Chat outbox](../web/src/features/chat/useMessageOutbox.ts) · [Chunked uploads](../web/src/shared/lib/chunkedUpload.ts)
+
+See [AGENTS.md](../AGENTS.md#realtime-compatibility-and-deploys) for the rules to follow when changing these paths.
 
 ## Content-Security-Policy
 
