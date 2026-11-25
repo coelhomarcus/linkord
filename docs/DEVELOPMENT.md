@@ -236,7 +236,7 @@ Playwright runs on Bun and uses the installed Google Chrome. Its CLI scripts use
 | `features/presence` | Status and custom status reaching other devices and friends, invisible, status kept across a reload. |
 | `restart/voice` | A voice call survives a redeploy, and someone joining afterwards hears the others. |
 | `restart/dm-call` | An answered DM call and a ringing one survive a redeploy. |
-| `restart/chat` | Messages sent during a redeploy are stored and shown exactly once. |
+| `restart/chat` | Messages sent during a redeploy are stored and shown exactly once. Separate steps report failures in PostgreSQL persistence and in each participant's view. |
 | `restart/voice-message` | A voice message sent while the server is down arrives once. |
 | `restart/upload` | A throttled 40 MB upload survives a 10 s and a 30 s outage, byte for byte. |
 | `restart/activity` | Activity reported after a redeploy does not overlap the previous session. |
