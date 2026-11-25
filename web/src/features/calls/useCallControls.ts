@@ -1,9 +1,8 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useRoom, useRoomSelector, useRoomState } from '@/state/RoomContext';
+import { useRoom, useRoomState } from '@/state/RoomContext';
 import type { MicProblem } from '@/state/roomReducer';
 import { hasPermission, PERMISSIONS } from '@/features/servers/permissionBits';
-import { screenPresenterId } from '@/features/playground/screenPresenter';
 import { useOwnMic } from './micState';
 import { useCallPublishRights } from './publishRights';
 
@@ -19,8 +18,7 @@ const MIC_PROBLEM_NOTICE_KEY = {
   unavailable: 'micProblem.unavailableNotice',
 } as const;
 
-/** What the call's controls show and do, for every place that draws them: the
- * control bar under a call, and a playground's game menu. */
+/** What the call's controls show and do, for every place that draws them. */
 export function useCallControls() {
   const { t } = useTranslation('calls');
   const {
@@ -47,14 +45,6 @@ export function useCallControls() {
   const [dismissedMicProblem, setDismissedMicProblem] = useState<MicProblem>(null);
   if (!micProblem && dismissedMicProblem) setDismissedMicProblem(null);
   const { canSpeak, canStream } = useCallPublishRights();
-  // a playground has one big screen: while someone else is on it, nobody else starts
-  const playground = callChannel?.voiceMode === 'playground';
-  const screenTaken = useRoomSelector((room) => {
-    if (!playground || !activeCallConversationId) return false;
-    const presenter = screenPresenterId(room, activeCallConversationId);
-    return presenter !== null && presenter !== room.state.me.id;
-  });
-  const canShare = canStream && !screenTaken;
 
   return {
     mic: {
@@ -81,9 +71,9 @@ export function useCallControls() {
     },
     share: {
       on: sharing,
-      locked: !canShare && !sharing,
-      label: !canStream ? t('controls.noStreamPermission') : sharing ? t('controls.shareStop') : screenTaken ? t('controls.screenTaken') : t('controls.shareStart'),
-      toggle: () => { if (canShare || sharing) void (sharing ? stopSharing() : startSharing()); },
+      locked: !canStream && !sharing,
+      label: !canStream ? t('controls.noStreamPermission') : sharing ? t('controls.shareStop') : t('controls.shareStart'),
+      toggle: () => { if (canStream || sharing) void (sharing ? stopSharing() : startSharing()); },
     },
     fullscreen: {
       on: isCallFullscreen,

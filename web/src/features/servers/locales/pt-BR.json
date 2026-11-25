@@ -78,13 +78,11 @@
     "type": "Tipo de canal",
     "types": {
       "text": "Texto",
-      "voice": "Voz",
-      "playground": "Playground"
+      "voice": "Voz"
     },
     "typeHint": {
       "text": "Envie mensagens, imagens, GIFs, emoji, opiniões e piadas",
-      "voice": "Converse com voz, vídeo e compartilhamento de tela",
-      "playground": "Um mundo 3D: cada um é um personagem, a voz depende da distância e uma tela grande para assistir juntos"
+      "voice": "Converse com voz, vídeo e compartilhamento de tela"
     },
     "name": "Nome do canal",
     "namePlaceholder": "novo-canal",
@@ -216,10 +214,7 @@
     "topic": "Tópico do canal",
     "topicPlaceholder": "Diga a todos como usar este canal",
     "synced": "Este canal segue as permissões da categoria. Mudar algo aqui deixa de segui-las.",
-    "sync": "Sincronizar com a categoria",
-    "gameChat": "Chat do jogo",
-    "gameChatNone": "Nenhum",
-    "gameChatHint": "As mensagens deste canal de texto aparecem dentro do jogo (T abre o chat), e o que os jogadores escrevem no jogo é enviado a ele."
+    "sync": "Sincronizar com a categoria"
   },
   "deleteChannel": {
     "title": "Excluir #{{name}}",

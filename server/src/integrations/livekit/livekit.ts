@@ -34,17 +34,13 @@ export function isLiveKitConfigured(): boolean {
  * evictFromCall). */
 /** What a participant may send into a call. A voice channel derives it from
  * SPEAK and STREAM (modules/calls/callPermissions.ts); a DM call allows both.
- * `data` is LiveKit's data channel, open only in a playground, where each
- * client sends its avatar's position straight to the others through the SFU
- * (a dozen small lossy packets a second that the app server never needs to
- * see). Everywhere else it stays off, so nothing but media reaches a peer. */
+ * LiveKit's data channel stays off everywhere, so nothing but media reaches a peer. */
 export interface PublishRights {
   microphone: boolean;
   video: boolean;
-  data: boolean;
 }
 
-const DM_PUBLISH_RIGHTS: PublishRights = { microphone: true, video: true, data: false };
+const DM_PUBLISH_RIGHTS: PublishRights = { microphone: true, video: true };
 
 function publishSources(rights: PublishRights): TrackSource[] {
   return [
@@ -73,7 +69,7 @@ export function createToken(p: Participant, roomName: string, rights: PublishRig
     roomJoin: true,
     ...publishGrant(rights),
     canSubscribe: true,
-    canPublishData: rights.data,
+    canPublishData: false,
   });
   return at.toJwt();
 }
@@ -106,7 +102,7 @@ export async function updatePublishRights(
   await api.updateParticipant(roomName, identity, undefined, {
     ...publishGrant(rights),
     canSubscribe: true,
-    canPublishData: rights.data,
+    canPublishData: false,
     canUpdateMetadata: false,
   });
 }

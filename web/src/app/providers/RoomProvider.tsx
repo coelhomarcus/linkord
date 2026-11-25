@@ -38,7 +38,6 @@ import { useOwnStatus } from '@/features/status/useOwnStatus';
 import { useActivitySettings } from '@/features/activity/useActivitySettings';
 import { useActivityReporter } from '@/features/activity/useActivityReporter';
 import { syncServerClock } from '@/features/activity/serverClock';
-import { getActivePlaygroundSession } from '@/features/playground/playgroundSession';
 import { useIdleReporter } from '@/features/status/useIdleReporter';
 import { useNotificationSettings } from '@/features/notifications/useNotificationSettings';
 import { badgeCounts, policyAlerts } from '@/features/notifications/notificationSettings';
@@ -176,7 +175,6 @@ export function RoomProvider({ children }: { children: ReactNode }) {
   const saved = useSavedMessages(sendWs);
   const headerSearch = useHeaderSearch(sendWs);
   const [maxAttachmentBytes, setMaxAttachmentBytes] = useState(DEFAULT_MAX_ATTACHMENT_BYTES);
-  const [playgroundEnabled, setPlaygroundEnabled] = useState(true);
 
   const { startSharing, stopSharing, changeSource, pauseSharePreview, resumeSharePreview } = useScreenShare(livekitRoom, dispatch);
   const { startCamera, stopCamera } = useCamera(livekitRoom, dispatch);
@@ -311,7 +309,6 @@ export function RoomProvider({ children }: { children: ReactNode }) {
         if (m.preferences !== undefined) void syncAccountPreferences(m.userId, m.preferences);
         onActivityWelcome();
         setMaxAttachmentBytes(m.maxAttachmentBytes ?? DEFAULT_MAX_ATTACHMENT_BYTES);
-        setPlaygroundEnabled(m.playgroundEnabled ?? true);
         // the first welcome opens nothing: the URL says what to show (the
         // route sync opens it). A reconnect reloads what was open.
         if (hasWelcomedRef.current) {
@@ -376,9 +373,6 @@ export function RoomProvider({ children }: { children: ReactNode }) {
         break;
       case 'soundboard-play':
         soundboardEvents.onSoundboardPlay(m);
-        break;
-      case 'playground-token':
-        getActivePlaygroundSession()?.receiveToken(m);
         break;
       case 'server-sounds-changed':
         soundboardEvents.onServerSoundsChanged(m);
@@ -685,7 +679,6 @@ export function RoomProvider({ children }: { children: ReactNode }) {
         setMessageSearchSort: headerSearch.setSearchSort, setMessageSearchPage: headerSearch.setSearchPage,
         closeMessageSearch: headerSearch.closeSearch,
         maxAttachmentBytes,
-        playgroundEnabled,
       }}
     >
       {children}

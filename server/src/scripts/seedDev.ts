@@ -22,7 +22,6 @@ const conversationIds = {
   announcements: '20000000-0000-4000-8000-000000000003',
   secondDirect: '20000000-0000-4000-8000-000000000004',
   voice: '20000000-0000-4000-8000-000000000005',
-  playground: '20000000-0000-4000-8000-000000000006',
 } as const;
 const serverIds = {
   server: '40000000-0000-4000-8000-000000000001',
@@ -94,7 +93,6 @@ async function seed(): Promise<void> {
       { id: conversationIds.general, type: 'text', title: textCategory!.channels[0]!.name, serverId: serverIds.server, categoryId: serverIds.textCategory, position: 0, createdBy: accountIds.ana, createdAt: joinedAt },
       { id: conversationIds.announcements, type: 'text', title: 'avisos', topic: 'Só o bot do projeto escreve aqui.', serverId: serverIds.server, categoryId: serverIds.textCategory, position: 1, permissionsSynced: false, createdBy: accountIds.ana, createdAt: joinedAt },
       { id: conversationIds.voice, type: 'voice', title: voiceCategory!.channels[0]!.name, serverId: serverIds.server, categoryId: serverIds.voiceCategory, position: 0, createdBy: accountIds.ana, createdAt: joinedAt },
-      { id: conversationIds.playground, type: 'voice', voiceMode: 'playground', playgroundChatId: conversationIds.general, title: 'Playground', serverId: serverIds.server, categoryId: serverIds.voiceCategory, position: 1, createdBy: accountIds.ana, createdAt: joinedAt },
     ]).onConflictDoNothing();
     await tx.insert(channelPermissionOverwrites).values({
       id: serverIds.readOnly, serverId: serverIds.server, channelId: conversationIds.announcements, roleId: serverIds.everyone, deny: PERMISSIONS.SEND_MESSAGES,

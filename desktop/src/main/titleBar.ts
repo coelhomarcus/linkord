@@ -46,7 +46,7 @@ export function windowState(window: { isMaximized(): boolean; isFullScreen(): bo
 /**
  * The page's request to put the window in fullscreen or take it out, or null when it is not one.
  * The page asks for the window's fullscreen rather than an element's because Chromium leaves an
- * element's on Esc, and the page needs Esc for itself (the playground's screens and pause menu).
+ * element's on Esc, and the page needs Esc for itself (closing a menu or dialog on the stage).
  */
 export function parseFullScreenRequest(value: unknown): boolean | null {
   return typeof value === 'boolean' ? value : null;

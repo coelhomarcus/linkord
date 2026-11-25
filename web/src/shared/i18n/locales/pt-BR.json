@@ -104,7 +104,6 @@
     "networkUpload": "Falha de rede ao enviar o arquivo.",
     "uploadTimeout": "O servidor demorou para responder ao upload. Tente novamente.",
     "codes": {
-      "playground_exists": "Este servidor já tem um playground.",
       "invalid_credentials": "Usuário ou senha inválidos.",
       "account_unavailable": "Esta conta está indisponível. Fale com a administração.",
       "account_deleted": "Esta conta foi excluída a pedido do titular.",

@@ -37,8 +37,6 @@ jobs:
         run: npm run typecheck:server:tests
       - name: Test
         run: npm run test:server
-      - name: Playground service
-        run: npm run build:playground && npm run typecheck:playground:tests && npm run test:playground
 
   web:
     name: Web

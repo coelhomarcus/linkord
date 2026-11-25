@@ -28,9 +28,9 @@ export type ReactionEmoji = string;
 
 /** Wire protocol version this build speaks; the server refuses older ones
  * (client_outdated). Keep in sync with server/src/realtime/protocolVersion.ts
- * — version 37 adds `welcome.playgroundEnabled`: whether the server runs the playground service, without
- * which a playground channel arrives as a plain voice channel and none can be created. */
-export const PROTOCOL_VERSION = 37;
+ * — version 38 removes playgrounds: no `playground-token`, no `voiceMode` or `playgroundChatId` on
+ * channels. */
+export const PROTOCOL_VERSION = 38;
 
 export interface LiveNotice {
   kind: 'friend_request' | 'friend_accepted' | 'server_invitation';
@@ -322,8 +322,6 @@ export interface Conversation {
   position?: number;
   /** effective permission bits in a channel (features/servers/permissionBits.ts); absent on a DM */
   permissions?: number;
-  /** a voice channel's call layout; absent means 'standard' */
-  voiceMode?: VoiceMode;
 }
 
 /** A DM as the server sends it — no title or server. */
@@ -342,17 +340,10 @@ export interface RoleSummary {
 
 export interface CategorySummary { id: string; name: string; position: number }
 
-/** How a voice channel's call is shown: tiles, or the 3D playground (features/playground). */
-export type VoiceMode = 'standard' | 'playground';
-
 export interface ChannelSummary {
   id: string;
   serverId: string;
   type: 'text' | 'voice';
-  /** absent from a server older than protocol 31, which has no playgrounds */
-  voiceMode?: VoiceMode;
-  /** a playground's game chat: the text channel its players talk in from the game (protocol 32) */
-  playgroundChatId?: string | null;
   name: string;
   topic: string;
   categoryId: string | null;
@@ -459,8 +450,6 @@ export type ClientMessage =
   // answers a `stream-preview-capture`: a JPEG data URL of the shared screen
   | { t: 'stream-preview-frame'; image: string }
   | { t: 'soundboard-play'; conversationId: string; serverId?: string; soundId: string }
-  /** asks for a pass into the playground service, for the playground call you are in (protocol 35) */
-  | { t: 'playground-token'; conversationId: string }
   | { t: 'leave' }
   | { t: 'ping' };
 
@@ -493,8 +482,6 @@ export type ServerMessage =
       mentionsByConversation?: Record<string, number>;
       // the largest file this server takes; absent from servers before protocol 8
       maxAttachmentBytes?: number;
-      // whether a new channel may be a playground; absent from servers before protocol 37, which all could
-      playgroundEnabled?: boolean;
       livekitUrl: string;
       // the call this connection is in server-side; absent from servers that predate it
       callConversationId?: string | null;
@@ -544,9 +531,6 @@ export type ServerMessage =
   | { t: 'participant-updated'; participant: Participant }
   | { t: 'participant-left'; id: string }
   | { t: 'soundboard-play'; conversationId: string; serverId: string; soundId: string; participantId: string; emoji: string; volume: number; fileToken?: string }
-  /** a pass into the playground service and where it is (`url`, an origin), or `token: null` when the
-   * service is off or that call is not your playground */
-  | { t: 'playground-token'; conversationId: string; url?: string; token: string | null }
   // payload-free like social-changed: the list itself comes from GET /api/servers/:id/sounds
   | { t: 'server-sounds-changed'; serverId: string }
   | { t: 'server-emojis-changed'; serverId: string }

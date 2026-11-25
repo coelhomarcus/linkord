@@ -199,11 +199,6 @@
   100% { transform: translateY(-55vh) scale(1); opacity: 0; }
 }
 
-/* the playground's chat lines over the world: the last second of the few they stay */
-@keyframes playground-chat-fade {
-  to { opacity: 0; }
-}
-
 @keyframes typing-dot {
   0%, 60%, 100% { transform: translateY(0); opacity: 0.4; }
   30% { transform: translateY(-2px); opacity: 1; }
