@@ -2,14 +2,14 @@ import { execFileSync } from 'node:child_process';
 import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import { REPO_DIR } from './stack';
+import { BASE_URL, NEXT_WEB_IMAGE, REPO_DIR, SPLIT, SPLIT_LIVEKIT_URL, WEB_IMAGE } from './stack';
 
 /** E2E_HEAD_IMAGE runs the suite against an image built elsewhere (to check
  * that a spec catches a regression, build the broken tree and point here). */
 export const HEAD_IMAGE = process.env.E2E_HEAD_IMAGE || 'linkord-e2e:head';
 
-function run(cmd: string, args: string[], cwd = REPO_DIR): string {
-  return execFileSync(cmd, args, { cwd, encoding: 'utf8', stdio: ['ignore', 'pipe', 'inherit'], maxBuffer: 64 * 1024 * 1024 });
+function run(cmd: string, args: string[], cwd = REPO_DIR, input?: string): string {
+  return execFileSync(cmd, args, { cwd, input, encoding: 'utf8', stdio: [input ? 'pipe' : 'ignore', 'pipe', 'inherit'], maxBuffer: 64 * 1024 * 1024 });
 }
 
 function imageExists(tag: string): boolean {
@@ -19,6 +19,20 @@ function imageExists(tag: string): boolean {
 /** The working tree as it is now, uncommitted changes included. Rebuilt every
  * run; Docker's layer cache keeps an unchanged tree fast. */
 export function buildHeadImage(): string {
+  if (SPLIT) {
+    const backend = process.env.E2E_HEAD_IMAGE || 'linkord-e2e:split-backend';
+    if (!process.env.E2E_HEAD_IMAGE) run('docker', ['build', '-q', '--target', 'backend', '-t', backend, '.']);
+    run('docker', ['build', '-q', '--target', 'frontend', '--build-arg', `APP_URL=${BASE_URL}`,
+      '--build-arg', `LIVEKIT_URL=${SPLIT_LIVEKIT_URL}`, '-t', WEB_IMAGE, '.']);
+    // A visible build change without altering any inline code covered by CSP.
+    run('docker', ['build', '-q', '-t', NEXT_WEB_IMAGE, '-'], REPO_DIR, [
+      `FROM ${WEB_IMAGE}`,
+      'USER root',
+      'RUN echo "<!-- split frontend replacement -->" >> /usr/share/nginx/linkord/index.html',
+      'USER 101',
+    ].join('\n'));
+    return backend;
+  }
   if (process.env.E2E_HEAD_IMAGE) return HEAD_IMAGE;
   run('docker', ['build', '-q', '-t', HEAD_IMAGE, '.']);
   return HEAD_IMAGE;

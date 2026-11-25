@@ -1,0 +1,21 @@
+http:
+  routers:
+    linkord-backend:
+      rule: 'PathRegexp(`^/(api|ws|uploads)(/|$)`) || Path(`/healthz`) || Path(`/readyz`)'
+      priority: 200
+      entryPoints: [web]
+      service: app
+    linkord-frontend:
+      rule: 'PathPrefix(`/`)'
+      priority: 100
+      entryPoints: [web]
+      service: frontend
+  services:
+    app:
+      loadBalancer:
+        servers:
+          - url: http://app:3000
+    frontend:
+      loadBalancer:
+        servers:
+          - url: http://frontend:8080

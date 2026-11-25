@@ -1,0 +1,31 @@
+services:
+  # Separate published ports let the existing monolith suite run on the same host.
+  livekit:
+    environment:
+      LIVEKIT_CONFIG: |
+        rtc:
+          tcp_port: 17881
+          udp_port: 17882
+    ports: !override
+      - "17880:7880"
+      - "17881:17881"
+      - "17882:17882/udp"
+
+  mailsink:
+    ports: !override
+      - "18025:8025"
+
+  app:
+    environment:
+      APP_URL: http://localhost:18080
+      LIVEKIT_URL: ws://lk.localhost:17880
+      LIVEKIT_SERVER_URL: ws://livekit:7880
+
+  frontend:
+    image: ${WEB_IMAGE:?set WEB_IMAGE}
+
+  proxy:
+    ports: !override
+      - "18080:8080"
+    volumes:
+      - ./split-traefik.yml:/etc/traefik/dynamic.yml:ro

@@ -6,11 +6,19 @@ import type { ChatAttachment as ChatAttachmentData } from '@/shared/types/protoc
 import { FileAttachmentCard } from './FileAttachmentCard';
 import { downloadFile } from '@/shared/lib/download';
 import { highlightCode } from '@/shared/lib/highlightCode';
+import { logger } from '@/shared/lib/logger';
 import { useNearViewport } from './useNearViewport';
 
 // react-markdown + remark-gfm + rehype-sanitize only load when a markdown
 // file is actually previewed, not as part of the main bundle.
-const MarkdownPreview = lazy(() => import('./MarkdownPreview'));
+const MarkdownPreview = lazy(() => import('./MarkdownPreview').catch((error: unknown) => {
+  logger.error('markdown preview failed to load', error);
+  return { default: PlainTextPreview };
+}));
+
+function PlainTextPreview({ content }: { content: string }) {
+  return <pre className="whitespace-pre-wrap wrap-break-word font-mono text-caption text-text-secondary">{content}</pre>;
+}
 
 interface PreviewResponse {
   previewable: boolean;
@@ -96,7 +104,7 @@ export function TextPreviewCard({ attachment, maxWidth }: { attachment: ChatAtta
         <div className="border-t border-border">
           <div className="relative select-text overflow-hidden px-3 py-2" style={{ maxHeight: expanded ? undefined : COLLAPSED_MAX_HEIGHT }}>
             {markdown ? (
-              <Suspense fallback={<pre className="whitespace-pre-wrap wrap-break-word font-mono text-caption text-text-secondary">{preview.content}</pre>}>
+              <Suspense fallback={<PlainTextPreview content={preview.content} />}>
                 <MarkdownPreview content={preview.content} className={MARKDOWN_STYLES} />
               </Suspense>
             ) : highlightedHtml ? (
@@ -105,7 +113,7 @@ export function TextPreviewCard({ attachment, maxWidth }: { attachment: ChatAtta
                 dangerouslySetInnerHTML={{ __html: highlightedHtml }}
               />
             ) : (
-              <pre className="whitespace-pre-wrap wrap-break-word font-mono text-caption text-text-secondary">{preview.content}</pre>
+              <PlainTextPreview content={preview.content} />
             )}
             {!expanded && (
               <div className="pointer-events-none absolute inset-x-0 bottom-0 h-8 bg-linear-to-t from-bg-tertiary to-transparent" />

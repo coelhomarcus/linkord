@@ -3,11 +3,21 @@ import { Route, Routes } from 'react-router';
 
 import { SettingsPage } from '@/features/settings/SettingsPage';
 import { useTranslation } from 'react-i18next';
+import { ErrorBanner } from '@/shared/ErrorBanner';
 import { AppModal } from '@/shared/ui/app-modal';
+import { logger } from '@/shared/lib/logger';
 import type { ModalKind } from '@/shared/lib/routes';
 
 // the administrative area is its own chunk: ordinary users never download it
-const AdminArea = lazy(() => import('@/features/admin/AdminArea'));
+const AdminArea = lazy(() => import('@/features/admin/AdminArea').catch((error: unknown) => {
+  logger.error('administration failed to load', error);
+  return { default: AdminUnavailable };
+}));
+
+function AdminUnavailable() {
+  const { t } = useTranslation('common');
+  return <ErrorBanner className="m-6">{t('layout.administrationUnavailable')}</ErrorBanner>;
+}
 
 /** Settings and administration, opened over the app. Each is the same routed
  * page it always was, now inside a modal: the URL still says which one (and

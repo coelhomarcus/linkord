@@ -29,6 +29,7 @@
     "tryAgain": "Try again",
     "settings": "Settings",
     "administration": "Administration",
+    "administrationUnavailable": "Could not load administration.",
     "loading": "Loading…",
     "dismissNotice": "Dismiss notice",
     "deletionCancelled": "Account deletion cancelled. Welcome back!",

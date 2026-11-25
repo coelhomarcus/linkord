@@ -7,6 +7,7 @@
     "test:features": "bun --bun playwright test --project=features",
     "test:restart": "bun --bun playwright test --project=restart",
     "test:upgrade": "bun --bun playwright test --project=upgrade",
+    "test:split": "E2E_SPLIT=1 bun --bun playwright test --project=split",
     "report": "bun --bun playwright show-report report",
     "typecheck": "bun --bun tsc --noEmit"
   },

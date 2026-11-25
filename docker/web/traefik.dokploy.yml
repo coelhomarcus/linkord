@@ -1,0 +1,29 @@
+http:
+  routers:
+    linkord-split-redirect:
+      rule: 'Host(`linkord.marcuscoelho.com`)'
+      priority: 100
+      entryPoints: [web]
+      middlewares: [redirect-to-https@file]
+      service: linkord-web
+    linkord-split-backend:
+      rule: 'Host(`linkord.marcuscoelho.com`) && (PathRegexp(`^/(api|ws|uploads)(/|$)`) || Path(`/healthz`) || Path(`/readyz`))'
+      priority: 200
+      entryPoints: [websecure]
+      service: linkord-backend
+    linkord-split-frontend:
+      rule: 'Host(`linkord.marcuscoelho.com`)'
+      priority: 100
+      entryPoints: [websecure]
+      service: linkord-web
+  services:
+    linkord-backend:
+      loadBalancer:
+        passHostHeader: true
+        servers:
+          - url: http://linkord-app-e2o2lh:3000
+    linkord-web:
+      loadBalancer:
+        passHostHeader: true
+        servers:
+          - url: http://__FRONTEND_APP_NAME__:8080

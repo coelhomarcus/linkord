@@ -87,7 +87,7 @@ export function createApp(): FastifyInstance {
   // static/JSON responses, which previously relied on a CDN's own gzip.
   fastify.register(fastifyCompress);
 
-  fastify.addHook('onRequest', securityHeaders(PUBLIC_DIR));
+  fastify.addHook('onRequest', securityHeaders(config.SERVE_WEB ? PUBLIC_DIR : null));
   fastify.addHook('onRequest', originGuard);
   // correlation id: the same value the request lines and errors carry, so a
   // report from the client ("x-request-id: req-7") finds the server side
@@ -132,32 +132,32 @@ export function createApp(): FastifyInstance {
   registerNotificationRoutes(fastify);
   registerAdminRoutes(fastify);
 
-  // static files from the frontend build (web/dist) — wildcard:false so it
-  // doesn't compete with setNotFoundHandler below for the same catch-all.
-  fastify.register(fastifyStatic, {
-    root: PUBLIC_DIR,
-    wildcard: false,
-    index: ['index.html'],
-    setHeaders(reply, filePath) {
-      const isHashedAsset = filePath.startsWith(ASSETS_DIR);
-      const isHtml = path.extname(filePath) === '.html';
-      // the service worker too: a stale copy would keep serving the old one for an hour after a deploy
-      const isServiceWorker = path.basename(filePath) === 'sw.js';
-      reply.header('Cache-Control', isHashedAsset ? 'public, max-age=31536000, immutable' : isHtml || isServiceWorker ? 'no-cache' : 'public, max-age=3600');
-      reply.header('X-Content-Type-Options', 'nosniff');
-      // 'same-origin' made the browser send no Referer to the YouTube
-      // iframe — its player uses that to validate the embed's origin, so
-      // it fell back to a generic "player configuration error". This value
-      // still only reveals the origin (not the full URL) to third parties.
-      reply.header('Referrer-Policy', 'strict-origin-when-cross-origin');
-    },
-  });
+  if (config.SERVE_WEB) {
+    // static files from the frontend build (web/dist) — wildcard:false so it
+    // doesn't compete with setNotFoundHandler below for the same catch-all.
+    fastify.register(fastifyStatic, {
+      root: PUBLIC_DIR,
+      wildcard: false,
+      index: ['index.html'],
+      setHeaders(reply, filePath) {
+        const isHashedAsset = filePath.startsWith(ASSETS_DIR);
+        const isHtml = path.extname(filePath) === '.html';
+        // the service worker too: a stale copy would keep serving the old one for an hour after a deploy
+        const isServiceWorker = path.basename(filePath) === 'sw.js';
+        reply.header('Cache-Control', isHashedAsset ? 'public, max-age=31536000, immutable' : isHtml || isServiceWorker ? 'no-cache' : 'public, max-age=3600');
+        reply.header('X-Content-Type-Options', 'nosniff');
+        // 'same-origin' made the browser send no Referer to the YouTube
+        // iframe — its player uses that to validate the embed's origin, so
+        // it fell back to a generic "player configuration error". This value
+        // still only reveals the origin (not the full URL) to third parties.
+        reply.header('Referrer-Policy', 'strict-origin-when-cross-origin');
+      },
+    });
+  }
 
-  // any unmatched GET (that isn't /api/* or /uploads/*) falls through to
-  // index.html. The app keeps its address at the bare origin, but an old link
-  // or bookmark to one of its pages (/app/friends) must still load it, not 404.
+  // The monolith keeps direct links and bookmarks working through the SPA.
   fastify.setNotFoundHandler((request, reply) => {
-    if (request.method !== 'GET' || request.url.startsWith('/api/') || request.url.startsWith('/uploads/')) {
+    if (!config.SERVE_WEB || request.method !== 'GET' || /^\/(?:api|uploads|ws)(?:[/?]|$)/.test(request.url)) {
       return sendError(reply, 404, 'not_found', 'Rota não encontrada.');
     }
     return reply.sendFile('index.html');
