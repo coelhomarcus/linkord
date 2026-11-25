@@ -6,7 +6,7 @@
 // system's font instead. Run it after bumping emojibase-data or
 // @discordapp/twemoji:
 //
-//   npm run emoji:data
+//   bun run emoji:data
 //
 // Each entry is [emoji, label, group, shortcodes, tags, skins?]:
 // - group is emojibase's (0 smileys, 1 people, 3 nature, 4 food, 5 travel,

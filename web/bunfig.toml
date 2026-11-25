@@ -1,0 +1,2 @@
+# Vite loads environment files in mode order.
+env = false

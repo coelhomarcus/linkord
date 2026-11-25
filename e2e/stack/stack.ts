@@ -63,9 +63,8 @@ export async function up(image: string): Promise<void> {
  * and a new one starts from `image`. Same image = a plain redeploy. */
 export async function deploy(image: string = currentImage()): Promise<void> {
   writeFileSync(STATE_FILE, JSON.stringify({ image } satisfies StackState));
-  // The upgrade specs start from a version that ran as root, whose files the `node` user of this one cannot
-  // write. This is the `chown` docs/DEPLOY.md asks for before an upgrade.
-  compose(['run', '--rm', '--no-deps', '--user', 'root', '--entrypoint', 'chown', 'app', '-R', 'node:node', '/app/uploads'], image);
+  // Uploads from old root-owned images need the UID/GID used by both the Node and Bun images.
+  compose(['run', '--rm', '--no-deps', '--user', 'root', '--entrypoint', 'chown', 'app', '-R', '1000:1000', '/app/uploads'], image);
   compose(['up', '-d', '--force-recreate', '--no-deps', 'app'], image);
   await waitHealthy();
 }

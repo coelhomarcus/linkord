@@ -4,12 +4,12 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
-    "build": "tsc -b && vite build",
-    "lint": "oxlint",
-    "preview": "vite preview",
-    "test": "vitest run",
-    "test:coverage": "vitest run --coverage"
+    "dev": "bun --bun vite",
+    "build": "bun --bun tsc -b && bun --bun vite build",
+    "lint": "bun --bun oxlint",
+    "preview": "bun --bun vite preview",
+    "test": "bun --bun vitest run",
+    "test:coverage": "bun --bun vitest run --coverage"
   },
   "dependencies": {
     "@base-ui/react": "^1.7.0",

@@ -3,7 +3,7 @@ import path from 'node:path';
 const PORT = Number(process.env.PORT || 3000);
 const HOST_BIND = process.env.HOST_BIND || '0.0.0.0';
 // Live socket connections the whole instance takes (ghosts in the reconnect grace window do not
-// count). A memory guard for one Node process, not a room size: the per-account and per-address
+// count). A memory guard for one server process, not a room size: the per-account and per-address
 // caps below are what keep a few people from filling it.
 const MAX_PARTICIPANTS = Number(process.env.MAX_PARTICIPANTS || 500);
 const TRUST_PROXY = process.env.TRUST_PROXY === '1';
@@ -57,7 +57,7 @@ const MAX_WEBHOOKS_PER_CHANNEL = Number(process.env.MAX_WEBHOOKS_PER_CHANNEL || 
 const MAX_INVITEES_PER_REQUEST = 20;
 
 // anchored to the repo root (not cwd) — inside Docker this is /app/uploads
-// (matches the external bind mount); in `npm run dev` it's <repo>/uploads.
+// (matches the external bind mount); in `bun run dev` it's <repo>/uploads.
 const UPLOAD_DIR = process.env.UPLOAD_DIR || path.join(import.meta.dirname, '..', '..', '..', 'uploads');
 // the largest single file anyone may upload; uploads are chunked, so this is bounded by disk, not by proxies
 const MAX_ATTACHMENT_BYTES = Number(process.env.MAX_ATTACHMENT_BYTES || 512 * 1024 * 1024);
@@ -125,7 +125,7 @@ if (!Number.isFinite(SESSION_IDLE_DAYS) || SESSION_IDLE_DAYS < 0) throw new Erro
 // doesn't become open registration.
 const REGISTRATION_CODE = process.env.REGISTRATION_CODE || '';
 // (ADMIN_USERNAME is gone: registering never grants admin anymore. Admins are
-// provisioned explicitly — `npm run admin:grant -- <username>` or the /admin area.)
+// provisioned explicitly — `bun run admin:grant <username>` or the /admin area.)
 // 'auto' reads X-Forwarded-Proto (set by Caddy/nginx); '1'/'0' force it —
 // otherwise the Secure cookie attribute breaks local http:// dev.
 const COOKIE_SECURE = process.env.COOKIE_SECURE || 'auto';

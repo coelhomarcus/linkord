@@ -65,7 +65,7 @@ Push notifications through each browser vendor's push service, with VAPID (`serv
 - **Content:** written in the recipient's language. A DM is titled by the sender, a channel message `#channel · Server`; mentions, friend requests, acceptances and server invitations name who and where. Message text is cut to 120 characters, and left out when the account turns off "Show message text". New messages in one conversation replace the previous notification. The sender's avatar is fetched by the service worker from our origin (external avatars are never used).
 - **Delivery:** by the notification outbox worker, `aes128gcm`, a TTL of one hour for chat messages and 24 hours for the rest, honouring `Retry-After`. Nothing is pushed to an account in do not disturb, or for a server, channel or DM whose notification level or mute rules it out; the notification stays in the in-app list either way.
 - **Open tabs:** friend requests, acceptances and invitations also go to the account's open connections as a `notice` socket message, which the desktop app and browsers without push show as a page notification.
-- **Configuration:** `PUSH_VAPID_PUBLIC_KEY`, `PUSH_VAPID_PRIVATE_KEY`, `PUSH_VAPID_SUBJECT`, all three or none (the server refuses to start otherwise), from `npx web-push generate-vapid-keys`. Production needs an HTTPS `APP_URL`. New keys break every existing subscription.
+- **Configuration:** `PUSH_VAPID_PUBLIC_KEY`, `PUSH_VAPID_PRIVATE_KEY`, `PUSH_VAPID_SUBJECT`, all three or none (the server refuses to start otherwise), from `bunx --bun web-push generate-vapid-keys`. Production needs an HTTPS `APP_URL`. New keys break every existing subscription.
 - **When missing:** push is unavailable and nothing is pushed; open tabs still get `notice`.
 
 ## KLIPY

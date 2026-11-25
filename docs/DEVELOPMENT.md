@@ -4,16 +4,17 @@ Run the frontend and backend on your machine, with the services they need (Postg
 
 ## Prerequisites
 
-- Node.js 22 or newer and npm
+- Bun 1.4.5 for the server, web app and browser tests
+- Node.js 22 and npm for desktop development and packaging
 - Docker with the Compose plugin
 
 ## Set up the repository
 
-The backend/tooling and the web app have separate lockfiles:
+The root package, web app and browser tests each have a Bun lockfile.
 
 ```bash
-npm ci
-npm ci --prefix web
+bun install --frozen-lockfile
+bun install --frozen-lockfile --cwd web
 cp .env.example .env
 ```
 
@@ -27,6 +28,8 @@ LIVEKIT_URL=ws://localhost:7880
 LIVEKIT_API_KEY=devkey
 LIVEKIT_API_SECRET=secret
 ```
+
+The server reads the optional root `.env` with literal values. Shell environment variables take precedence. Unit tests load `.env.test` explicitly.
 
 The `LIVEKIT_*` values are only needed for calls ([Voice and video locally](#voice-and-video-locally)).
 
@@ -48,8 +51,8 @@ Compose also reads `.env`, which is how LiveKit gets the same `LIVEKIT_API_KEY` 
 ## Apply migrations and run the app
 
 ```bash
-npm run db:migrate
-npm run dev
+bun run db:migrate
+bun run dev
 ```
 
 Vite serves the web app at [http://localhost:5173](http://localhost:5173) and Fastify the API at [http://localhost:3000](http://localhost:3000).
@@ -60,7 +63,7 @@ When you are done, `docker compose down` stops the services and keeps the databa
 
 The `livekit` service is enough (LiveKit Cloud works too). With the `LIVEKIT_*` values above, browsers on this machine connect to `ws://localhost:7880` and receive media from `127.0.0.1` (`LIVEKIT_NODE_IP`). A call needs two accounts in separate browser sessions (a normal and a private window, or [Sample data](#sample-data)).
 
-LiveKit warns that `secret` is too short and starts anyway. To silence it, put a secret of 32 characters or more (`openssl rand -hex 32`) in `.env`, run `docker compose up -d` again and restart `npm run dev`.
+LiveKit warns that `secret` is too short and starts anyway. To silence it, put a secret of 32 characters or more (`openssl rand -hex 32`) in `.env`, run `docker compose up -d` again and restart `bun run dev`.
 
 ## Emailed codes locally
 
@@ -72,20 +75,20 @@ RESEND_API_KEY=mail-sink
 RESEND_FROM_EMAIL=Linkord <noreply@localhost>
 ```
 
-Restart `npm run dev` and read the codes with `docker compose logs -f mailsink`.
+Restart `bun run dev` and read the codes with `docker compose logs -f mailsink`.
 
 ## Sample data
 
 ```bash
-npm run db:seed
+bun run db:seed
 ```
 
-Creates four accounts (`ana`, `bruno`, `carla`, `davi`; the shared password is printed at the end and set at the top of `server/src/scripts/seedDev.ts`), friendships and a pending request, two DMs, and a server ("Equipe do projeto") with `#geral`, a read-only `#avisos` fed by a webhook, a voice channel and a hoisted moderators role. It only runs against a database on `localhost`, and running it again leaves existing rows alone. Restart `npm run dev` afterwards: the server caches memberships in memory.
+Creates four accounts (`ana`, `bruno`, `carla`, `davi`; the shared password is printed at the end and set at the top of `server/src/scripts/seedDev.ts`), friendships and a pending request, two DMs, and a server ("Equipe do projeto") with `#geral`, a read-only `#avisos` fed by a webhook, a voice channel and a hoisted moderators role. It only runs against a database on `localhost`, and running it again leaves existing rows alone. Restart `bun run dev` afterwards: the server caches memberships in memory.
 
 ## Create an administrator
 
 ```bash
-npm run admin:grant -- <your-username>
+bun run admin:grant <your-username>
 ```
 
 ## The whole stack in Docker
@@ -116,7 +119,7 @@ Open [http://localhost:3000](http://localhost:3000) and register with the code.
 - **Data:** the `linkord_postgres_data` and `linkord_uploads` volumes. `down` keeps them, `down -v` deletes them.
 - **Network:** the app reaches LiveKit as `http://livekit:7880` (`LIVEKIT_SERVER_URL`); browsers use `LIVEKIT_URL` (`ws://localhost:7880`). Everything is published on `127.0.0.1` only, and the image trusts `X-Forwarded-For`, so serve other machines only as [DEPLOY.md](DEPLOY.md#the-complete-stack-on-one-server) describes.
 - **Emailed codes:** `docker compose --env-file .env.full logs mailsink`.
-- **Administrator:** `docker compose --env-file .env.full exec app node server/dist/scripts/adminRole.js grant <username>`.
+- **Administrator:** `docker compose --env-file .env.full exec app bun --no-env-file server/dist/scripts/adminRole.js grant <username>`.
 - **Updating:** `git pull` and the same `up -d --build`; migrations run at startup.
 - **Backups:** see [DEPLOY.md](DEPLOY.md#backups).
 
@@ -126,8 +129,8 @@ Open [http://localhost:3000](http://localhost:3000) and register with the code.
 
 ```bash
 npm install --prefix desktop   # once; Electron downloads its binary on first run
-npm run dev:desktop            # with `npm run dev` running; opens http://localhost:5173
-LINKORD_URL=https://chat.example.com npm run dev:desktop   # or --url=<address>
+bun run dev:desktop            # with `bun run dev` running; opens http://localhost:5173
+LINKORD_URL=https://chat.example.com bun run dev:desktop   # or --url=<address>
 ```
 
 Plain `http` is accepted only for `localhost`, `127.0.0.1` and `[::1]`. A development run keeps its data in its own folder (`%APPDATA%\Linkord Dev`), so it runs next to an installed Linkord.
@@ -154,15 +157,15 @@ The server keeps the newest 20 activities per account (`activity_history`, for t
 ## Run the checks
 
 ```bash
-npm run check
+bun run check
 ```
 
 Runs the server test typecheck, the web lint, the dependency audit, the server and web tests and the production build. None of the tests needs PostgreSQL (`.env.test` supplies a placeholder `DATABASE_URL`).
 
-- **CI** (`.github/workflows/ci.yml`) runs the same on every push to `main` and `develop` and on pull requests, unless only Markdown changed, as four jobs: server, web, desktop, and one for the audit, `npm run check:dead-code` and the e2e typecheck.
+- **CI** (`.github/workflows/ci.yml`) runs the same on every push to `main` and `develop` and on pull requests, unless only Markdown changed, as four jobs: server, web, desktop, and one for the audit, `bun run check:dead-code` and the e2e typecheck.
 - **End-to-end** (`.github/workflows/e2e.yml`) runs the `features`, `restart` and `upgrade` projects in parallel on pull requests into `main`, and on demand from the Actions tab. A failed job uploads the Playwright report and traces.
 - **Desktop installer** (`.github/workflows/desktop.yml`) runs only by hand; see [DEPLOY.md](DEPLOY.md#building-the-installer).
-- **Audit:** `npm audit --omit=dev --audit-level=high` for the root and `web/`, so keep build-only packages (Tailwind, Vite plugins) in `devDependencies` of `web/`; the image ships only the build output.
+- **Audit:** `bun audit --prod --audit-level=high` for the root and `web/`, so keep build-only packages (Tailwind, Vite plugins) in `devDependencies` of `web/`; the image ships only the build output.
 
 ## Scripts
 
@@ -170,33 +173,33 @@ Every script runs from the repository root.
 
 | Script | What it does |
 | --- | --- |
-| `npm run dev` | API (`:3000`) and web (`:5173`) in watch mode. |
-| `npm run dev:desktop` | The [desktop app](#desktop-app) against `LINKORD_URL` (default `http://localhost:5173`). Needs `npm install --prefix desktop`. |
-| `npm run package:desktop` | The Windows installer, see [DEPLOY.md](DEPLOY.md#building-the-installer). |
-| `npm run build` / `npm start` | Production build of the server and the web app, and the built server. |
-| `npm run check` | Everything that should pass before pushing ([Run the checks](#run-the-checks)). |
-| `npm test` | `test:server` and `test:web`. |
-| `npm run test:server` / `test:web` / `test:desktop` | Unit tests of one side (`node --test`, Vitest, `node --test`). `test:desktop` needs `desktop/` installed and is not part of `npm test`. |
-| `npm run test:server:coverage` | Server unit tests with Node's coverage report. |
-| `npm run typecheck:server:tests` | Typechecks `server/tests/`. |
-| `npm run test:integration` | `server/tests/integration/*.itest.ts` against a throwaway database it creates and drops on your local Postgres. `-- <name>` runs only the files whose name contains it. |
-| `npm run test:e2e` (and `:features`, `:restart`, `:upgrade`) | The browser suite ([End-to-end tests](#end-to-end-tests)). Needs Docker and Chrome. |
-| `npm run check:audit` | The dependency audit, part of `npm run check`. |
-| `npm run check:dead-code` | `knip`: unused files, exports and dependencies across `server/`, `web/`, `e2e/` and `desktop/` (all four installed). Runs in CI, not in `npm run check`. |
-| `npm run db:migrate` | Applies pending migrations (the server also does it at boot unless `MIGRATE_ON_BOOT=0`). |
-| `npm run db:generate` | Generates a migration from `server/src/db/schema.ts`. Rename the file to describe the change. |
-| `npm run db:seed` | [Sample data](#sample-data). |
-| `npm run db:studio` | Drizzle Studio over `DATABASE_URL`. |
-| `npm run db:preflight` | Read-only inventory of legacy data that would block a migration (exit 1 means blocked; `-- --json` for machine output). |
-| `npm run db:repair` | Repairs the legacy relationship rows `db:preflight` reports. |
-| `npm run db:rehearse` | Rehearses the migrations on throwaway local databases. |
-| `npm run backup` / `restore` | Backup and restore, see [DEPLOY.md](DEPLOY.md#backups). |
-| `npm run backup:rehearse` | Backup, restore and a boot on throwaway local databases ([below](#backup-scripts-locally)). |
-| `npm run admin:grant -- <username>` / `admin:revoke` | Gives or takes administrator access. |
-| `npm run emoji:data` | Rebuilds `web/public/emoji-data/<lang>/emojis.json` from the pinned `emojibase-data`, leaving out what the pinned `@discordapp/twemoji` cannot draw. Run it after bumping either. |
-| `npm run icons` | Rebuilds `web/src/shared/ui/icons/fluent.ts` from `@fluentui/svg-icons` for every icon imported from `@/shared/ui/icons`. A new icon needs a line in `FLUENT_ICONS` (`web/scripts/buildIcons.ts`) first; a test fails while the file is stale. |
+| `bun run dev` | API (`:3000`) and web (`:5173`) in watch mode. |
+| `bun run dev:desktop` | The [desktop app](#desktop-app) against `LINKORD_URL` (default `http://localhost:5173`). Needs `npm install --prefix desktop`. |
+| `bun run package:desktop` | The Windows installer, see [DEPLOY.md](DEPLOY.md#building-the-installer). |
+| `bun run build` / `bun run start` | Production build of the server and the web app, and the built server. |
+| `bun run check` | Everything that should pass before pushing ([Run the checks](#run-the-checks)). |
+| `bun run test` | `test:server` and `test:web`. |
+| `bun run test:server` / `test:web` / `test:desktop` | Unit tests of one side (`bun test`, Vitest, `node --test`). `test:desktop` needs `desktop/` installed and is not part of `bun run test`. |
+| `bun run test:server:coverage` | Server unit tests with Bun's coverage report. |
+| `bun run typecheck:server:tests` | Typechecks `server/tests/`. |
+| `bun run test:integration` | `server/tests/integration/*.itest.ts` against a throwaway database it creates and drops on your local Postgres. `bun run test:integration <name>` runs only the files whose name contains it. |
+| `bun run test:e2e` (and `:features`, `:restart`, `:upgrade`) | The browser suite ([End-to-end tests](#end-to-end-tests)). Needs Docker and Chrome. |
+| `bun run check:audit` | The dependency audit, part of `bun run check`. |
+| `bun run check:dead-code` | `knip`: unused files, exports and dependencies across `server/`, `web/`, `e2e/` and `desktop/` (all four installed). Runs in CI, not in `bun run check`. |
+| `bun run db:migrate` | Applies pending migrations (the server also does it at boot unless `MIGRATE_ON_BOOT=0`). |
+| `bun run db:generate` | Generates a migration from `server/src/db/schema.ts`. Rename the file to describe the change. |
+| `bun run db:seed` | [Sample data](#sample-data). |
+| `bun run db:studio` | Drizzle Studio over `DATABASE_URL`. |
+| `bun run db:preflight` | Read-only inventory of legacy data that would block a migration (exit 1 means blocked; `--json` for machine output). |
+| `bun run db:repair` | Repairs the legacy relationship rows `db:preflight` reports. |
+| `bun run db:rehearse` | Rehearses the migrations on throwaway local databases. |
+| `bun run backup` / `restore` | Backup and restore, see [DEPLOY.md](DEPLOY.md#backups). |
+| `bun run backup:rehearse` | Backup, restore and a boot on throwaway local databases ([below](#backup-scripts-locally)). |
+| `bun run admin:grant -- <username>` / `admin:revoke` | Gives or takes administrator access. |
+| `bun run emoji:data` | Rebuilds `web/public/emoji-data/<lang>/emojis.json` from the pinned `emojibase-data`, leaving out what the pinned `@discordapp/twemoji` cannot draw. Run it after bumping either. |
+| `bun run icons` | Rebuilds `web/src/shared/ui/icons/fluent.ts` from `@fluentui/svg-icons` for every icon imported from `@/shared/ui/icons`. A new icon needs a line in `FLUENT_ICONS` (`web/scripts/buildIcons.ts`) first; a test fails while the file is stale. |
 
-`build:server`/`build:web` and `dev:server`/`dev:web` are the parts of `build` and `dev`. The packages have their own scripts, which the root ones call: `web/` (`dev`, `build`, `lint`, `preview`, `test`, `test:coverage`), `desktop/` (`start`, `build`, `typecheck`, `test`, `package`) and `e2e/` (`test`, `test:features`, `test:restart`, `test:upgrade`, `report`, `typecheck`), run with `--prefix <package>`.
+`build:server`/`build:web` and `dev:server`/`dev:web` are the parts of `build` and `dev`. The root calls scripts in `web/` (`dev`, `build`, `lint`, `preview`, `test`, `test:coverage`), `desktop/` (`start`, `build`, `typecheck`, `test`, `package`) and `e2e/` (`test`, `test:features`, `test:restart`, `test:upgrade`, `report`, `typecheck`). Run web and E2E scripts with `bun run --cwd <package> <script>`, and desktop scripts with `npm run <script> --prefix desktop`.
 
 The scripts behind `db:*`, `admin:*`, `backup*`, `restore` and `test:integration` live in `server/src/scripts/`, each with a header comment on how to call it.
 
@@ -205,17 +208,17 @@ The scripts behind `db:*`, `admin:*`, `backup*`, `restore` and `test:integration
 `e2e/` drives the real app in Chrome with several accounts at once, against a production-shaped Docker stack (`e2e/docker/compose.yml`: the app image behind Traefik, a LiveKit dev server, a throwaway in-memory Postgres and a mail sink). It is its own Compose project (`linkord-e2e`), so it never touches the dev database, but it publishes the same LiveKit ports and 8025: run `docker compose down` first.
 
 ```bash
-PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1 npm install --prefix e2e   # once; uses the installed Chrome
-npm run test:e2e
+PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1 bun install --frozen-lockfile --cwd e2e   # once; uses the installed Chrome
+bun run test:e2e
 ```
 
 - `test:e2e:features`: every feature on the working tree's build.
 - `test:e2e:restart`: what a redeploy of the same build must survive.
 - `test:e2e:upgrade`: tabs opened on the production version (`origin/main`, or `E2E_BASE_REF`) while the server is upgraded to the working tree. It adapts to what the base version supports and says so in the report's annotations.
 
-Each run builds `linkord-e2e:head` from the working tree (uncommitted changes included), starts the stack, runs and removes it. `E2E_KEEP_STACK=1` leaves it up at `http://localhost:8080`, `E2E_HEADED=1` shows the browsers, `E2E_RETRIES=0` turns retries off, and `E2E_HEAD_IMAGE=<tag>` tests an image you built yourself. A failure keeps a trace, video and screenshot: `npm run report --prefix e2e` opens the report, `npx playwright show-trace <trace.zip>` (from `e2e/`) replays it.
+Each run builds `linkord-e2e:head` from the working tree (uncommitted changes included), starts the stack, runs and removes it. `E2E_KEEP_STACK=1` leaves it up at `http://localhost:8080`, `E2E_HEADED=1` shows the browsers, `E2E_RETRIES=0` turns retries off, and `E2E_HEAD_IMAGE=<tag>` tests an image you built yourself. A failure keeps a trace, video and screenshot: `bun run --cwd e2e report` opens the report, `bun --bun playwright show-trace <trace.zip>` (from `e2e/`) replays it.
 
-On Node 22.18 or newer, set `NODE_OPTIONS=--no-experimental-strip-types` as CI does: Node's own TypeScript stripping rejects what Playwright compiles.
+Playwright runs on Bun and uses the installed Google Chrome. Its CLI scripts use `bun --bun` to select the runtime.
 
 ### How a spec runs
 
@@ -264,7 +267,7 @@ When you add a user-facing flow, add it to the matching spec (or a new `features
 
 ## Backup scripts locally
 
-`npm run backup` and `npm run restore` (documented in [DEPLOY.md](DEPLOY.md#backups)) need `pg_dump`, `pg_restore` (at least as new as the server) and `tar`. On a Mac without the PostgreSQL client tools, point `PG_DUMP_BIN` and `PG_RESTORE_BIN` at wrappers that run them in the dev database container:
+`bun run backup` and `bun run restore` (documented in [DEPLOY.md](DEPLOY.md#backups)) need `pg_dump`, `pg_restore` (at least as new as the server) and `tar`. On a Mac without the PostgreSQL client tools, point `PG_DUMP_BIN` and `PG_RESTORE_BIN` at wrappers that run them in the dev database container:
 
 ```sh
 #!/bin/sh
@@ -272,7 +275,7 @@ When you add a user-facing flow, add it to the matching spec (or a new `features
 exec docker exec -i -e PGPASSWORD -e PGUSER -e PGDATABASE -e PGHOST -e PGPORT linkord-dev-postgres-1 pg_dump "$@"
 ```
 
-`npm run backup:rehearse` runs the whole path on throwaway `linkord_rehearsal_*` databases of your local Postgres: seeds data and files, takes four backups with `BACKUP_KEEP=2`, restores the last, boots the real server on it and checks a sign-in and byte-for-byte downloads, plus the restore's refusals. Run it after changing the schema or `server/src/scripts/backup/`; `-- --keep` leaves the databases for inspection.
+`bun run backup:rehearse` runs the whole path on throwaway `linkord_rehearsal_*` databases of your local Postgres: seeds data and files, takes four backups with `BACKUP_KEEP=2`, restores the last, boots the real server on it and checks a sign-in and byte-for-byte downloads, plus the restore's refusals. Run it after changing the schema or `server/src/scripts/backup/`; `--keep` leaves the databases for inspection.
 
 ## Server limits and background jobs
 
@@ -319,11 +322,11 @@ Failed logins, wrong reset codes, code requests, username checks, wrong invite c
 
 ## Restarting the server during a call
 
-Restarting `npm run dev` or deploying should leave a call running. To see it, join a voice channel with two accounts, restart `npm run dev`, and check that both stay connected without touching either tab. The rules that keep this working are in [AGENTS.md](../AGENTS.md) ("Realtime compatibility and deploys"), and the `restart` end-to-end specs check them.
+Restarting `bun run dev` or deploying should leave a call running. To see it, join a voice channel with two accounts, restart `bun run dev`, and check that both stay connected without touching either tab. The rules that keep this working are in [AGENTS.md](../AGENTS.md) ("Realtime compatibility and deploys"), and the `restart` end-to-end specs check them.
 
 ## Content-Security-Policy
 
-The server builds the policy in `server/src/http/securityHeaders.ts`; what operators see is in [DEPLOY.md](DEPLOY.md#security-headers). The Vite dev server does not send it, so to see it run the production build (`npm run build`, then `npm start` on port 3000) or the end-to-end suite.
+The server builds the policy in `server/src/http/securityHeaders.ts`; what operators see is in [DEPLOY.md](DEPLOY.md#security-headers). The Vite dev server does not send it, so to see it run the production build (`bun run build`, then `bun run start` on port 3000) or the end-to-end suite.
 
 - **Scripts** only from our origin. The inline scripts in `web/index.html` and `web/public/offline.html` are allowed by SHA-256 hashes computed at boot, so editing them needs nothing else. Inline event handlers cannot be hashed (use `addEventListener`), and `eval`, `new Function` and WebAssembly stay blocked. A library that injects a third-party script (YouTube's iframe API, for one) is not allowed: embed the provider's player as an iframe.
 - **Styles:** stylesheets from our origin, and `<style>` elements only when their text matches a hash computed at boot (the offline page, the theme bootstrap, and the crop dialog's sheet in `csp-style-sources.json`). Style attributes stay allowed, since React, Motion and Base UI set them while rendering.

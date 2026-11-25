@@ -1,7 +1,7 @@
 import { Pool } from 'pg';
 import { classifyInventory, formatFindings, loadInventory } from '../modules/migration/legacyInventory.js';
 
-// `npm run db:preflight [-- --json] [-- --database-url=<url>]`
+// `bun run db:preflight [--json] [--database-url=<url>]`
 // Read-only inventory; exit code 1 means a pending migration is blocked.
 
 const args = process.argv.slice(2);

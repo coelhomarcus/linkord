@@ -1,0 +1,2 @@
+# The Playwright fixtures own the test stack's environment.
+env = false

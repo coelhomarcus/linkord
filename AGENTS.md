@@ -2,7 +2,7 @@
 
 Instructions for agents (and humans) working in this repository. What the project is and how to run it is in [README.md](README.md) and [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md); this file is about **how the code is organized and the conventions to follow when touching it**.
 
-Monorepo: `web/` (React + Vite + Vitest), `server/` (Fastify + Drizzle/Postgres + Socket.IO + LiveKit, `node --test`) and `desktop/` (an Electron window around the web app, `node --test`). All TypeScript/ESM.
+Monorepo: `web/` (React + Vite + Vitest), `server/` (Fastify + Drizzle/Postgres + Socket.IO + LiveKit, `bun test`) and `desktop/` (an Electron window around the web app, `node --test`). All TypeScript/ESM.
 
 ## Branch workflow
 
@@ -51,7 +51,7 @@ A read that more than one surface shows (a profile, its details, its Wall, a rel
 
 - **Render reads nothing else.** A module-level cache, `i18n.language`, `getTimeFormat()`, `localStorage` or the clock read during render is computed once and kept. Take the language from `useLanguage()` and the time format from `useTimeFormat()` and pass them in (`formatTime(ts, language, timeFormat)`); a plain function called during render takes `language` and translates with `i18n.t(key, { lng: language })`. A cache that fills later is read through `useSyncExternalStore` (`useResolvedTwemoji`, `useEmojiData`), never through a counter bumped to force a render.
 - **No new `useMemo`/`useCallback`/`memo` by hand** in compiled code; keep the existing ones only where identity is a contract (what `RoomProvider` hands out). Remove one rather than fight a `preserve-manual-memoization` diagnostic.
-- **What it skips** still works, unmemoized: a Rules of React violation (a ref read during render, a lint suppression), `try`/`finally` (move the `finally` body after the `try`/`catch`), getters in an object literal (build the object in a plain function outside the component). `REACT_COMPILER_LOG=1 npm run build --prefix web` lists every skipped component and why; check it for what you touch on a hot path (the chat view, call tiles).
+- **What it skips** still works, unmemoized: a Rules of React violation (a ref read during render, a lint suppression), `try`/`finally` (move the `finally` body after the `try`/`catch`), getters in an object literal (build the object in a plain function outside the component). `REACT_COMPILER_LOG=1 bun run build:web` lists every skipped component and why; check it for what you touch on a hot path (the chat view, call tiles).
 - `useVirtualizer` (TanStack Virtual) is incompatible: the compiler leaves `MessageTimeline` and the other virtual lists as written, so their manual memoization of rows stays.
 
 ### Touch: long press, selection, sliders
@@ -96,7 +96,7 @@ server/src/
   integrations/<name>/  # adapters for external services (livekit, github, igdb, steam, twitch, ...)
   net/                  # safeRequest.ts, ssrfGuard.ts: every request to a URL a user or response chose
   modules/<domain>/     # one folder per domain (messages, calls, presence, connections, ...)
-  scripts/              # the CLI scripts behind `npm run db:*`, `admin:*`, `backup`, `test:integration`
+  scripts/              # the CLI scripts behind `bun run db:*`, `admin:*`, `backup`, `test:integration`
 server/tests/           # mirrors server/src/ — NO tests inside src/
 ```
 
@@ -137,7 +137,7 @@ i18next + react-i18next, strings bundled. Supported languages live in `web/src/s
 
 ## Realtime compatibility and deploys
 
-A deploy restarts the Node process while people are connected, and browsers keep running the old JS until they reload. Two things make that safe; both are easy to break without noticing.
+A deploy restarts the Bun process while people are connected, and browsers keep running the old JS until they reload. Two things make that safe; both are easy to break without noticing.
 
 **1. The protocol version gate** (`server/src/realtime/protocolVersion.ts`, client side `web/src/shared/types/protocol.ts`).
 
@@ -181,33 +181,33 @@ Docs are part of the change: when code changes what a doc describes, update that
 
 ```bash
 # backend
-npx tsc -p server/tsconfig.json --noEmit      # typecheck the production build
-npm run typecheck:server:tests                 # typecheck server/tests/
-npm run test:server                            # node --test
+bun --bun tsc -p server/tsconfig.json --noEmit      # typecheck the production build
+bun run typecheck:server:tests                 # typecheck server/tests/
+bun run test:server                            # bun test
 
 # frontend
-cd web && npx tsc -p tsconfig.app.json --noEmit
-cd web && npm run lint                         # oxlint
-cd web && npm run test                         # vitest run
+cd web && bun --bun tsc -p tsconfig.app.json --noEmit
+cd web && bun run lint                         # oxlint
+cd web && bun run test                         # vitest run
 
 # desktop
 npm run typecheck --prefix desktop
-npm run test:desktop
+npm test --prefix desktop
 
 # both together
-npm run build                                  # tsc -p server + vite build
-npm test                                       # test:server + test:web
+bun run build                                  # tsc -p server + vite build
+bun run test                                   # test:server + test:web
 ```
 
-A change that touches a real flow (upload, call, conversations, auth) deserves live verification (`npm run dev`, two accounts), not just automated tests.
+A change that touches a real flow (upload, call, conversations, auth) deserves live verification (`bun run dev`, two accounts), not just automated tests.
 
-**Scripts and sample data.** Every `npm run` script is in [`docs/DEVELOPMENT.md`](docs/DEVELOPMENT.md#scripts); look there before writing a one-off. `npm run db:seed` fills a local database with sample accounts, DMs and a server. A new script in `server/src/scripts/` gets a header comment, a `package.json` entry and a row in that table.
+**Scripts and sample data.** Every root script is in [`docs/DEVELOPMENT.md`](docs/DEVELOPMENT.md#scripts); look there before writing a one-off. `bun run db:seed` fills a local database with sample accounts, DMs and a server. A new script in `server/src/scripts/` gets a header comment, a `package.json` entry and a row in that table.
 
 **End-to-end suite (`e2e/`, Playwright),** set up as in [`docs/DEVELOPMENT.md`](docs/DEVELOPMENT.md#end-to-end-tests). Run the matching project when a change touches what it covers, and add a spec when you add a user-facing flow:
 
-- `npm run test:e2e:features`: every feature, one spec per area (`e2e/specs/features/<area>.spec.ts`).
-- `npm run test:e2e:restart`: anything a redeploy must survive (realtime, calls, chat sends, uploads, the shutdown path).
-- `npm run test:e2e:upgrade`: wire or protocol changes, migrations, anything an old tab talks to.
+- `bun run test:e2e:features`: every feature, one spec per area (`e2e/specs/features/<area>.spec.ts`).
+- `bun run test:e2e:restart`: anything a redeploy must survive (realtime, calls, chat sends, uploads, the shutdown path).
+- `bun run test:e2e:upgrade`: wire or protocol changes, migrations, anything an old tab talks to.
 
 Rules for specs: set data up through the app's HTTP routes (`e2e/fixtures/api.ts`), never the database, since the app caches memberships in memory; find elements by role and pt-BR label; never `.click().catch(() => {})` on something that may not exist (it waits for the whole action timeout); a step that sends a socket message right after a restart waits for the tab's `welcome` first (`waitForSocketEvent`).
 

@@ -4,14 +4,16 @@ How to run Linkord in production, what the container expects from the host, and 
 
 ## What gets deployed
 
-One Docker image, built by the [`Dockerfile`](../Dockerfile), holds everything: the web app (`web/dist`), the API, the realtime server (Socket.IO on the `/ws` path) and the backup scripts with the PostgreSQL client tools. A single Node process serves all of it on port **3000**, so the reverse proxy needs one route to one port, websockets included.
+One Docker image, built by the [`Dockerfile`](../Dockerfile), holds everything: the web app (`web/dist`), the API, the realtime server (Socket.IO on the `/ws` path) and the backup scripts with the PostgreSQL client tools. A single Bun 1.4.5 process serves all of it on port **3000**, so the reverse proxy needs one route to one port, websockets included.
 
 - **Health checks:** both public, both answer only `{ ok: … }`.
   - `GET /healthz` (liveness): `200` while the process serves HTTP. The image's `HEALTHCHECK`, Dokploy and the end-to-end stack use it.
   - `GET /readyz` (readiness): `200` when PostgreSQL answers within 1 s and the upload folders are writable, `503` otherwise, cached for 5 s. The log says what failed (`not ready` under the `health` component). Point monitoring at it. The container's health check stays on `/healthz` on purpose: with [one instance](#one-instance-only), restarting the container on a database outage would drop every call and fix nothing.
 - **Behind a proxy:** the image sets `TRUST_PROXY=1`. The client address is the `X-Forwarded-For` entry `TRUSTED_PROXY_HOPS` places from the right (default `1`, one proxy such as Traefik). With a CDN or a second proxy in front, set it to the number of proxies: too low and callers pick their own address and escape the per-IP limits, too high and everyone shares one address. With `COOKIE_SECURE=auto` (the default) the session cookie is `Secure` whenever the proxy says the request was HTTPS.
-- **Migrations** run at startup (`MIGRATE_ON_BOOT=1`, the default) before the server accepts connections; if one fails, the process exits with the reason in the log. Set `MIGRATE_ON_BOOT=0` to run them yourself with `node server/dist/db/migrate.js`.
-- **Not root:** the process runs as `node` (uid 1000). It cannot rewrite its own code and can only write to `/app/uploads` and `/app/backups`, which is why those two folders need the right owner on the host ([Folders and permissions](#folders-and-permissions)).
+- **Migrations** run at startup (`MIGRATE_ON_BOOT=1`, the default) before the server accepts connections; if one fails, the process exits with the reason in the log. Set `MIGRATE_ON_BOOT=0` to run them yourself with `bun --no-env-file server/dist/db/migrate.js`.
+- **Not root:** the process runs as `bun` (UID/GID 1000). It cannot rewrite its own code and can only write to `/app/uploads` and `/app/backups`, which is why those two folders need the right owner on the host ([Folders and permissions](#folders-and-permissions)).
+
+To roll back a runtime upgrade, redeploy the previous image with the same PostgreSQL, upload and backup volumes.
 
 ## Before you start
 
@@ -27,10 +29,10 @@ The variables a production instance needs:
 | `APP_URL` | The public origin, `https://chat.example.com`, no trailing slash. Used in emails, push, the origin check and the Content-Security-Policy. |
 | `REGISTRATION_CODE` | Empty means nobody can sign up. Set a code and share it with the people you invite. |
 | `LIVEKIT_URL`, `LIVEKIT_API_KEY`, `LIVEKIT_API_SECRET` | The URL browsers really use to reach LiveKit (`wss://…`). The CSP only lets the browser connect there. |
-| `PUSH_VAPID_PUBLIC_KEY`, `PUSH_VAPID_PRIVATE_KEY`, `PUSH_VAPID_SUBJECT` | All three or none. Generate them once (`npx web-push generate-vapid-keys`) and keep them: new keys break every existing subscription. |
+| `PUSH_VAPID_PUBLIC_KEY`, `PUSH_VAPID_PRIVATE_KEY`, `PUSH_VAPID_SUBJECT` | All three or none. Generate them once (`bunx --bun web-push generate-vapid-keys`) and keep them: new keys break every existing subscription. |
 | `RESEND_API_KEY`, `RESEND_FROM_EMAIL` | Optional. Without them, password recovery, email changes and two-step login are unavailable, and older accounts that still have no email cannot get past the screen asking them to link one. Once people turn two-step login on, removing them locks those accounts out ([Resend](INTEGRATIONS.md#resend)). |
 
-Optional services and limits are in `.env.example`. Steam Wall connections use `STEAM_WEB_API_KEY`, and Twitch connections share the IGDB app credentials. Covers, connection avatars, link preview pictures and thumbnails are downloaded by the server and served from its own domain, which costs outbound bandwidth and up to 64 MB of memory for the cache (another 64 MB for the background loops of Steam mini profiles); `MEDIA_PROXY=0` sends browsers to those services instead ([media proxy](INTEGRATIONS.md#media-proxy)). After the first start, make yourself an administrator: `node server/dist/scripts/adminRole.js grant <username>` inside the container (`npm run admin:grant -- <username>` from a checkout).
+Optional services and limits are in `.env.example`. Steam Wall connections use `STEAM_WEB_API_KEY`, and Twitch connections share the IGDB app credentials. Covers, connection avatars, link preview pictures and thumbnails are downloaded by the server and served from its own domain, which costs outbound bandwidth and up to 64 MB of memory for the cache (another 64 MB for the background loops of Steam mini profiles); `MEDIA_PROXY=0` sends browsers to those services instead ([media proxy](INTEGRATIONS.md#media-proxy)). After the first start, make yourself an administrator: `bun --no-env-file server/dist/scripts/adminRole.js grant <username>` inside the container (`bun run admin:grant <username>` from a checkout).
 
 ## The complete stack on one server
 
@@ -127,7 +129,7 @@ The app writes to two places and nothing else:
 
 **Data exports** (Settings → Data & privacy) are ZIPs of a person's profile, settings, activity, friends, servers, sent messages and their files, written to `EXPORT_DIR` (default `/app/uploads/exports`), downloadable by that account for 7 days and then deleted. Each is about the size of the person's attachments, at most one request per account per day. Keep `EXPORT_DIR` on a mounted volume, or a deploy drops ready files and their links answer 404. Backups leave exports out.
 
-Both must belong to uid 1000 **all the way down**. Docker creates a missing bind-mounted folder owned by root, and installs from before the image ran as `node` have root-owned files inside. Always use `chown -R`: with only the top folder fixed, profile pictures still save but every attachment and voice message fails (`tmp/` stays root's).
+Both must belong to uid 1000 **all the way down**. Docker creates a missing bind-mounted folder owned by root, and older installs that ran as root have root-owned files inside. Always use `chown -R`: with only the top folder fixed, profile pictures still save but every attachment and voice message fails (`tmp/` stays root's).
 
 To see where the folders live on the host and fix them:
 
@@ -142,7 +144,7 @@ To check, from inside the container (no restart is needed after a `chown`):
 docker exec <container> sh -c 'id; ls -ld /app/uploads /app/uploads/tmp /app/backups'
 ```
 
-Every folder listed must belong to `node`. When one does not, the server logs `uploads folder is not writable` at startup with the folders it cannot write.
+Every folder listed must belong to UID/GID 1000. When one does not, the server logs `uploads folder is not writable` at startup with the folders it cannot write.
 
 ## Updating
 
@@ -166,7 +168,7 @@ Browsers report violations to `POST /api/csp-reports`, and the server logs them 
 
 ## Backups
 
-The database and the uploads must be backed up together, and the image does it without stopping the app: `node server/dist/scripts/backup.js` (`npm run backup` from a checkout) writes one folder to `BACKUP_DIR` (`/app/backups` in the image):
+The database and the uploads must be backed up together, and the image does it without stopping the app: `bun --no-env-file server/dist/scripts/backup.js` (`bun run backup` from a checkout) writes one folder to `BACKUP_DIR` (`/app/backups` in the image):
 
 ```
 linkord-backup-20261108T015300Z/
@@ -177,9 +179,9 @@ linkord-backup-20261108T015300Z/
 
 ```bash
 # the complete stack on one server
-docker compose --env-file .env.full exec app node server/dist/scripts/backup.js
+docker compose --env-file .env.full exec app bun --no-env-file server/dist/scripts/backup.js
 # Dokploy (from the host)
-docker exec $(docker ps -qf name=<app-name>) node server/dist/scripts/backup.js
+docker exec $(docker ps -qf name=<app-name>) bun --no-env-file server/dist/scripts/backup.js
 ```
 
 | Setting | Default | What it does |
@@ -191,7 +193,7 @@ docker exec $(docker ps -qf name=<app-name>) node server/dist/scripts/backup.js
 
 - **Safe to interrupt:** a backup is written as `<name>.partial` and renamed when complete. Rotation runs only after a successful backup and only deletes folders it made.
 - **Consistent:** the dump and the file list come from one database snapshot, and files are archived after it, so every row in the dump has its file. A file deleted while the archive runs is reported as a warning (that message shows a broken attachment). Uploads still in progress are left out.
-- **Scheduling:** on the complete stack, add `backup` to `COMPOSE_PROFILES` for a service that backs up at start and every `BACKUP_INTERVAL_SECONDS`. Otherwise use the host's cron, for example `0 3 * * * cd /srv/linkord && flock -n .backup.lock docker compose --env-file .env.full exec -T app node server/dist/scripts/backup.js >> backup.log 2>&1`.
+- **Scheduling:** on the complete stack, add `backup` to `COMPOSE_PROFILES` for a service that backs up at start and every `BACKUP_INTERVAL_SECONDS`. Otherwise use the host's cron, for example `0 3 * * * cd /srv/linkord && flock -n .backup.lock docker compose --env-file .env.full exec -T app bun --no-env-file server/dist/scripts/backup.js >> backup.log 2>&1`.
 - **Off the machine:** a backup on the same disk does not survive that disk. Copy the folder elsewhere after each run (`rclone copy`, `aws s3 sync`, `rsync`; from a compose volume, `docker compose --env-file .env.full cp app:/app/backups ./backups`) and set a lifecycle rule there, since rotation only prunes the local folder.
 - **Not in the backup:** the `.env` (database credentials, `LIVEKIT_*` and the Web Push VAPID keys, without which every push subscription breaks) and LiveKit. Keep the `.env` in a secrets store. A backup holds password hashes, sessions and every message: treat it like the database, and encrypt it when it leaves the machine.
 
@@ -202,9 +204,9 @@ docker exec $(docker ps -qf name=<app-name>) node server/dist/scripts/backup.js
 3. With the app stopped, run the restore. The first run only says what it would do; `--confirm` must name the database in `DATABASE_URL`:
 
 ```bash
-npm run restore -- latest --confirm linkord
+bun run restore latest --confirm linkord
 # the complete stack (after `docker compose --env-file .env.full stop app`):
-docker compose --env-file .env.full run --rm --no-deps app node server/dist/scripts/restore.js latest --confirm linkord
+docker compose --env-file .env.full run --rm --no-deps app bun --no-env-file server/dist/scripts/restore.js latest --confirm linkord
 ```
 
 4. Start the app. A newer app applies its newer migrations as on any upgrade; an older app cannot read a newer database.
@@ -237,13 +239,13 @@ The app ships for Windows only; there are no macOS or Linux builds.
 
 ```bash
 npm install --prefix desktop
-LINKORD_URL=https://chat.example.com npm run package:desktop
+LINKORD_URL=https://chat.example.com npm run package --prefix desktop
 ```
 
 The installer lands in `desktop/release/` as `Linkord-<version>-win-x64.exe` (the version is `desktop/package.json`'s). It installs for the current user, with no administrator prompt, and registers `linkord://` links (`HKCU\Software\Classes\linkord`, from `desktop/resources/installer.nsh`); uninstalling removes them. What the links open is in [DEVELOPMENT.md](DEVELOPMENT.md#desktop-app).
 
 - `LINKORD_URL` must be `https` (plain `http` only for `localhost`); the build refuses to run without it. A different server needs its own build. Someone who has the app can still point it elsewhere with `LINKORD_URL` or `--url=<address>` at launch; a start from a `linkord://` link ignores `--url`.
-- The build always targets Windows (`--win`). Anything after `--` goes to electron-builder, for example `npm run package:desktop -- --dir` for an unpacked folder. On macOS or Linux electron-builder may need Wine to build it; the workflow below builds it on a Windows runner.
+- The build always targets Windows (`--win`). Anything after `--` goes to electron-builder, for example `npm run package --prefix desktop -- --dir` for an unpacked folder. On macOS or Linux electron-builder may need Wine to build it; the workflow below builds it on a Windows runner.
 
 **From GitHub Actions:** run **Desktop installer** (`.github/workflows/desktop.yml`) from the Actions tab with the server's address in `url`. It builds on a Windows runner and uploads the artifact `linkord-desktop-windows`; no secrets are needed, since nothing is signed. Workflow builds look for updates in the repository's releases; a local build does only with `LINKORD_UPDATE_REPO=<owner>/<repo>` set.
 
@@ -266,7 +268,7 @@ The build flips Electron's fuses in `Linkord.exe` (`electronFuses` in `desktop/e
 
 - Cookie encryption is one way: a later build with the fuse off could not read the cookies, and everyone would have to sign in again.
 - No fuse covers Chromium's remote debugging, so an installed build exits at once when started with `--remote-debugging-port` or `--remote-debugging-pipe` (`desktop/src/main/debugSwitches.ts`).
-- To check a build: `npx electron-fuses read --app desktop/release/win-unpacked/Linkord.exe` (from `desktop/`, after `npm run package:desktop -- --dir`).
+- To check a build: `npx electron-fuses read --app desktop/release/win-unpacked/Linkord.exe` (from `desktop/`, after `npm run package --prefix desktop -- --dir`).
 
 ### Updates and data
 

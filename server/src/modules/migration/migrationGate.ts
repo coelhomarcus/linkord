@@ -44,9 +44,9 @@ export class LegacyDataBlockedError extends Error {
 
 export const REPAIR_INSTRUCTIONS = [
   'Nada foi migrado. Para corrigir:',
-  '  1. npm run db:preflight                 (inventário, só leitura)',
-  '  2. npm run db:repair                    (mostra o plano, não altera nada)',
-  '  3. revise as linhas "needs_review" e rode: npm run db:repair -- --apply',
+  '  1. bun run db:preflight                 (inventário, só leitura)',
+  '  2. bun run db:repair                    (mostra o plano, não altera nada)',
+  '  3. revise as linhas "needs_review" e rode: bun run db:repair --apply',
   '  4. suba o servidor de novo.',
 ].join('\n');
 

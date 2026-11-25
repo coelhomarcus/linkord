@@ -3,7 +3,7 @@ import { BackupError, resolveBackup } from './backup/backupLayout.js';
 import { ConfirmationRequired, restoreBackup } from './backup/restoreBackup.js';
 import { backupSettings } from './backup/settings.js';
 
-// `npm run restore -- [<backup>|latest] --confirm <database-name> [--strict]`
+// `bun run restore [<backup>|latest] --confirm <database-name> [--strict]`
 //
 // Restores a backup into the configured DATABASE_URL and UPLOAD_DIR, then
 // checks that what came back is what the backup held (every table's row count,
@@ -25,7 +25,7 @@ async function main(): Promise<number> {
     args: process.argv.slice(2), allowPositionals: true,
     options: { confirm: { type: 'string' }, strict: { type: 'boolean', default: false } },
   });
-  if (positionals.length > 1) { console.error('usage: npm run restore -- [<backup>|latest] --confirm <database-name> [--strict]'); return 2; }
+  if (positionals.length > 1) { console.error('usage: bun run restore [<backup>|latest] --confirm <database-name> [--strict]'); return 2; }
   const settings = backupSettings();
   const backupPath = await resolveBackup(settings.backupDir, positionals[0] ?? 'latest');
 

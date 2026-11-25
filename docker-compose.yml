@@ -2,7 +2,7 @@
 # image through Dokploy (docs/DEPLOY.md); the end-to-end suite has its own disposable stack (e2e/docker/compose.yml).
 #
 #   docker compose up -d                                # development: PostgreSQL, LiveKit and the mail sink,
-#                                                       # for `npm run dev` on the host (values from `.env`)
+#                                                       # for `bun run dev` on the host (values from `.env`)
 #   docker compose --env-file .env.full up -d --build   # the full stack: the same services plus the app
 #
 # `.env.full` (from `.env.full.example`) turns on the `full` profile and names the project `linkord`, so the full
@@ -60,13 +60,13 @@ services:
   # Prints the emails the app would send (recovery, two-step login codes) to its log. Unused once
   # RESEND_API_URL and RESEND_API_KEY point at the real Resend.
   mailsink:
-    image: node:22-alpine
+    image: oven/bun:1.4.5-alpine
     restart: unless-stopped
-    command: ["node", "/mailsink.mjs"]
+    command: ["bun", "--no-env-file", "/mailsink.mjs"]
     volumes:
       - ./docker/mailsink.mjs:/mailsink.mjs:ro
     ports:
-      # for `npm run dev` on the host (RESEND_API_URL=http://localhost:8025); the app container uses mailsink:8025
+      # for `bun run dev` on the host (RESEND_API_URL=http://localhost:8025); the app container uses mailsink:8025
       - "127.0.0.1:8025:8025"
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8025/healthz"]
@@ -108,7 +108,7 @@ services:
       options:
         max-size: 10m
         max-file: "5"
-    # The image already runs as `node`; these keep a compromised process from gaining more than that.
+    # The image already runs as `bun`; these keep a compromised process from gaining more than that.
     security_opt:
       - no-new-privileges:true
     cap_drop:
@@ -161,7 +161,7 @@ services:
     command:
       - sh
       - -c
-      - 'while true; do node server/dist/scripts/backup.js || echo "backup failed" >&2; sleep "$${BACKUP_INTERVAL_SECONDS:-86400}"; done'
+      - 'while true; do bun --no-env-file server/dist/scripts/backup.js || echo "backup failed" >&2; sleep "$${BACKUP_INTERVAL_SECONDS:-86400}"; done'
 
 volumes:
   postgres_data:

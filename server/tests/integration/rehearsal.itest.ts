@@ -10,10 +10,10 @@ describe('ensaio de migracao', () => {
   it('passa inteiro: legado → portao → reparo → topo, migracao interrompida e banco vazio', async () => {
     const script = path.join(import.meta.dirname, '..', '..', 'src', 'scripts', 'rehearseMigration.ts');
     const base = process.env.TEST_DATABASE_BASE_URL;
-    assert.ok(base, 'TEST_DATABASE_BASE_URL ausente (rode com npm run test:integration)');
+    assert.ok(base, 'TEST_DATABASE_BASE_URL is missing. Run with bun run test:integration.');
     const output = await new Promise<{ code: number; stdout: string }>((resolve) => {
       let stdout = '';
-      const child = spawn(process.execPath, ['--import', 'tsx', script, '--json'], { env: { ...process.env, DATABASE_URL: base }, stdio: ['ignore', 'pipe', 'inherit'] });
+      const child = spawn(process.execPath, ['--no-env-file', script, '--json'], { env: { ...process.env, DATABASE_URL: base }, stdio: ['ignore', 'pipe', 'inherit'] });
       child.stdout.on('data', (chunk) => { stdout += chunk; });
       child.on('exit', (code) => resolve({ code: code ?? 1, stdout }));
     });

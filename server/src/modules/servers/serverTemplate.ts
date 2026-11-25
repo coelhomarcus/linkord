@@ -21,7 +21,7 @@ export interface ServerTemplate {
 
 /** The layout every new server starts with — and the one each legacy group
  * was migrated into (migration 0043 writes the same names and positions in
- * SQL; `npm run db:rehearse` fails if the two drift apart). The first text
+ * SQL; `bun run db:rehearse` fails if the two drift apart). The first text
  * channel is where a migrated group's history lands, the first voice channel
  * is where its call moved. */
 export function defaultServerTemplate(locale: Locale): ServerTemplate {

@@ -163,7 +163,7 @@ async function handleRegister(request: FastifyRequest, reply: FastifyReply): Pro
 
   const passwordHash = await hashPassword(password);
   // never 'admin' from a sign-up: administrators are provisioned explicitly
-  // (`npm run admin:grant`, or the /admin area) — a username is not a credential.
+  // (`bun run admin:grant`, or the /admin area) — a username is not a credential.
   const role = 'user';
 
   if (await findByEmailLower(email)) return sendError(reply, 409, 'email_taken', 'Esse e-mail já está em uso.');
