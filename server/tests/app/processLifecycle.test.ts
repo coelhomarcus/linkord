@@ -3,12 +3,12 @@ import { EventEmitter } from 'node:events';
 import { describe, it, mock } from 'node:test';
 import { installProcessLifecycle, type ShutdownSteps } from '../../src/app/processLifecycle.js';
 
-function setup(close: () => Promise<void> = () => Promise.resolve()) {
+function setup(closeHttp: () => Promise<void> = () => Promise.resolve()) {
   const proc = Object.assign(new EventEmitter(), { exit: mock.fn((_code: number) => {}) });
   const errors: string[] = [];
   const log = { info: () => {}, error: (msg: string) => { errors.push(msg); } };
   const lifecycle = installProcessLifecycle(proc, log, 3000);
-  const steps = { stop: mock.fn(() => {}), close: mock.fn(close) } satisfies ShutdownSteps;
+  const steps = { stop: mock.fn(() => {}), closeHttp: mock.fn(closeHttp) } satisfies ShutdownSteps;
   const exitCodes = () => proc.exit.mock.calls.map((c) => c.arguments[0]);
   return { proc, lifecycle, steps, errors, exitCodes };
 }
@@ -23,7 +23,7 @@ describe('process lifecycle', () => {
       proc.emit(kind, new Error('boom'));
       await flush();
       assert.equal(steps.stop.mock.callCount(), 1);
-      assert.equal(steps.close.mock.callCount(), 1);
+      assert.equal(steps.closeHttp.mock.callCount(), 1);
       assert.deepEqual(exitCodes(), [1]);
       assert.match(errors[0], new RegExp(`fatal ${kind}`));
     });
@@ -56,7 +56,7 @@ describe('process lifecycle', () => {
     lifecycle.ready(steps);
     proc.emit('uncaughtException', new Error('boom'));
     await flush();
-    assert.equal(steps.close.mock.callCount(), 1);
+    assert.equal(steps.closeHttp.mock.callCount(), 1);
     assert.deepEqual(exitCodes(), [1]);
     assert.ok(errors.includes('shutdown step failed'));
   });

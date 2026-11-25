@@ -63,15 +63,10 @@ export async function up(image: string): Promise<void> {
   compose(['up', '-d', '--wait', 'postgres', 'mailsink'], image);
   compose(['up', '-d', 'livekit', 'proxy', 'app'], image);
   await waitHealthy();
-  compose(['up', '-d', 'connection-sync'], image);
   if (SPLIT) {
     compose(['up', '-d', '--no-deps', 'frontend'], image);
     await waitHealthy('/index.html');
   }
-}
-
-export function controlConnectionSync(action: 'start' | 'stop'): void {
-  compose([action, 'connection-sync']);
 }
 
 export async function replaceFrontend(): Promise<void> {

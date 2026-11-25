@@ -6,11 +6,9 @@
   "main": "server/dist/index.js",
   "scripts": {
     "start": "bun --preload ./server/dist/config/loadLocalEnv.js server/dist/index.js",
-    "start:connection-sync": "bun --preload ./server/dist/config/loadLocalEnv.js server/dist/connectionSync.js",
-    "dev": "bun --bun concurrently -k -n server,web,connection-sync -c blue,magenta,cyan \"bun run dev:server\" \"bun run dev:web\" \"bun run dev:connection-sync\"",
+    "dev": "bun --bun concurrently -k -n server,web -c blue,magenta \"bun run dev:server\" \"bun run dev:web\"",
     "dev:server": "bun --watch --preload ./server/src/config/loadLocalEnv.ts server/src/index.ts",
     "dev:web": "bun run --cwd web dev",
-    "dev:connection-sync": "bun --watch --preload ./server/src/config/loadLocalEnv.ts server/src/connectionSync.ts",
     "dev:desktop": "npm start --prefix desktop",
     "build": "bun run build:server && bun run build:web",
     "build:server": "bun --bun tsc -p server/tsconfig.json",

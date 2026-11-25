@@ -1,5 +1,6 @@
 import { ACTIVITY_CHECKPOINT_MS, ACTIVITY_DAY_MS, closeInterruptedActivitySessions, pruneActivitySessions } from '../modules/activity/activitySessions.js';
 import { activitySessionsWritten, checkpointActivitySessions } from '../modules/presence/presenceStatus.js';
+import { syncConnections } from '../modules/connections/syncWorker.js';
 import { config } from '../config/env.js';
 import { broadcast, restoreCallParticipants, setCallPresenceStore } from '../modules/presence/participants.js';
 import { callPresenceStore, loadCallPresence } from '../modules/presence/callPresenceRepository.js';
@@ -113,6 +114,11 @@ export async function bootstrap(): Promise<void> {
     log.warn('LiveKit is not configured: calls, camera and screen sharing will fail');
   }
 
+  const runConnectionSync = () => syncConnections().catch((err) => log.error('failed to sync profile connections', err));
+  void runConnectionSync();
+  const connectionSyncTimer = setInterval(runConnectionSync, 60_000);
+  connectionSyncTimer.unref();
+
   // periodic cleanup of expired and idle sessions — doesn't need to run per
   // request, just enough to keep the table from growing forever. A session
   // behind a socket that stayed connected is in use even without requests,
@@ -192,6 +198,7 @@ export async function bootstrap(): Promise<void> {
 
   lifecycle.ready({
     stop() {
+      clearInterval(connectionSyncTimer);
       clearInterval(activityPruneTimer);
       clearInterval(activityCheckpointTimer);
       if (callRoomSyncTimer) clearInterval(callRoomSyncTimer);
@@ -205,7 +212,7 @@ export async function bootstrap(): Promise<void> {
       // included) treats as a network drop and reconnects from.
       io.close();
     },
-    close: async () => {
+    closeHttp: async () => {
       await fastify.close();
       await activitySessionsWritten();
     },

@@ -45,12 +45,6 @@ HEALTHCHECK --interval=30s --timeout=5s --start-period=5s \
 
 CMD ["bun", "--no-env-file", "server/dist/index.js"]
 
-FROM server-deps AS connection-sync
-ENV NODE_ENV=production
-COPY --from=server-build /app/server/dist ./server/dist
-USER bun
-CMD ["bun", "--no-env-file", "server/dist/connectionSync.js"]
-
 FROM web-build AS web-headers
 WORKDIR /app
 COPY server/src/http/pageSecurityPolicy.ts ./server/src/http/
@@ -71,7 +65,7 @@ EXPOSE 8080
 HEALTHCHECK --interval=30s --timeout=5s --start-period=5s \
   CMD wget -qO- http://127.0.0.1:8080/index.html > /dev/null || exit 1
 
-# Standalone installs can serve the web and API together alongside the worker.
+# Keep the default image usable for Docker Compose and standalone installs.
 FROM backend AS monolith
 COPY --from=web-build /app/web/dist ./web/dist
 ENV SERVE_WEB=1

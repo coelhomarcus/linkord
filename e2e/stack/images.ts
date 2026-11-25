@@ -19,7 +19,6 @@ function imageExists(tag: string): boolean {
 /** The working tree as it is now, uncommitted changes included. Rebuilt every
  * run; Docker's layer cache keeps an unchanged tree fast. */
 export function buildHeadImage(): string {
-  run('docker', ['build', '-q', '--target', 'connection-sync', '-t', 'linkord-e2e:connection-sync', '.']);
   if (SPLIT) {
     const backend = process.env.E2E_HEAD_IMAGE || 'linkord-e2e:split-backend';
     if (!process.env.E2E_HEAD_IMAGE) run('docker', ['build', '-q', '--target', 'backend', '-t', backend, '.']);

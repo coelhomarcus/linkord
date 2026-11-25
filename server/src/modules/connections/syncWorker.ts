@@ -42,18 +42,8 @@ async function claim(now: Date, providers: Array<'myanimelist' | 'github' | 'ste
     return { ...row, leaseToken };
   });
 }
-interface SyncOptions {
-  request?: RequestJson;
-  requestText?: RequestText;
-  now?: Date;
-  malClientId?: string;
-  steamKey?: string;
-  twitchClient?: Pick<typeof twitch, 'profile' | 'configured'>;
-  signal?: AbortSignal;
-}
-
 let running = false;
-export async function syncConnections(options: SyncOptions = {}): Promise<void> {
+export async function syncConnections(options: { request?: RequestJson; requestText?: RequestText; now?: Date; malClientId?: string; steamKey?: string; twitchClient?: Pick<typeof twitch, 'profile' | 'configured'> } = {}): Promise<void> {
   if (running) return;
   running = true;
   const steamKey = options.steamKey ?? config.STEAM_WEB_API_KEY;
@@ -62,7 +52,7 @@ export async function syncConnections(options: SyncOptions = {}): Promise<void> 
   if (steamKey) providers.push('steam');
   if (twitchClient.configured) providers.push('twitch');
   try {
-    for (let count = 0; count < 20 && !options.signal?.aborted; count++) {
+    for (let count = 0; count < 20; count++) {
       const row = await claim(options.now ?? new Date(), providers);
       if (!row) break;
       const guard = and(eq(profileConnections.id, row.id), eq(profileConnections.leaseToken, row.leaseToken));

@@ -108,7 +108,7 @@ describe('profile connections (real Postgres)', () => {
     await assert.rejects(mutateConnection(another.id, 'create', { provider: 'myanimelist', value: 'otheruser' }), (error: ConnectionMutationError) => error.code === 'connection_exists');
     await assert.rejects(mutateConnection(another.id, 'create', { provider: 'url', value: 'https://myanimelist.net/profile/syncuser' }), (error: ConnectionMutationError) => error.code === 'connection_exists');
   });
-  it('queues GitHub in the API and syncs it in the worker without credentials', async () => {
+  it('connects and syncs GitHub without credentials and validates provider input', async () => {
     const calendar = githubCalendarFixture();
     const network = mock.method(globalThis, 'fetch', async (url: string | URL | Request, init?: RequestInit) => {
       assert.equal(new Headers(init?.headers).has('authorization'), false);
@@ -118,9 +118,9 @@ describe('profile connections (real Postgres)', () => {
       const owner = await makeUser('github'); const auth = await headers(owner.id);
       const result = await app.inject({ method: 'POST', url: '/api/me/connections', headers: auth, payload: { provider: 'github', value: 'octocat' } });
       assert.equal(result.statusCode, 201);
-      assert.equal(result.json().connections[0].status, 'pending');
-      assert.equal(network.mock.callCount(), 0);
-      await sync();
+      for (let attempt = 0; attempt < 100 && !(await listConnections(owner.id))[0]?.syncedAt; attempt++) {
+        await new Promise((resolve) => setTimeout(resolve, 20));
+      }
       const row = (await listConnections(owner.id))[0]!;
       assert.ok(row.syncedAt); assert.equal(row.snapshot?.widgets['github-calendar']?.kind, 'github-calendar');
       assert.equal((await app.inject({ method: 'GET', url: '/api/me/connections', headers: auth })).json().connections[0].provider, 'github');
@@ -307,24 +307,6 @@ describe('connection sync worker (real Postgres)', () => {
     await started;
     await sync({ now, request: async () => assert.fail('must not overlap') });
     release(); await first;
-  });
-  it('finishes the claimed connection and leaves the remaining work queued on shutdown', async () => {
-    const first = await makeUser('syncstop');
-    const second = await makeUser('syncnext');
-    await mal(first.id);
-    await mal(second.id);
-    const now = new Date(Date.now() + 1000);
-    const shutdown = new AbortController();
-    await sync({ now, signal: shutdown.signal, request: async (url) => {
-      shutdown.abort();
-      return request(url);
-    } });
-    const rows = [...await listConnections(first.id), ...await listConnections(second.id)];
-    assert.equal(rows.filter((row) => row.syncedAt !== null).length, 1);
-    assert.ok(rows.every((row) => row.leaseToken === null));
-    await sync({ now, request });
-    assert.ok((await listConnections(first.id))[0]?.syncedAt);
-    assert.ok((await listConnections(second.id))[0]?.syncedAt);
   });
   it('discards results when the username changes or the connection is removed in flight', async () => {
     for (const action of ['edit', 'delete'] as const) {
