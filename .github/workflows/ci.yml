@@ -1,9 +1,7 @@
 name: CI
 
-# The checks AGENTS.md asks for before calling a change done, split in four
-# jobs that run side by side. None needs PostgreSQL: `.env.test` only satisfies
-# the import guard of `server/src/db/client.ts`. The browser suite has its own
-# workflow (e2e.yml).
+# The checks run in parallel. Only the integration job needs PostgreSQL.
+# The browser suite has its own workflow (e2e.yml).
 on:
   push:
     branches: [main, develop]
@@ -38,6 +36,35 @@ jobs:
         run: bun run typecheck:server:tests
       - name: Test
         run: bun run test:server
+
+  integration:
+    name: PostgreSQL integration
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: linkord
+          POSTGRES_PASSWORD: linkord
+          POSTGRES_DB: linkord
+        ports:
+          - 5432/tcp
+        options: >-
+          --health-cmd "pg_isready -h 127.0.0.1 -U linkord -d linkord"
+          --health-interval 2s
+          --health-timeout 3s
+          --health-retries 15
+    steps:
+      - uses: actions/checkout@v7
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: ${{ env.BUN_VERSION }}
+      - run: bun install --frozen-lockfile
+      - name: Run integration tests
+        run: bun run test:integration
+        env:
+          DATABASE_URL: postgres://linkord:linkord@127.0.0.1:${{ job.services.postgres.ports['5432'] }}/linkord
 
   web:
     name: Web

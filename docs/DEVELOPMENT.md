@@ -140,7 +140,7 @@ bun run check
 
 Runs the server test typecheck, the web lint, the dependency audit, the server and web tests and the production build. None of these tests needs PostgreSQL (`.env.test` supplies a placeholder `DATABASE_URL`). For desktop changes, also run `npm run typecheck --prefix desktop` and `npm test --prefix desktop`. See [End-to-end tests](#end-to-end-tests) for browser verification.
 
-- **CI** (`.github/workflows/ci.yml`) runs the same on every push to `main` and `develop` and on pull requests, unless only Markdown changed, as four jobs: server, web, desktop, and one for the audit, `bun run check:dead-code` and the e2e typecheck.
+- **CI** (`.github/workflows/ci.yml`) runs the server, web, desktop, and audit and dead code checks in parallel on pushes to `main` and `develop` and on pull requests that change more than documentation. A separate job runs `bun run test:integration` against a disposable PostgreSQL 17 service on the runner.
 - **End-to-end** (`.github/workflows/e2e.yml`) runs the `features`, `restart` and `upgrade` projects in parallel on pull requests into `main`, and on demand from the Actions tab. A failed job uploads the Playwright report and traces.
 - **Desktop installer** (`.github/workflows/desktop.yml`) runs only by hand; see [DEPLOY.md](DEPLOY.md#building-the-installer).
 - **Audit:** `bun audit --prod --audit-level=high` for the root and `web/`, so keep build-only packages (Tailwind, Vite plugins) in `devDependencies` of `web/`; the image ships only the build output.
