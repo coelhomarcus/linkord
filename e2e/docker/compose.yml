@@ -1,5 +1,5 @@
 # The end-to-end stack: the app behind Traefik (as in production behind
-# Dokploy), the profile sync worker, a LiveKit dev server, a throwaway Postgres and a mail sink
+# Dokploy), a LiveKit dev server, its own throwaway Postgres and a mail sink
 # standing in for Resend. Driven by e2e/stack/stack.ts; never shares anything
 # with the dev database.
 name: linkord-e2e
@@ -74,11 +74,6 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
-
-  connection-sync:
-    image: linkord-e2e:connection-sync
-    environment:
-      DATABASE_URL: postgres://linkord:linkord@postgres:5432/linkord
 
   proxy:
     image: traefik:v3.3

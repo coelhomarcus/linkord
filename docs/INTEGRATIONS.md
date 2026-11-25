@@ -10,12 +10,12 @@ Every external service Linkord talks to, including where its calls originate, wh
 | [Resend](#resend) | Codes for recovery, email changes, two-step login and security changes; sign-in alerts and account notices; data export links | Server | `RESEND_*` | For email flows and two-step login |
 | [Web Push](#web-push) | Browser push notifications | Server | `PUSH_VAPID_*` | No |
 | [KLIPY](#klipy) | GIF picker | Browser | `KLIPY_API_KEY` | No |
-| [MyAnimeList](#myanimelist) | Wall widget | Profile sync worker | `MAL_CLIENT_ID` | No |
-| [GitHub](#github) | Wall widgets | Profile sync worker | None | No |
+| [MyAnimeList](#myanimelist) | Wall widget | Server (background) | `MAL_CLIENT_ID` | No |
+| [GitHub](#github) | Wall widgets | Server (background) | None | No |
 | [GitHub Releases](#github-releases) | The desktop installer the web app offers | Server (on demand, cached) | `DESKTOP_RELEASES_REPO` | No |
 | [IGDB](#igdb) | Game search for the Wall; names of games someone is playing | Server (on demand) | `IGDB_CLIENT_ID`, `IGDB_CLIENT_SECRET` | No |
-| [Steam](#steam) | Public profile, recent games and playtime on the Wall | API on connect, profile sync worker for refreshes | `STEAM_WEB_API_KEY` | No |
-| [Twitch](#twitch) | Live streams and recent VODs on the Wall | API for setup and live status, profile sync worker for refreshes, browser for the player | `IGDB_CLIENT_ID`, `IGDB_CLIENT_SECRET` | No |
+| [Steam](#steam) | Public profile, recent games and playtime on the Wall | Server (on connect and in the background) | `STEAM_WEB_API_KEY` | No |
+| [Twitch](#twitch) | Live streams and recent VODs on the Wall | Server; browser for the player | `IGDB_CLIENT_ID`, `IGDB_CLIENT_SECRET` | No |
 | [SteamGridDB](#steamgriddb) (and Steam's CDN) | Activity icons and fallback banners for Steam games on the Wall | Server (on demand; icons stored and banners cached by us) | `STEAMGRIDDB_API_KEY` | No |
 | [Discord application API](#discord-application-api) | Name and pictures of a game reporting through Discord Rich Presence | Server (on demand, cached) | None | No |
 | [Link previews](#link-previews) | Cards for links pasted in chat | Server | None | Built in |
@@ -95,9 +95,9 @@ The "GitHub profile" and "Contributions" Wall widgets (`server/src/integrations/
 
 ### How connection syncing works
 
-The [profile sync worker](DEPLOY.md#profile-sync-worker) refreshes MyAnimeList, GitHub, Steam and Twitch snapshots in a separate process. Viewing a profile reads the snapshots from PostgreSQL. Twitch's live status is checked by the API on its own cache schedule.
+The backend refreshes MyAnimeList, GitHub, Steam and Twitch snapshots in the background. Viewing a profile reads stored snapshots, apart from Twitch's live status.
 
-- The worker checks for due connections on startup and waits five seconds between batches. It claims each connection with a lease and refreshes it every 24 hours. MyAnimeList requests are spaced 1.1 seconds apart.
+- The backend checks for due connections at startup, every minute, and after a connection is added or edited. PostgreSQL leases prevent overlapping syncs. Each connection refreshes every 24 hours, and MyAnimeList requests are spaced 1.1 seconds apart.
 - A failed sync keeps the last good snapshot. `not_found`, `private` and `invalid_response` wait for the next day; `rate_limited` and `unavailable` retry with backoff, honouring `Retry-After` and `X-RateLimit-Reset`.
 - Requests time out after 10 seconds, refuse redirects and cap bodies at 2 MB (`server/src/integrations/connectionHttp.ts`).
 
@@ -131,7 +131,7 @@ Game search for the four games widgets (favorite game, games I like, games in ro
 The Wall shows the public Steam profile, drawn like Steam's own mini profile, and its recent games. The recent widget shows playtime for the last two weeks. The most-played widget ranks those games by lifetime playtime. The connection accepts a vanity name, a SteamID64 or a profile URL, and stores the canonical profile URL.
 
 - **API** `ISteamUser` (`ResolveVanityURL`, `GetPlayerSummaries`) and `IPlayerService` (`GetOwnedGames`, `GetSteamLevel`, `GetProfileItemsEquipped`) on `api.steampowered.com`. A signed-out request to the profile on `steamcommunity.com` supplies the game count, in-game status and eligible app IDs. The playtime request includes only the recent games for which that page shows playtime. Steam requires sign-in to view the full library page.
-- **Sync** Connecting checks the profile and its **Game details** are public. The [worker](#how-connection-syncing-works) checks again every 24 hours. If a refresh fails, the Wall hides the saved Steam widgets until the next successful refresh.
+- **Sync** Connecting checks the profile and its **Game details** are public. The [backend](#how-connection-syncing-works) checks again every 24 hours. If a refresh fails, the Wall hides the saved Steam widgets until the next successful refresh.
 - **Mini profile:** the Points Shop items the profile has equipped (`GetProfileItemsEquipped`): the mini profile background (a still picture and its WebM/MP4 loop), the avatar frame and the animated avatar, all files under `community_assets/images/items/` on `shared.fastly.steamstatic.com`. The background fills the compact widget and stays aligned to the top when cropped. An item Steam describes in an unexpected way is left out, never the profile. Snapshots from before this feature show the plain avatar until their next refresh. Under reduced motion the loop gives way to its still picture and the animated avatar and frame to their first frame. Steam draws levels past 100 as other shapes; we keep the ring with its colours per ten.
 - **Pictures:** the media proxy serves game banners, avatars, frames and the background's still, and its video side serves the background loop. If the standard CDN address for a game banner fails, the proxy checks the public Steam Store `/api/appdetails` endpoint for that app's official header. If that image is also unavailable, it tries [SteamGridDB](#steamgriddb). The lookup is cached with the image and applies to existing widgets. If no banner loads, the tile displays the game's title in the same 460:215 space. With `MEDIA_PROXY=0`, banners use the direct Steam CDN address.
 - **Configuration:** a [Steam Web API key](https://steamcommunity.com/dev/apikey) in `STEAM_WEB_API_KEY`. It stays on the server.
@@ -142,7 +142,7 @@ The Wall shows the public Steam profile, drawn like Steam's own mini profile, an
 The channel with its game, title and viewer count when live (or its offline banner and the last stream's date), and up to six recent VODs, as Wall widgets. The connection is a login name.
 
 - **API:** `server/src/integrations/twitch/twitch.ts` calls [Helix](https://dev.twitch.tv/docs/api/reference/): `GET /users` to check the login, `GET /videos?type=archive&first=6`, and `GET /streams` for live status. One client-credentials token per process is shared with IGDB and renewed a minute before expiry or after a 401.
-- **Sync:** connecting reads the profile and VODs; the [worker](#how-connection-syncing-works) refreshes them. Live status is read when a Wall is viewed, cached 60 seconds per login.
+- **Sync:** connecting reads the profile and VODs, and the [backend](#how-connection-syncing-works) refreshes them. Live status is read when a Wall is viewed and cached for 60 seconds per login.
 - **Pictures:** avatars, offline banners and thumbnails through the media proxy, from Twitch's CDN hosts. The player loads from Twitch after the viewer clicks it.
 - **Configuration:** the IGDB app's `IGDB_CLIENT_ID` and `IGDB_CLIENT_SECRET`.
 - **When missing:** the Twitch connection option is hidden.
@@ -231,7 +231,7 @@ Serves the third-party pictures above, and the loop behind a Steam mini profile,
 2. **Put it in the right place.** Adapters in `server/src/integrations/<name>/`, domain logic in `server/src/modules/<domain>/`, frontend-only integrations in their feature folder.
 3. **Make the credential optional.** Read it in `server/src/config/env.ts`, document it in `.env.optional.example`, and degrade quietly when it is empty. Variables that only work together, like the VAPID trio, fail fast when partly set.
 4. **Never trust the destination.** If any part of the URL comes from a user or a response, use `net/safeRequest.ts`, allowlist image hosts, and cap time and size.
-5. **Respect rate limits.** Background work reuses the connection-sync worker and its Postgres-coordinated limits, never a call per profile view.
+5. **Respect rate limits.** Reuse the backend's [background sync](#how-connection-syncing-works) and its Postgres-coordinated limits for profile snapshots.
 6. **Preserve good data.** A failed or malformed response never replaces a valid snapshot.
 7. **Test with injected requests.** Adapters take their `request` function as a parameter (see `server/tests/integrations/`).
 8. **Allow it in the Content-Security-Policy** if the browser talks to it ([DEVELOPMENT.md](DEVELOPMENT.md#content-security-policy)).
