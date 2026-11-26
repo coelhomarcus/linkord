@@ -6,20 +6,21 @@ import { config } from '../../src/config/env.js';
 import { adminAuditLogs, messages, servers } from '../../src/db/schema.js';
 import { createApp } from '../../src/http/app.js';
 import { createSession } from '../../src/modules/auth/session.js';
-import { makeServerWithMembers, makeUser, db, pool } from './helpers.js';
+import { adminHeaders, makeAdminSession, makeServerWithMembers, makeUser, db, pool } from './helpers.js';
 
 let app: FastifyInstance;
 before(async () => { app = createApp(); await app.ready(); });
 after(async () => { await app.close(); await pool.end(); });
 
-interface Actor { id: string; username: string; cookie: string }
+interface Actor { id: string; username: string; cookie: string; adminToken: string }
 async function actor(prefix: string, role: 'user' | 'admin' = 'user'): Promise<Actor> {
   const user = await makeUser(prefix, role);
-  return { ...user, cookie: `${config.SESSION_COOKIE}=${(await createSession(user.id)).rawToken}` };
+  return { ...user, cookie: `${config.SESSION_COOKIE}=${(await createSession(user.id)).rawToken}`, adminToken: await makeAdminSession(user.id) };
 }
 
 async function call(as: Actor, method: 'GET' | 'POST' | 'DELETE', url: string, payload?: unknown) {
-  const res = await app.inject({ method, url, payload: payload as object | undefined, headers: { cookie: as.cookie } });
+  const headers = url.startsWith('/api/admin/') ? adminHeaders(as.adminToken) : { cookie: as.cookie };
+  const res = await app.inject({ method, url, payload: payload as object | undefined, headers });
   return { status: res.statusCode, body: res.body ? JSON.parse(res.body) : null };
 }
 

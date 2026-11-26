@@ -3,6 +3,7 @@ import { config } from '../config/env.js';
 import { sendError } from './respond.js';
 import { logger } from '../lib/logger.js';
 import { loggablePath } from './requestPath.js';
+import { requireAdminOrigin } from '../modules/admin/adminOrigin.js';
 
 const log = logger.child({ component: 'http' });
 
@@ -38,8 +39,12 @@ const currentInput = (origin: string | undefined, requestHost: string | undefine
   origin, requestHost, appUrl: config.APP_URL, allowedOrigins: config.ALLOWED_ORIGINS, isDev: config.IS_DEV,
 });
 
-/** Fastify `onRequest` hook: state-changing /api/* calls only. */
+/** Fastify `onRequest` hook for admin routes and state-changing API calls. */
 export async function originGuard(request: FastifyRequest, reply: FastifyReply): Promise<void> {
+  if (/^\/api\/admin(?:[/?]|$)/.test(request.url)) {
+    requireAdminOrigin(request, reply);
+    return;
+  }
   if (SAFE_METHODS.has(request.method) || !request.url.startsWith('/api/')) return;
   const origin = typeof request.headers.origin === 'string' ? request.headers.origin : undefined;
   if (!isOriginAllowed(currentInput(origin, request.headers.host))) {

@@ -7,11 +7,27 @@ import { join, participants } from '../../src/modules/presence/participants.js';
 import { createServer } from '../../src/modules/servers/serversRepository.js';
 import { invalidateAllServers } from '../../src/modules/servers/serverAccess.js';
 import type { AppSocket, Participant } from '../../src/types.js';
+import { config } from '../../src/config/env.js';
+import { adminCookieName } from '../../src/modules/admin/adminOrigin.js';
+import { createSession } from '../../src/modules/auth/session.js';
 
 // Shared setup for the real-Postgres suite. Every test makes its own users and
 // servers (unique names), so files never depend on each other or on order.
 
 export { db, pool };
+
+export async function makeAdminSession(userId: string): Promise<string> {
+  return (await createSession(userId, undefined, 'admin')).rawToken;
+}
+
+export function adminHeaders(token?: string) {
+  assert.ok(config.ADMIN_ORIGIN, 'Integration runner must configure the admin origin');
+  return {
+    host: config.ADMIN_ORIGIN.host,
+    origin: config.ADMIN_ORIGIN.url,
+    ...(token ? { cookie: `${adminCookieName()}=${token}` } : {}),
+  };
+}
 
 export async function makeUser(prefix: string, role: 'user' | 'admin' = 'user'): Promise<{ id: string; username: string }> {
   const id = crypto.randomUUID();

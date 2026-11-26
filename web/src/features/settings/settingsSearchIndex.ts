@@ -9,13 +9,12 @@ export interface SearchEntry {
   /** `search.<searchKey>.title` / `.keywords` (comma separated) in the
    * settings locale files. */
   searchKey: SearchKey;
-  adminOnly?: boolean;
 }
 
 type SearchKey =
   | 'accountInfo' | 'email' | 'session' | 'deleteAccount' | 'dataExport' | 'password' | 'twoFactor' | 'loginAlerts' | 'sessions' | 'connections' | 'blocked' | 'presence'
   | 'theme' | 'density' | 'typography' | 'voice' | 'inputProfile' | 'video' | 'calls' | 'uploads'
-  | 'desktopNotifications' | 'sounds' | 'language' | 'timeFormat' | 'adminArea' | 'desktopDownload' | 'webApp'
+  | 'desktopNotifications' | 'sounds' | 'language' | 'timeFormat' | 'desktopDownload' | 'webApp'
   | 'desktopStartup' | 'desktopWindow' | 'desktopUpdates' | 'activity';
 
 // One entry per SettingsSection that exists today (grep '<SettingsSection id='
@@ -52,5 +51,4 @@ export const SETTINGS_SEARCH_INDEX: SearchEntry[] = [
   { categoryId: 'desktop', sectionId: 'desktop-startup', searchKey: 'desktopStartup' },
   { categoryId: 'desktop', sectionId: 'desktop-window', searchKey: 'desktopWindow' },
   { categoryId: 'desktop', sectionId: 'desktop-updates', searchKey: 'desktopUpdates' },
-  { categoryId: 'moderation', sectionId: 'admin-area', searchKey: 'adminArea', adminOnly: true },
 ];

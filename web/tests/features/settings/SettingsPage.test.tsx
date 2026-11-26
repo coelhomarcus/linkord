@@ -144,9 +144,9 @@ describe('SettingsPage — category navigation', () => {
     expect(onOpenProfile).toHaveBeenCalledWith('u');
   });
 
-  it('admin sees the administration category', () => {
+  it('does not show an administration category to administrators', () => {
     renderSettings({ state: adminState });
-    expect(screen.getByRole('link', { name: 'Administração' })).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Administração' })).not.toBeInTheDocument();
   });
 
   it('clicking a category navigates to its route', async () => {

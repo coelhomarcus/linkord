@@ -4,7 +4,7 @@ import { resolve } from 'node:path';
 import { AVATAR_COLOR_OPTIONS } from '@/shared/Avatar';
 import { PRESET_OKLCH, hexOf, presetHex } from '@/features/profile/avatarPresets';
 
-const css = readFileSync(resolve(__dirname, '../../../src/styles/index.css'), 'utf8');
+const css = readFileSync(resolve(__dirname, '../../../../packages/frontend-shared/src/styles/base.css'), 'utf8');
 
 describe('avatar presets', () => {
   it('are the colours the stylesheet defines, so the cursor lands where the swatch is', () => {

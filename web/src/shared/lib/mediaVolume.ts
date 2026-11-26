@@ -1,4 +1,4 @@
-import { LOCAL_STORAGE_KEYS, localStorageStore } from './localStorage';
+import { LOCAL_STORAGE_KEYS, localStorageStore } from '@/shared/lib/localStorage';
 
 // One volume lives outside any single player: every video/audio element in
 // the app reads and writes the same value, so turning one down turns them

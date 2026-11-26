@@ -27,8 +27,12 @@ test('administration uses its own origin and session', async ({ users, request }
   expect((await member.api.get(`${ADMIN_URL}/api/admin/users`)).status()).toBe(401);
 
   const page = await signedIn.context.newPage();
-  await page.goto(`${BASE_URL}/admin/users/${member.id}?tab=moderation`);
-  await expect(page).toHaveURL(`${ADMIN_URL}/admin/users/${member.id}?tab=moderation`);
+  for (const legacy of ['/admin', `/admin/users/${member.id}?tab=moderation`]) {
+    const retired = await page.goto(BASE_URL + legacy);
+    expect(retired?.status()).toBe(404);
+    await expect(page).toHaveURL(BASE_URL + legacy);
+  }
+  await page.goto(`${ADMIN_URL}/admin/users/${member.id}?tab=moderation`);
   await signIn(page, signedIn);
   await expect(page.getByRole('heading', { name: 'Acesso', exact: true })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Sair', exact: true })).toBeVisible();

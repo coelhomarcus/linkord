@@ -15,8 +15,7 @@
       "social": "Profile & social",
       "display": "Appearance & language",
       "communication": "Voice, video & chat",
-      "app": "App",
-      "admin": "Administration"
+      "app": "App"
     },
     "categories": {
       "account": "My account",
@@ -30,8 +29,7 @@
       "notifications": "Notifications",
       "language": "Language & time",
       "downloads": "Get the app",
-      "desktop": "App",
-      "moderation": "Administration"
+      "desktop": "App"
     },
     "sections": {
       "accountInfo": "Account information",
@@ -46,7 +44,6 @@
       "sounds": "Sounds",
       "language": "Language",
       "timeFormat": "Time format",
-      "adminArea": "Admin area",
       "presence": "Status",
       "password": "Password",
       "twoFactor": "Two-step verification",
@@ -129,10 +126,6 @@
     "timeFormat": {
       "title": "Time format",
       "keywords": "time, clock, 12-hour, 24-hour, am, pm"
-    },
-    "adminArea": {
-      "title": "Admin area",
-      "keywords": "admin, report, audit, users, servers"
     },
     "presence": {
       "title": "Status",
@@ -302,11 +295,6 @@
       "requestFailed": "Could not ask for a copy. Try again.",
       "loadFailed": "Could not load the state of your copy."
     }
-  },
-  "adminLink": {
-    "label": "Users, servers, reports and audit",
-    "description": "Every action asks for a reason and is logged.",
-    "open": "Open the admin area"
   },
   "av": {
     "microphone": "Microphone",

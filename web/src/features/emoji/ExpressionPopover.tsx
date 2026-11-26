@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { ServerIcon } from '@/features/servers/ServerIcon';
+import { ServerIcon } from '@linkord/frontend-shared/ui/ServerIcon';
 import type { ServerSummary } from '@/shared/types/protocol';
 
 /** The card a clicked emoji or sticker opens, after Discord's: the picture,

@@ -5,7 +5,7 @@ import { useContentLocation } from '@/shared/lib/contentLocation';
 import { ROUTES, isHomePath } from '@/shared/lib/routes';
 import { DesktopUpdateButton } from '@/features/desktopApp/DesktopUpdateButton';
 import { NotificationBell } from '@/features/notifications/NotificationBell';
-import { ServerIcon } from '@/features/servers/ServerIcon';
+import { ServerIcon } from '@linkord/frontend-shared/ui/ServerIcon';
 import type { ServerSummary } from '@/shared/types/protocol';
 import { useTitleBarHost } from '@/app/layout/titleBar';
 import { WindowControls } from '@/app/layout/WindowControls';

@@ -1,6 +1,6 @@
 import 'i18next';
-import type common from './locales/pt-BR.json';
-import type auth from '@/features/auth/locales/pt-BR.json';
+import type common from '@linkord/frontend-shared/i18n/locales/pt-BR.json';
+import type auth from '@linkord/frontend-shared/auth/locales/pt-BR.json';
 import type chat from '@/features/chat/locales/pt-BR.json';
 import type conversations from '@/features/conversations/locales/pt-BR.json';
 import type friends from '@/features/friends/locales/pt-BR.json';
@@ -12,9 +12,8 @@ import type notifications from '@/features/notifications/locales/pt-BR.json';
 import type calls from '@/features/calls/locales/pt-BR.json';
 import type profile from '@/features/profile/locales/pt-BR.json';
 import type media from '@/features/media/locales/pt-BR.json';
-import type reports from '@/features/reports/locales/pt-BR.json';
+import type reports from '@linkord/frontend-shared/reports/locales/pt-BR.json';
 import type bots from '@/features/bots/locales/pt-BR.json';
-import type admin from '@/features/admin/locales/pt-BR.json';
 import type settings from '@/features/settings/locales/pt-BR.json';
 import type soundboard from '@/features/soundboard/locales/pt-BR.json';
 import type share from '@/features/share/locales/pt-BR.json';
@@ -50,7 +49,6 @@ declare module 'i18next' {
       media: typeof media;
       reports: typeof reports;
       bots: typeof bots;
-      admin: typeof admin;
       settings: typeof settings;
       soundboard: typeof soundboard;
       share: typeof share;

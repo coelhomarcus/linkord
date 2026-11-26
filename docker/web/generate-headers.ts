@@ -24,11 +24,13 @@ if (app.pathname !== '/' || app.search || app.hash) throw new Error('APP_URL mus
 const appUrl = app.origin;
 const livekit = process.env.LIVEKIT_URL?.trim();
 const livekitUrl = livekit ? publicUrl('LIVEKIT_URL', ['http:', 'https:', 'ws:', 'wss:'], livekit).origin : '';
-const dist = process.argv[2] ? path.resolve(process.argv[2]) : path.resolve(import.meta.dirname, '../../web/dist');
-for (const file of ['index.html', 'offline.html', 'sw.js', 'csp-style-sources.json']) readFileSync(path.join(dist, file));
+const admin = process.argv[2] === '--admin';
+const dist = path.resolve(import.meta.dirname, admin ? '../../admin/dist' : '../../web/dist');
+const files = admin ? ['index.html'] : ['index.html', 'offline.html', 'sw.js', 'csp-style-sources.json'];
+for (const file of files) readFileSync(path.join(dist, file));
 const scriptHashes = readBuildScriptHashes(dist);
 const styleHashes = readBuildStyleHashes(dist);
-if (!scriptHashes.length || !styleHashes.length) throw new Error('The web build is missing its inline CSP sources.');
+if (!admin && (!scriptHashes.length || !styleHashes.length)) throw new Error('The web build is missing its inline CSP sources.');
 const policy = buildContentSecurityPolicy({
   appUrl, livekitUrl, scriptHashes, styleHashes,
   klipyEnabled: flag('KLIPY_ENABLED', '0'),

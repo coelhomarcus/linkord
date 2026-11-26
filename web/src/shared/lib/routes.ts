@@ -1,6 +1,6 @@
 // Shared because the router and feature links need the same paths; features must not import app/.
 
-const SETTINGS_TABS = ['account', 'security', 'connections', 'activity', 'privacy', 'appearance', 'av', 'chat', 'notifications', 'language', 'downloads', 'desktop', 'moderation'] as const;
+const SETTINGS_TABS = ['account', 'security', 'connections', 'activity', 'privacy', 'appearance', 'av', 'chat', 'notifications', 'language', 'downloads', 'desktop'] as const;
 export type SettingsTab = (typeof SETTINGS_TABS)[number];
 
 /** Tabs that were split up: an old link (or a bookmark) still lands on the
@@ -42,7 +42,6 @@ export const ROUTES = {
   /** legacy: redirects to the pending view of Friends; new links use friendsView/friendsSection */
   requests: '/app/requests',
   settings: '/app/settings',
-  admin: '/admin/users',
   settingsTab: (tab: SettingsTab) => `/app/settings/${tab}`,
   direct: (id: string) => `/app/channels/@me/${encodeURIComponent(id)}`,
   /** a server without a channel: lands on its first visible text channel */
@@ -58,13 +57,11 @@ export function conversationPath(conversation: { id: string; serverId: string | 
   return conversation.serverId ? ROUTES.channel(conversation.serverId, conversation.id) : ROUTES.direct(conversation.id);
 }
 
-/** Settings and administration open as modals over the app: their URLs name
- * the modal, and the page underneath stays the last real page. */
-export type ModalKind = 'settings' | 'admin';
+/** The settings URL opens a modal over the app, and the page underneath stays the last real page. */
+export type ModalKind = 'settings';
 
 export function modalForPath(pathname: string): ModalKind | null {
   if (pathname === ROUTES.settings || pathname.startsWith(`${ROUTES.settings}/`)) return 'settings';
-  if (pathname === '/admin' || pathname.startsWith('/admin/')) return 'admin';
   return null;
 }
 

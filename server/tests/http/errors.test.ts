@@ -5,7 +5,7 @@ import { describe, it } from 'node:test';
 import { ERROR_REGISTRY, errorBody } from '../../src/http/errors.js';
 
 const SRC = path.resolve(import.meta.dirname, '../../src');
-const WEB_CODES = path.resolve(import.meta.dirname, '../../../web/src/shared/api/errorCodes.ts');
+const WEB_CODES = path.resolve(import.meta.dirname, '../../../packages/frontend-shared/src/api/errorCodes.ts');
 
 function sourceFiles(dir: string): string[] {
   return fs.readdirSync(dir, { withFileTypes: true }).flatMap((e) => {

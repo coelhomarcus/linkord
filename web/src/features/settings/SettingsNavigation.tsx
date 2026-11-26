@@ -94,9 +94,9 @@ function SettingsSearchResults({ results, query }: { results: SettingsSearchResu
 /** The permanent category sidebar of a wide settings area. One level only: a
  * per-section list under the open category did nothing visible on pages that
  * fit on screen, so the page's own titles are the way around it. */
-export function SettingsSidebar({ active, isAdmin, onOpenProfile }: { active: SettingsTab; isAdmin: boolean; onOpenProfile: (userId: string) => void }) {
+export function SettingsSidebar({ active, onOpenProfile }: { active: SettingsTab; onOpenProfile: (userId: string) => void }) {
   const { t } = useTranslation('settings');
-  const { query, setQuery, results } = useSettingsSearch(isAdmin);
+  const { query, setQuery, results } = useSettingsSearch();
   return (
     <nav aria-label={t('nav.ariaLabel')} className="flex w-[279px] flex-none flex-col px-[18px] py-6">
       <ProfileShortcut onOpenProfile={onOpenProfile} />
@@ -105,7 +105,7 @@ export function SettingsSidebar({ active, isAdmin, onOpenProfile }: { active: Se
         <SettingsSearchResults results={results} query={query} />
       ) : (
         <div className="flex flex-col">
-          {visibleGroups(isAdmin, hasDesktopSettings()).map((group, index) => (
+          {visibleGroups(hasDesktopSettings()).map((group, index) => (
             <div key={group.labelKey} className="flex flex-col">
               {index > 0 && <span aria-hidden className="mx-2.5 my-2 h-px flex-none bg-border-divider" />}
               <GroupLabel>{t(group.labelKey)}</GroupLabel>
@@ -139,9 +139,9 @@ export function SettingsSidebar({ active, isAdmin, onOpenProfile }: { active: Se
 
 /** The compact landing screen: the same groups, icons and labels as the sidebar,
  * one full-width row each. */
-export function SettingsIndex({ isAdmin, onOpenProfile }: { isAdmin: boolean; onOpenProfile: (userId: string) => void }) {
+export function SettingsIndex({ onOpenProfile }: { onOpenProfile: (userId: string) => void }) {
   const { t } = useTranslation('settings');
-  const { query, setQuery, results } = useSettingsSearch(isAdmin);
+  const { query, setQuery, results } = useSettingsSearch();
   return (
     <nav aria-label={t('nav.ariaLabel')} className="flex flex-col px-4 py-4 @[520px]:px-6">
       <ProfileShortcut onOpenProfile={onOpenProfile} />
@@ -150,7 +150,7 @@ export function SettingsIndex({ isAdmin, onOpenProfile }: { isAdmin: boolean; on
         <SettingsSearchResults results={results} query={query} />
       ) : (
         <div className="flex flex-col gap-1">
-          {visibleGroups(isAdmin, hasDesktopSettings()).map((group) => (
+          {visibleGroups(hasDesktopSettings()).map((group) => (
             <div key={group.labelKey} className="flex flex-col gap-0.5 pt-4 first:pt-0">
               <GroupLabel>{t(group.labelKey)}</GroupLabel>
               {group.categories.map((category) => {

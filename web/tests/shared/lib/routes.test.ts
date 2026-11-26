@@ -82,7 +82,8 @@ describe('isDesktopLinkPath', () => {
 describe('isSettingsTab', () => {
   it('accepts only the known tabs', () => {
     expect(isSettingsTab('privacy')).toBe(true);
-    expect(isSettingsTab('moderation')).toBe(true);
+    expect(isSettingsTab('moderation')).toBe(false);
+    expect(isSettingsTab('administration')).toBe(false);
     expect(isSettingsTab('nope')).toBe(false);
     expect(isSettingsTab(undefined)).toBe(false);
   });
@@ -141,10 +142,10 @@ describe('modalForPath', () => {
     expect(modalForPath('/app/settings/av')).toBe('settings');
   });
 
-  it('every administration page opens the admin modal', () => {
-    expect(modalForPath('/admin')).toBe('admin');
-    expect(modalForPath('/admin/users')).toBe('admin');
-    expect(modalForPath('/admin/users/abc')).toBe('admin');
+  it('does not open a modal for retired administration routes', () => {
+    for (const path of ['/admin', '/admin/users', '/admin/users/abc']) {
+      expect(modalForPath(path), path).toBeNull();
+    }
   });
 
   it('other pages, and look-alike paths, are not modals', () => {

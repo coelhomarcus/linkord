@@ -19,9 +19,8 @@ describe('addressFor', () => {
     expect(addressFor('/app')).toBe('/app');
   });
 
-  it('keeps the pages meant to be linked: settings, administration, invites', () => {
+  it('keeps the pages meant to be linked: settings and invites', () => {
     expect(addressFor('/app/settings/profile')).toBe('/app/settings/profile');
-    expect(addressFor('/admin/users')).toBe('/admin/users');
     expect(addressFor('/invite/abc')).toBe('/invite/abc');
   });
 });

@@ -93,7 +93,7 @@ Use two **Applications** in the same project and environment, both with the GitH
 | Application | Docker Build Stage | Port | Watch Paths |
 | --- | --- | --- | --- |
 | `linkord-backend` | `backend` | `3000` | `server/**`, `package.json`, `bun.lock`, `bunfig.toml`, `Dockerfile`, `.dockerignore` |
-| `linkord-web` | `frontend` | `8080` | `web/**`, `docker/web/generate-headers.ts`, `docker/web/nginx.conf`, `server/src/http/pageSecurityPolicy.ts`, `server/src/modules/link-preview/playerHosts.ts`, `Dockerfile`, `.dockerignore` |
+| `linkord-web` | `frontend` | `8080` | `web/**`, `packages/frontend-shared/**`, `docker/web/generate-headers.ts`, `docker/web/nginx.conf`, `docker/web/public-routes.conf`, `server/src/http/pageSecurityPolicy.ts`, `server/src/modules/link-preview/playerHosts.ts`, `Dockerfile`, `.dockerignore` |
 
 Keep one replica of the backend. Its environment holds the database and integration settings above. Keep the existing bind mounts for `/app/uploads` and `/app/backups`. For a new installation, create the source folders on the host as root for uid 1000:
 
@@ -138,13 +138,22 @@ docker ps --format '{{.Names}}' | grep <app-name>
 
 ### Separate administration site
 
-Set up a third Dokploy Application, `linkord-admin`, in the same environment. Use the same repository and branch as `linkord-web`, the `admin` Docker target, and port `8080`. Give it the same Watch Paths as `linkord-web` and set the build argument `APP_URL` to the new admin site's HTTPS origin. Point its DNS at the same Traefik instance.
+Set up a third Dokploy Application, `linkord-admin`, in the same environment. Use the same repository and branch as `linkord-web`, the `admin` Docker target, and port `8080`. Set the build argument `APP_URL` to the admin site's HTTPS origin and point its DNS at the same Traefik instance. Add these Watch Paths to the admin Application:
+
+- `admin/**`
+- `packages/frontend-shared/**`
+- `docker/web/generate-headers.ts`
+- `docker/web/nginx.conf`
+- `server/src/http/pageSecurityPolicy.ts`
+- `server/src/modules/link-preview/playerHosts.ts`
+- `Dockerfile`
+- `.dockerignore`
 
 Deploy the admin image and install the [admin Traefik template](../docker/web/traefik.admin.dokploy.yml) under the new Application's **Advanced → Traefik**. Substitute its hostname, its internal service name, and the existing backend service name. Leave **Domains** empty when the Traefik file manages routing. Verify the admin root serves its HTML over HTTPS. Its API goes to the existing backend with the original `Host` header. The `/uploads/` route serves only profile and server images to that site.
 
-Set `ADMIN_URL` to the same HTTPS origin in the backend's runtime environment and redeploy the backend. This enables the separate sign-in and closes `/api/admin/*` on the public host. Links under `/admin` in the main app forward to the new site. The admin session lasts up to 12 hours, uses the account's existing two-step setting and is revocable from its session list. Chat and voice moderation still run in the main app.
+In the backend Application's **Environment** settings, set `ADMIN_URL` to the same HTTPS origin as a runtime variable, then redeploy the backend with the image's default command. The admin HTTP API is available only on that origin and requires a dedicated admin session after sign-in. Leaving `ADMIN_URL` unset disables the admin HTTP API while the main app starts as usual. The public host returns `404` for `/admin`, its subpaths and `/api/admin/*`. The admin session lasts up to 12 hours, uses the account's existing two-step setting and is revocable from its session list. Chat and voice moderation still run in the main app.
 
-Verify that the admin domain's `/api/admin/auth/me` returns `401` before login, the public domain's `/api/admin/users` returns `404`, and an active admin can sign in and sign out on the new domain. If rollback is needed, remove `ADMIN_URL` and redeploy the backend before retiring the new Traefik routes. This restores the integrated panel once the public app refreshes its session.
+After changing the Watch Paths, deploy the admin site, the public web app and the backend. Check that the admin domain's `/api/admin/auth/me` returns `401` before login, the public domain returns `404` for `/admin` and `/api/admin/users`, and an active admin can sign in and out. To roll back a frontend or backend, deploy its last working revision as described in the [split deploy rollback instructions](#dokploy).
 
 ## Upgrading from a version with playgrounds
 

@@ -18,7 +18,7 @@ import { useFriends } from '@/features/friends/FriendsContext';
 import { useRoom, useRoomState } from '@/state/RoomContext';
 import { useCallRoster } from '@/features/calls/callRoster';
 import { LinkordMark } from '@/shared/ui/LinkordMark';
-import { ServerIcon } from './ServerIcon';
+import { ServerIcon } from '@linkord/frontend-shared/ui/ServerIcon';
 import { CreateServerDialog } from './CreateServerDialog';
 import { liveCallIds, serverHasLiveCall, serverUnread } from './serverUtils';
 import { railDirects } from './railDirects';

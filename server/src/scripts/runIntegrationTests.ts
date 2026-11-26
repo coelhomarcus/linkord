@@ -35,7 +35,7 @@ async function main(): Promise<number> {
   try {
     await migrateOn(db.pool, folder.folder);
     console.log(`[integration] banco ${db.name} migrado; ${files.length} arquivo(s)`);
-    const env = { ...process.env, DATABASE_URL: db.url, TEST_DATABASE_BASE_URL: baseUrl, MIGRATE_ON_BOOT: '0' } as NodeJS.ProcessEnv;
+    const env = { ...process.env, DATABASE_URL: db.url, TEST_DATABASE_BASE_URL: baseUrl, MIGRATE_ON_BOOT: '0', ADMIN_URL: 'https://admin.integration.invalid' } as NodeJS.ProcessEnv;
     delete env.DATABASE_URL_PROD;
     const child = spawn(process.execPath, ['test', '--isolate', '--timeout=30000', '--no-env-file', ...files], { env, stdio: 'inherit' });
     return await new Promise<number>((resolve) => child.on('exit', (code) => resolve(code ?? 1)));

@@ -1,6 +1,5 @@
 import { eq } from 'drizzle-orm';
 import type { FastifyReply, FastifyRequest } from 'fastify';
-import { config } from '../../config/env.js';
 import { db } from '../../db/client.js';
 import { users } from '../../db/schema.js';
 import { sendError } from '../../http/respond.js';
@@ -21,15 +20,14 @@ export async function isActiveAdmin(userId: string): Promise<boolean> {
 /** HTTP guard for /api/admin/*. 401 without a session, 403 for anyone who is
  * not an active admin RIGHT NOW. */
 export async function requireAdminSession(request: FastifyRequest, reply: FastifyReply) {
-  const split = config.ADMIN_ORIGIN !== null;
-  if (split && !requireAdminOrigin(request, reply)) return null;
+  if (!requireAdminOrigin(request, reply)) return null;
   const cookies = parseCookies(request.headers.cookie || '');
-  const sess = await resolveSession(split ? cookies[adminCookieName()] : cookies[config.SESSION_COOKIE], split ? 'admin' : 'app');
+  const sess = await resolveSession(cookies[adminCookieName()], 'admin');
   if (!sess) {
     sendError(reply, 401, 'unauthenticated', 'Não autenticado.');
     return null;
   }
-  if (!(split ? sess.role === 'admin' : await isActiveAdmin(sess.userId))) {
+  if (sess.role !== 'admin') {
     sendError(reply, 403, 'forbidden', 'Apenas administradores.');
     return null;
   }

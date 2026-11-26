@@ -3,7 +3,6 @@ import { useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { Navigate, useLocation, useNavigate, useParams } from 'react-router';
-import { useRoomState } from '@/state/RoomContext';
 import { PageHeader } from '@/shared/PageHeader';
 import { Button } from '@/shared/ui/primitives/button';
 import { useAppModalClose } from '@/shared/ui/app-modal';
@@ -13,7 +12,6 @@ import type { SettingsTab } from '@/shared/lib/routes';
 import { ConnectionsSettings } from '@/features/profile/ConnectionsSettings';
 import { ActivitySettings } from '@/features/activity/ActivitySettings';
 import { AccountSettings } from './AccountSettings';
-import { AdminLinkTab } from './AdminLinkTab';
 import { AppearanceSettings } from './AppearanceSettings';
 import { AudioVideoSettings } from './AudioVideoSettings';
 import { ChatSettings } from './ChatSettings';
@@ -47,7 +45,6 @@ function CategoryPage({ tab, onOpenProfile }: { tab: SettingsTab; onOpenProfile:
     case 'language': return <LanguageSettings />;
     case 'downloads': return <DownloadsSettings />;
     case 'desktop': return <DesktopSettings />;
-    case 'moderation': return <AdminLinkTab />;
   }
 }
 
@@ -56,7 +53,6 @@ function CategoryPage({ tab, onOpenProfile }: { tab: SettingsTab; onOpenProfile:
  * an index of categories that opens one at a time. */
 export function SettingsPage({ onOpenProfile }: SettingsPageProps) {
   const { t } = useTranslation('settings');
-  const state = useRoomState('me');
   const { tab } = useParams<{ tab?: string }>();
   const navigate = useNavigate();
   const location = useLocation();
@@ -66,9 +62,8 @@ export function SettingsPage({ onOpenProfile }: SettingsPageProps) {
   const headingRef = useRef<HTMLHeadingElement | null>(null);
   const mode = useSettingsLayout(areaRef);
   const firstRender = useRef(true);
-  const isAdmin = state.me.role === 'admin';
 
-  const known = isSettingsTab(tab) && categoryVisible(findCategory(tab), isAdmin, hasDesktopSettings());
+  const known = isSettingsTab(tab) && categoryVisible(findCategory(tab), hasDesktopSettings());
   const active: SettingsTab | null = known ? tab : null;
   // wide: no category in the URL just means "the first one", on the same URL;
   // compact: it is the index
@@ -100,7 +95,7 @@ export function SettingsPage({ onOpenProfile }: SettingsPageProps) {
 
   if (tab !== undefined && !known) {
     const legacy = LEGACY_SETTINGS_TABS[tab];
-    // an unknown category — or the admin-only one for a non-admin — falls back
+    // an unknown or unavailable category falls back
     // to the first one instead of rendering an empty page
     return <Navigate to={ROUTES.settingsTab(legacy ?? 'account')} replace />;
   }
@@ -121,7 +116,7 @@ export function SettingsPage({ onOpenProfile }: SettingsPageProps) {
     return (
       <div className="flex min-h-0 min-w-0 flex-1">
         <div className="scrollbar-none flex flex-none overflow-y-auto border-r border-border-divider">
-          <SettingsSidebar active={current} isAdmin={isAdmin} onOpenProfile={onOpenProfile} />
+          <SettingsSidebar active={current} onOpenProfile={onOpenProfile} />
         </div>
         <div className="flex min-h-0 min-w-0 flex-1 flex-col">
           {/* Discord's bar over the page: its name (already the page's hidden heading) and the close button */}
@@ -160,7 +155,7 @@ export function SettingsPage({ onOpenProfile }: SettingsPageProps) {
         ) : undefined}
       />
       <main ref={scrollerRef} aria-label={showIndex ? t('title') : t(category.labelKey)} className="@container min-h-0 min-w-0 flex-1 overflow-y-auto [scrollbar-gutter:stable]">
-        {showIndex ? <SettingsIndex isAdmin={isAdmin} onOpenProfile={onOpenProfile} /> : page}
+        {showIndex ? <SettingsIndex onOpenProfile={onOpenProfile} /> : page}
       </main>
       </>
     );

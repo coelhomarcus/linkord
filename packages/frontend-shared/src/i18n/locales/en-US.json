@@ -1,0 +1,180 @@
+{
+  "typing": {
+    "one": "{{name}} is typing...",
+    "some": "{{names}} are typing...",
+    "many": "Several people are typing..."
+  },
+  "time": {
+    "yesterdayAt": "Yesterday at {{time}}"
+  },
+  "confirm": {
+    "confirm": "Confirm",
+    "cancel": "Cancel"
+  },
+  "page": {
+    "close": "Close",
+    "retry": "Try again",
+    "loadingMore": "Loading more items"
+  },
+  "layout": {
+    "retryNow": "Reconnect now",
+    "waitingForServer": "Waiting for the server connection...",
+    "reload": "Reload",
+    "unexpectedTitle": "Something went wrong",
+    "unexpectedDescription": "Something unexpected happened and was recorded. Reload the page to continue.",
+    "outdatedTitle": "A new version of Linkord is available",
+    "outdatedDescription": "Linkord was updated, but this tab is still on the previous version. Update the page to continue. Your conversations and friendships are unchanged.",
+    "update": "Update the page",
+    "roomErrorTitle": "Could not join",
+    "tryAgain": "Try again",
+    "settings": "Settings",
+    "loading": "Loading…",
+    "dismissNotice": "Dismiss notice",
+    "deletionCancelled": "Account deletion cancelled. Welcome back!",
+    "window": {
+      "minimize": "Minimize",
+      "maximize": "Maximize",
+      "restore": "Restore",
+      "close": "Close",
+      "controls": "Window controls"
+    }
+  },
+  "upload": {
+    "missingConversation": "Conversation not provided."
+  },
+  "accessibility": {
+    "navigationClose": "Close navigation",
+    "oneTimeCode": "One-time code"
+  },
+  "avatar": {
+    "colors": {
+      "blurple": "Indigo",
+      "green": "Green",
+      "red": "Red",
+      "fuchsia": "Fuchsia",
+      "orange": "Orange",
+      "purple": "Purple",
+      "teal": "Teal",
+      "blue": "Blue"
+    }
+  },
+  "browserNotifications": {
+    "mentionedDirect": "{{name}} mentioned you",
+    "mentioned": "You were mentioned in {{conversation}}",
+    "sentMessages_one": "{{name}} sent {{count}} message",
+    "sentMessages_other": "{{name}} sent {{count}} messages",
+    "peopleSent_one": "{{count}} person sent messages",
+    "peopleSent_other": "{{count}} people sent messages"
+  },
+  "contextMenu": {
+    "reply": "Reply",
+    "allReactions": "View all reactions",
+    "copyText": "Copy text",
+    "selectText": "Select text",
+    "report": "Report",
+    "edit": "Edit",
+    "removeAttachment": "Remove attachment",
+    "removeEmbed": "Remove embed",
+    "delete": "Delete",
+    "download": "Download",
+    "copy": "Copy",
+    "viewProfile": "View profile",
+    "closeConversation": "Close conversation",
+    "removeEmbedTitle": "Remove embed",
+    "removeAttachmentTitle": "Remove attachment",
+    "removeEmbedDescription": "The link stays in the message; only its preview is removed for everyone.",
+    "removeAttachmentDescription": "\"{{name}}\" is removed from the message for everyone and deleted. The rest of the message remains.",
+    "remove": "Remove",
+    "messageFrom": "message from {{name}}",
+    "markAsRead": "Mark as read",
+    "markServerAsRead": "Mark server as read"
+  },
+  "room": {
+    "full": "The room is full. Try again later.",
+    "tooManyConnections": "You already have too many open connections. Close another tab.",
+    "server": {
+      "removed": "You were removed from the server \"{{name}}\".",
+      "banned": "You were banned from the server \"{{name}}\".",
+      "deleted": "The server \"{{name}}\" was deleted."
+    }
+  },
+  "errors": {
+    "unexpected": "Unexpected error.",
+    "networkUpload": "Network error while uploading the file.",
+    "uploadTimeout": "The server took too long to respond to the upload. Try again.",
+    "codes": {
+      "invalid_credentials": "Invalid username or password.",
+      "account_unavailable": "This account is unavailable. Contact an administrator.",
+      "account_deleted": "This account was deleted at its owner's request.",
+      "export_expired": "This link has expired. Ask for a new copy in Settings → Data & privacy.",
+      "last_admin": "You are the only administrator. Make someone else an administrator before deleting your account.",
+      "registration_closed": "Registration is closed.",
+      "invalid_code": "Invalid code.",
+      "code_expired": "Code expired. Request a new one.",
+      "too_many_attempts": "Too many attempts. Request a new code.",
+      "invalid_email": "Enter a valid email address.",
+      "weak_password": "The password does not meet the minimum requirements.",
+      "password_mismatch": "The passwords do not match.",
+      "username_taken": "That username or email is already in use.",
+      "email_taken": "That email is already in use.",
+      "forbidden": "You do not have permission to do this.",
+      "not_found": "The item could not be found.",
+      "rate_limited": "Too many requests. Try again later.",
+      "relationship_required": "You cannot message this person.",
+      "reason_required": "Enter a reason.",
+      "internal_error": "Could not complete the operation. Try again.",
+      "server_full": "This server is full.",
+      "banned": "You were banned from this server.",
+      "invalid_invite": "This invite is invalid or has expired.",
+      "hierarchy": "That is above your role.",
+      "invalid_password": "Wrong password.",
+      "login_expired": "The sign-in expired. Enter your password again.",
+      "email_required": "Add an email to the account before turning on two-step verification.",
+      "email_not_configured": "Sending email is not set up on this server.",
+      "email_unavailable": "Could not send the code right now. Try again later."
+    }
+  },
+  "colorPicker": {
+    "title": "Choose a color",
+    "saturation": "Saturation and brightness",
+    "saturationValue": "Saturation {{saturation}}%, brightness {{brightness}}%",
+    "hue": "Hue",
+    "hex": "Color hex code",
+    "eyedropper": "Pick a color from the screen",
+    "presets": "Presets",
+    "useColor": "Use {{name}}"
+  },
+  "saveBar": {
+    "unsaved": "Don't forget to save your changes!",
+    "reset": "Reset",
+    "save": "Save",
+    "saving": "Saving…",
+    "saved": "Changes saved."
+  },
+  "clipboard": {
+    "copied": "Copied"
+  },
+  "imageCrop": {
+    "processing": "Processing image…",
+    "processingDescription": "Uploading and cropping the image. Animated GIFs can take a few seconds.",
+    "cancel": "Cancel",
+    "save": "Save",
+    "zoom": "Zoom"
+  },
+  "datePicker": {
+    "trigger": "{{label}}: {{value}}",
+    "anyDate": "Any date",
+    "since": "Since {{date}}",
+    "until": "Through {{date}}",
+    "previousMonth": "Previous month",
+    "nextMonth": "Next month",
+    "pickStart": "Pick the start date",
+    "pickEnd": "Now pick the end date",
+    "clear": "Clear",
+    "presets": {
+      "today": "Today",
+      "last7": "Last 7 days",
+      "last30": "Last 30 days"
+    }
+  }
+}

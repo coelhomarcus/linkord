@@ -1,6 +1,6 @@
 # AGENTS.md
 
-Linkord has a React web app in `web/`, a Bun API in `server/` and an Electron client in `desktop/`. See [README.md](README.md) for the product and [DEVELOPMENT.md](docs/DEVELOPMENT.md) for setup and commands.
+Linkord has a React web app in `web/`, a separate React administration site in `admin/`, a Bun API in `server/` and an Electron client in `desktop/`. The frontends share primitives in `packages/frontend-shared/`. See [README.md](README.md) for the product and [DEVELOPMENT.md](docs/DEVELOPMENT.md) for setup and commands.
 
 ## Workflow and organization
 

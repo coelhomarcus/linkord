@@ -1,6 +1,6 @@
 # Brand assets
 
-The main Linkord mark uses brand blue `#2b99e7`. The standalone administration site uses its [own monogram](../web/src/features/admin/admin-mark.svg) in the header, sign-in form and browser tab.
+The main Linkord mark uses brand blue `#2b99e7`. The standalone administration site uses its [own monogram](../admin/src/features/admin/admin-mark.svg) in the header, sign-in form and browser tab.
 
 ## `svg/` (and the same names in `png/`, 1024px)
 

@@ -15,8 +15,8 @@ describe('cn', () => {
     expect(cn('text-body', 'text-sm')).toBe('text-sm');
   });
 
-  it('knows every --text-* step in index.css as a font size', () => {
-    const css = readFileSync(join(process.cwd(), 'src/styles/index.css'), 'utf8');
+  it('knows every --text-* step in the shared base stylesheet as a font size', () => {
+    const css = readFileSync(join(process.cwd(), '../packages/frontend-shared/src/styles/base.css'), 'utf8');
     const steps = [...css.matchAll(/^\s*--text-([a-z]+):\s/gm)].map(([, step]) => step);
     expect(steps).toContain('heading');
     for (const step of steps) {

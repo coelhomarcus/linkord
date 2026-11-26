@@ -157,7 +157,7 @@ export function createApp(): FastifyInstance {
 
   // The monolith keeps direct links and bookmarks working through the SPA.
   fastify.setNotFoundHandler((request, reply) => {
-    if (!config.SERVE_WEB || request.method !== 'GET' || /^\/(?:api|uploads|ws)(?:[/?]|$)/.test(request.url)) {
+    if (!config.SERVE_WEB || request.method !== 'GET' || /^\/(?:api|uploads|ws|admin)(?:[/?]|$)/.test(request.url)) {
       return sendError(reply, 404, 'not_found', 'Rota não encontrada.');
     }
     return reply.sendFile('index.html');

@@ -7,7 +7,7 @@ import { TextPreviewCard } from '@/features/media/TextPreviewCard';
 import { VoiceMessagePlayer } from '@/features/voiceMessages/VoiceMessagePlayer';
 import { useCachedImageSrc } from '@/shared/hooks/useCachedImageSrc';
 import { availableAttachmentWidth, useChatSurfaceWidth } from '../../shared/lib/chatSurfaceWidth';
-import { cn } from '../../shared/lib/utils';
+import { cn } from '@/shared/lib/utils';
 import { attachmentViewerItem } from './messageViewerItems';
 import { MessageMediaScopeContext } from './useMediaViewer';
 

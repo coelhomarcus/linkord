@@ -5,12 +5,11 @@ import type { RouteObject, To } from 'react-router';
 const APP_ADDRESS = '/app';
 
 /** The address bar's text for a page: its own path for the pages meant to be
- * opened from a link or shared (settings and administration, an invite),
+ * opened from a link or shared (settings, an invite),
  * the bare app address for everything else — no server, channel or
  * conversation ids on screen. */
 export function addressFor(pathname: string): string {
   if (pathname === '/app/settings' || pathname.startsWith('/app/settings/')) return pathname;
-  if (pathname === '/admin' || pathname.startsWith('/admin/')) return pathname;
   if (pathname.startsWith('/invite/')) return pathname;
   if (pathname === APP_ADDRESS || pathname.startsWith(`${APP_ADDRESS}/`)) return APP_ADDRESS;
   return pathname;
