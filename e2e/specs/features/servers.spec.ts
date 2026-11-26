@@ -1,5 +1,5 @@
 import { test, expect } from '../../fixtures/test';
-import { PERMISSIONS, acceptInvite, createCategory, createChannel, createInvite, createServer, setChannelOverwrite } from '../../fixtures/api';
+import { PERMISSIONS, acceptInvite, createCategory, createChannel, createInvite, createServer, grantEveryone, setChannelOverwrite } from '../../fixtures/api';
 import { gifInfo, threeFrameGif } from '../../fixtures/images';
 
 test.describe('servers', () => {
@@ -256,6 +256,67 @@ test.describe('servers', () => {
       await expect(channel(tab, 'avisos')).toHaveCount(0);
       await expect(tab.page.getByPlaceholder('Conversar em #geral')).toBeVisible();
     }
+  });
+
+  test('channel drag and menu moves sync across accounts and preserve access', async ({ users }) => {
+    const alice = await users.create('alice');
+    const bob = await users.create('bob');
+    const server = await createServer(alice.api, 'E2E channel layout');
+    await acceptInvite(bob.api, await createInvite(alice.api, server.id));
+    await grantEveryone(alice.api, server, PERMISSIONS.MANAGE_CHANNELS);
+    const projects = await createCategory(alice.api, server.id, 'Projetos');
+    const team = await createCategory(alice.api, server.id, 'Equipe reservada');
+    const planning = await createChannel(alice.api, server.id, 'planejamento', 'text', projects);
+    const notices = await createChannel(alice.api, server.id, 'avisos', 'text', projects);
+    await createChannel(alice.api, server.id, 'Sala A', 'voice', projects);
+    await createChannel(alice.api, server.id, 'Sala B', 'voice', projects);
+    const secret = await createChannel(alice.api, server.id, 'segredo', 'text', team);
+    await setChannelOverwrite(alice.api, server.id, team, server.everyoneRoleId, 0, PERMISSIONS.VIEW_CHANNEL);
+    await setChannelOverwrite(alice.api, server.id, notices, server.everyoneRoleId, 0, PERMISSIONS.MANAGE_CHANNELS);
+
+    const a = await alice.app();
+    const b = await bob.app();
+    await a.openChannel(server.id, server.text.id);
+    await b.openChannel(server.id, server.text.id);
+    const list = (tab: typeof a) => tab.page.getByRole('navigation', { name: 'Canais', exact: true });
+    const row = (tab: typeof a, name: string) => list(tab).getByRole('button', { name, exact: true });
+    const namesIn = (tab: typeof a, name: string) => row(tab, name).locator('xpath=ancestor::section[1]').locator('li[data-channel-id] button[data-row-menu-control]');
+    const leading = { targetPosition: { x: 20, y: 3 } };
+
+    await expect(row(b, 'avisos')).toHaveAttribute('draggable', 'false');
+    await row(b, 'avisos').click({ button: 'right' });
+    await expect(b.page.getByRole('menuitem', { name: 'Mover para cima' })).toHaveCount(0);
+    await b.page.keyboard.press('Escape');
+    const denied = await bob.api.patch(`/api/channels/${notices}/position`, { data: { categoryId: team } });
+    expect(denied.status()).toBe(403);
+
+    await row(a, 'avisos').dragTo(row(a, 'planejamento'), leading);
+    await expect(namesIn(b, 'Projetos')).toHaveText(['avisos', 'planejamento', 'Sala A', 'Sala B']);
+    await row(a, 'Sala B').dragTo(row(a, 'Sala A'), leading);
+    await expect(namesIn(b, 'Projetos')).toHaveText(['avisos', 'planejamento', 'Sala B', 'Sala A']);
+
+    await row(a, 'Equipe reservada').click();
+    await expect(row(a, 'Equipe reservada')).toHaveAttribute('aria-expanded', 'false');
+    await row(a, 'planejamento').dragTo(row(a, 'Equipe reservada'));
+    // The public channel remains visible to Bob under a restricted category.
+    await expect(namesIn(b, 'Equipe reservada')).toHaveText(['planejamento']);
+    await row(a, 'Equipe reservada').click();
+    await expect(namesIn(a, 'Equipe reservada')).toHaveText(['segredo', 'planejamento']);
+
+    await row(a, 'segredo').press('Shift+F10');
+    await a.page.getByRole('menuitem', { name: 'Mover para categoria' }).hover();
+    await a.page.getByRole('menuitem', { name: 'Projetos' }).click();
+    await expect(namesIn(a, 'Projetos')).toHaveText(['avisos', 'segredo', 'Sala B', 'Sala A']);
+    await expect(row(b, 'segredo')).toHaveCount(0);
+    expect((await bob.api.patch(`/api/channels/${secret}/position`, { data: { categoryId: null } })).status()).toBe(403);
+
+    await row(a, 'planejamento').press('Shift+F10');
+    await a.page.getByRole('menuitem', { name: 'Mover para categoria' }).hover();
+    await a.page.getByRole('menuitem', { name: 'Sem categoria' }).click();
+    await expect(list(b).locator('li[data-channel-id]').first()).toHaveAttribute('data-channel-id', planning);
+    await b.page.reload();
+    await expect(list(b).locator('li[data-channel-id]').first()).toHaveAttribute('data-channel-id', planning);
+    await expect(namesIn(b, 'Projetos')).toHaveText(['avisos', 'Sala B', 'Sala A']);
   });
 
   test('a phone can reorder servers from the long-press menu', async ({ users }) => {

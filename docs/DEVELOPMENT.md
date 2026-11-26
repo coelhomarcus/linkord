@@ -223,7 +223,7 @@ Playwright runs on Bun and uses the installed Google Chrome. Its CLI scripts use
 | `features/dm` | Talking in a DM, unread counts, no DM without friendship, row menus in the list and rail, muting a DM across tabs. |
 | `features/chat` | Send, typing, reply, edit, delete, reactions, search, image and video attachments, the new-messages line, marking as read. |
 | `features/voice-messages` | Recording and playing a voice message; recording refused during a call without breaking its microphone. |
-| `features/servers` | Creating, invites, permissions, an animated icon, mute levels, and context menus for category and channel management, member moderation, and reordering servers by touch. |
+| `features/servers` | Creating, invites, permissions, an animated icon, mute levels, and context menus for category and channel management, member moderation, and reordering servers by touch. Channel reordering and category moves across accounts preserve access rules. |
 | `features/pins` | Pinning and unpinning, the `PIN_MESSAGES` permission, saved messages. |
 | `features/search` | The header search's filters, keyboard submission with suggestions open, sort, jump to message and history. |
 | `features/voice` | Hearing each other, mute, camera, screen share, moving and disconnecting a member. |

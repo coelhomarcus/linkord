@@ -35,6 +35,7 @@ Overcord is a self-hosted place to chat and call with friends. Talk in direct me
 **Servers**
 - Roles, channel permissions, invite links, kicks, and bans.
 - Right-click or long-press a server, category, channel, or member for its actions. The More actions button and Shift+F10 open the same menu. Channels and categories can be edited or deleted by members with permission. Deleting a category moves its channels to the uncategorized list and preserves their permissions.
+- Drag text and voice channels to reorder each type or move a channel between categories. On touch screens or with a keyboard, use the channel menu. Moving preserves the channel’s access rules.
 - Server templates to get started quickly.
 - Audit log of moderation and settings changes.
 - Webhooks so deploys, monitors, and other services can post into a channel ([guide](docs/WEBHOOK.md)).

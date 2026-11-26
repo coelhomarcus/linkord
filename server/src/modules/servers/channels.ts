@@ -11,11 +11,12 @@ import { enforceCallPermissions } from '../calls/callPermissions.js';
 import { participants } from '../presence/participants.js';
 import { ALL_PERMISSIONS, canManageRole, hasPermission, outranks, PERMISSIONS } from './permissions.js';
 import { channelPermissionsIn, invalidateServer, memberInput, type ServerSnapshot } from './serverAccess.js';
-import { sanitizeCategoryName, sanitizeChannelName, sanitizeTopic } from './serversRepository.js';
+import { lockServer, sanitizeCategoryName, sanitizeChannelName, sanitizeTopic } from './serversRepository.js';
 import { sendServerUpdateToMembers } from './serverSummaries.js';
 import { requireServerMember, requireSession, type ServerActor } from './serverHttp.js';
 import type { ChannelType } from './serverTemplate.js';
 import { createdFields, diffFields, recordServerAudit } from './serverAuditLog.js';
+import { moveServerChannel } from './channelLayout.js';
 import { logger } from '../../lib/logger.js';
 
 const log = logger.child({ component: 'channels' });
@@ -93,6 +94,7 @@ async function handleUpdateChannel(request: FastifyRequest<{ Params: ChannelPara
   const changes = diffFields({ name: channel.title, topic: channel.topic, permissionsSynced: channel.permissionsSynced },
     { name: updates.title, topic: updates.topic, permissionsSynced: updates.permissionsSynced }, ['name', 'topic', 'permissionsSynced']);
   await db.transaction(async (tx) => {
+    await lockServer(tx, actor.snapshot.server.id);
     await tx.update(conversations).set(updates).where(eq(conversations.id, channelId));
     // following the category again drops the channel's own rules
     if (updates.permissionsSynced) await tx.delete(channelPermissionOverwrites).where(eq(channelPermissionOverwrites.channelId, channelId));
@@ -175,6 +177,7 @@ async function handleDeleteCategory(request: FastifyRequest<{ Params: CategoryPa
   const actor = await requireCategoryManager(request, reply, categoryId);
   if (!actor) return;
   await db.transaction(async (tx) => {
+    await lockServer(tx, actor.snapshot.server.id);
     const synced = await tx.select({ id: conversations.id }).from(conversations)
       .where(and(eq(conversations.categoryId, categoryId), eq(conversations.permissionsSynced, true)));
     const inherited = await tx.select().from(channelPermissionOverwrites).where(eq(channelPermissionOverwrites.categoryId, categoryId));
@@ -193,6 +196,29 @@ async function handleDeleteCategory(request: FastifyRequest<{ Params: CategoryPa
   sendJson(reply, 200, { ok: true });
 }
 
+async function handleMoveChannel(request: FastifyRequest<{ Params: ChannelParams }>, reply: FastifyReply): Promise<void> {
+  const channelId = String(request.params.channelId || '');
+  const manager = await requireChannelManager(request, reply, channelId);
+  if (!manager) return;
+  const { categoryId, target } = jsonBody(request.body);
+  if (categoryId !== null && typeof categoryId !== 'string') {
+    return sendError(reply, 400, 'invalid_request', 'Escolha a categoria de destino.');
+  }
+  const relativeTo = target === undefined ? null : jsonBody(target);
+  if (relativeTo && (typeof relativeTo.channelId !== 'string' || (relativeTo.edge !== 'before' && relativeTo.edge !== 'after'))) {
+    return sendError(reply, 400, 'invalid_request', 'Escolha uma posição válida.');
+  }
+  const serverId = manager.actor.snapshot.server.id;
+  const result = await moveServerChannel(serverId, manager.actor.userId, channelId, categoryId, relativeTo && {
+    channelId: String(relativeTo.channelId),
+    edge: relativeTo.edge === 'before' ? 'before' : 'after',
+  });
+  if (result === 'forbidden') return sendError(reply, 403, 'forbidden', 'Você não tem permissão para mover esse canal.');
+  if (result === 'stale') return sendError(reply, 409, 'conflict', 'A lista de canais mudou. Tente de novo.');
+  if (result === 'moved') await changed(serverId);
+  sendJson(reply, 200, { ok: true });
+}
+
 /** The whole channel list's order in one go, as the drag-and-drop leaves
  * it: categories in order, and each channel's category and place. Ids that
  * don't belong to the server are ignored. */
@@ -208,6 +234,7 @@ async function handleLayout(request: FastifyRequest<{ Params: ServerParams }>, r
     .filter((c): c is { id: string; categoryId: string | null } => !!c && typeof c === 'object' && channelIds.has((c as { id: unknown }).id as string))
     .map((c) => ({ id: c.id, categoryId: typeof c.categoryId === 'string' && categoryIds.has(c.categoryId) ? c.categoryId : null }));
   await db.transaction(async (tx) => {
+    await lockServer(tx, serverId);
     for (const [position, id] of categories.entries()) await tx.update(serverCategories).set({ position }).where(eq(serverCategories.id, id));
     const positions = new Map<string | null, number>();
     for (const channel of channels) {
@@ -288,6 +315,7 @@ async function handleSetOverwrite(request: FastifyRequest<{ Params: OverwritePar
   const targetLabel = channel ? channel.title : actor.snapshot.categories.find((c) => c.id === targetId)!.name;
 
   await db.transaction(async (tx) => {
+    await lockServer(tx, serverId);
     if (channel) {
       if (channel.permissionsSynced && channel.categoryId) {
         const inherited = await tx.select().from(channelPermissionOverwrites).where(eq(channelPermissionOverwrites.categoryId, channel.categoryId));
@@ -325,6 +353,7 @@ async function handleSetOverwrite(request: FastifyRequest<{ Params: OverwritePar
 export function registerChannelRoutes(fastify: FastifyInstance): void {
   fastify.post('/api/servers/:serverId/channels', handleCreateChannel);
   fastify.patch('/api/channels/:channelId', handleUpdateChannel);
+  fastify.patch('/api/channels/:channelId/position', handleMoveChannel);
   fastify.delete('/api/channels/:channelId', handleDeleteChannel);
   fastify.post('/api/servers/:serverId/categories', handleCreateCategory);
   fastify.patch('/api/categories/:categoryId', handleUpdateCategory);

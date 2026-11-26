@@ -1,4 +1,4 @@
-import { BellSlashIcon, CaretDownIcon, CaretRightIcon, ChecksIcon, GearSixIcon, LinkIcon, PencilSimpleIcon, PlusIcon, TrashIcon, UserPlusIcon } from '@/shared/ui/icons';
+import { ArrowDownIcon, ArrowUpIcon, BellSlashIcon, CaretDownIcon, CaretRightIcon, ChecksIcon, GearSixIcon, LinkIcon, PencilSimpleIcon, PlusIcon, TrashIcon, UserPlusIcon } from '@/shared/ui/icons';
 import { useRef, useState } from 'react';
 import type { DragEvent } from 'react';
 import { useNavigate } from 'react-router';
@@ -8,10 +8,11 @@ import { useRowMenu } from '@/shared/hooks/useRowMenu';
 import { copyToClipboard } from '@/shared/lib/clipboard';
 import { ActiveFill } from '@/shared/ui/active-fill';
 import {
-  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger,
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuSub, DropdownMenuSubContent, DropdownMenuSubTrigger, DropdownMenuTrigger,
 } from '@/shared/ui/primitives/dropdown-menu';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/shared/ui/primitives/tooltip';
 import { Button } from '@/shared/ui/primitives/button';
+import { ErrorBanner } from '@/shared/ErrorBanner';
 import { EmptyState } from '@/shared/ui/empty-state';
 import { ROUTES } from '@/shared/lib/routes';
 import { cn } from '@/shared/lib/utils';
@@ -19,13 +20,14 @@ import { useRoom, useRoomState } from '@/state/RoomContext';
 import { getPreference, setPreference, usePreferenceValue } from '@/shared/preferences/accountPreferences';
 import type { CategorySummary, ChannelSummary, ServerSummary } from '@/shared/types/protocol';
 import { PERMISSIONS } from './permissionBits';
-import { can, canInChannel, canMoveInto, channelSettingsTabs, groupChannels } from './serverUtils';
+import { can, canInChannel, canMoveInto, channelSettingsTabs } from './serverUtils';
 import { CategoryActionDialog } from './CategoryActionDialog';
 import { ChannelDeleteDialog } from './ChannelDeleteDialog';
 import { ServerActionDialog, ServerMenuItems, type ServerMenuAction } from './ServerMenu';
 import { ChannelGlyph } from './ChannelGlyph';
 import { useServerSettings } from './ServerSettingsContext';
 import { NotificationMenuItems } from '@/features/notifications/NotificationMenuItems';
+import { useChannelLayout } from './useChannelLayout';
 import { VoiceMembers, type VoiceDrag } from './VoiceMembers';
 
 const NO_CATEGORIES: readonly string[] = [];
@@ -38,9 +40,10 @@ function useCollapsedCategories(serverId: string): readonly string[] {
   });
 }
 
-function ChannelRow({ server, channel, active, onOpen, onInvite, onDelete, onOpenProfile, onNavigate, drag, onDragChange }: {
+function ChannelRow({ server, channel, active, onOpen, onInvite, onDelete, onOpenProfile, onNavigate, drag, onDragChange, layout }: {
   server: ServerSummary; channel: ChannelSummary; active: boolean; onOpen: () => void; onInvite: () => void; onDelete: () => void;
   onOpenProfile: (userId: string) => void; onNavigate?: () => void; drag: VoiceDrag | null; onDragChange: (drag: VoiceDrag | null) => void;
+  layout: ReturnType<typeof useChannelLayout>;
 }) {
   const { t } = useTranslation('servers');
   const { t: tn } = useTranslation('notifications');
@@ -53,6 +56,10 @@ function ChannelRow({ server, channel, active, onOpen, onInvite, onDelete, onOpe
   const [dropping, setDropping] = useState(false);
   const menu = useRowMenu();
   const canInvite = can(server, PERMISSIONS.CREATE_INVITE);
+  const canMove = layout.canMove(channel);
+  const { previous, next } = canMove ? layout.neighbors(channel) : {};
+  const dragProps = layout.dragProps(channel);
+  const moveTargets = server.categories.filter((category) => category.id !== channel.categoryId).sort((a, b) => a.position - b.position);
   const canEdit = channelSettingsTabs(server, channel).length > 0;
   const canDelete = canInChannel(channel, PERMISSIONS.MANAGE_CHANNELS);
   const edit = () => openChannelSettings(server.id, channel.id);
@@ -74,15 +81,18 @@ function ChannelRow({ server, channel, active, onOpen, onInvite, onDelete, onOpe
   } : {};
   return (
     <li data-channel-id={channel.id} data-drop-target={accepts && dropping ? '' : undefined} {...dropHandlers}>
-      <div {...menu.rowProps} className={cn(
+      <div {...menu.rowProps} {...layout.dropProps({ categoryId: channel.categoryId, channel })} className={cn(
         'group/channel relative isolate mx-2 flex min-h-row-channel items-center rounded-lg',
         active ? 'text-text-primary' : unread ? 'text-text-primary' : 'text-text-muted hover:bg-nav-hover hover:text-text-primary',
         muted && !active && !unread && 'opacity-60',
         accepts && dropping && 'bg-nav-hover text-text-primary ring-2 ring-ring',
+        layout.dragged?.id === channel.id && 'opacity-50',
+        'after:pointer-events-none after:absolute after:inset-x-0 after:z-10 after:h-0.5 after:rounded-full after:bg-ring after:opacity-0 data-[channel-drop=before]:after:-top-0.5 data-[channel-drop=after]:after:-bottom-0.5 data-[channel-drop=before]:after:opacity-100 data-[channel-drop=after]:after:opacity-100',
       )}>
         {active && <ActiveFill />}
         {unread > 0 && !active && <span aria-hidden className="absolute -left-2 top-1/2 h-2 w-1 -translate-y-1/2 rounded-r-full bg-text-primary" />}
-        <button {...menu.primaryProps} type="button" onClick={onOpen} aria-current={active ? 'page' : undefined} className="flex min-w-0 flex-1 items-center gap-1.5 self-stretch rounded-lg px-2 text-left focus-ring">
+        <button {...menu.primaryProps} {...dragProps} type="button" onClick={onOpen} aria-current={active ? 'page' : undefined}
+          className={cn('flex min-w-0 flex-1 items-center gap-1.5 self-stretch rounded-lg px-2 text-left focus-ring', dragProps.draggable && 'cursor-grab active:cursor-grabbing')}>
           <ChannelGlyph channel={channel} size={20} className={cn('flex-none', active || unread > 0 ? 'text-text-secondary' : 'text-text-muted')} />
           <span className={cn('truncate text-body', unread > 0 ? 'font-semibold' : 'font-medium')}>{channel.name}</span>
           {muted && <BellSlashIcon size={14} className="flex-none text-text-muted" aria-label={tn('preferences.muted')} role="img" />}
@@ -123,6 +133,30 @@ function ChannelRow({ server, channel, active, onOpen, onInvite, onDelete, onOpe
           <DropdownMenuItem onClick={() => void copyToClipboard(new URL(ROUTES.channel(server.id, channel.id), window.location.origin).href)}>
             <LinkIcon size={16} />{t('channel.copyLink')}
           </DropdownMenuItem>
+          {canMove && (
+            <>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem disabled={!previous || layout.saving} onClick={() => {
+                if (previous) void layout.move(channel, { categoryId: channel.categoryId, target: { channelId: previous.id, edge: 'before' } });
+              }}><ArrowUpIcon size={16} />{t('menu.moveUp')}</DropdownMenuItem>
+              <DropdownMenuItem disabled={!next || layout.saving} onClick={() => {
+                if (next) void layout.move(channel, { categoryId: channel.categoryId, target: { channelId: next.id, edge: 'after' } });
+              }}><ArrowDownIcon size={16} />{t('menu.moveDown')}</DropdownMenuItem>
+              {(moveTargets.length > 0 || channel.categoryId !== null) && (
+                <DropdownMenuSub>
+                  <DropdownMenuSubTrigger disabled={layout.saving}>{t('channelLayout.moveTo')}</DropdownMenuSubTrigger>
+                  <DropdownMenuSubContent>
+                    {channel.categoryId !== null && (
+                      <DropdownMenuItem onClick={() => void layout.move(channel, { categoryId: null })}>{t('channelLayout.uncategorized')}</DropdownMenuItem>
+                    )}
+                    {moveTargets.map((category) => (
+                      <DropdownMenuItem key={category.id} onClick={() => void layout.move(channel, { categoryId: category.id })}>{category.name}</DropdownMenuItem>
+                    ))}
+                  </DropdownMenuSubContent>
+                </DropdownMenuSub>
+              )}
+            </>
+          )}
           {canDelete && (
             <>
               <DropdownMenuSeparator />
@@ -136,16 +170,17 @@ function ChannelRow({ server, channel, active, onOpen, onInvite, onDelete, onOpe
   );
 }
 
-function CategoryHeader({ category, collapsed, canManage, onToggle, onCreate, onRename, onDelete }: {
+function CategoryHeader({ category, collapsed, canManage, onToggle, onCreate, onRename, onDelete, dropProps }: {
   category: CategorySummary; collapsed: boolean; canManage: boolean;
   onToggle: () => void; onCreate: () => void; onRename: () => void; onDelete: () => void;
+  dropProps: ReturnType<ReturnType<typeof useChannelLayout>['dropProps']>;
 }) {
   const { t } = useTranslation('servers');
   const menu = useRowMenu();
   const Caret = collapsed ? CaretRightIcon : CaretDownIcon;
 
   return (
-    <div {...menu.rowProps} className="group/category mb-1 flex h-6 items-center px-4">
+    <div {...menu.rowProps} {...dropProps} className="group/category mx-2 mb-1 flex h-6 items-center rounded-sm px-2 data-[channel-drop=category]:bg-nav-hover data-[channel-drop=category]:ring-2 data-[channel-drop=category]:ring-ring">
       <button {...menu.primaryProps} type="button" onClick={onToggle} aria-expanded={!collapsed}
         className="flex min-w-0 flex-1 items-center gap-1 rounded-sm text-left text-label font-medium text-text-muted focus-ring hover:text-text-primary">
         <span className="truncate">{category.name}</span>
@@ -179,6 +214,7 @@ export function ChannelList({ server, activeChannelId, onNavigate, onOpenProfile
   server: ServerSummary; activeChannelId: string | null; onNavigate?: () => void; onOpenProfile: (userId: string) => void;
 }) {
   const { t } = useTranslation('servers');
+  const layout = useChannelLayout(server);
   const navigate = useNavigate();
   const { openCall, activeCallConversationId } = useRoom('openCall', 'activeCallConversationId');
   const collapsedIds = useCollapsedCategories(server.id);
@@ -226,6 +262,11 @@ export function ChannelList({ server, activeChannelId, onNavigate, onOpenProfile
           </DropdownMenuContent>
         </DropdownMenu>
         <span className="flex-1" />
+        {layout.dragged && (
+          <div {...layout.dropProps({ categoryId: null })} className="flex h-7 flex-none items-center rounded-sm border border-dashed border-border-strong px-2 text-label text-text-muted data-[channel-drop=category]:bg-nav-hover data-[channel-drop=category]:text-text-primary data-[channel-drop=category]:ring-2 data-[channel-drop=category]:ring-ring">
+            {t('channelLayout.uncategorized')}
+          </div>
+        )}
         {can(server, PERMISSIONS.CREATE_INVITE) && (
           <Tooltip>
             <TooltipTrigger onClick={() => setServerAction({ kind: 'invite' })} aria-label={t('menu.invite')} className="grid size-8 flex-none place-items-center rounded-lg text-text-secondary hover:bg-nav-hover hover:text-text-primary">
@@ -236,17 +277,18 @@ export function ChannelList({ server, activeChannelId, onNavigate, onOpenProfile
         )}
       </div>
 
+      {layout.error && <div role="alert" className="px-3 pt-2"><ErrorBanner>{layout.error}</ErrorBanner></div>}
       {server.status === 'suspended' ? (
         <p className="px-4 py-8 text-center text-label text-text-muted">{t('suspended')}</p>
       ) : (
         <nav aria-label={t('channels')} className="min-h-0 flex-1 overflow-y-auto pb-[max(0.75rem,var(--dock-list-clearance,0px))] pt-4">
-          {groupChannels(server).map(({ category, channels }) => {
+          {layout.groups.map(({ category, channels }) => {
             const isCollapsed = !!category && collapsed.has(category.id);
             const shown = isCollapsed ? channels.filter((c) => c.id === activeChannelId || c.id === activeCallConversationId) : channels;
             return (
               <section key={category?.id ?? 'loose'} className="mb-4">
                 {category && (
-                  <CategoryHeader category={category} collapsed={isCollapsed} canManage={canManageChannels}
+                  <CategoryHeader category={category} collapsed={isCollapsed} canManage={canManageChannels} dropProps={layout.dropProps({ categoryId: category.id })}
                     onToggle={() => toggleCategory(category.id)} onCreate={() => createChannelIn(category.id)}
                     onRename={() => setCategoryAction({ id: category.id, kind: 'rename' })}
                     onDelete={() => setCategoryAction({ id: category.id, kind: 'delete' })} />
@@ -256,7 +298,7 @@ export function ChannelList({ server, activeChannelId, onNavigate, onOpenProfile
                     <ChannelRow key={channel.id} server={server} channel={channel} active={channel.id === activeChannelId}
                       onOpen={() => open(channel)} onInvite={() => setServerAction({ kind: 'invite', channelId: channel.id })}
                       onDelete={() => setDeleteChannelId(channel.id)}
-                      onOpenProfile={onOpenProfile} onNavigate={onNavigate} drag={drag} onDragChange={setDrag} />
+                      onOpenProfile={onOpenProfile} onNavigate={onNavigate} drag={drag} onDragChange={setDrag} layout={layout} />
                   ))}
                 </ul>
               </section>

@@ -492,6 +492,8 @@
       }
     },
     "fields": {
+      "category": "Category",
+      "position": "Position",
       "name": "Name",
       "icon": "Icon",
       "topic": "Topic",
@@ -531,6 +533,12 @@
   },
   "noChannelsCanCreate": "Create the first channel to get the conversation going.",
   "noChannelsText": "When there is a channel you can see, it shows up here.",
+  "channelLayout": {
+    "moveTo": "Move to category",
+    "uncategorized": "Uncategorized",
+    "moved": "Moved {{name}}.",
+    "failed": "Could not move the channel. Try again."
+  },
   "category": {
     "rename": "Rename category",
     "delete": "Delete category",

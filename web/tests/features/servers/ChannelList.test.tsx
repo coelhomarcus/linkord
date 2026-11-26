@@ -1,10 +1,16 @@
 import { describe, expect, it, vi } from 'vitest';
-import { fireEvent, screen } from '@testing-library/react';
+import { fireEvent, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { renderSocial } from '@tests/fixtures/socialFixture';
 import { ChannelList } from '@/features/servers/ChannelList';
+import { moveChannel } from '@/features/servers/serversApi';
 import { PERMISSIONS } from '@/features/servers/permissionBits';
 import type { ServerSummary } from '@/shared/types/protocol';
+
+vi.mock('@/features/servers/serversApi', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/features/servers/serversApi')>()),
+  moveChannel: vi.fn(),
+}));
 
 const manage = PERMISSIONS.MANAGE_CHANNELS | PERMISSIONS.CREATE_INVITE;
 const server = {
@@ -34,6 +40,25 @@ describe('ChannelList', () => {
     fireEvent.contextMenu(screen.getByRole('button', { name: 'geral' }));
     await userEvent.click(await screen.findByRole('menuitem', { name: 'Marcar como lida' }));
     expect(markConversationRead).toHaveBeenCalledWith('c1');
+  });
+
+  it('restores the original channel order when saving a move fails', async () => {
+    let rejectMove!: (error: Error) => void;
+    vi.mocked(moveChannel).mockReturnValueOnce(new Promise((_, reject) => { rejectMove = reject; }));
+    renderSocial(<ChannelList server={server} activeChannelId={null} onOpenProfile={vi.fn()} />, {
+      room: { servers: [server] }, path: '/channels/s1',
+    });
+    const list = screen.getByRole('navigation', { name: 'Canais' });
+    const first = () => within(list).getAllByRole('listitem')[0]!;
+
+    fireEvent.contextMenu(screen.getByRole('button', { name: 'avisos' }));
+    await userEvent.click(await screen.findByRole('menuitem', { name: 'Mover para cima' }));
+    expect(first()).toHaveAttribute('data-channel-id', 'c2');
+    expect(moveChannel).toHaveBeenCalledWith('c2', { categoryId: null, target: { channelId: 'c1', edge: 'before' } });
+
+    rejectMove(new Error('offline'));
+    expect(await screen.findByRole('alert')).toHaveTextContent('Não foi possível mover o canal.');
+    expect(first()).toHaveAttribute('data-channel-id', 'c1');
   });
 
   it('a server with no visible channel offers to create one only to who can', async () => {
