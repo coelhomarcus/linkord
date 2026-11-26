@@ -63,7 +63,7 @@ To check, the admin domain's `/api/admin/auth/me` answers `401` before login, th
 
 ## Dokploy
 
-Use one **Application** with the GitHub repository root as the build context, branch `main`, Dockerfile `./Dockerfile`, no build stage and no build arguments. Under **Domains**, add the `APP_URL` hostname and the `ADMIN_URL` hostname, both on port `3000` with HTTPS. Every file in the repository can change the image, so leave **Watch Paths** empty.
+Use one **Application** with the GitHub repository root as the build context, branch `main`, Dockerfile `./Dockerfile`, no build stage and no build arguments. Under **Domains**, add the `APP_URL` hostname and the `ADMIN_URL` hostname, both on port `3000` with HTTPS. Domains are the only routing the Application needs; see the warning in [Migrating from the split deploy](#migrating-from-the-split-deploy) before touching Traefik files. Every file in the repository can change the image, so leave **Watch Paths** empty.
 
 Keep one replica. Its environment holds the settings above. Mount `/app/uploads` and `/app/backups` from the host, and keep an existing `LIVEKIT_ROOM_NAME` value so active calls can reconnect across deploys. For a new installation, create the source folders on the host as root for uid 1000:
 
@@ -88,14 +88,16 @@ docker ps --format '{{.Names}}' | grep <app-name>
 
 ### Migrating from the split deploy
 
-Earlier releases ran three Applications: `overcord-backend` (the `backend` target), `overcord-web` (`frontend`) and `overcord-admin` (`admin`), routed by Traefik files installed on the web and admin Applications. `overcord-backend` becomes the single Application. It keeps its environment, volumes and replica, so sessions, uploads and calls carry over.
+Earlier releases ran three Applications: `overcord-backend` (the `backend` target), `overcord-web` (`frontend`) and `overcord-admin` (`admin`). Their path routing lived outside **Domains**, in a Traefik file on `overcord-web` and in Swarm labels (**Advanced → Swarm Settings → Labels**) on both static Applications. `overcord-backend` becomes the single Application. It keeps its environment, volumes and replica, so sessions, uploads and calls carry over.
 
-1. Take a [backup](#backups). Pause Auto Deploy on all three Applications and write down each one's deployed commit, build stage and Traefik configuration.
+1. Take a [backup](#backups). Pause Auto Deploy on all three Applications and write down each one's deployed commit, build stage, Traefik file and Swarm labels.
 2. In `overcord-backend`, clear **Docker Build Stage** and **Watch Paths**, check that `ADMIN_URL` is the admin site's origin, and deploy the new revision. The current routes still send it only `/api`, `/ws`, `/uploads` and the health checks, so nothing visible changes yet. Wait for `/readyz`.
-3. Route both hostnames to `overcord-backend`. Either install a Traefik file on it with a catch-all router per hostname at a higher priority than the web and admin routers, or remove the Traefik files from `overcord-web` and `overcord-admin` and add both hostnames under the backend's **Domains**. Then check HTTPS, a direct link such as `/app/friends`, a signed-in session, an upload, the socket, a call, and the [admin site checks](#administration-site).
-4. Stop `overcord-web` and `overcord-admin` and remove their Traefik files. Keep both Applications, stopped, until the next release in case you need to roll back, then delete them. Turn Auto Deploy back on for `overcord-backend`.
+3. Add the `ADMIN_URL` hostname under the backend's **Domains**, next to the `APP_URL` one. The old routers keep a higher priority, so traffic does not move yet.
+4. Stop `overcord-web` and `overcord-admin`. Their labelled routers go away with their tasks, and both hostnames fall through to the backend's Domains. Check HTTPS, a direct link such as `/app/friends`, a signed-in session, an upload, the socket, a call, and the [admin site checks](#administration-site). Then delete both Applications, which also removes their Traefik files, and turn Auto Deploy back on for `overcord-backend`.
 
-**Rollback.** Before step 4, remove the backend's catch-all routers (or its Domains) so the web and admin routers take over again, and redeploy the backend from the recorded commit with the `backend` build stage. After step 4, start the two stopped Applications first and restore their Traefik files.
+Route only through **Domains**. Do not edit or empty Traefik files by hand: Traefik refuses a file with an empty `routers` map, and one invalid file makes it drop every file in `/etc/dokploy/traefik/dynamic`, which takes down every site on the server, the Dokploy panel included. If a change does not seem to apply, read `docker logs --tail 60 dokploy-traefik` before reloading Traefik.
+
+**Rollback.** Before step 4 nothing has moved. After it, start the two stopped Applications again and redeploy the backend from the recorded commit with the `backend` build stage.
 
 ## Upgrading from a version with playgrounds
 
