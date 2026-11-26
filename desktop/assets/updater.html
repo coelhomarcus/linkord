@@ -5,7 +5,7 @@
 <!-- The updater window (src/main/updaterWindow.ts). It shows what the main
      process sends and loads nothing from anywhere. -->
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'">
-<title>Linkord</title>
+<title>Overcord</title>
 <style>
   :root {
     color-scheme: dark;
@@ -102,15 +102,15 @@
       button.type = 'button';
       button.textContent = action.label;
       if (action.primary) button.className = 'primary';
-      button.addEventListener('click', () => window.linkordUpdater?.act(action.id));
+      button.addEventListener('click', () => window.overcordUpdater?.act(action.id));
       return button;
     }));
     actions.querySelector('.primary')?.focus();
   }
 
-  window.linkordUpdater?.onRender(render);
+  window.overcordUpdater?.onRender(render);
   document.addEventListener('keydown', (event) => {
-    if (event.key === 'Escape' && dismissable) window.linkordUpdater?.act('later');
+    if (event.key === 'Escape' && dismissable) window.overcordUpdater?.act('later');
   });
 </script>
 </body>

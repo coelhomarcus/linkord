@@ -10,7 +10,7 @@ const asRoot = process.getuid?.() === 0;
 const created: string[] = [];
 
 function uploadDir(): string {
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'linkord-uploads-'));
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'overcord-uploads-'));
   created.push(dir);
   return dir;
 }

@@ -1,6 +1,6 @@
 import type { CSSProperties, ReactNode } from 'react';
 
-import { MARK_BODY } from './LinkordMark';
+import { MARK_BODY } from './OvercordMark';
 
 /* Every colour is mixed against the surface the illustration sits on
    (`--surface-base`, set by the shell, panels and modals) instead of a fixed
@@ -66,7 +66,7 @@ const EYE_Y = 724;
 
 type Eyes = 'open' | 'closed' | 'happy';
 
-/** The Linkord mascot: `look` moves the pupils (in logo units, about ±30 across and ±50 down),
+/** The Overcord mascot: `look` moves the pupils (in logo units, about ±30 across and ±50 down),
  * `mouth` adds a small smile or an "o", `flip` turns it to face the other way. */
 function Mascot({ x, y, width, color = MASCOT, eyes = 'open', look = [0, 0], mouth, blush = true }: {
   x: number;

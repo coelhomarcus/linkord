@@ -5,11 +5,11 @@ import { parsePreferenceChange, parsePreferences, type DesktopPreferences } from
 import type { UpdateCheckOutcome, UpdateMode, UpdateStatus } from './updates.js';
 
 // The same names are spelled out in src/preload/index.cts, which cannot import this file
-const GET = 'linkord:settings:get';
-const SET = 'linkord:settings:set';
-const CHECK_UPDATES = 'linkord:settings:check-updates';
-const APPLY_UPDATE = 'linkord:settings:apply-update';
-const CHANGED = 'linkord:settings:changed';
+const GET = 'overcord:settings:get';
+const SET = 'overcord:settings:set';
+const CHECK_UPDATES = 'overcord:settings:check-updates';
+const APPLY_UPDATE = 'overcord:settings:apply-update';
+const CHANGED = 'overcord:settings:changed';
 
 /** What the settings page shows. */
 export interface DesktopSettings extends DesktopPreferences {

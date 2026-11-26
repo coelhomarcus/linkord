@@ -1,20 +1,20 @@
-// `linkord://` links, which another program (a browser, a chat, a document)
+// `overcord://` links, which another program (a browser, a chat, a document)
 // hands to the installed app. The link names a page of the web app, never a
 // URL: what it turns into is a path on the app's own origin, built here from
 // segments that each match a strict pattern. Anything else is ignored.
 //
-//   linkord://invite/<code>                           /invite/<code>
-//   linkord://channels/@me/<conversation>             a DM
-//   linkord://channels/<server>/<channel>             a server's channel
-//   linkord://channels/<@me|server>/<id>/<message>    that conversation, at the message
+//   overcord://invite/<code>                           /invite/<code>
+//   overcord://channels/@me/<conversation>             a DM
+//   overcord://channels/<server>/<channel>             a server's channel
+//   overcord://channels/<@me|server>/<id>/<message>    that conversation, at the message
 //
 // The paths are web/src/shared/lib/routes.ts's (ROUTES.invite, ROUTES.direct,
 // ROUTES.channel); the message is the `?message=` that route reads
 // (messageIdFromSearch).
 
-const DEEP_LINK_SCHEME = 'linkord';
+const DEEP_LINK_SCHEME = 'overcord';
 
-const PREFIX = /^linkord:\/\//i;
+const PREFIX = /^overcord:\/\//i;
 // No app link comes near this; a longer one is not ours
 const MAX_LENGTH = 512;
 // server/src/modules/servers/serverInvites.ts; web/src/features/servers/inviteCode.ts
@@ -26,7 +26,7 @@ const ID = /^[A-Za-z0-9_-]{1,64}$/;
 const MESSAGE_ID = /^[1-9][0-9]{0,14}$/;
 const HOME = '@me';
 
-/** The app path a `linkord://` link opens, or null when it is not one the app knows. */
+/** The app path a `overcord://` link opens, or null when it is not one the app knows. */
 export function deepLinkPath(link: string): string | null {
   if (typeof link !== 'string' || link.length > MAX_LENGTH || !PREFIX.test(link)) return null;
   // Some launchers add a trailing slash; nothing else is forgiven
@@ -53,14 +53,14 @@ export function deepLinkPath(link: string): string | null {
   }
 }
 
-/** Whether a command-line argument is a `linkord://` link (valid or not). */
+/** Whether a command-line argument is a `overcord://` link (valid or not). */
 export function isDeepLinkArgument(arg: string): boolean {
   return PREFIX.test(arg);
 }
 
 /**
  * The path of the link the app was started with, or a second launch passed
- * on: Windows runs `Linkord.exe "<link>"`, and Chromium may put its own
+ * on: Windows runs `Overcord.exe "<link>"`, and Chromium may put its own
  * switches before it. Only the last link counts.
  */
 export function deepLinkFromArgv(argv: readonly string[]): string | null {
@@ -73,7 +73,7 @@ export function deepLinkFromArgv(argv: readonly string[]): string | null {
  * system's registration alone. An installed build registers itself (the
  * installer did too; this takes the scheme back after a development run).
  * A development run registers only when asked to with --register-protocol,
- * since it would take the links away from an installed Linkord; it then
+ * since it would take the links away from an installed Overcord; it then
  * passes the app folder so Windows starts `electron <folder> "<link>"`.
  */
 export function protocolRegistration(input: {

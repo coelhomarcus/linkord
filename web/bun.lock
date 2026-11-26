@@ -12,7 +12,7 @@
         "@fontsource-variable/figtree": "^5.2.10",
         "@lexical/react": "0.52.0",
         "@lexical/utils": "0.52.0",
-        "@linkord/frontend-shared": "link:../packages/frontend-shared",
+        "@overcord/frontend-shared": "link:../packages/frontend-shared",
         "@tanstack/react-virtual": "^3.14.11",
         "@twinkleplop/bash": "^0.1.7",
         "@twinkleplop/css": "^0.1.7",
@@ -243,7 +243,7 @@
 
     "@lexical/yjs": ["@lexical/yjs@0.52.0", "", { "dependencies": { "@lexical/internal": "0.52.0", "@lexical/selection": "0.52.0", "lexical": "0.52.0" }, "peerDependencies": { "typescript": ">=5.2", "yjs": ">=13.5.37" }, "optionalPeers": ["typescript"] }, "sha512-6Qd9/AkMDxDNalsXDs1X7ddLTw2OsqUy42RRvpIWlv0ya1MO4CNedl4NvgwMtYzxtLzOkq0prtspCPvkirYkmA=="],
 
-    "@linkord/frontend-shared": ["@linkord/frontend-shared@link:../packages/frontend-shared", {}],
+    "@overcord/frontend-shared": ["@overcord/frontend-shared@link:../packages/frontend-shared", {}],
 
     "@livekit/mutex": ["@livekit/mutex@1.1.1", "", {}, "sha512-EsshAucklmpuUAfkABPxJNhzj9v2sG7JuzFDL4ML1oJQSV14sqrpTYnsaOudMAw9yOaW53NU3QQTlUQoRs4czw=="],
 

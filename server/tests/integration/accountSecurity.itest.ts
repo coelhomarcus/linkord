@@ -33,7 +33,7 @@ const saved = { key: config.RESEND_API_KEY, from: config.RESEND_FROM_EMAIL, idle
 beforeEach(() => {
   mailbox = [];
   config.RESEND_API_KEY = 're_test';
-  config.RESEND_FROM_EMAIL = 'Linkord <noreply@example.test>';
+  config.RESEND_FROM_EMAIL = 'Overcord <noreply@example.test>';
   config.APP_URL = 'https://chat.example.test';
   mock.method(globalThis, 'fetch', async (_url: string, init: RequestInit) => {
     mailbox.push(JSON.parse(String(init.body)));
@@ -832,7 +832,7 @@ describe('new sign-in alerts', () => {
 
     const [mail] = alertsTo(user.email);
     assert.ok(mail, 'an alert should have been sent');
-    assert.equal(mail.subject, 'New sign-in to your Linkord account');
+    assert.equal(mail.subject, 'New sign-in to your Overcord account');
     assert.match(mail.text, /Browser: Chrome on macOS/);
     assert.ok(mail.text.includes(`IP address: ${ip}`));
     assert.match(mail.text, /Time: .* UTC/);
@@ -843,7 +843,7 @@ describe('new sign-in alerts', () => {
     const user = await makeAccount();
     await signIn(user.username, freshIp(), FIREFOX_LINUX);
     const [mail] = alertsTo(user.email);
-    assert.equal(mail?.subject, 'Novo login na sua conta Linkord');
+    assert.equal(mail?.subject, 'Novo login na sua conta Overcord');
     assert.match(mail!.text, /Navegador: Firefox em Linux/);
   });
 

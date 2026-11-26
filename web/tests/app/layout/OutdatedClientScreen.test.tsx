@@ -8,7 +8,7 @@ afterEach(() => vi.unstubAllGlobals());
 describe('OutdatedClientScreen', () => {
   it('warns that a new version exists and reassures about the data', () => {
     render(<OutdatedClientScreen />);
-    expect(screen.getByRole('alert')).toHaveTextContent('Há uma versão nova do Linkord');
+    expect(screen.getByRole('alert')).toHaveTextContent('Há uma versão nova do Overcord');
     expect(screen.getByRole('alert')).toHaveTextContent(/conversas e amizades continuam/);
   });
 

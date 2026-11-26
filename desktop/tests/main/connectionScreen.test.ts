@@ -5,7 +5,7 @@ import { STRINGS } from '../../src/main/strings.js';
 
 const strings = STRINGS['en-US'];
 const context = { now: 10_000, titleBar: 'windows', maximized: false } as const;
-const SCREEN = 'file:///Applications/Linkord.app/Contents/Resources/app.asar/assets/connection.html';
+const SCREEN = 'file:///Applications/Overcord.app/Contents/Resources/app.asar/assets/connection.html';
 
 describe('connectionView', () => {
   it('shows a moving bar and nothing to press while it connects', () => {

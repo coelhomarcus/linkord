@@ -12,7 +12,7 @@
   "empty": "No conversations found.",
   "missing": {
     "title": "Nothing to send",
-    "body": "What you shared expired or never reached Linkord. Share it again from the original app.",
+    "body": "What you shared expired or never reached Overcord. Share it again from the original app.",
     "action": "Go to home"
   },
   "failed": "Couldn't receive what you shared. Try again."

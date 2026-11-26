@@ -145,7 +145,7 @@
       "igdb-playing-games": "What you are playing right now",
       "igdb-wishlist-games": "Your wishlist",
       "activity-top": "Games and apps ranked by time over the last 7 or 30 days",
-      "activity-recent": "The latest games and apps seen on Linkord",
+      "activity-recent": "The latest games and apps seen on Overcord",
       "activity-summary": "Total time, longest streak and favorite game",
       "twitch-live": "Live stream, game and viewer count",
       "twitch-vods": "The latest archived Twitch streams"
@@ -178,7 +178,7 @@
     "added": "Added",
     "barLabel": "Save changes to the Wall",
     "sections": {
-      "linkord": "From Linkord",
+      "overcord": "From Overcord",
       "integrations": "Integrations"
     },
     "groups": {
@@ -212,7 +212,7 @@
     "connectAccounts": "Connect accounts",
     "activity": {
       "empty": "No activity yet",
-      "desktopOnly": "Only the Linkord desktop app records playtime and app activity.",
+      "desktopOnly": "Only the Overcord desktop app records playtime and app activity.",
       "private": "Hidden from your profile while activity sharing is off.",
       "period": "Last {{count}} days",
       "periodLabel": "Period for {{name}}",

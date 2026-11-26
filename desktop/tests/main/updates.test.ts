@@ -2,16 +2,16 @@ import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { checksAtStart, mainWindowMayShow, parseUpdateRepo, progressPercent, startWindowClose, updateMode } from '../../src/main/updates.js';
 
-const repo = { owner: 'acme', repo: 'linkord' };
+const repo = { owner: 'acme', repo: 'overcord' };
 
 describe('parseUpdateRepo', () => {
   it('reads owner/repo', () => {
-    assert.deepEqual(parseUpdateRepo(' acme/linkord '), repo);
+    assert.deepEqual(parseUpdateRepo(' acme/overcord '), repo);
     assert.deepEqual(parseUpdateRepo('a-b.c/d_e'), { owner: 'a-b.c', repo: 'd_e' });
   });
 
   it('refuses anything else', () => {
-    for (const value of ['acme', 'acme/linkord/extra', 'https://github.com/acme/linkord', '../x/y', '', 42, null]) {
+    for (const value of ['acme', 'acme/overcord/extra', 'https://github.com/acme/overcord', '../x/y', '', 42, null]) {
       assert.equal(parseUpdateRepo(value), null, String(value));
     }
   });

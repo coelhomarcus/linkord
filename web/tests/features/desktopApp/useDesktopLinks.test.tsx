@@ -9,12 +9,12 @@ function Probe() {
   return <p data-testid="path">{location.pathname}{location.search}</p>;
 }
 
-afterEach(() => { delete window.linkordDesktop; });
+afterEach(() => { delete window.overcordDesktop; });
 
 function withDesktopApp() {
   let deliver: ((path: string) => void) | null = null;
   const unsubscribe = vi.fn();
-  window.linkordDesktop = {
+  window.overcordDesktop = {
     platform: 'win32',
     version: '0.4.0',
     onDeepLink: (callback) => {
@@ -26,7 +26,7 @@ function withDesktopApp() {
 }
 
 describe('useDesktopLinks', () => {
-  it('moves to the invite or conversation a linkord:// link names', () => {
+  it('moves to the invite or conversation a overcord:// link names', () => {
     const app = withDesktopApp();
     render(<MemoryRouter initialEntries={['/app/friends']}><Probe /></MemoryRouter>);
     app.open('/invite/aB3dEf7h');
@@ -49,7 +49,7 @@ describe('useDesktopLinks', () => {
     unmount();
     expect(app.unsubscribe).toHaveBeenCalled();
 
-    window.linkordDesktop = { platform: 'win32', version: '0.3.0' };
+    window.overcordDesktop = { platform: 'win32', version: '0.3.0' };
     expect(() => render(<MemoryRouter><Probe /></MemoryRouter>)).not.toThrow();
   });
 });

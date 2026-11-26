@@ -32,7 +32,7 @@ describe('useColorThemePreference', () => {
   });
 
   it('reads the ids a browser stored before the rename as the new ones', () => {
-    for (const [legacy, current] of [['linkord', 'old'], ['discord', 'graphite']]) {
+    for (const [legacy, current] of [['overcord', 'old'], ['discord', 'graphite']]) {
       localStorage.clear();
       localStorageStore.set(KEY, legacy);
       expect(loadColorTheme(), legacy).toBe(current);

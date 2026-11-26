@@ -1,5 +1,5 @@
-import { Skeleton } from '@linkord/frontend-shared/ui/primitives/skeleton';
-import { cn } from '@linkord/frontend-shared/lib/utils';
+import { Skeleton } from '@overcord/frontend-shared/ui/primitives/skeleton';
+import { cn } from '@overcord/frontend-shared/lib/utils';
 
 // Shapes of the admin pages while their first read is in flight. Each one keeps
 // the borders, paddings and row heights of what it stands for (AdminTable,

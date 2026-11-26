@@ -1,6 +1,6 @@
 {
   "panel": {
-    "description": "Emojis any member of the server can use in messages and reactions, here and anywhere else on Linkord. The image is cropped to a square and stored at 128 px; GIFs stay animated.",
+    "description": "Emojis any member of the server can use in messages and reactions, here and anywhere else on Overcord. The image is cropped to a square and stored at 128 px; GIFs stay animated.",
     "upload": "Upload emoji",
     "nameRule": "Names: 2 to 32 lowercase letters, numbers or _.",
     "static": "Emoji",
@@ -80,7 +80,7 @@
       "elsewhere": "This emoji is from a server you're not in. Only its members can use it.",
       "source": "This emoji is from"
     },
-    "standard": "A default emoji. You can use this emoji anywhere on Linkord.",
+    "standard": "A default emoji. You can use this emoji anywhere on Overcord.",
     "inviteOnly": "Invite-only server"
   }
 }

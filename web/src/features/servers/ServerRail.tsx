@@ -17,8 +17,8 @@ import { Avatar } from '@/shared/Avatar';
 import { useFriends } from '@/features/friends/FriendsContext';
 import { useRoom, useRoomState } from '@/state/RoomContext';
 import { useCallRoster } from '@/features/calls/callRoster';
-import { LinkordMark } from '@/shared/ui/LinkordMark';
-import { ServerIcon } from '@linkord/frontend-shared/ui/ServerIcon';
+import { OvercordMark } from '@/shared/ui/OvercordMark';
+import { ServerIcon } from '@overcord/frontend-shared/ui/ServerIcon';
 import { CreateServerDialog } from './CreateServerDialog';
 import { liveCallIds, serverHasLiveCall, serverUnread } from './serverUtils';
 import { railDirects } from './railDirects';
@@ -181,7 +181,7 @@ export function ServerRail({ className }: { className?: string }) {
             the mark takes the accent's label colour on it. Its eyes are holes,
             so the tile shows through them. */}
         <span className={cn('grid size-10 place-items-center rounded-[12px] transition-colors duration-150', home ? 'bg-accent-primary' : 'bg-surface-300 group-hover/server:bg-accent-primary')}>
-          <LinkordMark className={cn('h-auto w-6 transition-colors duration-150', home ? 'text-primary-foreground' : 'text-logo group-hover/server:text-primary-foreground')} />
+          <OvercordMark className={cn('h-auto w-6 transition-colors duration-150', home ? 'text-primary-foreground' : 'text-logo group-hover/server:text-primary-foreground')} />
         </span>
       </RailItem>
       {directs.map((row) => {

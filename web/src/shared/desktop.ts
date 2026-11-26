@@ -140,7 +140,7 @@ export interface DesktopNotifications {
   onClick: (callback: (id: string) => void) => () => void;
 }
 
-export interface LinkordDesktop {
+export interface OvercordDesktop {
   platform: string;
   version: string;
   screenShare?: DesktopScreenShare;
@@ -149,7 +149,7 @@ export interface LinkordDesktop {
   /** puts the window in fullscreen or takes it out; Esc does not leave it as it leaves an element's
    * (shared/lib/fullscreen.ts). Absent in builds that only have the element's fullscreen. */
   setFullScreen?: (on: boolean) => Promise<void>;
-  /** `linkord://` links opened while the app runs, as paths on this origin (an invite, a
+  /** `overcord://` links opened while the app runs, as paths on this origin (an invite, a
    * conversation); returns the unsubscribe. Absent in builds without deep links. */
   onDeepLink?: (callback: (path: string) => void) => () => void;
   /** the unread count on the taskbar button (0 clears it); absent in Windows builds up to 0.7.0,
@@ -167,12 +167,12 @@ export interface LinkordDesktop {
 
 declare global {
   interface Window {
-    linkordDesktop?: LinkordDesktop;
+    overcordDesktop?: OvercordDesktop;
   }
 }
 
-export function desktopApp(): LinkordDesktop | null {
-  return typeof window === 'undefined' ? null : window.linkordDesktop ?? null;
+export function desktopApp(): OvercordDesktop | null {
+  return typeof window === 'undefined' ? null : window.overcordDesktop ?? null;
 }
 
 export function isDesktopApp(): boolean {

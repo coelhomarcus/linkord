@@ -139,10 +139,10 @@ describe('Web Push activation', () => {
 });
 
 describe('Web Push in the desktop app', () => {
-  afterEach(() => { delete window.linkordDesktop; });
+  afterEach(() => { delete window.overcordDesktop; });
 
   it('is not supported, so a launch neither asks the server nor subscribes', async () => {
-    window.linkordDesktop = { platform: 'darwin', version: '0.1.0' };
+    window.overcordDesktop = { platform: 'darwin', version: '0.1.0' };
     stubSupportedBrowser();
     localStorageStore.set(LOCAL_STORAGE_KEYS.notificationsEnabled, '1');
 

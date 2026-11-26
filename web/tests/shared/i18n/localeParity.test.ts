@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { LANGUAGES, DEFAULT_LANGUAGE } from '@/shared/i18n/languages';
 
-import { sharedResources } from '@linkord/frontend-shared/i18n/resources';
+import { sharedResources } from '@overcord/frontend-shared/i18n/resources';
 
 type Bundle = Record<string, unknown>;
 

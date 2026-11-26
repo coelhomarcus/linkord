@@ -35,9 +35,9 @@ export function trayMenuSize(items: readonly { kind: string }[]): Size {
   };
 }
 
-/** Windows draws its own (see trayMenuWindow.ts); LINKORD_TRAY_MENU=drawn shows it elsewhere in a development run. */
+/** Windows draws its own (see trayMenuWindow.ts); OVERCORD_TRAY_MENU=drawn shows it elsewhere in a development run. */
 export function drawsTrayMenu(input: { platform: NodeJS.Platform; env: Readonly<Record<string, string | undefined>>; isPackaged: boolean }): boolean {
-  if (!input.isPackaged && input.env.LINKORD_TRAY_MENU === 'drawn') return true;
+  if (!input.isPackaged && input.env.OVERCORD_TRAY_MENU === 'drawn') return true;
   return input.platform === 'win32';
 }
 

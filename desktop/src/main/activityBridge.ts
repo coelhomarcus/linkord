@@ -4,15 +4,15 @@ import { parseActivityKey, parseActivityKeys } from './activityResolve.js';
 import type { CurrentActivity, RunningActivities, createActivityWatcher } from './activityWatcher.js';
 
 // The same names are spelled out in src/preload/index.cts, which cannot import this file
-const WATCH = 'linkord:activity:watch';
-const CURRENT = 'linkord:activity:current';
-const RECENT = 'linkord:activity:recent';
-const ICON = 'linkord:activity:icon';
-const CHANGED = 'linkord:activity:changed';
-const RUNNING = 'linkord:activity:running';
-const PREFER = 'linkord:activity:prefer';
-const HIDDEN = 'linkord:activity:hidden';
-const RUNNING_CHANGED = 'linkord:activity:running-changed';
+const WATCH = 'overcord:activity:watch';
+const CURRENT = 'overcord:activity:current';
+const RECENT = 'overcord:activity:recent';
+const ICON = 'overcord:activity:icon';
+const CHANGED = 'overcord:activity:changed';
+const RUNNING = 'overcord:activity:running';
+const PREFER = 'overcord:activity:prefer';
+const HIDDEN = 'overcord:activity:hidden';
+const RUNNING_CHANGED = 'overcord:activity:running-changed';
 
 /** The page decides whether anything is shared: it turns the watcher on while the account shares its
  * activity, and off otherwise, so a person who turned it off is not even looked at. */

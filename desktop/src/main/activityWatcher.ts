@@ -90,8 +90,8 @@ async function steamGameInfo(root: string | null, appId: number): Promise<{ name
 }
 
 const WINDOWS_FOREGROUND = [
-  'Add-Type -Namespace Linkord -Name Fg -MemberDefinition \'[DllImport("user32.dll")] public static extern System.IntPtr GetForegroundWindow(); [DllImport("user32.dll")] public static extern uint GetWindowThreadProcessId(System.IntPtr h, out uint p);\';',
-  '$p = 0; [void][Linkord.Fg]::GetWindowThreadProcessId([Linkord.Fg]::GetForegroundWindow(), [ref]$p);',
+  'Add-Type -Namespace Overcord -Name Fg -MemberDefinition \'[DllImport("user32.dll")] public static extern System.IntPtr GetForegroundWindow(); [DllImport("user32.dll")] public static extern uint GetWindowThreadProcessId(System.IntPtr h, out uint p);\';',
+  '$p = 0; [void][Overcord.Fg]::GetWindowThreadProcessId([Overcord.Fg]::GetForegroundWindow(), [ref]$p);',
   '"$p`t$((Get-Process -Id $p -ErrorAction SilentlyContinue).Path)"',
 ].join(' ');
 
@@ -235,7 +235,7 @@ export function createActivityWatcher(options: {
   async function check() {
     const generation = stops;
     const [processes, steam] = await Promise.all([listProcesses(), steamState()]);
-    // Discord keeps the pipe whenever it runs; Linkord listens only while nothing else does
+    // Discord keeps the pipe whenever it runs; Overcord listens only while nothing else does
     if (processes.some((p) => isDiscordProcess(p.path))) presence.yield();
     else await presence.ensure();
     let game: SteamGame | null = null;

@@ -4,11 +4,11 @@ import { isLoadFailure } from './loadRetry.js';
 import type { MainWindow } from './mainWindow.js';
 
 // The same names are spelled out in src/preload/index.cts, which cannot import this file
-const OPEN = 'linkord:deep-link:open';
-const READY = 'linkord:deep-link:ready';
+const OPEN = 'overcord:deep-link:open';
+const READY = 'overcord:deep-link:ready';
 
 /**
- * Opens a page named by a `linkord://` link (a path deepLink.ts built) in the
+ * Opens a page named by a `overcord://` link (a path deepLink.ts built) in the
  * main window. A page that listens moves there through its own router, so a
  * call keeps going; reloading would end it (the call lives in the page). One
  * that does not listen yet (still loading, failed, or a build from before

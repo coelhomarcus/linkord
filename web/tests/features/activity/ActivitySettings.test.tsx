@@ -17,7 +17,7 @@ vi.mock('@/features/activity/activityApi', async (importOriginal) => ({
 const fetchOwnHistory = vi.mocked(activityApi.fetchOwnActivityHistory);
 
 beforeEach(() => { fetchOwnHistory.mockReset().mockResolvedValue({ items: [] }); });
-afterEach(() => { delete window.linkordDesktop; });
+afterEach(() => { delete window.overcordDesktop; });
 
 function stubDesktop() {
   const api = {
@@ -27,7 +27,7 @@ function stubDesktop() {
     icon: vi.fn(async () => null),
     onChange: vi.fn(() => () => {}),
   } satisfies DesktopActivityApi;
-  window.linkordDesktop = { platform: 'win32', version: '0.3.0', activity: api };
+  window.overcordDesktop = { platform: 'win32', version: '0.3.0', activity: api };
 }
 
 function stubChoosingDesktop(initial: DesktopRunningActivities) {
@@ -46,7 +46,7 @@ function stubChoosingDesktop(initial: DesktopRunningActivities) {
       return () => { listener = null; };
     }),
   } satisfies DesktopActivityApi;
-  window.linkordDesktop = { platform: 'win32', version: '0.6.0', activity: api };
+  window.overcordDesktop = { platform: 'win32', version: '0.6.0', activity: api };
   return api;
 }
 

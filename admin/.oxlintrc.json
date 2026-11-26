@@ -7,7 +7,7 @@
     "no-restricted-imports": ["error", {
       "patterns": [{
         "group": ["@fluentui/*", "@fluentui/*/**"],
-        "message": "Import icons from '@linkord/frontend-shared/ui/icons' and run `bun run icons`: the package is SVG files the build reads, not code to bundle."
+        "message": "Import icons from '@overcord/frontend-shared/ui/icons' and run `bun run icons`: the package is SVG files the build reads, not code to bundle."
       }]
     }]
   }

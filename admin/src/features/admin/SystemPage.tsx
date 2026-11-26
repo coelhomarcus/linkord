@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Button } from '@linkord/frontend-shared/ui/primitives/button';
-import { formatFileSize } from '@linkord/frontend-shared/lib/formatBytes';
-import { SettingsNotice } from '@linkord/frontend-shared/ui/settings-layout';
+import { Button } from '@overcord/frontend-shared/ui/primitives/button';
+import { formatFileSize } from '@overcord/frontend-shared/lib/formatBytes';
+import { SettingsNotice } from '@overcord/frontend-shared/ui/settings-layout';
 import { fetchSystem, sweepOrphans } from './adminApi';
 import type { RetentionInfo, SweepResult } from './adminApi';
 import { AdminActionRow, AdminFieldRow, AdminFields, AdminPageTitle, AdminSection } from './AdminSection';
@@ -12,7 +12,7 @@ import { formatWhen } from './adminFormat';
 import { AdminTextLink, DetailStatusView } from './adminUi';
 import { AdminSectionsSkeleton } from './AdminSkeletons';
 import { useAdminDetail } from './useAdminDetail';
-import { useLanguage } from '@linkord/frontend-shared/i18n/useLanguage';
+import { useLanguage } from '@overcord/frontend-shared/i18n/useLanguage';
 
 const AUDIT_SWEEP_FAILURES = '/admin/audit?action=storage.orphan_delete';
 

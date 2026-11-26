@@ -4,20 +4,20 @@
 //
 // resources/icon.png is drawn from web/public/favicon.svg's mark.
 
-const [owner, repo] = (process.env.LINKORD_UPDATE_REPO ?? '').split('/');
+const [owner, repo] = (process.env.OVERCORD_UPDATE_REPO ?? '').split('/');
 const updateRepo = owner && repo ? { owner, repo } : null;
 
 /** @type {import('electron-builder').Configuration} */
 module.exports = {
-  appId: 'app.linkord.desktop',
-  productName: 'Linkord',
+  appId: 'app.overcord.desktop',
+  productName: 'Overcord',
   directories: { output: 'release', buildResources: 'resources' },
   files: ['dist/**/*', '!dist/**/*.map', 'assets/**/*', 'package.json'],
-  artifactName: 'Linkord-${version}-${os}-${arch}.${ext}',
+  artifactName: 'Overcord-${version}-${os}-${arch}.${ext}',
   // With a repository (scripts/package.mjs checks it), the build writes the
-  // latest*.yml files the app's updater reads from that repository's GitHub
-  // releases. Uploading them is the workflow's job (--publish never).
-  publish: updateRepo ? { provider: 'github', owner: updateRepo.owner, repo: updateRepo.repo } : null,
+  // overcord.yml manifest for the Overcord updater. Earlier desktop builds
+  // look for latest.yml, so they cannot install this separate application.
+  publish: updateRepo ? { provider: 'github', ...updateRepo, channel: 'overcord' } : null,
 
   // Without these the installed, familiar binary would run any script as Node
   // (ELECTRON_RUN_AS_NODE, NODE_OPTIONS), take a debugger (--inspect) or load

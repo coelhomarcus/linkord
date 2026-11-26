@@ -13,7 +13,7 @@
   "dismissNotice": "Dismiss notice",
   "preview": "Voice message",
   "notices": {
-    "denied": "Linkord isn't allowed to use the microphone. Allow it in the site settings (the icon next to the address) and try again.",
+    "denied": "Overcord isn't allowed to use the microphone. Allow it in the site settings (the icon next to the address) and try again.",
     "busy": "Couldn't open the microphone. Another app may be using it, such as a call in Discord or Meet.",
     "noDevice": "No microphone found.",
     "unsupported": "This browser can't record audio.",

@@ -101,7 +101,7 @@ export async function findDownload(userId: string, id: string, now = new Date())
   const file = exportFilePath(e.id);
   if (!(await fs.stat(file).then((st) => st.isFile(), () => false))) return { code: 'not_found' };
   const day = (e.completedAt ?? e.requestedAt).toISOString().slice(0, 10);
-  return { code: 'ok', file, fileName: `linkord-${row.username}-${day}.zip`, sizeBytes: e.sizeBytes ?? 0 };
+  return { code: 'ok', file, fileName: `overcord-${row.username}-${day}.zip`, sizeBytes: e.sizeBytes ?? 0 };
 }
 
 // ---- the job ----

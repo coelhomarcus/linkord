@@ -1,5 +1,5 @@
 import type { ComponentProps, ReactNode } from 'react';
-import { cn } from '@linkord/frontend-shared/lib/utils';
+import { cn } from '@overcord/frontend-shared/lib/utils';
 
 /** A semantic table whose overflow stays in its own region — never on the page.
  * Used on the wide layout only; compact screens render stacked rows instead,

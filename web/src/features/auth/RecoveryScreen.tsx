@@ -7,7 +7,7 @@ import { ErrorBanner } from '@/shared/ErrorBanner';
 import { describeApiError } from '@/shared/api/errorText';
 import { Button } from '@/shared/ui/primitives/button';
 import { OTPInput, type OTPStatus } from '@/shared/ui/motion/otp-input';
-import { AuthField } from '@linkord/frontend-shared/auth/AuthField';
+import { AuthField } from '@overcord/frontend-shared/auth/AuthField';
 import { AuthCard, AuthHeading, AuthLink, PasswordToggle } from './AuthLayout';
 import { MIN_PASSWORD_LEN, recoveryIdentifierOf } from './credentialRules';
 

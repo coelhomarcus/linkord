@@ -179,6 +179,7 @@ const LIVEKIT_API_KEY = process.env.LIVEKIT_API_KEY || '';
 const LIVEKIT_API_SECRET = process.env.LIVEKIT_API_SECRET || '';
 // prefix for each call's LiveKit room name (see
 // integrations/livekit/livekit.ts) — one room per voice channel or DM, not a single shared one.
+// Existing deployments reconnect to the same rooms across a server restart.
 const LIVEKIT_ROOM_NAME = process.env.LIVEKIT_ROOM_NAME || 'linkord-room';
 // A token only gates ENTERING a room and the client uses it the moment it arrives;
 // LiveKit can't recall one already issued, so a short life bounds how long a
@@ -207,7 +208,7 @@ const STEAM_WEB_API_KEY = (process.env.STEAM_WEB_API_KEY || '').trim();
 const STEAMGRIDDB_API_KEY = (process.env.STEAMGRIDDB_API_KEY || '').trim();
 
 // The GitHub repository ("owner/repo") whose releases carry the desktop app's installers, the same one
-// the installers update from (LINKORD_UPDATE_REPO when they are built). Set, the web app announces the
+// the installers update from (OVERCORD_UPDATE_REPO when they are built). Set, the web app announces the
 // desktop app once on Windows computers and links to the installer; empty, it never mentions it.
 const desktopReleasesRepo = (process.env.DESKTOP_RELEASES_REPO || '').trim();
 const DESKTOP_RELEASES_REPO = /^[\w.-]+\/[\w.-]+$/.test(desktopReleasesRepo) ? desktopReleasesRepo : '';

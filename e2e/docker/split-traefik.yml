@@ -1,21 +1,21 @@
 http:
   routers:
-    linkord-backend:
+    overcord-backend:
       rule: 'Host(`localhost`) && (PathRegexp(`^/(api|ws|uploads)(/|$)`) || Path(`/healthz`) || Path(`/readyz`))'
       priority: 200
       entryPoints: [web]
       service: app
-    linkord-frontend:
+    overcord-frontend:
       rule: 'Host(`localhost`)'
       priority: 100
       entryPoints: [web]
       service: frontend
-    linkord-admin-api:
+    overcord-admin-api:
       rule: 'Host(`127.0.0.1`) && (PathPrefix(`/api/admin/`) || Path(`/api/csp-reports`) || PathPrefix(`/uploads/`))'
       priority: 200
       entryPoints: [web]
       service: app
-    linkord-admin-site:
+    overcord-admin-site:
       rule: 'Host(`127.0.0.1`)'
       priority: 100
       entryPoints: [web]

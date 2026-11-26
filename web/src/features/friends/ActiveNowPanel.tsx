@@ -14,7 +14,7 @@ import { ActivityIcon } from '@/features/activity/ActivityLine';
 import { formatActivityTimer } from '@/features/activity/activityTime';
 import { useServerNow } from '@/features/activity/serverClock';
 import { UserStatusDot } from '@/features/status/UserStatus';
-import { ServerIcon } from '@linkord/frontend-shared/ui/ServerIcon';
+import { ServerIcon } from '@overcord/frontend-shared/ui/ServerIcon';
 import { cn } from '@/shared/lib/utils';
 
 interface ActiveCall { conversation: Conversation; friends: RosterParticipant[] }

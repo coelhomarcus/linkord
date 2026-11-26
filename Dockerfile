@@ -85,13 +85,13 @@ HEALTHCHECK --interval=30s --timeout=5s --start-period=5s \
   CMD wget -qO- http://127.0.0.1:8080/index.html > /dev/null || exit 1
 
 FROM static-web AS frontend
-COPY docker/web/public-routes.conf /etc/nginx/linkord-routes/public.conf
+COPY docker/web/public-routes.conf /etc/nginx/overcord-routes/public.conf
 COPY --from=web-headers /app/security-headers.conf /etc/nginx/security-headers.conf
-COPY --from=web-build /app/web/dist/ /usr/share/nginx/linkord/
+COPY --from=web-build /app/web/dist/ /usr/share/nginx/overcord/
 
 FROM static-web AS admin
 COPY --from=admin-headers /app/security-headers.conf /etc/nginx/security-headers.conf
-COPY --from=admin-build /app/admin/dist/ /usr/share/nginx/linkord/
+COPY --from=admin-build /app/admin/dist/ /usr/share/nginx/overcord/
 
 # Keep the default image usable for Docker Compose and standalone installs.
 FROM backend AS monolith

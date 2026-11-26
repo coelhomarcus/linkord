@@ -1,6 +1,6 @@
 import { WindowsLogoIcon } from '@/shared/ui/icons';
 import { useTranslation } from 'react-i18next';
-import { LinkordMark } from '@/shared/ui/LinkordMark';
+import { OvercordMark } from '@/shared/ui/OvercordMark';
 import type { DesktopAppOffer } from './useDesktopAppOffer';
 
 /** The column beside the login form: the app's mark, and the link to the Windows installer. Only on
@@ -10,7 +10,7 @@ export function DesktopAppPanel({ offer }: { offer: Exclude<DesktopAppOffer, nul
   return (
     <aside aria-labelledby="desktopAppTitle" className="hidden w-60 flex-none flex-col items-center justify-center text-center md:flex">
       <div className="relative mb-8 grid size-44 place-items-center rounded-lg bg-[linear-gradient(135deg,var(--color-accent-primary),color-mix(in_oklch,var(--color-accent-primary)_55%,black))] shadow-[0_2px_10px_0_rgb(0_0_0/0.25)]">
-        <LinkordMark className="w-28 text-white" />
+        <OvercordMark className="w-28 text-white" />
         <span aria-hidden className="absolute -bottom-3 -right-3 grid size-12 place-items-center rounded-full border-4 border-surface-panel bg-surface-raised text-text-strong">
           <WindowsLogoIcon size={22} weight="fill" />
         </span>

@@ -1,5 +1,5 @@
-import { ApiError } from '@linkord/frontend-shared/api/transport';
-import { ERROR_CODES } from '@linkord/frontend-shared/api/errorCodes';
+import { ApiError } from '@overcord/frontend-shared/api/transport';
+import { ERROR_CODES } from '@overcord/frontend-shared/api/errorCodes';
 import i18n from 'i18next';
 
 export const REASON_MIN = 3;

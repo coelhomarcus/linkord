@@ -1,7 +1,7 @@
 import { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useLocation } from 'react-router';
-import { categoryLabel } from '@linkord/frontend-shared/reports/reportCategories';
+import { categoryLabel } from '@overcord/frontend-shared/reports/reportCategories';
 import { fetchAdminReports } from './adminApi';
 import type { AdminReportRow } from './adminApi';
 import { reportTargetLabel, formatWhen, formatWhenShort } from './adminFormat';
@@ -13,10 +13,10 @@ import { useAdminList } from './useAdminList';
 import { useAdminTableFits } from './useAdminMode';
 import { useAdminQuery } from './useAdminQuery';
 import type { QuerySchema } from './useAdminQuery';
-import { AppLink } from '@linkord/frontend-shared/ui/app-link';
+import { AppLink } from '@overcord/frontend-shared/ui/app-link';
 import { AdminStackedSkeleton, AdminTableSkeleton } from './AdminSkeletons';
 import { AdminPageTitle } from './AdminSection';
-import { useLanguage } from '@linkord/frontend-shared/i18n/useLanguage';
+import { useLanguage } from '@overcord/frontend-shared/i18n/useLanguage';
 
 type Queue = 'open' | 'reviewing' | 'closed';
 type TargetFilter = 'all' | 'user' | 'server' | 'message';

@@ -339,13 +339,13 @@
   "notifications": {
     "label": "Ativar notificações na área de trabalho",
     "description": "Mensagens, menções, solicitações de amizade e convites, mesmo com o app fechado.",
-    "descriptionDesktop": "Mensagens e menções enquanto o Linkord estiver aberto, mesmo com a janela fechada.",
+    "descriptionDesktop": "Mensagens e menções enquanto o Overcord estiver aberto, mesmo com a janela fechada.",
     "status": {
       "default": "Permissão necessária. O navegador vai perguntar quando você ativar.",
       "denied": "Bloqueadas no navegador. Permita o acesso nas configurações do navegador pra este site.",
       "unsupported": "Não disponíveis neste navegador."
     },
-    "ios": "No iPhone, adicione o Linkord à Tela de Início, abra pelo ícone e volte aqui para ativar as notificações.",
+    "ios": "No iPhone, adicione o Overcord à Tela de Início, abra pelo ícone e volte aqui para ativar as notificações.",
     "pushUnavailable": "Push indisponível: confira a configuração do servidor.",
     "showContent": {
       "label": "Mostrar o texto das mensagens",
@@ -420,7 +420,7 @@
       "label": "Fonte",
       "figtree": {
         "label": "Figtree",
-        "description": "A fonte do Linkord."
+        "description": "A fonte do Overcord."
       },
       "system": {
         "label": "Fonte do sistema",
@@ -563,24 +563,24 @@
   "desktop": {
     "startAtLogin": {
       "label": "Iniciar com o computador",
-      "description": "Abre o Linkord quando você entra no sistema."
+      "description": "Abre o Overcord quando você entra no sistema."
     },
     "startMinimized": {
       "label": "Iniciar minimizado",
-      "description": "Ao iniciar com o computador, o Linkord fica na bandeja do sistema até você abri-lo."
+      "description": "Ao iniciar com o computador, o Overcord fica na bandeja do sistema até você abri-lo."
     },
     "closeToTray": {
       "label": "Manter aberto ao fechar a janela",
-      "description": "O Linkord continua na bandeja do sistema e você segue recebendo mensagens e chamadas. Desligado, fechar a janela encerra o app."
+      "description": "O Overcord continua na bandeja do sistema e você segue recebendo mensagens e chamadas. Desligado, fechar a janela encerra o app."
     },
     "updates": {
       "version": "Versão {{version}}",
-      "automatic": "As atualizações são baixadas sozinhas e instaladas quando o Linkord reinicia.",
-      "manual": "Quando houver uma versão nova, o Linkord avisa e abre a página para baixar.",
+      "automatic": "As atualizações são baixadas sozinhas e instaladas quando o Overcord reinicia.",
+      "manual": "Quando houver uma versão nova, o Overcord avisa e abre a página para baixar.",
       "off": "Esta versão não procura atualizações.",
       "checking": "Procurando atualizações…",
       "upToDate": "Você está na versão mais recente.",
-      "downloading": "Baixando a versão {{version}}. Ela será instalada quando o Linkord reiniciar.",
+      "downloading": "Baixando a versão {{version}}. Ela será instalada quando o Overcord reiniciar.",
       "downloadingPercent": "Baixando a versão {{version}}… {{percent}}%",
       "failed": "Não foi possível procurar atualizações.",
       "available": "A versão {{version}} está disponível.",
@@ -591,8 +591,8 @@
     }
   },
   "downloads": {
-    "title": "Instale o Linkord",
-    "description": "Use o Linkord fora de uma aba do navegador. São duas opções e as duas entram na mesma conta, com as mesmas conversas: use uma, a outra ou as duas.",
+    "title": "Instale o Overcord",
+    "description": "Use o Overcord fora de uma aba do navegador. São duas opções e as duas entram na mesma conta, com as mesmas conversas: use uma, a outra ou as duas.",
     "recommended": "Recomendado para você",
     "retry": "Tentar de novo",
     "windows": {
@@ -616,7 +616,7 @@
     "web": {
       "platforms": "Celular e computador",
       "title": "Web app",
-      "description": "O próprio Linkord do navegador, instalado como app: ganha um ícone na tela de início ou na barra de tarefas e abre sem a barra de endereço. Não há nada para baixar.",
+      "description": "O próprio Overcord do navegador, instalado como app: ganha um ícone na tela de início ou na barra de tarefas e abre sem a barra de endereço. Não há nada para baixar.",
       "features": {
         "anywhere": "Funciona no Android, iPhone, Windows, Mac e Linux",
         "notifications": "Notificações push, mesmo com o navegador fechado",
@@ -624,8 +624,8 @@
       },
       "install": "Instalar web app",
       "installed": "O web app está instalado neste aparelho.",
-      "unsupported": "Este navegador não oferece a instalação. Use o Chrome ou o Edge (computador e Android) ou o Safari (iPhone e iPad). Se você já dispensou o convite, procure “Instalar Linkord” no menu do navegador.",
-      "fromDesktopApp": "Para ter o Linkord no celular, abra o site no navegador do celular e instale por lá.",
+      "unsupported": "Este navegador não oferece a instalação. Use o Chrome ou o Edge (computador e Android) ou o Safari (iPhone e iPad). Se você já dispensou o convite, procure “Instalar Overcord” no menu do navegador.",
+      "fromDesktopApp": "Para ter o Overcord no celular, abra o site no navegador do celular e instale por lá.",
       "ios": {
         "title": "No Safari, em três toques:",
         "share": "Toque em Compartilhar",
@@ -642,7 +642,7 @@
       },
       "web": {
         "question": "No celular, num Mac ou no Linux?",
-        "answer": "Instale o web app. É assim que o Linkord vira app nesses aparelhos, e ele recebe notificações como um app nativo."
+        "answer": "Instale o web app. É assim que o Overcord vira app nesses aparelhos, e ele recebe notificações como um app nativo."
       },
       "both": {
         "question": "Dá para usar os dois?",

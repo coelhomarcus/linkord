@@ -2,9 +2,9 @@
 // A sandboxed preload must be CommonJS and self-contained.
 const { contextBridge, ipcRenderer } = require('electron') as typeof import('electron');
 
-contextBridge.exposeInMainWorld('linkordUpdater', Object.freeze({
+contextBridge.exposeInMainWorld('overcordUpdater', Object.freeze({
   onRender: (callback: (view: unknown) => void) => {
-    ipcRenderer.on('linkord:updater:render', (_event, view: unknown) => callback(view));
+    ipcRenderer.on('overcord:updater:render', (_event, view: unknown) => callback(view));
   },
-  act: (action: string) => ipcRenderer.send('linkord:updater:action', String(action)),
+  act: (action: string) => ipcRenderer.send('overcord:updater:action', String(action)),
 }));

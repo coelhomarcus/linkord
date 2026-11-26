@@ -3,20 +3,30 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-    <title>Linkord</title>
+    <title>Overcord</title>
     <meta name="description" content="Chat, chamadas de voz e vídeo e compartilhamento de tela em tempo real." />
     <script>
       (function () {
         var language = (localStorage.getItem('ss-locale') || navigator.language || '').toLowerCase().startsWith('en') ? 'en-US' : 'pt-BR';
         document.documentElement.lang = language;
-        document.title = language === 'en-US' ? 'Linkord' : 'Linkord';
+        // Carry browser preferences forward when an existing origin changes brand.
+        try {
+          ['preferences', 'preferencesOwner', 'colorTheme', 'density', 'textSize', 'font'].forEach(function (name) {
+            var oldKey = 'linkord.' + name;
+            var key = 'overcord.' + name;
+            var stored = localStorage.getItem(oldKey);
+            if (stored === null) return;
+            if (localStorage.getItem(key) === null) localStorage.setItem(key, stored);
+            localStorage.removeItem(oldKey);
+          });
+        } catch (e) {}
       }());
     </script>
     <meta name="robots" content="noindex" />
     <meta name="theme-color" content="#000000" />
     <script>
       (function () {
-        var key = 'linkord.colorTheme';
+        var key = 'overcord.colorTheme';
         var raw = localStorage.getItem(key);
         var shells = { black: '#000000', old: '#0d0d0f', graphite: '#202225', latte: '#dce0e8', frappe: '#232634', macchiato: '#181926', mocha: '#11111b' };
         // Ids stored before the rename; keep in step with LEGACY_COLOR_THEME_IDS
@@ -43,9 +53,9 @@
         // never lays out at the defaults first. Keep in step with
         // appearancePreferences.ts; a default value has no attribute.
         var prefs = [
-          ['linkord.density', 'density', ['compact', 'comfortable']],
-          ['linkord.textSize', 'textSize', ['small', 'large', 'larger']],
-          ['linkord.font', 'font', ['system']]
+          ['overcord.density', 'density', ['compact', 'comfortable']],
+          ['overcord.textSize', 'textSize', ['small', 'large', 'larger']],
+          ['overcord.font', 'font', ['system']]
         ];
         var root = document.documentElement;
         for (var i = 0; i < prefs.length; i++) {
@@ -59,8 +69,8 @@
     <link rel="manifest" href="/manifest.webmanifest" />
     <!-- iOS takes the home-screen icon and name from these, not from the manifest -->
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
-    <meta name="apple-mobile-web-app-title" content="Linkord" />
-    <meta name="application-name" content="Linkord" />
+    <meta name="apple-mobile-web-app-title" content="Overcord" />
+    <meta name="application-name" content="Overcord" />
   </head>
   <body>
     <div id="root"></div>

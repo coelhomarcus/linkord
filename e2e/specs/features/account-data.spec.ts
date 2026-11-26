@@ -20,7 +20,7 @@ test.describe('your data', () => {
 
     const download = page.waitForEvent('download');
     await link.click();
-    expect((await download).suggestedFilename()).toBe(`linkord-${alice.username}-${new Date().toISOString().slice(0, 10)}.zip`);
+    expect((await download).suggestedFilename()).toBe(`overcord-${alice.username}-${new Date().toISOString().slice(0, 10)}.zip`);
     await expect.poll(() => emailCount(email)).toBeGreaterThan(mailsBefore);
   });
 

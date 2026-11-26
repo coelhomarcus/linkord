@@ -200,7 +200,7 @@ describe('ChatMessageText — default emojis', () => {
     await user.click(screen.getByRole('button', { name: '💰' }));
     const dialog = await screen.findByRole('dialog');
     expect(dialog).toHaveTextContent(':moneybag:');
-    expect(dialog).toHaveTextContent('Um emoji padrão. Você pode usar este emoji em qualquer lugar do Linkord.');
+    expect(dialog).toHaveTextContent('Um emoji padrão. Você pode usar este emoji em qualquer lugar do Overcord.');
   });
 });
 

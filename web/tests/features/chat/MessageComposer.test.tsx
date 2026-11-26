@@ -579,7 +579,7 @@ describe('MessageComposer — per-conversation draft', () => {
   });
 
   it('text saved in sessionStorage comes back after a page reload', () => {
-    sessionStorage.setItem('linkord:draft:v1::conv-9', 'sobreviveu ao reload');
+    sessionStorage.setItem('overcord:draft:v1::conv-9', 'sobreviveu ao reload');
     renderComposer('conv-9');
     expect(fieldValue(screen.getByRole('textbox'))).toBe('sobreviveu ao reload');
   });
@@ -590,10 +590,10 @@ describe('MessageComposer — per-conversation draft', () => {
       const { unmount } = renderComposer('conv-1');
       await setFieldText(screen.getByRole('textbox'), 'segredo');
       act(() => { vi.advanceTimersByTime(1000); });
-      expect(sessionStorage.getItem('linkord:draft:v1::conv-1')).toBe('segredo');
+      expect(sessionStorage.getItem('overcord:draft:v1::conv-1')).toBe('segredo');
 
       act(() => clearAllDrafts());
-      expect(sessionStorage.getItem('linkord:draft:v1::conv-1')).toBeNull();
+      expect(sessionStorage.getItem('overcord:draft:v1::conv-1')).toBeNull();
       expect(fieldValue(screen.getByRole('textbox'))).toBe('');
       unmount();
     } finally {

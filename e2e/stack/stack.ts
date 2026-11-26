@@ -13,9 +13,9 @@ const COMPOSE_FILE = path.join(E2E_DIR, 'docker', 'compose.yml');
 const SPLIT_FILE = path.join(E2E_DIR, 'docker', 'split.yml');
 const ENV_FILE = path.join(E2E_DIR, '.e2e.env');
 const STATE_FILE = path.join(E2E_DIR, SPLIT ? '.e2e-split-state.json' : '.e2e-state.json');
-export const WEB_IMAGE = 'linkord-e2e:split-frontend';
-export const ADMIN_IMAGE = 'linkord-e2e:split-admin';
-export const NEXT_WEB_IMAGE = 'linkord-e2e:split-frontend-next';
+export const WEB_IMAGE = 'overcord-e2e:split-frontend';
+export const ADMIN_IMAGE = 'overcord-e2e:split-admin';
+export const NEXT_WEB_IMAGE = 'overcord-e2e:split-frontend-next';
 
 interface StackState { image: string }
 
@@ -23,7 +23,7 @@ const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 function compose(args: string[], image?: string, webImage = WEB_IMAGE): string {
   const env = { ...process.env, APP_IMAGE: image ?? currentImage(), WEB_IMAGE: webImage, ADMIN_IMAGE, ADMIN_URL };
-  const files = SPLIT ? ['-p', 'linkord-e2e-split', '-f', COMPOSE_FILE, '-f', SPLIT_FILE] : ['-f', COMPOSE_FILE];
+  const files = SPLIT ? ['-p', 'overcord-e2e-split', '-f', COMPOSE_FILE, '-f', SPLIT_FILE] : ['-f', COMPOSE_FILE];
   return execFileSync('docker', ['compose', ...files, ...args], { env, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] });
 }
 
@@ -141,10 +141,10 @@ export async function waitForEmailCode(to: string, seen: number, timeoutMs = 15_
  * own HTTP flows: it caches memberships in memory, so a row written behind
  * its back is invisible until the next restart. */
 export function sql(query: string): string {
-  return compose(['exec', '-T', 'postgres', 'psql', '-U', 'linkord', '-d', 'linkord', '-tAc', query]).trim();
+  return compose(['exec', '-T', 'postgres', 'psql', '-U', 'overcord', '-d', 'overcord', '-tAc', query]).trim();
 }
 
 /** The one write with no HTTP path: the first administrator. */
 export function grantAdmin(username: string): void {
-  compose(['exec', '-T', 'postgres', 'psql', '-U', 'linkord', '-d', 'linkord', '-c', `UPDATE users SET role = 'admin' WHERE username = '${username.replace(/'/g, "''")}'`]);
+  compose(['exec', '-T', 'postgres', 'psql', '-U', 'overcord', '-d', 'overcord', '-c', `UPDATE users SET role = 'admin' WHERE username = '${username.replace(/'/g, "''")}'`]);
 }

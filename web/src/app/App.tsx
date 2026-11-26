@@ -519,7 +519,7 @@ function AppProviders() {
     if (!('serviceWorker' in navigator)) return;
     const onPushNavigation = (event: MessageEvent) => {
       const data = event.data as { type?: unknown; path?: unknown } | null;
-      if (data?.type !== 'linkord-push-navigation' || typeof data.path !== 'string' || !data.path.startsWith('/app/')) return;
+      if (data?.type !== 'overcord-push-navigation' || typeof data.path !== 'string' || !data.path.startsWith('/app/')) return;
       navigate(data.path);
     };
     navigator.serviceWorker.addEventListener('message', onPushNavigation);

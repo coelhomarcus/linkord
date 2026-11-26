@@ -1,4 +1,4 @@
-import type { ListSnapshot } from '@linkord/frontend-shared/hooks/useCursorList';
+import type { ListSnapshot } from '@overcord/frontend-shared/hooks/useCursorList';
 
 // In-memory only, on purpose: rows and scroll positions are never persisted
 // (nothing from an admin list may outlive the tab), and everything here is

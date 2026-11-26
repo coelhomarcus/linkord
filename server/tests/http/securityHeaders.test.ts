@@ -141,7 +141,7 @@ describe('inline style hashes', () => {
     const index = fs.readFileSync(path.join(ROOT, 'web/index.html'), 'utf8');
     const offline = fs.readFileSync(path.join(ROOT, 'web/public/offline.html'), 'utf8');
     assert.match(index, /'html,body\{background:' \+ bg \+ '}'/);
-    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'linkord-styles-'));
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'overcord-styles-'));
     fs.writeFileSync(path.join(dir, 'index.html'), index);
     fs.writeFileSync(path.join(dir, 'offline.html'), offline);
     fs.writeFileSync(path.join(dir, 'csp-style-sources.json'), JSON.stringify({ sources: ['h1{color:blue}', '', 4] }));
@@ -173,7 +173,7 @@ describe('security headers on responses', () => {
   const inline = "document.documentElement.lang = 'pt-BR';";
 
   before(async () => {
-    dir = fs.mkdtempSync(path.join(os.tmpdir(), 'linkord-csp-'));
+    dir = fs.mkdtempSync(path.join(os.tmpdir(), 'overcord-csp-'));
     fs.writeFileSync(path.join(dir, 'index.html'), `<!doctype html><html><head><script>${inline}</script><style>body{color:red}</style></head><body></body></html>`);
     fs.writeFileSync(path.join(dir, 'csp-style-sources.json'), '{not json');
     app = Fastify();

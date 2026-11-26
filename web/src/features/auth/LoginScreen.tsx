@@ -9,11 +9,11 @@ import { ErrorBanner } from '@/shared/ErrorBanner';
 import { SettingsNotice } from '@/shared/ui/settings-layout';
 import { describeApiError } from '@/shared/api/errorText';
 import { Button } from '@/shared/ui/primitives/button';
-import { AuthField } from '@linkord/frontend-shared/auth/AuthField';
+import { AuthField } from '@overcord/frontend-shared/auth/AuthField';
 import { AuthCard, AuthHeading, AuthLink, PasswordToggle } from './AuthLayout';
 import { DesktopAppPanel } from './DesktopAppPanel';
 import { useDesktopAppOffer } from './useDesktopAppOffer';
-import { TwoFactorStep } from '@linkord/frontend-shared/auth/TwoFactorStep';
+import { TwoFactorStep } from '@overcord/frontend-shared/auth/TwoFactorStep';
 
 interface LoginFieldErrors {
   username?: string;

@@ -1,7 +1,7 @@
 import { isDeepLinkArgument } from './deepLink.js';
 import { parseUpdateRepo, type UpdateRepo } from './updates.js';
 
-// What the window loads: the Linkord server itself, not a bundled copy of the
+// What the window loads: the Overcord server itself, not a bundled copy of the
 // web app. The page then talks to /api and /ws on its own origin, so the
 // server's cookies, origin guard and CSP apply unchanged, and a deploy updates
 // the interface without a new desktop build.
@@ -22,11 +22,11 @@ export function resolveAppUrl(input: {
   /** the address `npm run package` baked into an installer */
   bundledUrl?: string;
 }): AppUrlResult {
-  // A start from a `linkord://` link comes from another program: its command
+  // A start from a `overcord://` link comes from another program: its command
   // line must not get to choose the server the account's session talks to
   const fromLink = input.argv.some(isDeepLinkArgument);
   const fromArgv = fromLink ? undefined : input.argv.find((arg) => arg.startsWith(URL_FLAG))?.slice(URL_FLAG.length);
-  const value = fromArgv || input.env.LINKORD_URL?.trim() || input.bundledUrl || (input.isPackaged ? undefined : DEV_APP_URL);
+  const value = fromArgv || input.env.OVERCORD_URL?.trim() || input.bundledUrl || (input.isPackaged ? undefined : DEV_APP_URL);
   if (!value) return { ok: false, reason: 'missing' };
 
   let url: URL;

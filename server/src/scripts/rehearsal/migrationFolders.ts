@@ -18,7 +18,7 @@ export function makeMigrationsFolder(opts: { toIdx?: number; brokenAfterIdx?: nu
   const journal = readJournal();
   const toIdx = opts.toIdx ?? journal.entries.length - 1;
   const entries = journal.entries.filter((e) => e.idx <= toIdx);
-  const folder = fs.mkdtempSync(path.join(os.tmpdir(), 'linkord-migrations-'));
+  const folder = fs.mkdtempSync(path.join(os.tmpdir(), 'overcord-migrations-'));
   fs.mkdirSync(path.join(folder, 'meta'));
   for (const e of entries) fs.copyFileSync(path.join(MIGRATIONS_FOLDER, `${e.tag}.sql`), path.join(folder, `${e.tag}.sql`));
 

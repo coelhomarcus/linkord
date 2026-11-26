@@ -1,10 +1,10 @@
-import { FlagIcon } from '@linkord/frontend-shared/ui/icons';
+import { FlagIcon } from '@overcord/frontend-shared/ui/icons';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useParams } from 'react-router';
-import { Button } from '@linkord/frontend-shared/ui/primitives/button';
-import { categoryLabel } from '@linkord/frontend-shared/reports/reportCategories';
+import { Button } from '@overcord/frontend-shared/ui/primitives/button';
+import { categoryLabel } from '@overcord/frontend-shared/reports/reportCategories';
 import { claimReport, fetchAdminReport, resolveReport } from './adminApi';
 import type { ReportAction } from './adminApi';
 import { AdminEntityHeader } from './AdminEntityHeader';
@@ -15,8 +15,8 @@ import { AdminTextLink, AuditList, Badge, DetailStatusView, RefreshFailedNotice,
 import { RESTORE_LIST, useAdminBack } from './useAdminBack';
 import { useAdminDetail } from './useAdminDetail';
 import { AdminDetailSkeleton } from './AdminSkeletons';
-import { AppLink } from '@linkord/frontend-shared/ui/app-link';
-import { useLanguage } from '@linkord/frontend-shared/i18n/useLanguage';
+import { AppLink } from '@overcord/frontend-shared/ui/app-link';
+import { useLanguage } from '@overcord/frontend-shared/i18n/useLanguage';
 
 /** What the admin picked in the decision form: close with an action on the
  * target, close without one, or dismiss. */

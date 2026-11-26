@@ -29,7 +29,7 @@ import { migrateOn } from './rehearsal/migrateOn.js';
 //   4. the app itself started on the restored data: a login and the downloads of
 //      an attachment and the avatar, byte for byte.
 // Needs pg_dump and pg_restore (PG_DUMP_BIN / PG_RESTORE_BIN); never touches the
-// configured database, it only uses its server to create `linkord_rehearsal_*` ones.
+// configured database, it only uses its server to create `overcord_rehearsal_*` ones.
 
 const keep = process.argv.includes('--keep');
 interface Step { name: string; ok: boolean; detail?: string }
@@ -168,7 +168,7 @@ async function main(): Promise<number> {
 
   const dbs: IsolatedDatabase[] = [];
   const dirs: string[] = [];
-  const tmp = async (label: string): Promise<string> => { const dir = await fsp.mkdtemp(path.join(os.tmpdir(), `linkord-${label}-`)); dirs.push(dir); return dir; };
+  const tmp = async (label: string): Promise<string> => { const dir = await fsp.mkdtemp(path.join(os.tmpdir(), `overcord-${label}-`)); dirs.push(dir); return dir; };
   let app: Awaited<ReturnType<typeof bootApp>> | null = null;
   try {
     note('A database with chat data and files');
@@ -184,7 +184,7 @@ async function main(): Promise<number> {
     const backupDir = await tmp('backups');
     const bystander = path.join(backupDir, 'notes.txt');
     await fsp.writeFile(bystander, 'not a backup');
-    const lookalike = path.join(backupDir, 'linkord-backup-keep-me');
+    const lookalike = path.join(backupDir, 'overcord-backup-keep-me');
     await fsp.mkdir(lookalike);
     const base = Date.now();
     const results = [];
@@ -215,7 +215,7 @@ async function main(): Promise<number> {
     try { await restoreBackup({ ...restoreOptions, confirm: undefined }); } catch (err) { unconfirmed = err; }
     check('without --confirm nothing is restored', unconfirmed instanceof ConfirmationRequired && (await count(target.pool, "select count(*) as n from information_schema.tables where table_schema = 'public'")) === 0 && fs.readdirSync(targetUploads).length === 0);
     let wrongName: unknown = null;
-    try { await restoreBackup({ ...restoreOptions, confirm: 'linkord' }); } catch (err) { wrongName = err; }
+    try { await restoreBackup({ ...restoreOptions, confirm: 'overcord' }); } catch (err) { wrongName = err; }
     check('confirming a different database name is refused', wrongName instanceof ConfirmationRequired);
 
     const damaged = await tmp('damaged');

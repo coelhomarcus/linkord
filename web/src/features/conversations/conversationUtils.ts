@@ -9,7 +9,7 @@ export function conversationTitle(conversation: Conversation | null | undefined,
   return other?.displayName || other?.username || i18n.t('conversations:fallback.direct');
 }
 
-export const APP_TITLE = 'Linkord';
+export const APP_TITLE = 'Overcord';
 
 /** The browser tab title for the conversation on screen: a friend by
  * handle, a channel as `#name | Server`. With none open it is just the app name. */

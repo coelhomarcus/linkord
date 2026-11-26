@@ -145,7 +145,7 @@
       "igdb-playing-games": "O que você está jogando agora",
       "igdb-wishlist-games": "Sua lista de desejos",
       "activity-top": "Jogos e aplicativos por tempo de uso nos últimos 7 ou 30 dias",
-      "activity-recent": "Os últimos jogos e aplicativos vistos no Linkord",
+      "activity-recent": "Os últimos jogos e aplicativos vistos no Overcord",
       "activity-summary": "Tempo total, maior sequência de dias e jogo favorito",
       "twitch-live": "Transmissão ao vivo, jogo e espectadores",
       "twitch-vods": "As últimas transmissões arquivadas na Twitch"
@@ -178,7 +178,7 @@
     "added": "Adicionado",
     "barLabel": "Salvar alterações do Mural",
     "sections": {
-      "linkord": "Do Linkord",
+      "overcord": "Do Overcord",
       "integrations": "Integrações"
     },
     "groups": {
@@ -212,7 +212,7 @@
     "connectAccounts": "Conectar contas",
     "activity": {
       "empty": "Nenhuma atividade ainda",
-      "desktopOnly": "Só o aplicativo do Linkord para computador registra tempo de jogo e uso de aplicativos.",
+      "desktopOnly": "Só o aplicativo do Overcord para computador registra tempo de jogo e uso de aplicativos.",
       "private": "Oculto no seu perfil enquanto o compartilhamento de atividade estiver desativado.",
       "period": "Últimos {{count}} dias",
       "periodLabel": "Período de {{name}}",

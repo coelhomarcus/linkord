@@ -45,7 +45,7 @@ export function parseContributionCalendar(html: string): Extract<WidgetData, { k
   return { kind: 'github-calendar', total: days.reduce((total, day) => total + day.count, 0), days };
 }
 export async function fetchGitHub(username: string, request: RequestJson, requestText: RequestText): Promise<ConnectionSnapshot> {
-  const headers = { 'User-Agent': 'Linkord', 'Accept-Language': 'en-US' };
+  const headers = { 'User-Agent': 'Overcord', 'Accept-Language': 'en-US' };
   const user = record(await request(`https://api.github.com/users/${encodeURIComponent(username)}`, {
     headers: { ...headers, Accept: 'application/vnd.github+json', 'X-GitHub-Api-Version': '2022-11-28' },
   }));

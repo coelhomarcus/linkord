@@ -1,8 +1,8 @@
-import { CaretDownIcon, CaretRightIcon } from '@linkord/frontend-shared/ui/icons';
+import { CaretDownIcon, CaretRightIcon } from '@overcord/frontend-shared/ui/icons';
 import { useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { useUrlSearch } from '@linkord/frontend-shared/hooks/useUrlSearch';
+import { useUrlSearch } from '@overcord/frontend-shared/hooks/useUrlSearch';
 import { fetchAudit } from './adminApi';
 import type { AuditRow } from './adminApi';
 import { ACTION_LABELS, actionLabel, dayStartIso, formatWhenShort, nextDayStartIso, reportTargetLabel } from './adminFormat';
@@ -14,10 +14,10 @@ import { useAdminList } from './useAdminList';
 import { useAdminTableFits } from './useAdminMode';
 import { useAdminQuery } from './useAdminQuery';
 import type { QuerySchema } from './useAdminQuery';
-import { AppLink } from '@linkord/frontend-shared/ui/app-link';
+import { AppLink } from '@overcord/frontend-shared/ui/app-link';
 import { AdminStackedSkeleton, AdminTableSkeleton } from './AdminSkeletons';
 import { AdminPageTitle } from './AdminSection';
-import { useLanguage } from '@linkord/frontend-shared/i18n/useLanguage';
+import { useLanguage } from '@overcord/frontend-shared/i18n/useLanguage';
 
 // group and bot stay filterable: records from before servers still carry them
 const TARGET_TYPES = ['all', 'user', 'server', 'webhook', 'group', 'bot', 'message', 'report', 'system'] as const;

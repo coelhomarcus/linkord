@@ -138,7 +138,7 @@ function Body({ available, providers, added, onPick, onManage, onConnect }: {
   const integrations: Service[] = ['myanimelist', 'github'];
   if (providers?.includes('steam')) integrations.push('steam');
   if (providers?.includes('twitch')) integrations.push('twitch');
-  const groups = [{ key: 'linkord', services: builtIn }, { key: 'integrations', services: integrations }] as const;
+  const groups = [{ key: 'overcord', services: builtIn }, { key: 'integrations', services: integrations }] as const;
   const group = groups.some(({ services }) => services.includes(current)) ? current : 'igdb';
   const offered = available.filter((widget) => serviceOf(widget) === group);
   return (

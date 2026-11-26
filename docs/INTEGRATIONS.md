@@ -1,6 +1,6 @@
 # Third-party integrations
 
-Every external service Linkord talks to, including where its calls originate, which credentials it needs, and what happens when it fails. LiveKit's credentials are in [`.env.example`](../.env.example). Find settings for email, push and other integrations in [`.env.optional.example`](../.env.optional.example).
+Every external service Overcord talks to, including where its calls originate, which credentials it needs, and what happens when it fails. LiveKit's credentials are in [`.env.example`](../.env.example). Find settings for email, push and other integrations in [`.env.optional.example`](../.env.optional.example).
 
 ## Overview
 
@@ -22,7 +22,7 @@ Every external service Linkord talks to, including where its calls originate, wh
 | [oEmbed providers](#oembed) | Previews for YouTube, Vimeo, SoundCloud, Spotify, X, TikTok, Reddit | Server | None | Built in |
 | [Embedded players](#embedded-players) | YouTube, Twitch, Vimeo, SoundCloud, Streamable players | Browser, after a click | None | Built in |
 
-Third-party pictures (covers, avatars, preview images, favicons, thumbnails) reach the browser through our own [media proxy](#media-proxy), so they show on networks that block those hosts and the hosts never see who is looking. Fonts are bundled (`@fontsource-variable/figtree`), and [webhooks](WEBHOOK.md) are requests into Linkord, not calls we make.
+Third-party pictures (covers, avatars, preview images, favicons, thumbnails) reach the browser through our own [media proxy](#media-proxy), so they show on networks that block those hosts and the hosts never see who is looking. Fonts are bundled (`@fontsource-variable/figtree`), and [webhooks](WEBHOOK.md) are requests into Overcord, not calls we make.
 
 Every server request to a URL that a user or a response chose goes through `server/src/net/safeRequest.ts`, which checks the resolved IP against private and special-purpose ranges at connection time (so DNS rebinding cannot swap one in), revalidates each redirect, and caps time and size.
 
@@ -88,7 +88,7 @@ The "Recent anime activity" Wall widget (`server/src/integrations/myanimelist/my
 
 ## GitHub
 
-The "GitHub profile" and "Contributions" Wall widgets (`server/src/integrations/github/github.ts`), with no token, sent with `User-Agent: Linkord`.
+The "GitHub profile" and "Contributions" Wall widgets (`server/src/integrations/github/github.ts`), with no token, sent with `User-Agent: Overcord`.
 
 - **Requests per sync:** `GET https://api.github.com/users/{username}` for name, avatar and counts, and `GET https://github.com/users/{username}/contributions`, the public contribution calendar. The calendar is HTML, not an API, so a markup change on GitHub can break it; anything unrecognised fails the sync and keeps the previous snapshot.
 - **Rate limit:** anonymous access allows 60 requests per hour per IP, so syncs are spaced 65 seconds apart across instances, and a rate-limit answer pauses the provider. Other traffic from the same IP eats into the budget.

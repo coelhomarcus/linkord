@@ -2,7 +2,7 @@ import { describe, test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createDesktopDownloads, parseLatestRelease } from '../../../src/modules/desktop/desktopDownloads.js';
 
-const REPO = 'acme/linkord';
+const REPO = 'acme/overcord';
 const asset = (name: string, repo = REPO) => ({ name, browser_download_url: `https://github.com/${repo}/releases/download/v0.3.0/${name}` });
 const release = (overrides: Record<string, unknown> = {}) => ({
   tag_name: 'v0.3.0',
@@ -10,8 +10,8 @@ const release = (overrides: Record<string, unknown> = {}) => ({
   draft: false,
   prerelease: false,
   assets: [
-    asset('Linkord-0.3.0-win-x64.exe'), asset('Linkord-0.3.0-mac-arm64.dmg'), asset('Linkord-0.3.0-mac-x64.dmg'),
-    asset('Linkord-0.3.0-linux-x86_64.AppImage'), asset('Linkord-0.3.0-linux-amd64.deb'), asset('latest.yml'),
+    asset('Overcord-0.3.0-win-x64.exe'), asset('Overcord-0.3.0-mac-arm64.dmg'), asset('Overcord-0.3.0-mac-x64.dmg'),
+    asset('Overcord-0.3.0-linux-x86_64.AppImage'), asset('Overcord-0.3.0-linux-amd64.deb'), asset('overcord.yml'),
   ],
   ...overrides,
 });
@@ -22,21 +22,22 @@ describe('parseLatestRelease', () => {
     assert.deepEqual(downloads, {
       version: '0.3.0',
       page: `https://github.com/${REPO}/releases/tag/v0.3.0`,
-      files: { windows: `https://github.com/${REPO}/releases/download/v0.3.0/Linkord-0.3.0-win-x64.exe` },
+      files: { windows: `https://github.com/${REPO}/releases/download/v0.3.0/Overcord-0.3.0-win-x64.exe` },
     });
   });
 
   test('takes no link outside the repository\'s releases', () => {
-    const downloads = parseLatestRelease(release({ assets: [asset('Linkord-0.3.0-win-x64.exe', 'evil/linkord')] }), REPO);
+    const downloads = parseLatestRelease(release({ assets: [asset('Overcord-0.3.0-win-x64.exe', 'evil/overcord')] }), REPO);
     assert.equal(downloads, null);
     assert.equal(parseLatestRelease(release({ html_url: 'https://evil.example/x' }), REPO), null);
   });
 
-  test('ignores drafts, prereleases and releases without a Windows installer', () => {
+  test('ignores drafts, prereleases and releases without an Overcord Windows installer', () => {
     assert.equal(parseLatestRelease(release({ draft: true }), REPO), null);
     assert.equal(parseLatestRelease(release({ prerelease: true }), REPO), null);
     assert.equal(parseLatestRelease(release({ assets: [asset('notes.txt')] }), REPO), null);
-    assert.equal(parseLatestRelease(release({ assets: [asset('Linkord-0.3.0-mac-arm64.dmg')] }), REPO), null);
+    assert.equal(parseLatestRelease(release({ assets: [asset('Overcord-0.3.0-mac-arm64.dmg')] }), REPO), null);
+    assert.equal(parseLatestRelease(release({ assets: [asset('Linkord-0.3.0-win-x64.exe')] }), REPO), null);
   });
 });
 

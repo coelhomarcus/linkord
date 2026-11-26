@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import { cn } from '@/shared/lib/utils';
-import { LinkordMark } from '@/shared/ui/LinkordMark';
+import { OvercordMark } from '@/shared/ui/OvercordMark';
 
 // Where the backdrop's specks sit, in percent of the screen. Fixed rather than random so the screen
 // looks the same on every load (and in screenshots).
@@ -52,8 +52,8 @@ export function AuthBackdrop({ children }: { children: ReactNode }) {
         ))}
       </div>
       <div className="absolute left-8 top-8 flex items-center gap-2.5 text-white max-sm:hidden md:left-12 md:top-12">
-        <LinkordMark className="h-7 w-auto" />
-        <span className="text-heading font-extrabold tracking-tight">Linkord</span>
+        <OvercordMark className="h-7 w-auto" />
+        <span className="text-heading font-extrabold tracking-tight">Overcord</span>
       </div>
       {children}
     </div>
@@ -75,4 +75,4 @@ export function AuthCard({ wide = false, className, children }: { wide?: boolean
   );
 }
 
-export { AuthHeading, AuthLink, PasswordToggle } from '@linkord/frontend-shared/auth/AuthControls';
+export { AuthHeading, AuthLink, PasswordToggle } from '@overcord/frontend-shared/auth/AuthControls';

@@ -2,7 +2,7 @@ import { useTranslation } from 'react-i18next';
 import { UsersIcon } from '@/shared/ui/icons';
 import { useState } from 'react';
 
-import { ServerIcon } from '@linkord/frontend-shared/ui/ServerIcon';
+import { ServerIcon } from '@overcord/frontend-shared/ui/ServerIcon';
 import { useNavigate } from 'react-router';
 import { ROUTES } from '@/shared/lib/routes';
 import { Button } from '@/shared/ui/primitives/button';

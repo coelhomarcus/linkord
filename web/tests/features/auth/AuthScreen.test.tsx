@@ -30,7 +30,7 @@ vi.mock('@/features/desktopApp/desktopDownloads', async (importOriginal) => ({
   fetchDesktopDownloads: fetchDownloads,
 }));
 
-const INSTALLER = 'https://github.com/o/r/releases/download/v0.8.0/Linkord-0.8.0-win-x64.exe';
+const INSTALLER = 'https://github.com/o/r/releases/download/v0.8.0/Overcord-0.8.0-win-x64.exe';
 
 beforeEach(() => {
   clearResourceCaches();
@@ -42,7 +42,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
-  delete window.linkordDesktop;
+  delete window.overcordDesktop;
 });
 
 describe('AuthScreen', () => {
@@ -80,11 +80,11 @@ describe('AuthScreen', () => {
   });
 
   it('offers no app inside the desktop app, nor when there is no release', async () => {
-    window.linkordDesktop = { platform: 'win32', version: '0.8.0' } as typeof window.linkordDesktop;
+    window.overcordDesktop = { platform: 'win32', version: '0.8.0' } as typeof window.overcordDesktop;
     const { unmount } = render(<AuthScreen />);
     expect(screen.queryByRole('complementary')).not.toBeInTheDocument();
     unmount();
-    delete window.linkordDesktop;
+    delete window.overcordDesktop;
 
     clearResourceCaches();
     fetchDownloads.mockRejectedValue(new ApiError(404, 'not_found', 'Sem versão.'));

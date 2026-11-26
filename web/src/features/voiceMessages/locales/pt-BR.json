@@ -13,7 +13,7 @@
   "dismissNotice": "Dispensar aviso",
   "preview": "Mensagem de voz",
   "notices": {
-    "denied": "O Linkord não tem permissão para usar o microfone. Libere o acesso nas configurações do site (ícone ao lado do endereço) e tente de novo.",
+    "denied": "O Overcord não tem permissão para usar o microfone. Libere o acesso nas configurações do site (ícone ao lado do endereço) e tente de novo.",
     "busy": "Não foi possível abrir o microfone. Ele pode estar sendo usado por outro app, como uma chamada no Discord ou no Meet.",
     "noDevice": "Nenhum microfone encontrado.",
     "unsupported": "Este navegador não consegue gravar áudio.",

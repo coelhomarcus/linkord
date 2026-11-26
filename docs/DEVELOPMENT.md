@@ -25,14 +25,14 @@ The server reads the optional root `.env` with literal values. Shell environment
 
 ## Start the services
 
-Start PostgreSQL once. The data is stored in the `linkord-dev_postgres_data` volume. If you already use PostgreSQL locally, point `DATABASE_URL` at your own Linkord database instead.
+Start PostgreSQL once. The data is stored in the `overcord-dev_postgres_data` volume. If you already use PostgreSQL locally, point `DATABASE_URL` at your own Overcord database instead.
 
 ```bash
-docker run -d --name linkord-dev-postgres --restart unless-stopped \
-  -e POSTGRES_USER=linkord -e POSTGRES_PASSWORD=linkord -e POSTGRES_DB=linkord \
-  -p 127.0.0.1:5432:5432 -v linkord-dev_postgres_data:/var/lib/postgresql/data \
+docker run -d --name overcord-dev-postgres --restart unless-stopped \
+  -e POSTGRES_USER=overcord -e POSTGRES_PASSWORD=overcord -e POSTGRES_DB=overcord \
+  -p 127.0.0.1:5432:5432 -v overcord-dev_postgres_data:/var/lib/postgresql/data \
   postgres:17-alpine
-docker exec linkord-dev-postgres pg_isready -h 127.0.0.1 -U linkord -d linkord
+docker exec overcord-dev-postgres pg_isready -h 127.0.0.1 -U overcord -d overcord
 ```
 
 Repeat the readiness check until it accepts connections. If you previously used the bundled development stack, stop its database container before starting this one. The default development volume is reused with its existing credentials.
@@ -61,7 +61,7 @@ LIVEKIT_API_SECRET=secret
 Start the LiveKit development server.
 
 ```bash
-docker run -d --name linkord-dev-livekit --restart unless-stopped \
+docker run -d --name overcord-dev-livekit --restart unless-stopped \
   -p 127.0.0.1:7880:7880 -p 127.0.0.1:7881:7881 -p 127.0.0.1:7882:7882/udp \
   livekit/livekit-server:v1.13.11 --dev --bind 0.0.0.0 --node-ip 127.0.0.1
 ```
@@ -73,7 +73,7 @@ Browsers on this machine connect to `ws://localhost:7880` and receive media on p
 Start the development mail sink from the repository root.
 
 ```bash
-docker run -d --name linkord-dev-mailsink --restart unless-stopped \
+docker run -d --name overcord-dev-mailsink --restart unless-stopped \
   -p 127.0.0.1:8025:8025 -v "$PWD/docker/mailsink.mjs:/mailsink.mjs:ro" \
   oven/bun:1.4.5-alpine bun --no-env-file /mailsink.mjs
 ```
@@ -83,10 +83,10 @@ Use these settings in `.env` for account recovery, email changes and two-step lo
 ```dotenv
 RESEND_API_URL=http://localhost:8025
 RESEND_API_KEY=mail-sink
-RESEND_FROM_EMAIL=Linkord <noreply@localhost>
+RESEND_FROM_EMAIL=Overcord <noreply@localhost>
 ```
 
-Restart `bun run dev` and read the codes with `docker logs -f linkord-dev-mailsink`.
+Restart `bun run dev` and read the codes with `docker logs -f overcord-dev-mailsink`.
 
 ## Sample data
 
@@ -106,24 +106,24 @@ To develop the separate panel, start the backend with `ADMIN_URL=http://127.0.0.
 
 ## Desktop app
 
-`desktop/` is an Electron window that loads a Linkord server's address, so the page talks to `/api` and `/ws` on its own origin and the server's cookies, origin check and CSP apply as in a browser. It ships for Windows only; a development run also starts on a Mac (with its own title bar buttons and tray menu, without activity detection, start at login or a taskbar count). Building the installer, updates and releases are in [DEPLOY.md](DEPLOY.md#desktop-app); the rules for changing it are in [AGENTS.md](../AGENTS.md) ("Desktop").
+`desktop/` is an Electron window that loads a Overcord server's address, so the page talks to `/api` and `/ws` on its own origin and the server's cookies, origin check and CSP apply as in a browser. It ships for Windows only; a development run also starts on a Mac (with its own title bar buttons and tray menu, without activity detection, start at login or a taskbar count). Building the installer, updates and releases are in [DEPLOY.md](DEPLOY.md#desktop-app); the rules for changing it are in [AGENTS.md](../AGENTS.md) ("Desktop").
 
 ```bash
 npm install --prefix desktop   # once; Electron downloads its binary on first run
 bun run dev:desktop            # with `bun run dev` running; opens http://localhost:5173
-LINKORD_URL=https://chat.example.com bun run dev:desktop   # or --url=<address>
+OVERCORD_URL=https://chat.example.com bun run dev:desktop   # or --url=<address>
 ```
 
-Plain `http` is accepted only for `localhost`, `127.0.0.1` and `[::1]`. A development run keeps its data in its own folder (`%APPDATA%\Linkord Dev`), so it runs next to an installed Linkord.
+Plain `http` is accepted only for `localhost`, `127.0.0.1` and `[::1]`. A development run keeps its data in its own folder (`%APPDATA%\Overcord Dev`), so it runs next to an installed Overcord.
 
 What the window does, and how to try each part:
 
-- **Navigation and permissions.** Only the server's origin opens inside the app; other sites open in the system browser, other schemes are dropped. The page gets microphone, camera, screen capture, output device selection, notifications, image copy and fullscreen on that origin only. It sees `window.linkordDesktop` (typed in `web/src/shared/desktop.ts`) and nothing else from Node or Electron.
-- **`linkord://` links** open `invite/<code>`, `channels/@me/<id>` (a DM) and `channels/<server>/<channel>`, optionally followed by a message id. Anything that does not match the strict patterns in `deepLink.ts` is ignored, and a start from a link ignores `--url`, so another program cannot pick the server. A development run registers the scheme only when started with `npm start --prefix desktop -- --register-protocol`; try a link with `start linkord://invite/<code>` in `cmd`. On the web, an invite opened in a browser on Windows offers **Abrir no app** when the server has a desktop release.
-- **Title bar.** The page draws it (`TopBar` on wide screens, `DesktopFrame` elsewhere) with Windows 11's caption buttons. On a Mac, `LINKORD_TITLE_BAR=windows` shows the Windows bar.
+- **Navigation and permissions.** Only the server's origin opens inside the app; other sites open in the system browser, other schemes are dropped. The page gets microphone, camera, screen capture, output device selection, notifications, image copy and fullscreen on that origin only. It sees `window.overcordDesktop` (typed in `web/src/shared/desktop.ts`) and nothing else from Node or Electron.
+- **`overcord://` links** open `invite/<code>`, `channels/@me/<id>` (a DM) and `channels/<server>/<channel>`, optionally followed by a message id. Anything that does not match the strict patterns in `deepLink.ts` is ignored, and a start from a link ignores `--url`, so another program cannot pick the server. A development run registers the scheme only when started with `npm start --prefix desktop -- --register-protocol`; try a link with `start overcord://invite/<code>` in `cmd`. On the web, an invite opened in a browser on Windows offers **Abrir no app** when the server has a desktop release.
+- **Title bar.** The page draws it (`TopBar` on wide screens, `DesktopFrame` elsewhere) with Windows 11's caption buttons. On a Mac, `OVERCORD_TITLE_BAR=windows` shows the Windows bar.
 - **Screen sharing.** Electron has no picker, so the page shows its own (`DesktopSourcePicker`) and the app grants only the chosen source to the next `getDisplayMedia`. On a Mac it needs Screen Recording permission for Electron and shares video only.
 - **Notifications.** No Web Push: the page shows a native Windows toast for each new message, friend request and invitation while the app runs, with a picture it draws itself (`web/src/shared/notificationIcon.ts`), and a click opens the conversation. What the page may send is checked in `notificationLayout.ts`.
-- **Tray and menu.** Closing the window hides it to the tray and keeps a call going (Settings → App can make it quit instead). The tray's right-click menu is a small window of the app's own; on a Mac, `LINKORD_TRAY_MENU=drawn` shows it instead of the native one. The menu bar (Alt) is in the system's language.
+- **Tray and menu.** Closing the window hides it to the tray and keeps a call going (Settings → App can make it quit instead). The tray's right-click menu is a small window of the app's own; on a Mac, `OVERCORD_TRAY_MENU=drawn` shows it instead of the native one. The menu bar (Alt) is in the system's language.
 - **Settings → App** (desktop only): start with the computer, start minimized, keep running when closed, version and update check. Start at login is not offered in a development run.
 - **Connection screen.** Before loading the page the app checks the server (up to 10 s per try, retried 1 to 30 s apart) and shows its own "Não foi possível conectar" screen instead of Chromium's; a page process that keeps crashing stops reloading after the fourth crash (`loadRetry.ts`). To see it: `npm start --prefix desktop -- --url=http://localhost:59999`. To see the updater window, open `desktop/assets/updater.html` in a browser and call `render(view)` with a view from `updaterScreen.ts`.
 
@@ -156,7 +156,7 @@ Every script runs from the repository root.
 | --- | --- |
 | `bun run dev` | API (`:3000`) and web (`:5173`) in watch mode. |
 | `bun run dev:admin` | The [admin site](#create-an-administrator) on `:5174` in watch mode. |
-| `bun run dev:desktop` | The [desktop app](#desktop-app) against `LINKORD_URL` (default `http://localhost:5173`). Needs `npm install --prefix desktop`. |
+| `bun run dev:desktop` | The [desktop app](#desktop-app) against `OVERCORD_URL` (default `http://localhost:5173`). Needs `npm install --prefix desktop`. |
 | `bun run package:desktop` | The Windows installer, see [DEPLOY.md](DEPLOY.md#building-the-installer). |
 | `bun run build` / `bun run start` | Builds the server and both frontends, or starts the built server. |
 | `bun run check` | Everything that should pass before pushing ([Run the checks](#run-the-checks)). |
@@ -187,7 +187,7 @@ The scripts behind `db:*`, `admin:*`, `backup*`, `restore` and `test:integration
 
 ## End-to-end tests
 
-`e2e/` drives the real app in Chrome with several accounts at once. The Docker stack runs the app behind Traefik alongside a LiveKit dev server, a disposable in-memory Postgres and a mail sink. Chrome connects to LiveKit through a published port, while the backend reaches the room management API on the Compose network. Stop `linkord-dev-livekit` and `linkord-dev-mailsink` before the standard tests if they are running, since those ports overlap. The split deploy test uses separate ports.
+`e2e/` drives the real app in Chrome with several accounts at once. The Docker stack runs the app behind Traefik alongside a LiveKit dev server, a disposable in-memory Postgres and a mail sink. Chrome connects to LiveKit through a published port, while the backend reaches the room management API on the Compose network. Stop `overcord-dev-livekit` and `overcord-dev-mailsink` before the standard tests if they are running, since those ports overlap. The split deploy test uses separate ports.
 
 ```bash
 PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1 bun install --frozen-lockfile --cwd e2e   # once; uses the installed Chrome
@@ -199,7 +199,7 @@ bun run test:e2e
 - `bun run --cwd e2e test:split` checks routing, cache headers, a call through a frontend-only deploy, and admin site sign-in and session isolation.
 - `test:e2e:upgrade`: tabs opened on the production version (`origin/main`, or `E2E_BASE_REF`) while the server is upgraded to the working tree. It adapts to what the base version supports and says so in the report's annotations.
 
-Each run builds `linkord-e2e:head` from the working tree (uncommitted changes included), starts the stack, runs and removes it. `E2E_KEEP_STACK=1` leaves it up at `http://localhost:8080`, `E2E_HEADED=1` shows the browsers, `E2E_RETRIES=0` turns retries off, and `E2E_HEAD_IMAGE=<tag>` tests an image you built yourself. A failure keeps a trace, video and screenshot: `bun run --cwd e2e report` opens the report, `bun --bun playwright show-trace <trace.zip>` (from `e2e/`) replays it.
+Each run builds `overcord-e2e:head` from the working tree (uncommitted changes included), starts the stack, runs and removes it. `E2E_KEEP_STACK=1` leaves it up at `http://localhost:8080`, `E2E_HEADED=1` shows the browsers, `E2E_RETRIES=0` turns retries off, and `E2E_HEAD_IMAGE=<tag>` tests an image you built yourself. A failure keeps a trace, video and screenshot: `bun run --cwd e2e report` opens the report, `bun --bun playwright show-trace <trace.zip>` (from `e2e/`) replays it.
 
 Playwright runs on Bun and uses the installed Google Chrome. Its CLI scripts use `bun --bun` to select the runtime.
 
@@ -255,10 +255,10 @@ When you add a user-facing flow, add it to the matching spec (or a new `features
 ```sh
 #!/bin/sh
 # pg_dump-in-docker; the pg_restore twin is the same with pg_restore
-exec docker exec -i -e PGPASSWORD -e PGUSER -e PGDATABASE -e PGHOST -e PGPORT linkord-dev-postgres-1 pg_dump "$@"
+exec docker exec -i -e PGPASSWORD -e PGUSER -e PGDATABASE -e PGHOST -e PGPORT overcord-dev-postgres-1 pg_dump "$@"
 ```
 
-`bun run backup:rehearse` runs the whole path on throwaway `linkord_rehearsal_*` databases of your local Postgres: seeds data and files, takes four backups with `BACKUP_KEEP=2`, restores the last, boots the real server on it and checks a sign-in and byte-for-byte downloads, plus the restore's refusals. Run it after changing the schema or `server/src/scripts/backup/`; `--keep` leaves the databases for inspection.
+`bun run backup:rehearse` runs the whole path on throwaway `overcord_rehearsal_*` databases of your local Postgres: seeds data and files, takes four backups with `BACKUP_KEEP=2`, restores the last, boots the real server on it and checks a sign-in and byte-for-byte downloads, plus the restore's refusals. Run it after changing the schema or `server/src/scripts/backup/`; `--keep` leaves the databases for inspection.
 
 ## Server limits and background jobs
 
@@ -393,7 +393,7 @@ Providers' limits and failures are in [INTEGRATIONS.md](INTEGRATIONS.md#myanimel
 
 `web/public/manifest.webmanifest` declares a `share_target`, so the installed app appears in Android Chrome's share sheet (not on iOS, and not for a plain browser tab).
 
-- The share is a `multipart/form-data` POST to `/share-target` that the service worker (`web/public/sw.js`) answers, so it needs a production build with the worker registered. The worker stores the files in Cache Storage (`linkord-share-v1`) and redirects to `/app/share?id=<id>`; nothing reaches the server yet.
+- The share is a `multipart/form-data` POST to `/share-target` that the service worker (`web/public/sw.js`) answers, so it needs a production build with the worker registered. The worker stores the files in Cache Storage (`overcord-share-v1`) and redirects to `/app/share?id=<id>`; nothing reaches the server yet.
 - `features/share/SharePage.tsx` lets the person pick a DM or channel and hands the files and text to its composer, so the usual size and count limits apply. Unfinished shares expire after an hour. The cache name, path and expiry exist in both `sw.js` and `features/share/sharedPayload.ts`; change them together.
 - To try it: serve the build over HTTPS (or `localhost`), install the app on an Android phone and share a picture. `chrome://inspect` shows the worker and its Cache Storage.
 

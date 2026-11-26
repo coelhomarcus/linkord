@@ -16,8 +16,8 @@ const SAVE_DELAY_MS = 500;
 const SCREEN_PAGE = path.join(import.meta.dirname, '../../assets/connection.html');
 const SCREEN_URL = pathToFileURL(SCREEN_PAGE).href;
 // The same names are spelled out in src/preload/index.cts, which cannot import this file
-const RENDER = 'linkord:connection:render';
-const ACTION = 'linkord:connection:action';
+const RENDER = 'overcord:connection:render';
+const ACTION = 'overcord:connection:action';
 const CHECK_TIMEOUT_MS = 10_000;
 // A start that has not heard from the server by then shows the screen meanwhile
 const SLOW_CHECK_MS = 1_000;
@@ -53,7 +53,7 @@ export interface StartScreen {
 
 export function createMainWindow(options: {
   appUrl: URL;
-  /** a page of the app to open first instead of appUrl (a `linkord://` link) */
+  /** a page of the app to open first instead of appUrl (a `overcord://` link) */
   startUrl?: URL | null;
   stateFile: string;
   preload: string;
@@ -72,7 +72,7 @@ export function createMainWindow(options: {
     ...placement.bounds,
     minWidth: MIN_SIZE.width,
     minHeight: MIN_SIZE.height,
-    title: 'Linkord',
+    title: 'Overcord',
     backgroundColor: BACKGROUND,
     show: false,
     autoHideMenuBar: true,

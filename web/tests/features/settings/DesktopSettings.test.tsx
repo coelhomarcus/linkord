@@ -37,11 +37,11 @@ function stubSettings(initial: DesktopSettingsSnapshot, platform = 'win32') {
       return () => { listener = null; };
     }),
   } satisfies DesktopSettingsApi;
-  window.linkordDesktop = { platform, version: initial.version, settings: api };
+  window.overcordDesktop = { platform, version: initial.version, settings: api };
   return { api, push: (next: DesktopSettingsSnapshot) => act(() => listener?.(next)) };
 }
 
-afterEach(() => { delete window.linkordDesktop; });
+afterEach(() => { delete window.overcordDesktop; });
 
 describe('DesktopSettings', () => {
   it('turns start with the computer on, which unlocks starting minimised', async () => {

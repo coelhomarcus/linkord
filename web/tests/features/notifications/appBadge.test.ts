@@ -48,11 +48,11 @@ describe('app icon badge', () => {
 });
 
 describe('app icon badge — in the desktop app', () => {
-  afterEach(() => { delete window.linkordDesktop; });
+  afterEach(() => { delete window.overcordDesktop; });
 
   it('puts the count on the Windows taskbar button, and clears it', async () => {
     const setBadgeCount = vi.fn(async () => true);
-    window.linkordDesktop = { platform: 'win32', version: '0.7.1', setBadgeCount };
+    window.overcordDesktop = { platform: 'win32', version: '0.7.1', setBadgeCount };
     const setAppBadge = vi.fn(async () => {});
     vi.stubGlobal('navigator', { setAppBadge });
     fetchBadge.mockResolvedValueOnce({ count: 5 });
@@ -65,7 +65,7 @@ describe('app icon badge — in the desktop app', () => {
   });
 
   it('leaves the taskbar alone in a Windows build without the count', async () => {
-    window.linkordDesktop = { platform: 'win32', version: '0.7.0' };
+    window.overcordDesktop = { platform: 'win32', version: '0.7.0' };
     const setAppBadge = vi.fn(async () => {});
     vi.stubGlobal('navigator', { setAppBadge });
     await refreshAppBadge();
@@ -76,7 +76,7 @@ describe('app icon badge — in the desktop app', () => {
 
   it('an old macOS install sets the count itself instead of the Badging API', async () => {
     const setBadgeCount = vi.fn(async () => true);
-    window.linkordDesktop = { platform: 'darwin', version: '0.1.0', setBadgeCount };
+    window.overcordDesktop = { platform: 'darwin', version: '0.1.0', setBadgeCount };
     const setAppBadge = vi.fn(async () => {});
     vi.stubGlobal('navigator', { setAppBadge });
     fetchBadge.mockResolvedValueOnce({ count: 3 });
@@ -90,7 +90,7 @@ describe('app icon badge — in the desktop app', () => {
 
   it('an old Linux install badges without the Badging API', async () => {
     const setBadgeCount = vi.fn(async () => true);
-    window.linkordDesktop = { platform: 'linux', version: '0.1.0', setBadgeCount };
+    window.overcordDesktop = { platform: 'linux', version: '0.1.0', setBadgeCount };
     vi.stubGlobal('navigator', {});
     fetchBadge.mockResolvedValueOnce({ count: 1 });
 

@@ -3,10 +3,10 @@
 // has closed. API, socket and upload requests are never intercepted. The one
 // POST taken over is the Web Share Target (see receiveShare).
 
-const CACHE = 'linkord-offline-v1';
+const CACHE = 'overcord-offline-v1';
 // Files from the system share sheet wait here until the picker page uses them.
 // Keep these three in step with features/share/sharedPayload.ts.
-const SHARE_CACHE = 'linkord-share-v1';
+const SHARE_CACHE = 'overcord-share-v1';
 const SHARE_PATH = '/share-target';
 const SHARE_TTL_MS = 60 * 60 * 1000;
 const OFFLINE_URL = '/offline.html';
@@ -115,14 +115,14 @@ async function avatarIcon(avatar) {
 self.addEventListener('push', (event) => {
   let notice;
   try { notice = event.data?.json()?.notification; } catch { /* still show a visible fallback */ }
-  const title = typeof notice?.title === 'string' && notice.title ? notice.title : 'Linkord';
+  const title = typeof notice?.title === 'string' && notice.title ? notice.title : 'Overcord';
   const body = typeof notice?.body === 'string' ? notice.body : 'Você tem uma nova notificação.';
   let path = '/app/conversations';
   try {
     const target = new URL(notice?.navigate, self.location.origin);
     if (target.origin === self.location.origin && target.pathname.startsWith('/app/')) path = target.pathname + target.search + target.hash;
   } catch { /* keep the safe default */ }
-  const tag = typeof notice?.tag === 'string' ? notice.tag : 'linkord';
+  const tag = typeof notice?.tag === 'string' ? notice.tag : 'overcord';
   const notification = (async () => {
     const avatar = typeof notice?.avatar === 'string' ? await avatarIcon(notice.avatar) : null;
     await self.registration.showNotification(title, {
@@ -164,7 +164,7 @@ self.addEventListener('notificationclick', (event) => {
     const existing = windows.find((client) => new URL(client.url).origin === self.location.origin);
     if (existing) {
       await existing.focus();
-      existing.postMessage({ type: 'linkord-push-navigation', path });
+      existing.postMessage({ type: 'overcord-push-navigation', path });
     } else {
       await self.clients.openWindow(path);
     }

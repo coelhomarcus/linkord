@@ -339,13 +339,13 @@
   "notifications": {
     "label": "Enable desktop notifications",
     "description": "Messages, mentions, friend requests and invitations, even with the app closed.",
-    "descriptionDesktop": "Messages and mentions while Linkord is running, even with its window closed.",
+    "descriptionDesktop": "Messages and mentions while Overcord is running, even with its window closed.",
     "status": {
       "default": "Permission required. The browser will ask when you turn this on.",
       "denied": "Blocked in the browser. Allow access in your browser settings for this site.",
       "unsupported": "Not available in this browser."
     },
-    "ios": "On iPhone, add Linkord to your Home Screen, open it from the icon and come back here to turn on notifications.",
+    "ios": "On iPhone, add Overcord to your Home Screen, open it from the icon and come back here to turn on notifications.",
     "pushUnavailable": "Push unavailable: check the server configuration.",
     "showContent": {
       "label": "Show message text",
@@ -420,7 +420,7 @@
       "label": "Font",
       "figtree": {
         "label": "Figtree",
-        "description": "Linkord's font."
+        "description": "Overcord's font."
       },
       "system": {
         "label": "System font",
@@ -563,24 +563,24 @@
   "desktop": {
     "startAtLogin": {
       "label": "Start with the computer",
-      "description": "Opens Linkord when you sign in to your computer."
+      "description": "Opens Overcord when you sign in to your computer."
     },
     "startMinimized": {
       "label": "Start minimized",
-      "description": "When it starts with the computer, Linkord waits in the system tray until you open it."
+      "description": "When it starts with the computer, Overcord waits in the system tray until you open it."
     },
     "closeToTray": {
       "label": "Keep running when the window closes",
-      "description": "Linkord stays in the system tray and you keep getting messages and calls. Turned off, closing the window quits the app."
+      "description": "Overcord stays in the system tray and you keep getting messages and calls. Turned off, closing the window quits the app."
     },
     "updates": {
       "version": "Version {{version}}",
-      "automatic": "Updates download on their own and install when Linkord restarts.",
-      "manual": "When there is a new version, Linkord tells you and opens the page to download it.",
+      "automatic": "Updates download on their own and install when Overcord restarts.",
+      "manual": "When there is a new version, Overcord tells you and opens the page to download it.",
       "off": "This build does not look for updates.",
       "checking": "Checking for updates…",
       "upToDate": "You are on the latest version.",
-      "downloading": "Downloading version {{version}}. It installs when Linkord restarts.",
+      "downloading": "Downloading version {{version}}. It installs when Overcord restarts.",
       "downloadingPercent": "Downloading version {{version}}… {{percent}}%",
       "failed": "Could not check for updates.",
       "available": "Version {{version}} is available.",
@@ -591,8 +591,8 @@
     }
   },
   "downloads": {
-    "title": "Install Linkord",
-    "description": "Use Linkord outside a browser tab. There are two ways, and both sign in to the same account with the same conversations: use one, the other, or both.",
+    "title": "Install Overcord",
+    "description": "Use Overcord outside a browser tab. There are two ways, and both sign in to the same account with the same conversations: use one, the other, or both.",
     "recommended": "Recommended for you",
     "retry": "Try again",
     "windows": {
@@ -616,7 +616,7 @@
     "web": {
       "platforms": "Phone and computer",
       "title": "Web app",
-      "description": "Linkord from your browser, installed as an app: it gets an icon on your home screen or taskbar and opens without the address bar. Nothing to download.",
+      "description": "Overcord from your browser, installed as an app: it gets an icon on your home screen or taskbar and opens without the address bar. Nothing to download.",
       "features": {
         "anywhere": "Works on Android, iPhone, Windows, Mac and Linux",
         "notifications": "Push notifications, even with the browser closed",
@@ -624,8 +624,8 @@
       },
       "install": "Install web app",
       "installed": "The web app is installed on this device.",
-      "unsupported": "This browser doesn't offer installing. Use Chrome or Edge (computer and Android) or Safari (iPhone and iPad). If you dismissed the prompt, look for “Install Linkord” in the browser's menu.",
-      "fromDesktopApp": "To get Linkord on your phone, open the site in your phone's browser and install it there.",
+      "unsupported": "This browser doesn't offer installing. Use Chrome or Edge (computer and Android) or Safari (iPhone and iPad). If you dismissed the prompt, look for “Install Overcord” in the browser's menu.",
+      "fromDesktopApp": "To get Overcord on your phone, open the site in your phone's browser and install it there.",
       "ios": {
         "title": "In Safari, in three taps:",
         "share": "Tap Share",
@@ -642,7 +642,7 @@
       },
       "web": {
         "question": "On a phone, a Mac or Linux?",
-        "answer": "Install the web app. That's how Linkord becomes an app on those devices, and it gets notifications like a native app."
+        "answer": "Install the web app. That's how Overcord becomes an app on those devices, and it gets notifications like a native app."
       },
       "both": {
         "question": "Can I use both?",

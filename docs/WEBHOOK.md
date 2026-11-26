@@ -1,4 +1,4 @@
-# Integrating a system with Linkord through a webhook
+# Integrating a system with Overcord through a webhook
 
 A **webhook** lets an outside system (a deploy, a monitor, an automation, a cron script) post into a server's text channel. The system sends an HTTP `POST` to the webhook URL, and the message shows up immediately for everyone who can see the channel, with the webhook's name and image, a **WEBHOOK** badge, an unread count and a notification.
 
@@ -35,13 +35,13 @@ The name can be changed later in the same tab; old messages show the new name to
 
 ## 2. Store the webhook URL
 
-Right after creating it, Linkord shows the **webhook URL**:
+Right after creating it, Overcord shows the **webhook URL**:
 
 ```
-https://your-linkord/api/webhooks/<id>/<token>
+https://your-overcord/api/webhooks/<id>/<token>
 ```
 
-**Copy it now and keep it in a secret store** (your CI's secrets, an environment variable). It is the whole credential: anyone who has it can post as the webhook. Linkord stores only a hash of the token, so the URL **is not shown again**.
+**Copy it now and keep it in a secret store** (your CI's secrets, an environment variable). It is the whole credential: anyone who has it can post as the webhook. Overcord stores only a hash of the token, so the URL **is not shown again**.
 
 Lost or leaked? **Edit Channel** → **Integrations** → **Generate new URL** on the webhook. The old URL stops working immediately, so update every system that used it.
 
@@ -50,7 +50,7 @@ Lost or leaked? **Edit Channel** → **Integrations** → **Generate new URL** o
 With the URL in hand, a JSON `POST` is enough:
 
 ```bash
-curl -X POST "$LINKORD_WEBHOOK_URL" \
+curl -X POST "$OVERCORD_WEBHOOK_URL" \
   -H 'Content-Type: application/json' \
   -d '{"content": "Deploy finished ✅"}'
 ```
@@ -70,10 +70,10 @@ The message appears in the channel in real time for whoever is online, and as un
 | Token in the URL: `POST /api/webhooks/<id>/<token>` | Tools that only accept a URL (most services with a "webhook" option). |
 | Header: `POST /api/webhooks/<id>` with `Authorization: Bearer <token>` | When you control the code and want the token out of the URL. Proxies and access logs usually record URLs, but not headers. |
 
-The `<id>` and `<token>` are the last two parts of the URL Linkord showed you.
+The `<id>` and `<token>` are the last two parts of the URL Overcord showed you.
 
 ```bash
-curl -X POST "https://your-linkord/api/webhooks/$WEBHOOK_ID" \
+curl -X POST "https://your-overcord/api/webhooks/$WEBHOOK_ID" \
   -H "Authorization: Bearer $WEBHOOK_TOKEN" \
   -H 'Content-Type: application/json' \
   -d '{"content": "Backup finished"}'
@@ -186,7 +186,7 @@ Images, thumbnails and author (`image`, `thumbnail`, `author`) are ignored on pu
 If your system resends when the network fails (a queue, an automatic retry), send the **`Idempotency-Key`** header with an identifier that is unique to that event:
 
 ```bash
-curl -X POST "$LINKORD_WEBHOOK_URL" \
+curl -X POST "$OVERCORD_WEBHOOK_URL" \
   -H 'Content-Type: application/json' \
   -H 'Idempotency-Key: deploy-42' \
   -d '{"content": "Deploy 42 finished"}'
@@ -244,10 +244,10 @@ Need to send a lot at once? Group it into a single send (several `fields` or sev
 
 ```bash
 #!/usr/bin/env bash
-# notifies Linkord when the disk goes over 90%
+# notifies Overcord when the disk goes over 90%
 usage=$(df / | awk 'NR==2 {gsub("%", "", $5); print $5}')
 if [ "$usage" -gt 90 ]; then
-  curl -sS -X POST "$LINKORD_WEBHOOK_URL" \
+  curl -sS -X POST "$OVERCORD_WEBHOOK_URL" \
     -H 'Content-Type: application/json' \
     -d "{\"embeds\": [{\"title\": \"Disk almost full\", \"color\": \"red\", \"fields\": [{\"name\": \"Host\", \"value\": \"$(hostname)\", \"inline\": true}, {\"name\": \"Usage\", \"value\": \"${usage}%\", \"inline\": true}]}]}"
 fi
@@ -257,7 +257,7 @@ fi
 
 ```js
 async function notify(content, embeds, idempotencyKey) {
-  const res = await fetch(process.env.LINKORD_WEBHOOK_URL, {
+  const res = await fetch(process.env.OVERCORD_WEBHOOK_URL, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -272,7 +272,7 @@ async function notify(content, embeds, idempotencyKey) {
   }
   if (!res.ok) {
     const { error } = await res.json();
-    throw new Error(`Linkord rejected the request: ${error.code}: ${error.message}`);
+    throw new Error(`Overcord rejected the request: ${error.code}: ${error.message}`);
   }
   return res.json(); // { id, duplicate }
 }
@@ -291,7 +291,7 @@ import os, time, requests
 def notify(content=None, embeds=None, idempotency_key=None):
     headers = {"Idempotency-Key": idempotency_key} if idempotency_key else {}
     body = {k: v for k, v in {"content": content, "embeds": embeds}.items() if v}
-    res = requests.post(os.environ["LINKORD_WEBHOOK_URL"], json=body, headers=headers, timeout=10)
+    res = requests.post(os.environ["OVERCORD_WEBHOOK_URL"], json=body, headers=headers, timeout=10)
     if res.status_code == 429:
         time.sleep(int(res.headers.get("Retry-After", "1")))
         return notify(content, embeds, idempotency_key)
@@ -308,17 +308,17 @@ notify(embeds=[{
 
 ### GitHub Actions
 
-Store the URL under **Settings → Secrets and variables → Actions** as `LINKORD_WEBHOOK_URL` and add a step at the end of the workflow:
+Store the URL under **Settings → Secrets and variables → Actions** as `OVERCORD_WEBHOOK_URL` and add a step at the end of the workflow:
 
 ```yaml
-      - name: Notify Linkord
+      - name: Notify Overcord
         if: always()
         env:
-          LINKORD_WEBHOOK_URL: ${{ secrets.LINKORD_WEBHOOK_URL }}
+          OVERCORD_WEBHOOK_URL: ${{ secrets.OVERCORD_WEBHOOK_URL }}
           STATUS: ${{ job.status }}
         run: |
           if [ "$STATUS" = "success" ]; then COLOR=green; TITLE="Deploy finished"; else COLOR=red; TITLE="Deploy failed"; fi
-          curl -sS -X POST "$LINKORD_WEBHOOK_URL" \
+          curl -sS -X POST "$OVERCORD_WEBHOOK_URL" \
             -H 'Content-Type: application/json' \
             -H "Idempotency-Key: gh-${{ github.run_id }}-${{ github.run_attempt }}" \
             -d "{\"embeds\": [{\"title\": \"$TITLE\", \"url\": \"${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}\", \"color\": \"$COLOR\", \"fields\": [{\"name\": \"Branch\", \"value\": \"${{ github.ref_name }}\", \"inline\": true}, {\"name\": \"Author\", \"value\": \"${{ github.actor }}\", \"inline\": true}], \"footer\": \"GitHub Actions\"}]}"
@@ -326,7 +326,7 @@ Store the URL under **Settings → Secrets and variables → Actions** as `LINKO
 
 ## 11. Security
 
-- **Keep the URL out of code and repositories**, and prefer the `Authorization: Bearer` header when you can: URLs tend to show up in proxy and access logs. Linkord never logs the token, and stores only its hash, so not even the instance's administration can see your URL.
+- **Keep the URL out of code and repositories**, and prefer the `Authorization: Bearer` header when you can: URLs tend to show up in proxy and access logs. Overcord never logs the token, and stores only its hash, so not even the instance's administration can see your URL.
 - **The administration can revoke the webhook or suspend the server** (for abuse or a leak), and sends then get `401`. After a revocation, generating a new URL gets messages flowing again; after a suspension, the same URL works once the server is reactivated.
 - **Cards cannot run scripts or load images:** their links can only be `http(s)`.
 
@@ -342,4 +342,4 @@ Your system repeated the send. Send a unique `Idempotency-Key` per event ([secti
 Only fields with `"inline": true` share a row, up to 3 at a time.
 
 **Nobody received the message.**
-Check that the people are in the server and that the channel's permissions let them see the channel. Whoever was not online sees the message as unread the next time they open Linkord.
+Check that the people are in the server and that the channel's permissions let them see the channel. Whoever was not online sees the message as unread the next time they open Overcord.

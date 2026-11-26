@@ -4,8 +4,8 @@ import { bringBack } from './appBridge.js';
 import { nativeNotificationFields, parseNotificationRequest } from './notificationLayout.js';
 
 // The same names are spelled out in src/preload/index.cts, which cannot import this file
-const SHOW = 'linkord:notification:show';
-const CLICK = 'linkord:notification:click';
+const SHOW = 'overcord:notification:show';
+const CLICK = 'overcord:notification:click';
 
 // A notification nothing holds on to is collected, and its click is lost with it
 const MAX_KEPT = 100;

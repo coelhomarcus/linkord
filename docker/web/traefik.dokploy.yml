@@ -1,29 +1,29 @@
 # Substitute the public hostname and the two Dokploy service names before installing this file.
 http:
   routers:
-    linkord-split-redirect:
+    overcord-split-redirect:
       rule: 'Host(`__APP_DOMAIN__`)'
       priority: 100
       entryPoints: [web]
       middlewares: [redirect-to-https@file]
-      service: linkord-web
-    linkord-split-backend:
+      service: overcord-web
+    overcord-split-backend:
       rule: 'Host(`__APP_DOMAIN__`) && (PathRegexp(`^/(api|ws|uploads)(/|$)`) || Path(`/healthz`) || Path(`/readyz`))'
       priority: 200
       entryPoints: [websecure]
-      service: linkord-backend
-    linkord-split-frontend:
+      service: overcord-backend
+    overcord-split-frontend:
       rule: 'Host(`__APP_DOMAIN__`)'
       priority: 100
       entryPoints: [websecure]
-      service: linkord-web
+      service: overcord-web
   services:
-    linkord-backend:
+    overcord-backend:
       loadBalancer:
         passHostHeader: true
         servers:
           - url: http://__BACKEND_APP_NAME__:3000
-    linkord-web:
+    overcord-web:
       loadBalancer:
         passHostHeader: true
         servers:

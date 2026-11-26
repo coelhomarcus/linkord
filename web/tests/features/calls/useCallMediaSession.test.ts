@@ -40,7 +40,7 @@ const base: Parameters<typeof useCallMediaSession>[0] = { inCall: true, title: '
 describe('useCallMediaSession', () => {
   it('names the call and marks it playing while in a call', () => {
     renderHook(() => useCallMediaSession(base));
-    expect(session.metadata).toMatchObject({ title: 'geral', artist: 'Linkord' });
+    expect(session.metadata).toMatchObject({ title: 'geral', artist: 'Overcord' });
     expect(session.playbackState).toBe('playing');
   });
 

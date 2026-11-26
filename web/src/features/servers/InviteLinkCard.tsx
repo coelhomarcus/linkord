@@ -5,7 +5,7 @@ import { EnvelopeSimpleIcon } from '@/shared/ui/icons';
 import { Button } from '@/shared/ui/primitives/button';
 import { describeApiError } from '@/shared/api/errorText';
 import { ROUTES } from '@/shared/lib/routes';
-import { ServerIcon } from '@linkord/frontend-shared/ui/ServerIcon';
+import { ServerIcon } from '@overcord/frontend-shared/ui/ServerIcon';
 import { acceptInviteLink, fetchInvitePreview, type InvitePreview } from './serversApi';
 
 // previews are shared by every card showing the same code on screen

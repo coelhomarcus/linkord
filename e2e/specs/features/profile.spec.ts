@@ -86,7 +86,7 @@ test.describe('profile', () => {
     // the catalog is a window over the profile; the games widgets are there with no connection
     const catalog = a.page.getByRole('dialog', { name: 'Adicionar widget de perfil' });
     const navigation = catalog.getByRole('navigation', { name: 'Tipos de widget' });
-    await expect(navigation.getByRole('group', { name: 'Do Linkord' }).getByRole('button', { name: 'Jogos' })).toBeVisible();
+    await expect(navigation.getByRole('group', { name: 'Do Overcord' }).getByRole('button', { name: 'Jogos' })).toBeVisible();
     await expect(navigation.getByRole('group', { name: 'Integrações' }).getByRole('button', { name: 'GitHub' })).toBeVisible();
     await catalog.getByRole('button', { name: 'Jogo favorito' }).click();
     // an empty place opens the search in a window; the e2e stack has no IGDB credentials, so it says so

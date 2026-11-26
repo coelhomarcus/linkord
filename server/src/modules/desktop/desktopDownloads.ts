@@ -17,7 +17,7 @@ export interface DesktopDownloads {
 }
 
 // The installer's name (desktop/electron-builder.config.cjs artifactName)
-const WINDOWS_INSTALLER = /^Linkord-[\w.-]+-win-x64\.exe$/;
+const WINDOWS_INSTALLER = /^Overcord-[\w.-]+-win-x64\.exe$/;
 
 /** GitHub's "latest release" answer, keeping only links into that repository's releases. */
 export function parseLatestRelease(body: unknown, repo: string): DesktopDownloads | null {
@@ -45,7 +45,7 @@ export function createDesktopDownloads(options: { repo: string; request?: Reques
   async function load(): Promise<DesktopDownloads | null> {
     try {
       const body = await request(`https://api.github.com/repos/${repo}/releases/latest`, {
-        headers: { Accept: 'application/vnd.github+json', 'User-Agent': 'linkord-server' },
+        headers: { Accept: 'application/vnd.github+json', 'User-Agent': 'overcord-server' },
       });
       const value = parseLatestRelease(body, repo);
       cached = { value, until: now() + CACHE_MS };

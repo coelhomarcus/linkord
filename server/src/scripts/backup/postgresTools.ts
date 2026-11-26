@@ -46,7 +46,7 @@ export function pgConnection(databaseUrl: string, ssl: DatabaseSsl = { enabled: 
 /** Writes a pinned CA to a private temp file for the tools, which only read one from a path. */
 export async function withConnection<T>(databaseUrl: string, ssl: DatabaseSsl | undefined, run: (connection: PgConnection) => Promise<T>): Promise<T> {
   if (!ssl?.enabled || !ssl.ca) return run(pgConnection(databaseUrl, ssl));
-  const dir = await fsp.mkdtemp(path.join(os.tmpdir(), 'linkord-pg-'));
+  const dir = await fsp.mkdtemp(path.join(os.tmpdir(), 'overcord-pg-'));
   try {
     const caFile = path.join(dir, 'ca.pem');
     await fsp.writeFile(caFile, ssl.ca, { mode: 0o600 });

@@ -5,7 +5,7 @@ import { backupSettings } from './backup/settings.js';
 // `bun run backup`
 //
 // One backup = one folder in BACKUP_DIR (default ./backups), named by UTC time:
-//   linkord-backup-20261108T015300Z/
+//   overcord-backup-20261108T015300Z/
 //     database.dump    pg_dump, custom format
 //     uploads.tar.gz   UPLOAD_DIR without tmp/ (chunks of unfinished uploads) and exports/ (data exports)
 //     manifest.json    row counts, checksums, what the restore will check

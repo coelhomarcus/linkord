@@ -29,7 +29,7 @@ const saved = { key: config.RESEND_API_KEY, from: config.RESEND_FROM_EMAIL, appU
 beforeEach(() => {
   mailbox = [];
   config.RESEND_API_KEY = 're_test';
-  config.RESEND_FROM_EMAIL = 'Linkord <noreply@example.test>';
+  config.RESEND_FROM_EMAIL = 'Overcord <noreply@example.test>';
   config.APP_URL = 'https://chat.example.test';
   mock.method(globalThis, 'fetch', async (_url: string, init: RequestInit) => {
     mailbox.push(JSON.parse(String(init.body)));

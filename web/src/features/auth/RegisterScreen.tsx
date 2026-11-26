@@ -7,7 +7,7 @@ import { ApiError } from '@/shared/api/api';
 import { ErrorBanner } from '@/shared/ErrorBanner';
 import { Button } from '@/shared/ui/primitives/button';
 import { ERROR_CODES } from '@/shared/api/errorCodes';
-import { AuthField } from '@linkord/frontend-shared/auth/AuthField';
+import { AuthField } from '@overcord/frontend-shared/auth/AuthField';
 import { AuthCard, AuthHeading, AuthLink, PasswordToggle } from './AuthLayout';
 import { MAX_DISPLAY_NAME_LEN } from '@/shared/lib/displayName';
 import { MAX_EMAIL_LEN, MAX_USERNAME_LEN } from './credentialRules';

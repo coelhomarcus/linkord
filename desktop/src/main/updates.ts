@@ -1,5 +1,5 @@
 // Updates come from the GitHub releases of the repository the installer was
-// built for (LINKORD_UPDATE_REPO, baked into app-config.json). Windows is the
+// built for (OVERCORD_UPDATE_REPO, baked into app-config.json). Windows is the
 // only system the app ships for: the NSIS build checks at every start, in the
 // small window every start opens with (updaterWindow.ts), and installs what it
 // finds before opening; later checks download in the background and wait for
@@ -49,7 +49,7 @@ export function mainWindowMayShow(phase: StartupPhase): boolean {
 
 /**
  * What closing the updater window does. During a start it is the only window
- * on screen, so closing it quits Linkord, except mid-update, which it would
+ * on screen, so closing it quits Overcord, except mid-update, which it would
  * leave half done; after the start it only closes.
  */
 export function startWindowClose(input: { phase: StartupPhase; quitting: boolean }): 'close' | 'quit' | 'refuse' {

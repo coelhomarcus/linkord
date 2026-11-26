@@ -6,14 +6,14 @@ import { setTaskbarBadge } from './taskbarBadge.js';
 import { parseFullScreenRequest, windowState } from './titleBar.js';
 
 // The same names are spelled out in src/preload/index.cts, which cannot import this file
-const FOCUS_WINDOW = 'linkord:window:focus';
-const SET_BADGE = 'linkord:badge:set';
-const MINIMIZE = 'linkord:window:minimize';
-const TOGGLE_MAXIMIZE = 'linkord:window:toggle-maximize';
-const CLOSE = 'linkord:window:close';
-const GET_STATE = 'linkord:window:get-state';
-const STATE_CHANGED = 'linkord:window:state';
-const SET_FULL_SCREEN = 'linkord:window:set-full-screen';
+const FOCUS_WINDOW = 'overcord:window:focus';
+const SET_BADGE = 'overcord:badge:set';
+const MINIMIZE = 'overcord:window:minimize';
+const TOGGLE_MAXIMIZE = 'overcord:window:toggle-maximize';
+const CLOSE = 'overcord:window:close';
+const GET_STATE = 'overcord:window:get-state';
+const STATE_CHANGED = 'overcord:window:state';
+const SET_FULL_SCREEN = 'overcord:window:set-full-screen';
 
 export function installAppBridge(appOrigin: string, strings: Strings): void {
   // A notification clicked while the window is hidden (in the tray) or

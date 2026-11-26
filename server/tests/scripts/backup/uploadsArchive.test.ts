@@ -7,7 +7,7 @@ import { BackupError } from '../../../src/scripts/backup/backupLayout.js';
 import { createUploadsArchive, extractUploadsArchive, isEmptyDirectory, isSafeArchiveEntry, listArchive, listStoredFiles } from '../../../src/scripts/backup/uploadsArchive.js';
 
 let dir: string;
-beforeEach(async () => { dir = await fs.mkdtemp(path.join(os.tmpdir(), 'linkord-archive-test-')); });
+beforeEach(async () => { dir = await fs.mkdtemp(path.join(os.tmpdir(), 'overcord-archive-test-')); });
 afterEach(async () => { await fs.rm(dir, { recursive: true, force: true }); });
 
 const A = 'a'.repeat(32);
