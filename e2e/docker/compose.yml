@@ -55,6 +55,8 @@ services:
       LIVEKIT_API_SECRET: secret
       LIVEKIT_ROOM_NAME: e2e
       APP_URL: http://localhost:8080
+      # The admin site, served by the same container on another host.
+      ADMIN_URL: http://127.0.0.1:8080
       COOKIE_SECURE: "0"
       REGISTRATIONS_PER_IP_PER_HOUR: "100000"
       MAX_NEW_ACCOUNTS_PER_HOUR: "100000"

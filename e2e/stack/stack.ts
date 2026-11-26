@@ -5,26 +5,20 @@ import path from 'node:path';
 
 const E2E_DIR = path.resolve(import.meta.dirname, '..');
 export const REPO_DIR = path.resolve(E2E_DIR, '..');
-export const SPLIT = process.env.E2E_SPLIT === '1';
-export const BASE_URL = SPLIT ? 'http://localhost:18080' : 'http://localhost:8080';
-export const ADMIN_URL = 'http://127.0.0.1:18080';
-export const SPLIT_LIVEKIT_URL = 'ws://lk.localhost:17880';
+export const BASE_URL = 'http://localhost:8080';
+// The same app container behind the same proxy, reached by another host: the admin site.
+export const ADMIN_URL = 'http://127.0.0.1:8080';
 const COMPOSE_FILE = path.join(E2E_DIR, 'docker', 'compose.yml');
-const SPLIT_FILE = path.join(E2E_DIR, 'docker', 'split.yml');
 const ENV_FILE = path.join(E2E_DIR, '.e2e.env');
-const STATE_FILE = path.join(E2E_DIR, SPLIT ? '.e2e-split-state.json' : '.e2e-state.json');
-export const WEB_IMAGE = 'overcord-e2e:split-frontend';
-export const ADMIN_IMAGE = 'overcord-e2e:split-admin';
-export const NEXT_WEB_IMAGE = 'overcord-e2e:split-frontend-next';
+const STATE_FILE = path.join(E2E_DIR, '.e2e-state.json');
 
 interface StackState { image: string }
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
-function compose(args: string[], image?: string, webImage = WEB_IMAGE): string {
-  const env = { ...process.env, APP_IMAGE: image ?? currentImage(), WEB_IMAGE: webImage, ADMIN_IMAGE, ADMIN_URL };
-  const files = SPLIT ? ['-p', 'overcord-e2e-split', '-f', COMPOSE_FILE, '-f', SPLIT_FILE] : ['-f', COMPOSE_FILE];
-  return execFileSync('docker', ['compose', ...files, ...args], { env, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] });
+function compose(args: string[], image?: string): string {
+  const env = { ...process.env, APP_IMAGE: image ?? currentImage() };
+  return execFileSync('docker', ['compose', '-f', COMPOSE_FILE, ...args], { env, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] });
 }
 
 function readState(): StackState | null {
@@ -47,11 +41,11 @@ export function registrationCode(): string {
   return match[1]!;
 }
 
-async function waitHealthy(route = '/healthz', timeoutMs = 60_000, origin = BASE_URL): Promise<void> {
+async function waitHealthy(route = '/healthz', timeoutMs = 60_000): Promise<void> {
   const deadline = Date.now() + timeoutMs;
   while (Date.now() < deadline) {
     try {
-      const res = await fetch(`${origin}${route}`);
+      const res = await fetch(`${BASE_URL}${route}`);
       if (res.ok) return;
     } catch { /* not up yet */ }
     await sleep(300);
@@ -65,21 +59,6 @@ export async function up(image: string): Promise<void> {
   compose(['up', '-d', '--wait', 'postgres', 'mailsink'], image);
   compose(['up', '-d', 'livekit', 'proxy', 'app'], image);
   await waitHealthy();
-  if (SPLIT) {
-    compose(['up', '-d', '--no-deps', 'frontend', 'admin'], image);
-    await waitHealthy('/index.html');
-    await waitHealthy('/index.html', 60_000, ADMIN_URL);
-  }
-}
-
-export async function replaceFrontend(): Promise<void> {
-  compose(['up', '-d', '--force-recreate', '--no-deps', 'frontend'], undefined, NEXT_WEB_IMAGE);
-  await waitHealthy('/index.html');
-}
-
-export function backendTask(): string {
-  const id = compose(['ps', '-q', 'app']).trim();
-  return execFileSync('docker', ['inspect', '--format', '{{.Id}} {{.State.StartedAt}}', id], { encoding: 'utf8' }).trim();
 }
 
 /** What a Dokploy compose redeploy does: the running container gets SIGTERM
@@ -112,7 +91,7 @@ function logs(lines = 200): string {
   try { return compose(['logs', '--no-color', '--tail', String(lines), 'app']); } catch { return '(no logs)'; }
 }
 
-const MAILSINK_URL = SPLIT ? 'http://localhost:18025' : 'http://localhost:8025';
+const MAILSINK_URL = 'http://localhost:8025';
 
 async function emailsTo(to: string): Promise<{ text: string }[]> {
   const res = await fetch(`${MAILSINK_URL}/emails?to=${encodeURIComponent(to)}`);
