@@ -98,6 +98,27 @@ describe('UserDetailPage', () => {
     await waitFor(() => expect(mocked.grantAdmin).toHaveBeenCalledWith('u1', 'second trusted person'));
   });
 
+  it('the badges tab grants a badge the account lacks and removes one it holds, each with a reason', async () => {
+    const u = userEvent.setup();
+    mocked.fetchAdminUser.mockResolvedValue({ ...detail(), badges: [{ id: 'supporter', grantedAt: '2026-02-01T00:00:00.000Z', source: 'admin' }] });
+    mocked.grantBadge.mockResolvedValue({ ok: true });
+    mocked.revokeBadge.mockResolvedValue({ ok: true });
+    open(undefined, 'badges');
+    expect(await screen.findByText('Desenvolvedor do Overcord')).toBeInTheDocument();
+    expect(screen.getByText(/por um administrador/)).toBeInTheDocument();
+
+    await u.click(screen.getByRole('button', { name: 'Conceder' }));
+    expect(await screen.findByText(/@ana vai exibir a insígnia "Desenvolvedor do Overcord"/)).toBeInTheDocument();
+    await u.type(screen.getByLabelText(/Motivo/), 'contributed the call UI');
+    await u.click(screen.getAllByRole('button', { name: 'Conceder' }).at(-1)!);
+    await waitFor(() => expect(mocked.grantBadge).toHaveBeenCalledWith('u1', 'developer', 'contributed the call UI'));
+
+    await u.click(await screen.findByRole('button', { name: 'Remover' }));
+    await u.type(screen.getByLabelText(/Motivo/), 'refunded donation');
+    await u.click(screen.getAllByRole('button', { name: 'Remover' }).at(-1)!);
+    await waitFor(() => expect(mocked.revokeBadge).toHaveBeenCalledWith('u1', 'supporter', 'refunded donation'));
+  });
+
   it('admin account offers Remove admin (disabled on your own)', async () => {
     mocked.fetchAdminUser.mockResolvedValue(detail({ role: 'admin' }));
     const { unmount } = openModeration();

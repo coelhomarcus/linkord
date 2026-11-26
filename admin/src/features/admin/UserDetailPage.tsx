@@ -5,7 +5,7 @@ import { Avatar } from '@overcord/frontend-shared/Avatar';
 import { Button } from '@overcord/frontend-shared/ui/primitives/button';
 import { formatFileSize } from '@overcord/frontend-shared/lib/formatBytes';
 import { useCursorList } from '@overcord/frontend-shared/hooks/useCursorList';
-import { deleteUser, fetchAdminUser, fetchAudit, grantAdmin, reactivateUser, revokeAdmin, revokeUserSessions, suspendUser } from './adminApi';
+import { deleteUser, fetchAdminUser, fetchAudit, grantAdmin, grantBadge, reactivateUser, revokeAdmin, revokeBadge, revokeUserSessions, suspendUser } from './adminApi';
 import { AdminDetailTabs } from './AdminDetailTabs';
 import { AdminEntityHeader } from './AdminEntityHeader';
 import { AdminActionRow, AdminFieldRow, AdminFields, AdminSection } from './AdminSection';
@@ -21,10 +21,11 @@ import { AuditListSkeleton } from './AdminSkeletons';
 import { EmptyState } from '@overcord/frontend-shared/ui/empty-state';
 import { useLanguage } from '@overcord/frontend-shared/i18n/useLanguage';
 import { reportAdminSessionEnded } from './adminAccess';
+import { BADGES, BadgeIcon, badgeDescription, badgeName, knownBadges, type BadgeId } from '@overcord/frontend-shared/badges/badgeCatalog';
 
-type Dialog = 'suspend' | 'reactivate' | 'revoke' | 'delete' | 'grant-admin' | 'revoke-admin' | null;
+type Dialog = 'suspend' | 'reactivate' | 'revoke' | 'delete' | 'grant-admin' | 'revoke-admin' | { badge: BadgeId; action: 'grant' | 'revoke' } | null;
 
-const TABS = ['overview', 'servers', 'moderation', 'history'] as const;
+const TABS = ['overview', 'servers', 'badges', 'moderation', 'history'] as const;
 type Tab = (typeof TABS)[number];
 const QUERY: QuerySchema<'tab'> = { tab: { default: 'overview', allowed: TABS } };
 
@@ -65,6 +66,8 @@ function UserDetail({ id, viewerId }: { id: string; viewerId: string }) {
   const isSelf = user.id === viewerId;
   const suspended = user.status === 'suspended';
   const isAdmin = user.role === 'admin';
+  const badges = knownBadges(detail.badges);
+  const badgeDialog = dialog && typeof dialog === 'object' ? dialog : null;
   // revoking your own sessions ends this very session: the re-read would fail, and that is the expected outcome
   const revokeSessions = async (reason: string) => {
     if (!isSelf) return mutate(() => revokeUserSessions(user.id, reason));
@@ -82,7 +85,10 @@ function UserDetail({ id, viewerId }: { id: string; viewerId: string }) {
         title={user.displayName}
         subtitle={`@${user.username}`}
         id={user.id}
-        badges={<><Badge value={user.role} /><Badge value={user.status} /></>}
+        badges={<>
+          {badges.map((badge) => <BadgeIcon key={badge.id} id={badge.id} size={22} title={badgeName(badge.id)} />)}
+          <Badge value={user.role} /><Badge value={user.status} />
+        </>}
       />
 
       <AdminDetailTabs<Tab>
@@ -92,6 +98,7 @@ function UserDetail({ id, viewerId }: { id: string; viewerId: string }) {
         tabs={[
           { id: 'overview', label: t('detail.overview') },
           { id: 'servers', label: `${t('detail.servers')} (${servers.length})` },
+          { id: 'badges', label: `${t('detail.badges')} (${badges.length})` },
           { id: 'moderation', label: t('detail.moderation') },
           { id: 'history', label: t('detail.history') },
         ]}
@@ -111,6 +118,12 @@ function UserDetail({ id, viewerId }: { id: string; viewerId: string }) {
             <AdminFieldRow label={t('detail.servers')}>
               {servers.length === 0 ? t('detail.noServers') : <AdminTextLink to={{ search: '?tab=servers' }}>{t('detail.viewServers', { count: servers.length })}</AdminTextLink>}
             </AdminFieldRow>
+            <AdminFieldRow label={t('detail.badges')}>
+              <span className="inline-flex flex-wrap items-center gap-2">
+                {badges.length === 0 ? t('detail.noBadges') : badges.map((badge) => badgeName(badge.id)).join(', ')}
+                <AdminTextLink to={{ search: '?tab=badges' }}>{t('detail.viewBadges')}</AdminTextLink>
+              </span>
+            </AdminFieldRow>
             <AdminFieldRow label={t('detail.history')}><AdminTextLink to={{ search: '?tab=history' }}>{t('detail.viewHistory')}</AdminTextLink></AdminFieldRow>
           </AdminFields>
         </AdminSection>
@@ -129,6 +142,31 @@ function UserDetail({ id, viewerId }: { id: string; viewerId: string }) {
               ))}
             </ul>
           )}
+        </AdminSection>
+      )}
+
+      {tab === 'badges' && (
+        <AdminSection title={t('detail.badges')} description={t('detail.badgesDescription')}>
+          <div className="flex flex-col divide-y divide-border-divider">
+            {BADGES.map(({ id: badgeId }) => {
+              const held = badges.find((badge) => badge.id === badgeId);
+              return (
+                <AdminActionRow
+                  key={badgeId}
+                  icon={<BadgeIcon id={badgeId} size={28} />}
+                  title={badgeName(badgeId)}
+                  description={badgeDescription(badgeId)}
+                  note={held
+                    ? t('detail.badgeHeld', { when: formatWhen(held.grantedAt, language), source: held.source === 'automatic' ? t('detail.badgeSourceAutomatic') : t('detail.badgeSourceAdmin') })
+                    : t('detail.badgeNotHeld')}
+                >
+                  {held
+                    ? <Button type="button" size="sm" variant="secondary" onClick={() => setDialog({ badge: badgeId, action: 'revoke' })}>{t('detail.revokeBadge')}</Button>
+                    : <Button type="button" size="sm" onClick={() => setDialog({ badge: badgeId, action: 'grant' })}>{t('detail.grantBadge')}</Button>}
+                </AdminActionRow>
+              );
+            })}
+          </div>
         </AdminSection>
       )}
 
@@ -208,6 +246,16 @@ function UserDetail({ id, viewerId }: { id: string; viewerId: string }) {
       <ReasonDialog open={dialog === 'revoke-admin'} onOpenChange={(o) => !o && setDialog(null)} title={t('detail.revokeAdminTitle')}
         description={t('detail.revokeAdminDialog', { username: user.username })}
         confirmLabel={t('detail.removeAdmin')} destructive confirmText={user.username} onSubmit={(reason) => mutate(() => revokeAdmin(user.id, reason))} />
+      <ReasonDialog open={!!badgeDialog} onOpenChange={(o) => !o && setDialog(null)}
+        title={badgeDialog?.action === 'revoke' ? t('detail.revokeBadgeTitle') : t('detail.grantBadgeTitle')}
+        description={badgeDialog ? t(badgeDialog.action === 'revoke' ? 'detail.revokeBadgeDialog' : 'detail.grantBadgeDialog', { username: user.username, badge: badgeName(badgeDialog.badge) }) : ''}
+        confirmLabel={badgeDialog?.action === 'revoke' ? t('detail.revokeBadge') : t('detail.grantBadge')}
+        destructive={badgeDialog?.action === 'revoke'}
+        onSubmit={(reason) => {
+          if (!badgeDialog) return Promise.resolve();
+          const { badge, action } = badgeDialog;
+          return mutate(() => (action === 'grant' ? grantBadge(user.id, badge, reason) : revokeBadge(user.id, badge, reason)));
+        }} />
       <ReasonDialog open={dialog === 'delete'} onOpenChange={(o) => !o && setDialog(null)} title={t('detail.deleteTitle')}
         description={t('detail.deleteDialog')}
         confirmLabel={t('detail.deleteForever')} destructive confirmText={user.username}

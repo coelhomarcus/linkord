@@ -56,7 +56,9 @@ export function AdminFieldRow({ label, children }: { label: string; children: Re
 
 /** One action, like a settings row: what it does and what it affects on the left, its button on the right
  * (under the text when the width is short). */
-export function AdminActionRow({ title, description, note, children }: {
+export function AdminActionRow({ icon, title, description, note, children }: {
+  /** drawn before the title, such as a badge's own icon */
+  icon?: ReactNode;
   title: string;
   description: ReactNode;
   /** why the action is unavailable, when it is */
@@ -65,10 +67,13 @@ export function AdminActionRow({ title, description, note, children }: {
 }) {
   return (
     <div className="flex flex-wrap items-start justify-between gap-x-8 gap-y-3 py-3.5 first:pt-0 last:pb-0">
-      <div className="min-w-0 flex-1 basis-64">
-        <p className="text-body font-medium text-text-primary">{title}</p>
-        <p className="mt-1 text-label text-text-muted">{description}</p>
-        {note && <p className="mt-1.5 text-caption text-text-secondary">{note}</p>}
+      <div className="flex min-w-0 flex-1 basis-64 items-start gap-3">
+        {icon && <div className="flex-none pt-0.5">{icon}</div>}
+        <div className="min-w-0 flex-1">
+          <p className="text-body font-medium text-text-primary">{title}</p>
+          <p className="mt-1 text-label text-text-muted">{description}</p>
+          {note && <p className="mt-1.5 text-caption text-text-secondary">{note}</p>}
+        </div>
       </div>
       {/* the buttons take the size of the settings' row buttons, whatever size the page asked for */}
       <div className="flex flex-none flex-wrap items-center gap-2 [&_button]:h-10 [&_button]:px-4 [&_button]:text-body">{children}</div>

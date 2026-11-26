@@ -2,6 +2,7 @@ import { ApiError, apiFetch } from '@overcord/frontend-shared/api/transport';
 import { ERROR_CODES } from '@overcord/frontend-shared/api/errorCodes';
 import { reportAdminAccessLost, reportAdminSessionEnded } from './adminAccess';
 import { invalidateAdminLists } from './adminListCache';
+import type { BadgeId, HeldBadge } from '@overcord/frontend-shared/badges/badgeCatalog';
 
 // The server enforces access; hiding admin routes in the UI is not authorization.
 
@@ -50,6 +51,8 @@ export interface AuditRow {
 export interface AdminUserDetail {
   user: AdminUserRow & { email: string | null; statusReason: string; statusChangedAt: string | null };
   servers: { id: string; name: string; status: string; isOwner: boolean }[];
+  /** missing from a server older than badges */
+  badges?: (HeldBadge & { source: 'admin' | 'automatic' })[];
   storage: { bytes: number; files: number };
   history: AuditRow[];
 }
@@ -62,6 +65,9 @@ export const reactivateUser = (id: string, reason: string) => post(`/api/admin/u
 export const grantAdmin = (id: string, reason: string) => post(`/api/admin/users/${encodeURIComponent(id)}/grant-admin`, { reason });
 export const revokeAdmin = (id: string, reason: string) => post(`/api/admin/users/${encodeURIComponent(id)}/revoke-admin`, { reason });
 export const revokeUserSessions = (id: string, reason: string) => post(`/api/admin/users/${encodeURIComponent(id)}/revoke-sessions`, { reason });
+export const grantBadge = (id: string, badge: BadgeId, reason: string) => post(`/api/admin/users/${encodeURIComponent(id)}/badges/${badge}`, { reason });
+export const revokeBadge = (id: string, badge: BadgeId, reason: string) =>
+  adminFetch<{ ok: true }>(`/api/admin/users/${encodeURIComponent(id)}/badges/${badge}`, { method: 'DELETE', body: JSON.stringify({ reason }) });
 export const deleteUser = (id: string, reason: string, confirm: string) =>
   adminFetch<{ ok: true }>(`/api/admin/users/${encodeURIComponent(id)}`, { method: 'DELETE', body: JSON.stringify({ reason, confirm }) });
 
