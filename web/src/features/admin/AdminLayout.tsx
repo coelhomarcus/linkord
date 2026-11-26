@@ -2,12 +2,10 @@ import { ArrowLeftIcon } from '@/shared/ui/icons';
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { Outlet, useLocation, useNavigate } from 'react-router';
+import { Outlet, useLocation } from 'react-router';
+import type { ReactNode } from 'react';
 import { PageHeader } from '@/shared/PageHeader';
-import { Button, buttonVariants } from '@/shared/ui/primitives/button';
-import { ROUTES } from '@/shared/lib/routes';
-import { useAuth } from '@/state/AuthContext';
-import { useRoom } from '@/state/RoomContext';
+import { buttonVariants } from '@/shared/ui/primitives/button';
 import { useElementWidth } from '@/shared/hooks/useElementWidth';
 import { useAppModalClose } from '@/shared/ui/app-modal';
 import { EscCloseButton } from '@/shared/ui/esc-close-button';
@@ -22,42 +20,10 @@ import { AppLink } from '@/shared/ui/app-link';
 /** Width of the content column below which a 5–6 column table would cut its last columns. */
 const ADMIN_TABLE_MIN = 820;
 
-/** Shown when the server stopped treating this account as an administrator.
- * The pages are gone by then (their data, dialogs and pending reads with them);
- * leaving also fixes the stale role so the guard and the rail agree. */
-function AccessLost() {
-  const { t } = useTranslation('admin');
-  const { dispatch } = useRoom('dispatch');
-  const navigate = useNavigate();
-  return (
-    <div role="alert" className="flex flex-col items-center gap-3 py-12 text-center">
-      <h2 className="text-title font-semibold text-text-primary">{t('layout.accessLostTitle')}</h2>
-      <p className="max-w-md text-label text-text-muted">{t('layout.accessLostDescription')}</p>
-      <Button type="button" onClick={() => { dispatch({ type: 'SET_ROLE', role: 'user' }); navigate(ROUTES.home, { replace: true }); }}>
-        {t('layout.backToConversations')}
-      </Button>
-    </div>
-  );
-}
-
-/** Shown when the server says there is no session: the area is gone, and the
- * auth state is re-read so the app can take the person to the login. */
-function SessionEnded() {
-  const { t } = useTranslation('admin');
-  const { refresh } = useAuth();
-  useEffect(() => { void refresh(); }, [refresh]);
-  return (
-    <div role="alert" className="flex flex-col items-center gap-2 py-12 text-center">
-      <h2 className="text-title font-semibold text-text-primary">{t('layout.sessionEndedTitle')}</h2>
-      <p className="max-w-md text-label text-text-muted">{t('layout.sessionEndedDescription')}</p>
-    </div>
-  );
-}
-
 /** Shell of the administrative area, built like the settings: wide, the section list beside one
  * scrolling column of content and the round ESC button; compact, a header with a way back over one page
  * (or the section index). The content column is wider than the settings' 740px: lists are tables. */
-export function AdminLayout() {
+export function AdminLayout({ renderUnavailable }: { renderUnavailable?: (reason: 'access' | 'session') => ReactNode }) {
   const { t } = useTranslation('admin');
   const areaRef = useRef<HTMLDivElement | null>(null);
   const scrollerRef = useRef<HTMLElement | null>(null);
@@ -89,7 +55,7 @@ export function AdminLayout() {
 
   const content = (
     <div ref={contentRef} className="flex w-full min-w-0 max-w-[1040px] flex-col gap-6 px-4 pb-16 pt-6 @[520px]:px-8 @[520px]:pt-8">
-      {lost === 'access' ? <AccessLost /> : lost === 'session' ? <SessionEnded /> : <Outlet context={{ mode, measured, tableFits: contentWidth === 0 || contentWidth >= ADMIN_TABLE_MIN, scroller: scrollerRef } satisfies AdminOutletContext} />}
+      {lost ? renderUnavailable?.(lost) : <Outlet context={{ mode, measured, tableFits: contentWidth === 0 || contentWidth >= ADMIN_TABLE_MIN, scroller: scrollerRef } satisfies AdminOutletContext} />}
     </div>
   );
   const label = section ? t(section.labelKey as never) : t('layout.title');

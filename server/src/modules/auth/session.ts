@@ -23,6 +23,8 @@ import { resolveLocale } from '../users/locale.js';
 const SESSION_CACHE_TTL_MS = 60 * 1000;
 const LAST_SEEN_STALE_MS = 60 * 1000;
 const DAY_MS = 24 * 60 * 60 * 1000;
+export const ADMIN_SESSION_SECONDS = 12 * 60 * 60;
+export type SessionScope = 'app' | 'admin';
 
 function idleCutoff(): Date | null {
   return config.SESSION_IDLE_DAYS > 0 ? new Date(Date.now() - config.SESSION_IDLE_DAYS * DAY_MS) : null;
@@ -35,7 +37,8 @@ interface CacheEntry {
 
 const cache = new Map<string, CacheEntry>(); // tokenHash -> { value, expiresAtMs }
 
-function hashToken(rawToken: string): string {
+function hashToken(rawToken: string, scope: SessionScope): string {
+  if (scope === 'admin') return `admin:${crypto.createHash('sha256').update(rawToken).digest('hex')}`;
   return crypto.createHash('sha256').update(rawToken).digest('hex');
 }
 
@@ -58,11 +61,11 @@ export interface SessionOrigin { ip: string; userAgent: string }
 
 /** Creates a new session and returns the RAW token (goes in the cookie) —
  * never persisted in plaintext, only the hash. */
-export async function createSession(userId: string, origin: SessionOrigin = { ip: '', userAgent: '' }): Promise<{ rawToken: string; expiresAt: Date; id: string }> {
+export async function createSession(userId: string, origin: SessionOrigin = { ip: '', userAgent: '' }, scope: SessionScope = 'app'): Promise<{ rawToken: string; expiresAt: Date; id: string }> {
   const rawToken = crypto.randomBytes(32).toString('base64url');
-  const tokenHash = hashToken(rawToken);
+  const tokenHash = hashToken(rawToken, scope);
   const id = crypto.randomUUID();
-  const expiresAt = new Date(Date.now() + config.SESSION_TTL_DAYS * DAY_MS);
+  const expiresAt = new Date(Date.now() + (scope === 'admin' ? ADMIN_SESSION_SECONDS * 1000 : config.SESSION_TTL_DAYS * DAY_MS));
   await db.insert(sessions).values({ tokenHash, id, userId, expiresAt, ip: origin.ip.slice(0, 64), userAgent: origin.userAgent.slice(0, 512) });
   return { rawToken, expiresAt, id };
 }
@@ -75,10 +78,11 @@ function isSessionLive(row: { expiresAt: Date; lastSeenAt: Date }, now = Date.no
 
 /** Resolves a raw token (from a cookie) to the session's owner, or null if
  * invalid/expired/nonexistent. */
-export async function resolveSession(rawToken: string | undefined | null): Promise<SessionUser | null> {
+export async function resolveSession(rawToken: string | undefined | null, scope: SessionScope = 'app'): Promise<SessionUser | null> {
   if (!rawToken) return null;
-  const tokenHash = hashToken(rawToken);
-  const cached = cacheGet(tokenHash);
+  const tokenHash = hashToken(rawToken, scope);
+  // Administrative authorization must see revocation and expiry on the next request.
+  const cached = scope === 'app' ? cacheGet(tokenHash) : undefined;
   if (cached !== undefined) return cached;
 
   const [row] = await db
@@ -145,15 +149,15 @@ export async function resolveSession(rawToken: string | undefined | null): Promi
     role: row.role as SessionUser['role'],
     locale: resolveLocale(row.locale),
   };
-  cacheSet(tokenHash, value);
+  if (scope === 'app') cacheSet(tokenHash, value);
   return value;
 }
 
 /** Ends the session behind a cookie. Returns its token hash (to cut its sockets), or null when there
  * was no token. */
-export async function destroySession(rawToken: string | undefined | null): Promise<string | null> {
+export async function destroySession(rawToken: string | undefined | null, scope: SessionScope = 'app'): Promise<string | null> {
   if (!rawToken) return null;
-  const tokenHash = hashToken(rawToken);
+  const tokenHash = hashToken(rawToken, scope);
   cacheInvalidate(tokenHash);
   await db.delete(sessions).where(eq(sessions.tokenHash, tokenHash));
   return tokenHash;

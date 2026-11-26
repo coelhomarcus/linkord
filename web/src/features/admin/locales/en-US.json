@@ -44,6 +44,11 @@
     "backToAdmin": "Back to administration",
     "subtitle": "Run this instance"
   },
+  "site": {
+    "signInSubtitle": "Sign in with your Linkord administrator account.",
+    "signOut": "Sign out",
+    "signOutFailed": "Could not end the session. Try again."
+  },
   "audit": {
     "account": "Account",
     "group": "Group",

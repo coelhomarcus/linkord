@@ -57,6 +57,16 @@ function twemojiAssets(): Plugin {
   };
 }
 
+function adminEntry(): Plugin {
+  return {
+    name: 'admin-entry',
+    transformIndexHtml: {
+      order: 'pre',
+      handler: (html) => html.replace('/src/main.tsx', '/src/admin.tsx').replace('    <link rel="manifest" href="/manifest.webmanifest" />\n', ''),
+    },
+  };
+}
+
 // REACT_COMPILER_LOG=1 lists every component or hook the compiler left as
 // written (a Rules of React violation, or syntax it does not handle yet such
 // as try/finally); those still work, they are just not memoized.
@@ -73,8 +83,8 @@ function reactCompilerOptions() {
   };
 }
 
-export default defineConfig({
-  plugins: [react(), babel({ presets: [reactCompilerPreset(reactCompilerOptions())] }), tailwindcss(), Icons({ compiler: 'jsx', jsx: 'react' }), twemojiAssets(), cspStyleSources()],
+export default defineConfig(({ mode }) => ({
+  plugins: [react(), babel({ presets: [reactCompilerPreset(reactCompilerOptions())] }), tailwindcss(), Icons({ compiler: 'jsx', jsx: 'react' }), mode === 'admin' ? adminEntry() : twemojiAssets(), cspStyleSources()],
   define: {
     __TWEMOJI_PATH__: JSON.stringify(TWEMOJI_PATH),
     __EMOJI_DATA_VERSION__: JSON.stringify(`${EMOJIBASE_VERSION}-${TWEMOJI_VERSION}`),
@@ -86,7 +96,8 @@ export default defineConfig({
     },
   },
   server: {
-    port: 5173,
+    port: mode === 'admin' ? 5174 : 5173,
+    strictPort: mode === 'admin',
     proxy: {
       '/ws': { target: 'http://localhost:3000', ws: true },
       '/api': { target: 'http://localhost:3000' },
@@ -94,7 +105,7 @@ export default defineConfig({
     },
   },
   build: {
-    outDir: 'dist',
+    outDir: mode === 'admin' ? 'dist/admin' : 'dist',
     emptyOutDir: true,
   },
   test: {
@@ -106,4 +117,4 @@ export default defineConfig({
       reporter: ['text', 'html'],
     },
   },
-});
+}));

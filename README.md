@@ -56,6 +56,7 @@ Linkord is a self-hosted place to chat and call with friends. Talk in direct mes
 
 **Administration**
 - An `/admin` area for users, servers, webhooks, reports, audit history, and uploads.
+- A [separate administration site](docs/DEPLOY.md#separate-administration-site) can run on its own hostname with a dedicated sign-in.
 
 ## ⚡ Quick start
 

@@ -44,6 +44,11 @@
     "backToAdmin": "Voltar à administração",
     "subtitle": "Gerencie a instância"
   },
+  "site": {
+    "signInSubtitle": "Entre com sua conta de administrador do Linkord.",
+    "signOut": "Sair",
+    "signOutFailed": "Não foi possível encerrar a sessão. Tente novamente."
+  },
   "audit": {
     "account": "Conta",
     "group": "Grupo",

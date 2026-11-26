@@ -5,7 +5,7 @@ import { Avatar } from '@/shared/Avatar';
 import { Button } from '@/shared/ui/primitives/button';
 import { formatFileSize } from '@/shared/lib/formatBytes';
 import { useCursorList } from '@/shared/hooks/useCursorList';
-import { useRoomState } from '@/state/RoomContext';
+import { useOptionalRoomSelector } from '@/state/RoomContext';
 import { deleteUser, fetchAdminUser, fetchAudit, grantAdmin, reactivateUser, revokeAdmin, revokeUserSessions, suspendUser } from './adminApi';
 import { AdminDetailTabs } from './AdminDetailTabs';
 import { AdminEntityHeader } from './AdminEntityHeader';
@@ -22,6 +22,7 @@ import { AuditListSkeleton } from './AdminSkeletons';
 import { EmptyState } from '@/shared/ui/empty-state';
 import { SettingsNotice } from '@/shared/ui/settings-layout';
 import { useLanguage } from '@/shared/i18n/useLanguage';
+import { reportAdminSessionEnded } from './adminAccess';
 
 type Dialog = 'suspend' | 'reactivate' | 'revoke' | 'delete' | 'grant-admin' | 'revoke-admin' | null;
 
@@ -31,9 +32,9 @@ const QUERY: QuerySchema<'tab'> = { tab: { default: 'overview', allowed: TABS } 
 
 /** Keyed by id: opening another account starts from a clean slate (dialogs,
  * the "deleted" flag), not from the previous account's leftovers. */
-export function UserDetailPage() {
+export function UserDetailPage({ viewerId }: { viewerId?: string }) {
   const { id = '' } = useParams();
-  return <UserDetail key={id} id={id} />;
+  return <UserDetail key={id} id={id} viewerId={viewerId} />;
 }
 
 /** The whole history of the account, by cursor — not just the few rows the
@@ -49,10 +50,10 @@ function UserHistory({ id, revision }: { id: string; revision: string }) {
   );
 }
 
-function UserDetail({ id }: { id: string }) {
+function UserDetail({ id, viewerId }: { id: string; viewerId?: string }) {
   const language = useLanguage();
   const { t } = useTranslation('admin');
-  const state = useRoomState('me');
+  const appUserId = useOptionalRoomSelector((room) => room.state.me.userId);
   const back = useAdminBack('/admin/users');
   const { filters } = useAdminQuery(QUERY);
   const tab = filters.tab as Tab;
@@ -65,14 +66,15 @@ function UserDetail({ id }: { id: string }) {
   if (!detail) return <DetailStatusView status={status} missing={t('detail.notFound')} failed={t('detail.loadFailed')} backTo={back} backLabel={t('common.back')} onRetry={reload} />;
 
   const { user, servers, storage } = detail;
-  const isSelf = user.id === state.me.userId;
+  const isSelf = user.id === (viewerId ?? appUserId);
   const suspended = user.status === 'suspended';
   const isAdmin = user.role === 'admin';
   // revoking your own sessions ends this very session: the re-read would fail, and that is the expected outcome
   const revokeSessions = async (reason: string) => {
     if (!isSelf) return mutate(() => revokeUserSessions(user.id, reason));
     await revokeUserSessions(user.id, reason);
-    setOwnSessionsEnded(true);
+    if (viewerId) reportAdminSessionEnded();
+    else setOwnSessionsEnded(true);
   };
 
   return (

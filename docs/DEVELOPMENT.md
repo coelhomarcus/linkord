@@ -101,6 +101,8 @@ Creates four accounts (`ana`, `bruno`, `carla`, `davi`; the shared password is p
 bun run admin:grant <your-username>
 ```
 
+To develop the separate panel, start the backend with `ADMIN_URL=http://127.0.0.1:5174` and run `bun run --cwd web dev --mode admin` in a second terminal. Open `http://127.0.0.1:5174` and sign in with the administrator account. The public Vite app stays at `http://localhost:5173`.
+
 ## Desktop app
 
 `desktop/` is an Electron window that loads a Linkord server's address, so the page talks to `/api` and `/ws` on its own origin and the server's cookies, origin check and CSP apply as in a browser. It ships for Windows only; a development run also starts on a Mac (with its own title bar buttons and tray menu, without activity detection, start at login or a taskbar count). Building the installer, updates and releases are in [DEPLOY.md](DEPLOY.md#desktop-app); the rules for changing it are in [AGENTS.md](../AGENTS.md) ("Desktop").
@@ -192,7 +194,7 @@ bun run test:e2e
 
 - `test:e2e:features`: every feature on the working tree's build.
 - `test:e2e:restart`: what a redeploy of the same build must survive.
-- `bun run --cwd e2e test:split` checks routing, cache headers and a call through a frontend-only deploy.
+- `bun run --cwd e2e test:split` checks routing, cache headers, a call through a frontend-only deploy, and admin site sign-in and session isolation.
 - `test:e2e:upgrade`: tabs opened on the production version (`origin/main`, or `E2E_BASE_REF`) while the server is upgraded to the working tree. It adapts to what the base version supports and says so in the report's annotations.
 
 Each run builds `linkord-e2e:head` from the working tree (uncommitted changes included), starts the stack, runs and removes it. `E2E_KEEP_STACK=1` leaves it up at `http://localhost:8080`, `E2E_HEADED=1` shows the browsers, `E2E_RETRIES=0` turns retries off, and `E2E_HEAD_IMAGE=<tag>` tests an image you built yourself. A failure keeps a trace, video and screenshot: `bun run --cwd e2e report` opens the report, `bun --bun playwright show-trace <trace.zip>` (from `e2e/`) replays it.

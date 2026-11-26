@@ -1,54 +1,51 @@
-import { Navigate, Route, Routes } from 'react-router';
-import { useRoomState } from '@/state/RoomContext';
+import { useEffect } from 'react';
+import { Navigate, useNavigate } from 'react-router';
+import { useTranslation } from 'react-i18next';
+import { useAuth } from '@/state/AuthContext';
+import { useRoom, useRoomState } from '@/state/RoomContext';
+import { Button } from '@/shared/ui/primitives/button';
 import { ROUTES } from '@/shared/lib/routes';
-import { AuditPage } from './AuditPage';
-import { AdminLayout } from './AdminLayout';
-import { AdminIndex } from './AdminNavigation';
-import { ServerDetailPage } from './ServerDetailPage';
-import { ServersPage } from './ServersPage';
-import { WebhooksPage } from './WebhooksPage';
-import { WebhookDetailPage } from './WebhookDetailPage';
-import { ReportDetailPage } from './ReportDetailPage';
-import { ReportsPage } from './ReportsPage';
-import { SystemPage } from './SystemPage';
-import { UserDetailPage } from './UserDetailPage';
-import { UsersPage } from './UsersPage';
-import { useAdminMeasured, useAdminMode } from './useAdminMode';
+import { AdminRoutes } from './AdminRoutes';
 
-/** Bare /admin: the section index when there is no sidebar to pick from,
- * Users otherwise. Only this entry depends on the mode — a detail URL is
- * never redirected because of the window size. */
-function AdminEntry() {
-  const mode = useAdminMode();
-  // before the first measurement `mode` is a guess: deciding on it would redirect a narrow screen
-  if (!useAdminMeasured()) return null;
-  return mode === 'compact' ? <AdminIndex /> : <Navigate to={ROUTES.admin} replace />;
+/** Shown when the server stopped treating this account as an administrator.
+ * The pages are gone by then (their data, dialogs and pending reads with them);
+ * leaving also fixes the stale role so the guard and the rail agree. */
+function AccessLost() {
+  const { t } = useTranslation('admin');
+  const { dispatch } = useRoom('dispatch');
+  const navigate = useNavigate();
+  return (
+    <div role="alert" className="flex flex-col items-center gap-3 py-12 text-center">
+      <h2 className="text-title font-semibold text-text-primary">{t('layout.accessLostTitle')}</h2>
+      <p className="max-w-md text-label text-text-muted">{t('layout.accessLostDescription')}</p>
+      <Button type="button" onClick={() => { dispatch({ type: 'SET_ROLE', role: 'user' }); navigate(ROUTES.home, { replace: true }); }}>
+        {t('layout.backToConversations')}
+      </Button>
+    </div>
+  );
 }
 
-/** Loaded on demand under the app shell; server endpoints enforce admin access independently. */
+/** Shown when the server says there is no session: the area is gone, and the
+ * auth state is re-read so the app can take the person to the login. */
+function SessionEnded() {
+  const { t } = useTranslation('admin');
+  const { refresh } = useAuth();
+  useEffect(() => { void refresh(); }, [refresh]);
+  return (
+    <div role="alert" className="flex flex-col items-center gap-2 py-12 text-center">
+      <h2 className="text-title font-semibold text-text-primary">{t('layout.sessionEndedTitle')}</h2>
+      <p className="max-w-md text-label text-text-muted">{t('layout.sessionEndedDescription')}</p>
+    </div>
+  );
+}
+
+function renderUnavailable(reason: 'access' | 'session') {
+  return reason === 'access' ? <AccessLost /> : <SessionEnded />;
+}
+
+/** Integrated administration for installations with no separate admin origin. */
 export default function AdminArea() {
   const state = useRoomState('me');
   if (state.me.role !== 'admin') return <Navigate to={ROUTES.home} replace />;
-
-  return (
-    <Routes>
-      <Route element={<AdminLayout />}>
-        <Route index element={<AdminEntry />} />
-        <Route path="users" element={<UsersPage />} />
-        <Route path="users/:id" element={<UserDetailPage />} />
-        <Route path="servers" element={<ServersPage />} />
-        <Route path="servers/:id" element={<ServerDetailPage />} />
-        <Route path="webhooks" element={<WebhooksPage />} />
-        <Route path="webhooks/:id" element={<WebhookDetailPage />} />
-        {/* groups became servers and bots channel webhooks; their ids did not carry over */}
-        <Route path="groups/*" element={<Navigate to="/admin/servers" replace />} />
-        <Route path="bots/*" element={<Navigate to="/admin/webhooks" replace />} />
-        <Route path="reports" element={<ReportsPage />} />
-        <Route path="reports/:id" element={<ReportDetailPage />} />
-        <Route path="audit" element={<AuditPage />} />
-        <Route path="system" element={<SystemPage />} />
-        <Route path="*" element={<Navigate to={ROUTES.admin} replace />} />
-      </Route>
-    </Routes>
-  );
+  return <AdminRoutes renderUnavailable={renderUnavailable} />;
 }
