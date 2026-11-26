@@ -56,4 +56,7 @@ export const ERROR_CODES = {
   not_open: 'not_open',
   invalid_action: 'invalid_action',
   action_failed: 'action_failed',
+  backup_running: 'backup_running',
+  backup_link_expired: 'backup_link_expired',
+  backup_unavailable: 'backup_unavailable',
 } as const;

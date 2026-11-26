@@ -152,6 +152,12 @@ export const ERROR_REGISTRY = {
   already_closed: { statuses: [409], channel: 'http' },
   not_open: { statuses: [409], channel: 'http' },
   action_failed: { statuses: [409], channel: 'http' },
+  // another backup download is already streaming (one at a time per instance)
+  backup_running: { statuses: [409], channel: 'http' },
+  // the download link was used, expired or belongs to another admin
+  backup_link_expired: { statuses: [404], channel: 'http' },
+  // pg_dump is not installed or not runnable on the server
+  backup_unavailable: { statuses: [503], channel: 'http' },
 
   // socket only
   client_outdated: { statuses: [], channel: 'socket' },

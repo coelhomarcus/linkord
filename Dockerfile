@@ -35,7 +35,7 @@ FROM bun-base
 ENV NODE_ENV=production
 WORKDIR /app
 
-# pg_dump and pg_restore for server/dist/scripts/backup.js and restore.js (see "Backup and restore" in docs/DEVELOPMENT.md).
+# pg_dump and pg_restore for backups (the admin site and server/dist/scripts/backup.js) and restore.js (see "Backups" in docs/DEPLOY.md).
 # The client must be at least as new as the database server; the package follows the latest Alpine release.
 RUN apk add --no-cache postgresql-client
 
@@ -47,8 +47,8 @@ COPY server/db/migrations ./server/db/migrations
 COPY --from=web-build /app/web/dist ./web/dist
 COPY --from=admin-build /app/admin/dist ./admin/dist
 
-# Keep the application owned by root and preserve UID/GID 1000 for existing upload and backup volumes.
-RUN mkdir -p /app/uploads /app/backups && chown bun:bun /app/uploads /app/backups
+# Keep the application owned by root and preserve UID/GID 1000 for existing upload volumes.
+RUN mkdir -p /app/uploads && chown bun:bun /app/uploads
 USER bun
 
 EXPOSE 3000

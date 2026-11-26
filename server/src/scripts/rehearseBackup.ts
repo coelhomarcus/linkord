@@ -9,11 +9,11 @@ import { drizzle } from 'drizzle-orm/node-postgres';
 import type { Pool } from 'pg';
 import { attachments, conversationMembers, conversations, messages, serverSounds, servers, stagedAttachments, users } from '../db/schema.js';
 import { hashPassword } from '../modules/auth/password.js';
-import { BackupError, DUMP_FILE, listBackups, UPLOADS_FILE } from './backup/backupLayout.js';
-import { createBackup } from './backup/createBackup.js';
-import { runTool } from './backup/postgresTools.js';
-import { ConfirmationRequired, readBackup, restoreBackup } from './backup/restoreBackup.js';
-import { listArchive } from './backup/uploadsArchive.js';
+import { BackupError, DUMP_FILE, MANIFEST_FILE, README_FILE, UPLOADS_PREFIX } from '../modules/backups/backupLayout.js';
+import { writeBackupFile } from '../modules/backups/backupZip.js';
+import { listZipEntries } from '../modules/backups/backupZipReader.js';
+import { runTool } from '../modules/backups/postgresTools.js';
+import { ConfirmationRequired, readBackup, restoreBackup } from '../modules/backups/restoreBackup.js';
 import { createIsolatedDatabase, type IsolatedDatabase } from './rehearsal/isolatedDb.js';
 import { makeMigrationsFolder } from './rehearsal/migrationFolders.js';
 import { migrateOn } from './rehearsal/migrateOn.js';
@@ -24,8 +24,8 @@ import { migrateOn } from './rehearsal/migrateOn.js';
 //   1. a migrated database with a conversation, messages, attachments (with a
 //      thumbnail), an avatar, a server sound and a staged file, plus the files
 //      on disk and a half-finished chunked upload;
-//   2. `createBackup` of it, with rotation;
-//   3. `restoreBackup` into a second, empty database and uploads folder;
+//   2. a backup ZIP of it (`writeBackupFile`), plus one cancelled halfway;
+//   3. `restoreBackup` of the ZIP into a second, empty database and uploads folder;
 //   4. the app itself started on the restored data: a login and the downloads of
 //      an attachment and the avatar, byte for byte.
 // Needs pg_dump and pg_restore (PG_DUMP_BIN / PG_RESTORE_BIN); never touches the
@@ -180,36 +180,36 @@ async function main(): Promise<number> {
     const seeded = await seed(source.pool, sourceUploads);
     check('source seeded', (await count(source.pool, 'select count(*) as n from messages')) === 3 && Object.keys(seeded.hashes).length === 5);
 
-    note('Backup, with rotation');
+    note('Backup');
     const backupDir = await tmp('backups');
-    const bystander = path.join(backupDir, 'notes.txt');
-    await fsp.writeFile(bystander, 'not a backup');
-    const lookalike = path.join(backupDir, 'overcord-backup-keep-me');
-    await fsp.mkdir(lookalike);
-    const base = Date.now();
-    const results = [];
-    for (let i = 0; i < 4; i++) {
-      results.push(await createBackup({
-        databaseUrl: source.url, uploadDir: sourceUploads, backupDir, keep: 2, now: () => new Date(base + i * 60_000),
-      }));
-    }
-    const remaining = await listBackups(backupDir);
-    check('rotation keeps the newest 2 backups and removes the older ones', remaining.length === 2 && remaining[0] === path.basename(results[3]!.dir) && remaining[1] === path.basename(results[2]!.dir)
-      && results[3]!.removed.length === 1, remaining.join(', '));
-    check('rotation leaves files it did not create alone', fs.existsSync(bystander) && fs.existsSync(lookalike));
-    check('no unfinished folder is left behind', fs.readdirSync(backupDir).every((name) => !name.endsWith('.partial')));
-    const latest = results[3]!;
+    const backupFile = path.join(backupDir, 'overcord-backup.zip');
+    const latest = await writeBackupFile(backupFile, { databaseUrl: source.url, uploadDir: sourceUploads });
+    check('no unfinished file is left behind', fs.readdirSync(backupDir).every((name) => !name.endsWith('.partial')));
     check('manifest counts match the database (tables, migrations, files)',
       latest.manifest.tables.messages === 3 && latest.manifest.tables.attachments === 3 && latest.manifest.tables.users === 2 && latest.manifest.migrations > 0
       && latest.manifest.uploads.files === 5 && latest.manifest.uploads.missingFromArchive === 0, JSON.stringify(latest.manifest.uploads));
-    const archived = await listArchive(path.join(latest.dir, UPLOADS_FILE));
-    check('chunks of unfinished uploads (tmp/) are not archived', archived.every((entry) => !entry.startsWith('tmp')) && archived.length === 5);
+    const entries = await listZipEntries(backupFile);
+    const uploaded = entries.filter((entry) => entry.startsWith(UPLOADS_PREFIX));
+    check('the ZIP holds the readme, the dump, then the files, and the manifest last',
+      entries[0] === README_FILE && entries[1] === DUMP_FILE && entries.at(-1) === MANIFEST_FILE, entries.join(', '));
+    check('chunks of unfinished uploads (tmp/) are not in the backup', uploaded.length === 5 && uploaded.every((entry) => !entry.startsWith(`${UPLOADS_PREFIX}tmp`)));
+    check('the reported size is the size of the file', latest.bytes === fs.statSync(backupFile).size);
+    let overwrite: unknown = null;
+    try { await writeBackupFile(backupFile, { databaseUrl: source.url, uploadDir: sourceUploads }); } catch (err) { overwrite = err; }
+    check('a backup never overwrites an existing file', overwrite instanceof BackupError);
+
+    const cancelledFile = path.join(backupDir, 'cancelled.zip');
+    const cancel = new AbortController();
+    setTimeout(() => cancel.abort(), 20);
+    let cancelled: unknown = null;
+    try { await writeBackupFile(cancelledFile, { databaseUrl: source.url, uploadDir: sourceUploads, signal: cancel.signal }); } catch (err) { cancelled = err; }
+    check('a cancelled backup fails and leaves nothing behind', cancelled instanceof Error && !fs.existsSync(cancelledFile) && !fs.existsSync(`${cancelledFile}.partial`));
 
     note('Restore into an empty database and folder');
     const target = await createIsolatedDatabase(baseUrl, 'rehearsal', `bk_dst_${Date.now().toString(36)}`);
     dbs.push(target);
     const targetUploads = await tmp('uploads-dst');
-    const restoreOptions = { backupPath: latest.dir, databaseUrl: target.url, uploadDir: targetUploads, confirm: target.name };
+    const restoreOptions = { backupPath: backupFile, databaseUrl: target.url, uploadDir: targetUploads, confirm: target.name };
 
     let unconfirmed: unknown = null;
     try { await restoreBackup({ ...restoreOptions, confirm: undefined }); } catch (err) { unconfirmed = err; }
@@ -218,15 +218,13 @@ async function main(): Promise<number> {
     try { await restoreBackup({ ...restoreOptions, confirm: 'overcord' }); } catch (err) { wrongName = err; }
     check('confirming a different database name is refused', wrongName instanceof ConfirmationRequired);
 
-    const damaged = await tmp('damaged');
-    await fsp.cp(latest.dir, damaged, { recursive: true });
-    const dumpPath = path.join(damaged, DUMP_FILE);
-    const bytes = fs.readFileSync(dumpPath);
+    const damaged = path.join(await tmp('damaged'), 'damaged.zip');
+    const bytes = fs.readFileSync(backupFile);
     bytes[Math.floor(bytes.length / 2)]! ^= 0xff;
-    fs.writeFileSync(dumpPath, bytes);
+    fs.writeFileSync(damaged, bytes);
     let damagedError: unknown = null;
     try { await readBackup(damaged); } catch (err) { damagedError = err; }
-    check('a backup whose checksum does not match is refused before anything is touched', damagedError instanceof BackupError && /checksum/.test(String((damagedError as Error).message)));
+    check('a backup whose checksum does not match is refused before anything is touched', damagedError instanceof BackupError && /checksum/.test(String((damagedError as Error).message)), String(damagedError));
 
     const restored = await restoreBackup(restoreOptions);
     check('restore reports no mismatch and no warning', restored.integrity.errors.length === 0 && restored.integrity.warnings.length === 0, JSON.stringify(restored.integrity));
@@ -268,12 +266,13 @@ async function main(): Promise<number> {
       "insert into attachments (id, message_id, uploader_id, file_name, mime_type, size) select $1, id, $2, 'gone.bin', 'application/octet-stream', 1 from messages limit 1",
       [id(), seeded.users.alice],
     );
-    const withGap = await createBackup({ databaseUrl: source.url, uploadDir: sourceUploads, backupDir, keep: 2, now: () => new Date(base + 10 * 60_000) });
+    const gapFile = path.join(backupDir, 'gap.zip');
+    const withGap = await writeBackupFile(gapFile, { databaseUrl: source.url, uploadDir: sourceUploads });
     check('the backup counts the file that was not there', withGap.manifest.uploads.missingFromArchive === 1);
     const gapDb = await createIsolatedDatabase(baseUrl, 'rehearsal', `bk_gap_${Date.now().toString(36)}`);
     dbs.push(gapDb);
     const gapUploads = await tmp('uploads-gap');
-    const gap = await restoreBackup({ backupPath: withGap.dir, databaseUrl: gapDb.url, uploadDir: gapUploads, confirm: gapDb.name });
+    const gap = await restoreBackup({ backupPath: gapFile, databaseUrl: gapDb.url, uploadDir: gapUploads, confirm: gapDb.name });
     check('restore warns about it, and does not call it a mismatch', gap.integrity.errors.length === 0 && gap.integrity.missingFiles === 1 && gap.integrity.warnings.length === 1, gap.integrity.warnings.join(' '));
   } catch (err) {
     check('the rehearsal finished without an unexpected exception', false, err instanceof Error ? err.stack ?? err.message : String(err));

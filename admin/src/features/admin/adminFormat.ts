@@ -29,6 +29,7 @@ export const ACTION_LABELS: Record<string, string> = {
   'server.assign_owner': 'Dono atribuído', 'server.delete': 'Servidor excluído', 'server.owner_succession': 'Sucessão de dono', 'webhook.revoke': 'Webhook revogado',
   'message.delete': 'Mensagem apagada', 'message.attachment.remove': 'Anexo removido', 'call.kick': 'Removido da chamada', 'call.move': 'Movido de canal de voz','report.view': 'Evidência aberta',
   'report.claim': 'Denúncia assumida', 'report.resolve': 'Denúncia resolvida', 'report.dismiss': 'Denúncia dispensada',
+  'system.backup_download': 'Backup baixado',
 };
 
 export function actionLabel(action: string, language: string): string {

@@ -34,6 +34,9 @@ export function describeAdminError(err: unknown): string {
       case ERROR_CODES.not_open: return i18n.t('admin:errors.notOpen');
       case ERROR_CODES.invalid_action: return i18n.t('admin:errors.invalidAction');
       case ERROR_CODES.action_failed: return i18n.t('admin:errors.actionFailed');
+      case ERROR_CODES.backup_running: return i18n.t('admin:errors.backupRunning');
+      case ERROR_CODES.backup_link_expired: return i18n.t('admin:errors.backupLinkExpired');
+      case ERROR_CODES.backup_unavailable: return i18n.t('admin:errors.backupUnavailable');
       case ERROR_CODES.not_member: return i18n.t('admin:errors.notMember');
       case ERROR_CODES.forbidden: return i18n.t('admin:errors.forbidden');
       case ERROR_CODES.rate_limited: return i18n.t('admin:errors.rateLimited');

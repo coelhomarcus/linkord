@@ -8,7 +8,8 @@
     "audit": "Auditoria",
     "system": "Sistema",
     "servers": "Servidores",
-    "webhooks": "Webhooks"
+    "webhooks": "Webhooks",
+    "backup": "Backup"
   },
   "status": {
     "active": "Ativo",
@@ -184,7 +185,10 @@
     "notMember": "Essa conta não é mais membro do servidor. A lista de membros foi atualizada.",
     "forbidden": "Você não tem mais permissão de administrador.",
     "rateLimited": "Muitas ações seguidas. Espere um pouco.",
-    "generic": "Não foi possível concluir a ação. Tente de novo."
+    "generic": "Não foi possível concluir a ação. Tente de novo.",
+    "backupRunning": "Outro backup está sendo baixado. Espere ele terminar.",
+    "backupLinkExpired": "O link do backup expirou antes do download começar. Tente de novo.",
+    "backupUnavailable": "O servidor não tem o pg_dump instalado; não é possível gerar o backup."
   },
   "actions": {
     "user.suspend": "Conta suspensa",
@@ -235,7 +239,8 @@
     "account.deletion_cancel": "Exclusão da conta cancelada ao entrar",
     "account.data_export_request": "Cópia dos dados pedida",
     "account.data_export_download": "Cópia dos dados baixada",
-    "account.data_export": "Cópia dos dados"
+    "account.data_export": "Cópia dos dados",
+    "system.backup_download": "Backup baixado"
   },
   "detail": {
     "fullHistory": "Histórico completo",
@@ -462,7 +467,8 @@
     "webhooks": "Os webhooks dos canais: em que servidor postam, quem os criou e se estão ativos.",
     "reports": "O que as pessoas denunciaram. Abra uma denúncia para assumir, ver a evidência e decidir.",
     "audit": "Tudo o que administradores e o próprio sistema fizeram: quem, sobre o quê, quando e por quê.",
-    "system": "O estado da instância agora: conexões, armazenamento, contas, serviços e manutenção."
+    "system": "O estado da instância agora: conexões, armazenamento, contas, serviços e manutenção.",
+    "backup": "Baixe uma cópia completa da instância: o banco de dados e todos os arquivos, num único .zip."
   },
   "system": {
     "graceAny": "só arquivos antigos o bastante são considerados (os recentes podem ser uploads em andamento)",
@@ -552,5 +558,40 @@
       "title": "Nenhuma ação registrada",
       "text": "O que os administradores fizerem fica registrado aqui."
     }
+  },
+  "backup": {
+    "downloadTitle": "Baixar backup",
+    "downloadDescription": "Um único .zip com o banco de dados e todos os arquivos, gerado enquanto baixa. Nada fica guardado no servidor.",
+    "estimateDatabase": "Banco de dados",
+    "estimateDatabaseValue": "até {{size}}",
+    "estimateFiles": "Arquivos",
+    "estimateFilesValue_one": "{{count}} arquivo, {{size}}",
+    "estimateFilesValue_other": "{{count}} arquivos, {{size}}",
+    "estimateTotal": "Tamanho estimado",
+    "estimateTotalValue": "cerca de {{size}}",
+    "actionTitle": "Backup completo",
+    "actionDescription": "Pede um motivo, fica registrado na auditoria e baixa pelo navegador. Pode levar vários minutos, e o navegador não mostra o tamanho total enquanto baixa.",
+    "download": "Baixar backup",
+    "started": "O download começou no seu navegador. Ele continua mesmo se você sair desta página.",
+    "unavailable": "O servidor não tem o pg_dump instalado, então não é possível gerar o backup. Veja \"Backups\" no guia de deploy.",
+    "running": "{{name}} está baixando um backup desde {{when}}. Só um backup roda por vez.",
+    "dialogTitle": "Baixar backup completo",
+    "dialogDescription": "O arquivo terá hashes de senha, sessões e todas as mensagens da instância. Guarde-o como o próprio banco de dados e criptografe-o ao tirá-lo desta máquina.",
+    "dialogConfirm": "Baixar",
+    "contentsTitle": "O que contém",
+    "contentsDescription": "Tudo o que é preciso para recriar a instância, menos os segredos de configuração.",
+    "contentsDatabase": "o banco de dados PostgreSQL inteiro (pg_dump).",
+    "contentsUploads": "todos os arquivos guardados: anexos, avatares, emojis, figurinhas e sons.",
+    "contentsManifest": "contagens e checksums que a restauração confere.",
+    "contentsMissing": "Não inclui o .env (credenciais do banco, chaves do LiveKit e do Web Push), uploads em andamento nem as cópias de dados pedidas pelas pessoas. Guarde o .env num cofre de segredos.",
+    "sensitive": "O backup contém hashes de senha, sessões e todas as mensagens. Trate-o como o próprio banco de dados.",
+    "restoreTitle": "Como restaurar",
+    "restoreDescription": "Com o app parado, apontando para um banco de dados vazio e uma pasta de uploads vazia, rode no servidor:",
+    "restoreNote": "A primeira execução só mostra o que faria; o --confirm repete o nome do banco. Os detalhes estão em \"Backups\" no guia de deploy.",
+    "recentTitle": "Downloads recentes",
+    "recentDescription": "Cada download entra na auditoria quando começa. Um que falha ou é cancelado ganha uma segunda linha, marcada como falha.",
+    "recentEmpty": "Nenhum backup baixado ainda.",
+    "recentFailed": "Falhou",
+    "seeAll": "Ver na auditoria"
   }
 }

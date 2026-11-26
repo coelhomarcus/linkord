@@ -8,7 +8,8 @@
     "audit": "Audit",
     "system": "System",
     "servers": "Servers",
-    "webhooks": "Webhooks"
+    "webhooks": "Webhooks",
+    "backup": "Backup"
   },
   "status": {
     "active": "Active",
@@ -184,7 +185,10 @@
     "notMember": "This account is no longer a server member. The member list was refreshed.",
     "forbidden": "You no longer have administrator permission.",
     "rateLimited": "Too many actions in a row. Please wait a little.",
-    "generic": "Could not complete the action. Try again."
+    "generic": "Could not complete the action. Try again.",
+    "backupRunning": "Another backup is downloading. Wait for it to finish.",
+    "backupLinkExpired": "The backup link expired before the download started. Try again.",
+    "backupUnavailable": "The server does not have pg_dump installed; it cannot make a backup."
   },
   "actions": {
     "user.suspend": "Account suspended",
@@ -235,7 +239,8 @@
     "account.deletion_cancel": "Account deletion cancelled by signing in",
     "account.data_export_request": "Data copy requested",
     "account.data_export_download": "Data copy downloaded",
-    "account.data_export": "Data copy"
+    "account.data_export": "Data copy",
+    "system.backup_download": "Backup downloaded"
   },
   "detail": {
     "fullHistory": "Full history",
@@ -462,7 +467,8 @@
     "webhooks": "Channel webhooks: which server they post to, who created them and whether they are active.",
     "reports": "What people reported. Open a report to claim it, see the evidence and decide.",
     "audit": "Everything administrators and the system itself did: who, to what, when and why.",
-    "system": "The state of the instance right now: connections, storage, accounts, services and maintenance."
+    "system": "The state of the instance right now: connections, storage, accounts, services and maintenance.",
+    "backup": "Download a full copy of the instance: the database and every stored file, in one .zip."
   },
   "system": {
     "graceAny": "only files old enough are considered (recent ones may be uploads in progress)",
@@ -552,5 +558,40 @@
       "title": "No actions recorded",
       "text": "What administrators do is recorded here."
     }
+  },
+  "backup": {
+    "downloadTitle": "Download a backup",
+    "downloadDescription": "One .zip with the database and every stored file, built while it downloads. Nothing is kept on the server.",
+    "estimateDatabase": "Database",
+    "estimateDatabaseValue": "up to {{size}}",
+    "estimateFiles": "Files",
+    "estimateFilesValue_one": "{{count}} file, {{size}}",
+    "estimateFilesValue_other": "{{count}} files, {{size}}",
+    "estimateTotal": "Estimated size",
+    "estimateTotalValue": "about {{size}}",
+    "actionTitle": "Full backup",
+    "actionDescription": "Asks for a reason, is recorded in the audit log and downloads in the browser. It can take several minutes, and the browser does not show the total size while it downloads.",
+    "download": "Download backup",
+    "started": "The download started in your browser. It keeps going even if you leave this page.",
+    "unavailable": "The server does not have pg_dump installed, so it cannot make a backup. See \"Backups\" in the deployment guide.",
+    "running": "{{name}} has been downloading a backup since {{when}}. Only one backup runs at a time.",
+    "dialogTitle": "Download a full backup",
+    "dialogDescription": "The file will hold password hashes, sessions and every message on the instance. Keep it like the database itself, and encrypt it when it leaves this machine.",
+    "dialogConfirm": "Download",
+    "contentsTitle": "What it contains",
+    "contentsDescription": "Everything needed to rebuild the instance, except the configuration secrets.",
+    "contentsDatabase": "the whole PostgreSQL database (pg_dump).",
+    "contentsUploads": "every stored file: attachments, avatars, emojis, stickers and sounds.",
+    "contentsManifest": "counts and checksums the restore checks.",
+    "contentsMissing": "It does not include the .env (database credentials, LiveKit and Web Push keys), uploads in progress or the data copies people asked for. Keep the .env in a secrets store.",
+    "sensitive": "The backup holds password hashes, sessions and every message. Treat it like the database itself.",
+    "restoreTitle": "How to restore",
+    "restoreDescription": "With the app stopped, pointed at an empty database and an empty uploads folder, run on the server:",
+    "restoreNote": "The first run only shows what it would do; --confirm repeats the database name. The details are under \"Backups\" in the deployment guide.",
+    "recentTitle": "Recent downloads",
+    "recentDescription": "Each download enters the audit log when it starts. One that fails or is cancelled gets a second line, marked as failed.",
+    "recentEmpty": "No backup downloaded yet.",
+    "recentFailed": "Failed",
+    "seeAll": "See in the audit log"
   }
 }

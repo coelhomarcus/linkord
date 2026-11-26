@@ -1,5 +1,6 @@
 import { Navigate, Route, Routes } from 'react-router';
 import { AuditPage } from './AuditPage';
+import { BackupPage } from './BackupPage';
 import { ADMIN_USERS_PATH } from './adminCatalog';
 import { AdminLayout } from './AdminLayout';
 import { AdminIndex } from './AdminNavigation';
@@ -42,6 +43,7 @@ export function AdminRoutes({ viewerId }: { viewerId: string }) {
         <Route path="reports/:id" element={<ReportDetailPage />} />
         <Route path="audit" element={<AuditPage />} />
         <Route path="system" element={<SystemPage />} />
+        <Route path="backup" element={<BackupPage />} />
         <Route path="*" element={<Navigate to={ADMIN_USERS_PATH} replace />} />
       </Route>
     </Routes>

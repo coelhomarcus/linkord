@@ -11,9 +11,9 @@ The [`Dockerfile`](../Dockerfile) builds one image, and production runs one cont
   - `GET /readyz` (readiness): `200` when PostgreSQL answers within 1 s and the upload folders are writable, `503` otherwise, cached for 5 s. The log says what failed (`not ready` under the `health` component). Point monitoring at it. The container's health check stays on `/healthz` on purpose: with [one instance](#one-instance-only), restarting the container on a database outage would drop every call and fix nothing.
 - **Behind a proxy:** the image sets `TRUST_PROXY=1`. The client address is the `X-Forwarded-For` entry `TRUSTED_PROXY_HOPS` places from the right (default `1`, one proxy such as Traefik). With a CDN or a second proxy in front, set it to the number of proxies: too low and callers pick their own address and escape the per-IP limits, too high and everyone shares one address. With `COOKIE_SECURE=auto` (the default) the session cookie is `Secure` whenever the proxy says the request was HTTPS.
 - **Migrations** run at startup (`MIGRATE_ON_BOOT=1`, the default) before the server accepts connections; if one fails, the process exits with the reason in the log. Set `MIGRATE_ON_BOOT=0` to run them yourself with `bun --no-env-file server/dist/db/migrate.js`.
-- **Not root:** the process runs as `bun` (UID/GID 1000). It cannot rewrite its own code and can only write to `/app/uploads` and `/app/backups`, which is why those two folders need the right owner on the host ([Folders and permissions](#folders-and-permissions)).
+- **Not root:** the process runs as `bun` (UID/GID 1000). It cannot rewrite its own code and can only write to `/app/uploads`, which is why that folder needs the right owner on the host ([Folders and permissions](#folders-and-permissions)).
 
-To roll back a runtime upgrade, redeploy the previous image with the same PostgreSQL, upload and backup volumes.
+To roll back a runtime upgrade, redeploy the previous image with the same PostgreSQL and upload volumes.
 
 ## Before you start
 
@@ -41,17 +41,17 @@ Provision PostgreSQL and LiveKit, then build the image and run it behind a TLS r
 
 ```bash
 docker build -t overcord .
-mkdir -p uploads backups
-sudo chown -R 1000:1000 uploads backups
+mkdir -p uploads
+sudo chown -R 1000:1000 uploads
 docker run -d --name overcord --restart unless-stopped --env-file .env \
-  -p 127.0.0.1:3000:3000 -v "$PWD/uploads:/app/uploads" -v "$PWD/backups:/app/backups" \
+  -p 127.0.0.1:3000:3000 -v "$PWD/uploads:/app/uploads" \
   --security-opt no-new-privileges:true --cap-drop ALL \
   --log-opt max-size=10m --log-opt max-file=5 overcord
 ```
 
 Point the public HTTPS domain, and the admin domain when `ADMIN_URL` is set, at `127.0.0.1:3000`. The [example Caddyfile](../docker/Caddyfile) does that for both hostnames. The port stays on loopback because the image trusts `X-Forwarded-For`. Send the original `Host` and HTTPS scheme from the proxy, since the process picks the admin site by `Host`, and forward WebSocket upgrades.
 
-When migrating an older bundled installation, keep its PostgreSQL data and the upload and backup volumes. Take a [backup](#backups) before switching, then mount those volumes in place of the bind mounts above or restore into the new installation.
+When migrating an older bundled installation, keep its PostgreSQL data and the upload volume. Take a [backup](#backups) before switching, then mount those volumes in place of the bind mount above or restore into the new installation.
 
 ## Administration site
 
@@ -63,14 +63,16 @@ To check, the admin domain's `/api/admin/auth/me` answers `401` before login, th
 
 ## Dokploy
 
-Use one **Application** with the GitHub repository root as the build context, branch `main`, Dockerfile `./Dockerfile`, no build stage and no build arguments. Under **Domains**, add the `APP_URL` hostname and the `ADMIN_URL` hostname, both on port `3000` with HTTPS. Every file in the repository can change the image, so leave **Watch Paths** empty.
+Use one **Application** with the GitHub repository root as the build context, branch `main`, Dockerfile `./Dockerfile`, no build stage and no build arguments. Under **Domains**, add the `APP_URL` hostname and the `ADMIN_URL` hostname, both on port `3000` with HTTPS. Domains are the only routing the Application needs; see the warning in [Migrating from the split deploy](#migrating-from-the-split-deploy) before touching Traefik files. Every file in the repository can change the image, so leave **Watch Paths** empty.
 
-Keep one replica. Its environment holds the settings above. Mount `/app/uploads` and `/app/backups` from the host, and keep an existing `LIVEKIT_ROOM_NAME` value so active calls can reconnect across deploys. For a new installation, create the source folders on the host as root for uid 1000:
+Keep one replica. Its environment holds the settings above. Mount `/app/uploads` from the host, and keep an existing `LIVEKIT_ROOM_NAME` value so active calls can reconnect across deploys. For a new installation, create the source folder on the host as root for uid 1000:
 
 ```bash
-mkdir -p /srv/overcord/uploads /srv/overcord/backups
-chown -R 1000:1000 /srv/overcord/uploads /srv/overcord/backups
+mkdir -p /srv/overcord/uploads
+chown -R 1000:1000 /srv/overcord/uploads
 ```
+
+Installations from before downloaded backups also mounted `/app/backups`. The app no longer writes there: copy off the backup folders you still want (they [restore](#restoring) as they are), then remove that mount.
 
 Overcord sends `private, no-cache, no-store, max-age=0` for `/sw.js` so browsers can check for updates even behind a CDN. Verify that a CDN in front preserves those directives. HTML uses `no-cache` and versioned assets use immutable caching.
 
@@ -88,14 +90,16 @@ docker ps --format '{{.Names}}' | grep <app-name>
 
 ### Migrating from the split deploy
 
-Earlier releases ran three Applications: `overcord-backend` (the `backend` target), `overcord-web` (`frontend`) and `overcord-admin` (`admin`), routed by Traefik files installed on the web and admin Applications. `overcord-backend` becomes the single Application. It keeps its environment, volumes and replica, so sessions, uploads and calls carry over.
+Earlier releases ran three Applications: `overcord-backend` (the `backend` target), `overcord-web` (`frontend`) and `overcord-admin` (`admin`). Their path routing lived outside **Domains**, in a Traefik file on `overcord-web` and in Swarm labels (**Advanced → Swarm Settings → Labels**) on both static Applications. `overcord-backend` becomes the single Application. It keeps its environment, volumes and replica, so sessions, uploads and calls carry over.
 
-1. Take a [backup](#backups). Pause Auto Deploy on all three Applications and write down each one's deployed commit, build stage and Traefik configuration.
+1. Take a [backup](#backups). Pause Auto Deploy on all three Applications and write down each one's deployed commit, build stage, Traefik file and Swarm labels.
 2. In `overcord-backend`, clear **Docker Build Stage** and **Watch Paths**, check that `ADMIN_URL` is the admin site's origin, and deploy the new revision. The current routes still send it only `/api`, `/ws`, `/uploads` and the health checks, so nothing visible changes yet. Wait for `/readyz`.
-3. Route both hostnames to `overcord-backend`. Either install a Traefik file on it with a catch-all router per hostname at a higher priority than the web and admin routers, or remove the Traefik files from `overcord-web` and `overcord-admin` and add both hostnames under the backend's **Domains**. Then check HTTPS, a direct link such as `/app/friends`, a signed-in session, an upload, the socket, a call, and the [admin site checks](#administration-site).
-4. Stop `overcord-web` and `overcord-admin` and remove their Traefik files. Keep both Applications, stopped, until the next release in case you need to roll back, then delete them. Turn Auto Deploy back on for `overcord-backend`.
+3. Add the `ADMIN_URL` hostname under the backend's **Domains**, next to the `APP_URL` one. The old routers keep a higher priority, so traffic does not move yet.
+4. Stop `overcord-web` and `overcord-admin`. Their labelled routers go away with their tasks, and both hostnames fall through to the backend's Domains. Check HTTPS, a direct link such as `/app/friends`, a signed-in session, an upload, the socket, a call, and the [admin site checks](#administration-site). Then delete both Applications, which also removes their Traefik files, and turn Auto Deploy back on for `overcord-backend`.
 
-**Rollback.** Before step 4, remove the backend's catch-all routers (or its Domains) so the web and admin routers take over again, and redeploy the backend from the recorded commit with the `backend` build stage. After step 4, start the two stopped Applications first and restore their Traefik files.
+Route only through **Domains**. Do not edit or empty Traefik files by hand: Traefik refuses a file with an empty `routers` map, and one invalid file makes it drop every file in `/etc/dokploy/traefik/dynamic`, which takes down every site on the server, the Dokploy panel included. If a change does not seem to apply, read `docker logs --tail 60 dokploy-traefik` before reloading Traefik.
+
+**Rollback.** Before step 4 nothing has moved. After it, start the two stopped Applications again and redeploy the backend from the recorded commit with the `backend` build stage.
 
 ## Upgrading from a version with playgrounds
 
@@ -103,16 +107,15 @@ Stop the retired playground service's container and remove `PLAYGROUND_URL`, `PL
 
 ## Folders and permissions
 
-The app writes to two places and nothing else:
+The app writes to one place and nothing else:
 
 | Container path | What is there |
 | --- | --- |
 | `/app/uploads` | Every stored file: attachments, thumbnails, profile images, soundboard sounds, server emojis and stickers, and the icons shown with someone's activity, games' and apps' alike (`activity-icons/`). `tmp/` inside it holds the chunks of uploads still in progress, one folder per upload. `exports/` holds the ZIPs of "Download my data" (`EXPORT_DIR`, see below). |
-| `/app/backups` | One dated folder per backup (`BACKUP_DIR`). |
 
 **Data exports** (Settings → Data & privacy) are ZIPs of a person's profile, settings, activity, friends, servers, sent messages and their files, written to `EXPORT_DIR` (default `/app/uploads/exports`), downloadable by that account for 7 days and then deleted. Each is about the size of the person's attachments, at most one request per account per day. Keep `EXPORT_DIR` on a mounted volume, or a deploy drops ready files and their links answer 404. Backups leave exports out.
 
-Both must belong to uid 1000 **all the way down**. Docker creates a missing bind-mounted folder owned by root, and older installs that ran as root have root-owned files inside. Always use `chown -R`: with only the top folder fixed, profile pictures still save but every attachment and voice message fails (`tmp/` stays root's).
+It must belong to uid 1000 **all the way down**. Docker creates a missing bind-mounted folder owned by root, and older installs that ran as root have root-owned files inside. Always use `chown -R`: with only the top folder fixed, profile pictures still save but every attachment and voice message fails (`tmp/` stays root's).
 
 To see where the folders live on the host and fix them:
 
@@ -124,7 +127,7 @@ chown -R 1000:1000 <each Source path>
 To check, from inside the container (no restart is needed after a `chown`):
 
 ```bash
-docker exec <container> sh -c 'id; ls -ld /app/uploads /app/uploads/tmp /app/backups'
+docker exec <container> sh -c 'id; ls -ld /app/uploads /app/uploads/tmp'
 ```
 
 Every folder listed must belong to UID/GID 1000. When one does not, the server logs `uploads folder is not writable` at startup with the folders it cannot write.
@@ -151,54 +154,60 @@ Browsers report violations to `POST /api/csp-reports`, and the server logs them 
 
 ## Backups
 
-The database and the uploads must be backed up together, and the image does it without stopping the app: `bun --no-env-file server/dist/scripts/backup.js` (`bun run backup` from a checkout) writes one folder to `BACKUP_DIR` (`/app/backups` in the image):
+A backup is one ZIP with the database and every stored file, taken without stopping the app. The server never keeps one: it writes the ZIP straight to whoever asked for it, so it needs no free disk space for it and there is nothing on the host to rotate or clean up.
 
 ```
-overcord-backup-20261108T015300Z/
-  database.dump     pg_dump, custom format
-  uploads.tar.gz    the uploads, without tmp/ and exports/
-  manifest.json     row counts, migrations, file counts, SHA-256 of both files
+overcord-backup-20261126T153000Z.zip
+  README.txt       what it is and how to restore it
+  database.dump    pg_dump, custom format
+  uploads/         every stored file, without tmp/ and exports/
+  manifest.json    row counts, migrations, file counts and checksums
 ```
+
+From the [administration site](#administration-site), **Backup** downloads it in the browser. It asks for a reason and records the download in the audit log (`system.backup_download`) before the first byte leaves; a download that fails or is cancelled gets a second, failed entry. The page shows the expected size and the latest downloads. The ZIP is written by the same `backup.js` as below, in a separate process, so checksumming it does not slow chat and calls. One backup runs at a time. A download that moves no data for 5 minutes (a client that stopped reading) is stopped, and a deploy during a download cancels it.
+
+From the command line, the image writes it to stdout, so the host saves it directly:
 
 ```bash
 # standalone Docker
-docker exec overcord bun --no-env-file server/dist/scripts/backup.js
+docker exec overcord bun --no-env-file server/dist/scripts/backup.js > overcord-backup.zip
 # Dokploy (from the host)
-docker exec $(docker ps -qf name=<app-name>) bun --no-env-file server/dist/scripts/backup.js
+docker exec $(docker ps -qf name=<app-name>) bun --no-env-file server/dist/scripts/backup.js > overcord-backup-$(date -u +%Y%m%dT%H%M%SZ).zip
 ```
+
+From a checkout, `bun run backup --out <file or folder>` writes it to a file instead (named by the UTC time when `--out` is a folder). The file is written as `<name>.partial` and renamed when complete, and never replaces an existing one.
 
 | Setting | Default | What it does |
 | --- | --- | --- |
-| `BACKUP_DIR` | `./backups` | Where backups are written and read. Not inside `UPLOAD_DIR`. |
-| `BACKUP_KEEP` | `7` | How many backups rotation keeps (at least 1). |
 | `PG_DUMP_BIN`, `PG_RESTORE_BIN` | `pg_dump`, `pg_restore` | The PostgreSQL client tools, at least as new as the server. |
 
-- **Safe to interrupt:** a backup is written as `<name>.partial` and renamed when complete. Rotation runs only after a successful backup and only deletes folders it made.
-- **Consistent:** the dump and the file list come from one database snapshot, and files are archived after it, so every row in the dump has its file. A file deleted while the archive runs is reported as a warning (that message shows a broken attachment). Uploads still in progress are left out.
-- For scheduled backups, run the appropriate `docker exec` command from the host's scheduler.
-- Copy completed backups off the host after each run with a tool such as `rclone` or `rsync`. Set retention on the destination too, since rotation prunes only the local backup directory.
-- **Not in the backup:** the `.env` (database credentials, `LIVEKIT_*` and the Web Push VAPID keys, without which every push subscription breaks) and LiveKit. Keep the `.env` in a secrets store. A backup holds password hashes, sessions and every message: treat it like the database, and encrypt it when it leaves the machine.
+- **Consistent:** the dump and the list of files the database points at come from one snapshot, and the files are added after the dump, so every row in the dump has its file. A file deleted in between is left out and counted in the manifest (its message shows a broken attachment). Uploads still in progress (`tmp/`) and data exports (`EXPORT_DIR`, and `exports/` by name) are left out.
+- **Size:** about the database plus the uploads. Nothing is recompressed: the dump already is, and media files are.
+- **Interrupted:** a cancelled download or a failure ends the transfer as failed, never as a ZIP that looks complete.
+- For scheduled backups, run the `docker exec` command from the host's scheduler and send the file off the host with a tool such as `rclone` or `rsync`. Keep the retention you want at the destination.
+- **Not in the backup:** the `.env` (database credentials, `LIVEKIT_*` and the Web Push VAPID keys, without which every push subscription breaks) and LiveKit. Keep the `.env` in a secrets store. A backup holds password hashes, sessions and every message: treat it like the database, and encrypt it when it leaves the machine. Its checksums catch a damaged file, not a deliberate change, and a restore runs the dump's SQL as the `DATABASE_URL` user: only restore a backup you kept yourself.
 
 ### Restoring
 
 1. Install the app with its `.env`, pointing `DATABASE_URL` at a new, empty database and `UPLOAD_DIR` at an empty or missing folder (in Docker, owned by `1000:1000`).
-2. Copy the backup folder into `BACKUP_DIR`.
-3. With the app stopped, run the restore. The first run only says what it would do; `--confirm` must name the database in `DATABASE_URL`:
+2. With the app stopped, run the restore on the ZIP. The first run only says what it would do; `--confirm` must name the database in `DATABASE_URL`:
 
 ```bash
-bun run restore latest --confirm overcord
+bun run restore overcord-backup.zip --confirm overcord
 
 # standalone Docker, after stopping the app
 docker run --rm --env-file .env \
-  -v "$PWD/uploads:/app/uploads" -v "$PWD/backups:/app/backups" \
-  overcord bun --no-env-file server/dist/scripts/restore.js latest --confirm overcord
+  -v "$PWD/uploads:/app/uploads" -v "$PWD/overcord-backup.zip:/tmp/backup.zip:ro" \
+  overcord bun --no-env-file server/dist/scripts/restore.js /tmp/backup.zip --confirm overcord
 ```
 
 For Docker, use the same database network settings as the intended Overcord container.
 
-4. Start the app. A newer app applies its newer migrations as on any upgrade; an older app cannot read a newer database.
+3. Start the app. A newer app applies its newer migrations as on any upgrade; an older app cannot read a newer database.
 
-`latest` can be a folder name or a path. The restore refuses, before changing anything, a backup whose checksums do not match its manifest, a missing or wrong `--confirm`, a database that already has tables, and an uploads folder that has files. `pg_restore` runs in one transaction, and files are extracted only after it succeeds. It then compares row counts, migrations and files with the manifest: a mismatch exits 3, warnings exit 0 (3 with `--strict`), other failures 1, a missing confirmation 2.
+The restore refuses, before changing anything, a backup whose checksums do not match its manifest (every byte of the dump and of the files is checked), a ZIP that holds a name twice, a missing or wrong `--confirm`, a database that already has tables, and an uploads folder that has files. `pg_restore` runs in one transaction and gets the dump checked again as it reads it, so a file that changed after the check is never committed. Files are extracted only after it succeeds. It then compares row counts, migrations and files with the manifest: a mismatch exits 3, warnings exit 0 (3 with `--strict`), other failures 1, a missing confirmation 2.
+
+A backup folder written by an older version (`database.dump`, `uploads.tar.gz`, `manifest.json`) restores the same way, given the folder's path instead of a ZIP.
 
 Rehearsing a restore locally: [DEVELOPMENT.md](DEVELOPMENT.md#backup-scripts-locally).
 
@@ -290,7 +299,6 @@ The app keeps its session and window state in `%APPDATA%\Overcord`.
 - **An API call answers 500 with only "Erro interno." and a `requestId`.** The server never sends the cause of an unexpected error to the client (it may contain SQL or file paths). Search the log for that value as `reqId`: the `error in a route` line has the full error and stack. The same id is in the response's `x-request-id` header.
 
 - **Attachments and voice messages fail, profile pictures work.** `POST /api/attachments/init` answers 500 and the log shows `EACCES: permission denied, mkdir '/app/uploads/tmp/…'`. A folder under the uploads mount is still owned by root: see [Folders and permissions](#folders-and-permissions). The 429s that follow are the browser retrying.
-- **Backups fail with `EACCES`.** The same, for the folder mounted on `/app/backups`, or nothing is mounted there.
 - **Calls connect but nobody hears anyone.** On a self-hosted LiveKit instance, check the advertised media address and published TCP and UDP ports. See [LiveKit](INTEGRATIONS.md#livekit).
 - **Calls do not connect, chat works.** Check `LIVEKIT_URL`: it must be the address browsers use, and the browser console names it in a Content-Security-Policy error if the policy blocked it. Without `LIVEKIT_*` the server logs `LiveKit is not configured` at startup.
 - **Covers, avatars or link preview pictures are missing.** The server downloads them itself, so the container needs outbound HTTPS to `images.igdb.com`, `cdn.myanimelist.net`, `avatars.githubusercontent.com`, `i.ytimg.com` and the sites people link to. The browser's network tab shows the reason on the `/api/media-proxy/...` request (`502 image_unavailable`, `429 rate_limited`, `415 not_an_image`).

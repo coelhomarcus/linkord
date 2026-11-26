@@ -152,5 +152,19 @@ export interface SystemInfo {
 }
 
 export const fetchSystem = () => adminFetch<SystemInfo>('/api/admin/system');
+
+// ---- backup ------------------------------------------------------------------
+
+export interface BackupInfo {
+  /** false when the server cannot run pg_dump */
+  available: boolean;
+  running: { by: string; startedAt: string } | null;
+  estimate: { databaseBytes: number; uploadsBytes: number; files: number };
+  recent: AuditRow[];
+}
+
+export const fetchBackupInfo = () => adminFetch<BackupInfo>('/api/admin/backup');
+/** A one-time link to the ZIP, valid for a minute and only for this admin. */
+export const requestBackupDownload = (reason: string) => post<{ url: string; expiresAt: string }>('/api/admin/backup/download', { reason });
 export const sweepOrphans = (input: { dryRun: true } | { dryRun: false; reason: string }) =>
   adminFetch<{ result: SweepResult }>('/api/admin/system/sweep-orphans', { method: 'POST', body: JSON.stringify(input) });

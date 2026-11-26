@@ -56,6 +56,7 @@ Overcord is a self-hosted place to chat and call with friends. Talk in direct me
 
 **Administration**
 - An optional [administration site](docs/DEPLOY.md#administration-site) with a dedicated hostname and sign-in for managing users, servers, webhooks, reports, audit history and uploads.
+- [Full backups](docs/DEPLOY.md#backups) downloaded from the administration site as one ZIP of the database and every stored file, never kept on the server.
 
 ## ⚡ Quick start
 
@@ -68,7 +69,7 @@ cp .env.example .env
 docker build -t overcord .
 ```
 
-Set the database URL, public app URL and LiveKit credentials in `.env`. Set a registration code to let people sign up. Follow the [standalone Docker instructions](docs/DEPLOY.md#the-image-on-its-own) to start the image with persistent uploads and backups, or [deploy on Dokploy](docs/DEPLOY.md#dokploy). For email, push and other settings, copy the entries you need from [`.env.optional.example`](.env.optional.example).
+Set the database URL, public app URL and LiveKit credentials in `.env`. Set a registration code to let people sign up. Follow the [standalone Docker instructions](docs/DEPLOY.md#the-image-on-its-own) to start the image with persistent uploads, or [deploy on Dokploy](docs/DEPLOY.md#dokploy). For email, push and other settings, copy the entries you need from [`.env.optional.example`](.env.optional.example).
 
 ## 🚀 Development
 
@@ -86,7 +87,7 @@ Overcord ships as one image and runs as one service: a single Bun process that s
 bun run dev           # API and web app in watch mode
 bun run dev:desktop   # the desktop app against the dev server (npm install --prefix desktop first)
 bun run db:seed       # sample accounts, DMs and a server in the local database
-bun run backup        # database dump + uploads archive in ./backups, with rotation
+bun run backup --out backups/  # the database and every stored file in one ZIP
 bun run check         # typecheck, lint, unit tests and production build
 bun run test:e2e      # real browsers against a Docker stack (needs Docker and Chrome)
 ```
