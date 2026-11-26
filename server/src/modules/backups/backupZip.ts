@@ -205,7 +205,7 @@ export async function writeBackupZip(out: Writable, opts: BackupZipOptions): Pro
   try {
     stop.signal.throwIfAborted();
     const mtime = (opts.now ?? (() => new Date()))();
-    zip.addBuffer(Buffer.from(README), README_FILE, { mtime });
+    zip.addBuffer(Buffer.from(README), README_FILE, { mtime, compress: false });
     const { snapshot, dumpTool, dump } = await addDatabase(zip, opts, mtime, stop.signal, log);
     const uploads = await addUploads(zip, path.resolve(opts.uploadDir), stop.signal);
     log(`uploads added (${uploads.files} files, ${uploads.bytes} bytes)`);
@@ -221,7 +221,7 @@ export async function writeBackupZip(out: Writable, opts: BackupZipOptions): Pro
       uploads: { files: uploads.files, bytes: uploads.bytes, missingFromArchive },
       sha256: { dump: dump.sha256, uploads: uploads.sha256 },
     };
-    zip.addBuffer(Buffer.from(`${JSON.stringify(manifest, null, 2)}\n`), MANIFEST_FILE, { mtime });
+    zip.addBuffer(Buffer.from(`${JSON.stringify(manifest, null, 2)}\n`), MANIFEST_FILE, { mtime, compress: false });
     zip.end();
     await output;
     return { manifest, bytes: written };
