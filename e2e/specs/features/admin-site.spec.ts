@@ -1,4 +1,7 @@
+import fs from 'node:fs';
 import type { Page } from '@playwright/test';
+import { createServer } from '../../fixtures/api';
+import { threeFrameGif } from '../../fixtures/images';
 import { expect, test, type User } from '../../fixtures/test';
 import { ADMIN_URL, BASE_URL, emailCount, grantAdmin, waitForEmailCode } from '../../stack/stack';
 
@@ -89,4 +92,43 @@ test('a login code is bound to the site that requested it', async ({ users }) =>
   expect(wrongSite.status()).toBe(400);
   await page.getByLabel('Código de verificação', { exact: true }).pressSequentially(code);
   await expect(page.getByRole('button', { name: 'Sair', exact: true })).toBeVisible();
+});
+
+test('an admin downloads a full backup of the instance as one ZIP', async ({ users }) => {
+  const admin = await users.create('admin');
+  const owner = await users.create('owner');
+  grantAdmin(admin.username);
+  // a stored file the backup must carry
+  const server = await createServer(owner.api, 'E2E backup');
+  const gif = threeFrameGif();
+  const uploaded = await owner.api.post(`/api/servers/${server.id}/emojis?name=e2e_backup`, { headers: { 'Content-Type': gif.mimeType }, data: gif.buffer });
+  expect(uploaded.ok(), await uploaded.text()).toBe(true);
+  const { emoji } = await uploaded.json() as { emoji: { id: string } };
+
+  const signedIn = await users.login(admin.username, admin.password);
+  const page = await signedIn.context.newPage();
+  await page.goto(`${ADMIN_URL}/admin/backup`);
+  await signIn(page, signedIn);
+  await expect(page.getByRole('heading', { name: 'Baixar backup', exact: true })).toBeVisible();
+  await page.getByRole('button', { name: 'Baixar backup', exact: true }).click();
+  const dialog = page.getByRole('dialog', { name: 'Baixar backup completo' });
+  await dialog.getByRole('textbox', { name: 'Motivo (fica registrado na auditoria)', exact: true }).fill('Cópia antes da atualização');
+  const downloading = page.waitForEvent('download');
+  await dialog.getByRole('button', { name: 'Baixar', exact: true }).click();
+  const download = await downloading;
+  expect(download.suggestedFilename()).toMatch(/^overcord-backup-\d{8}T\d{6}Z\.zip$/);
+  expect(await download.failure()).toBeNull();
+  await expect(page.getByText(/O download começou no seu navegador/)).toBeVisible();
+
+  // stored entries keep their names and bytes as they are, so the ZIP can be checked without unpacking it
+  const zip = fs.readFileSync((await download.path())!);
+  expect(zip.subarray(0, 4).toString('latin1')).toBe('PK\x03\x04');
+  const text = zip.toString('latin1');
+  for (const entry of ['README.txt', 'database.dump', `uploads/${emoji.id}`, 'manifest.json']) expect(text).toContain(entry);
+  expect(text).toContain('"format": 2');
+
+  // the download is on the audit trail with its reason, shown on the page
+  await expect(page.getByText('Cópia antes da atualização')).toBeVisible();
+  const link = await signedIn.context.request.post(`${ADMIN_URL}/api/admin/backup/download`, { data: { reason: 'sem origem' } });
+  expect(link.status()).toBe(403);
 });
