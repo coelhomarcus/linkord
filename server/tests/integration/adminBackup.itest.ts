@@ -9,7 +9,7 @@ import type { FastifyInstance } from 'fastify';
 import { adminAuditLogs } from '../../src/db/schema.js';
 import { createApp } from '../../src/http/app.js';
 import { DUMP_FILE, MANIFEST_FILE, README_FILE } from '../../src/modules/backups/backupLayout.js';
-import { claimDownload, issueDownloadToken, releaseDownload } from '../../src/modules/backups/backupDownload.js';
+import { claimDownload, issueDownloadToken, releaseDownload, setBackupIdleTimeout } from '../../src/modules/backups/backupDownload.js';
 import { listZipEntries, readBackupZip } from '../../src/modules/backups/backupZipReader.js';
 import { adminHeaders, db, makeAdminSession, makeUser, pool } from './helpers.js';
 
@@ -137,6 +137,32 @@ describe('admin backup download', () => {
     assert.match(String((await failed())?.detail.error), /pg_dump failed/);
     process.env.PG_DUMP_BIN = fakePgDump;
     assert.equal((await request('POST', '/api/admin/backup/download', a.token, { reason: 'again' })).statusCode, 200, 'the lock was released');
+  });
+
+  it('stops a download that does not move, so a stalled client cannot hold the lock', async () => {
+    const a = await admin();
+    const stuck = path.join(scratch, 'pg_dump-stuck');
+    fs.writeFileSync(stuck, '#!/bin/sh\nif [ "$1" = "--version" ]; then echo "pg_dump (PostgreSQL) 17.0"; exit 0; fi\nexec sleep 30\n', { mode: 0o755 });
+    process.env.PG_DUMP_BIN = stuck;
+    setBackupIdleTimeout(400);
+    try {
+      const { url } = (await request('POST', '/api/admin/backup/download', a.token, { reason: 'stalls' })).json() as { url: string };
+      const started = Date.now();
+      await request('GET', url, a.token).catch(() => null);
+      assert.ok(Date.now() - started < 15_000, 'the download was cut, not left hanging');
+      const failed = async () => (await db.select().from(adminAuditLogs).where(and(eq(adminAuditLogs.actorId, a.id), eq(adminAuditLogs.result, 'failed'))))[0];
+      for (let i = 0; i < 50 && !(await failed()); i++) await new Promise((resolve) => setTimeout(resolve, 100));
+      assert.match(String((await failed())?.detail.error), /Nothing was downloaded/);
+      process.env.PG_DUMP_BIN = fakePgDump;
+      let next = 0;
+      for (let i = 0; i < 50 && next !== 200; i++) {
+        next = (await request('POST', '/api/admin/backup/download', a.token, { reason: 'after the stall' })).statusCode;
+        if (next !== 200) await new Promise((resolve) => setTimeout(resolve, 200));
+      }
+      assert.equal(next, 200, 'the lock was released once the script exited');
+    } finally {
+      setBackupIdleTimeout();
+    }
   });
 
   it('says so when the server cannot run pg_dump, before a link is issued', async () => {

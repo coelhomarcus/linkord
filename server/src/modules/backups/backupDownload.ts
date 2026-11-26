@@ -46,6 +46,17 @@ const pgDumpBin = () => process.env.PG_DUMP_BIN ?? 'pg_dump';
 const here = fileURLToPath(import.meta.url);
 const BACKUP_SCRIPT = path.join(path.dirname(here), '..', '..', 'scripts', `backup${path.extname(here)}`);
 const STDERR_LIMIT = 4_000;
+// A download whose client stopped reading without closing the connection would hold the lock (and, during
+// the dump, a database snapshot that holds back vacuum) until a restart. Nothing has to move for this long.
+const DEFAULT_IDLE_TIMEOUT_MS = 5 * 60_000;
+let idleTimeoutMs = DEFAULT_IDLE_TIMEOUT_MS;
+// SIGTERM lets the script stop pg_dump; SIGKILL after this if it does not exit
+const KILL_GRACE_MS = 10_000;
+
+/** Tests only: a shorter idle timeout, or the default back with no argument. */
+export function setBackupIdleTimeout(ms = DEFAULT_IDLE_TIMEOUT_MS): void {
+  idleTimeoutMs = ms;
+}
 
 /** What the script said when it failed: its "Backup failed: …" message (which may span lines, such as
  * pg_dump's own error under it), or its last line. */
@@ -137,17 +148,31 @@ export async function handleBackupDownload(request: FastifyRequest<{ Params: { t
   let bytes = 0;
   let stderr = '';
   let ended = false;
+  let lastProgress = Date.now();
+  const stopChild = () => {
+    if (child.exitCode !== null || child.signalCode !== null) return;
+    child.kill('SIGTERM');
+    setTimeout(() => { if (child.exitCode === null && child.signalCode === null) child.kill('SIGKILL'); }, KILL_GRACE_MS).unref();
+  };
   log.info('backup download started', { reqId: request.id, admin: actor.username, pid: child.pid });
   // not `pipe`'s own end: a failed run must destroy the body, so the download ends as failed, not as a short ZIP
-  child.stdout.on('data', (chunk: Buffer) => { bytes += chunk.length; });
+  // what leaves the script is what the client took: backpressure stops it when the client stops reading
+  child.stdout.on('data', (chunk: Buffer) => { bytes += chunk.length; lastProgress = Date.now(); });
   child.stdout.pipe(body, { end: false });
   child.stderr.on('data', (chunk: Buffer) => { stderr = (stderr + chunk.toString('utf8')).slice(-STDERR_LIMIT); });
   // the person closed the tab, or Fastify gave up on the response: stop the script, which stops pg_dump
-  body.on('close', () => { if (!ended) child.kill('SIGTERM'); });
+  body.on('close', () => { if (!ended) stopChild(); });
+  const idle = setInterval(() => {
+    if (Date.now() - lastProgress < idleTimeoutMs) return;
+    stopChild();
+    void finish(new Error(`Nothing was downloaded for ${Math.round(idleTimeoutMs / 1000)} s; the backup was stopped.`));
+  }, Math.min(30_000, Math.max(50, idleTimeoutMs / 4)));
+  idle.unref();
 
   const finish = async (err: Error | null) => {
     if (ended) return;
     ended = true;
+    clearInterval(idle);
     const ms = Date.now() - started;
     try {
       if (!err) {
@@ -160,7 +185,9 @@ export async function handleBackupDownload(request: FastifyRequest<{ Params: { t
       log.warn('backup download failed', { reqId: request.id, bytes, ms, err });
       await recordAuditFailure({ ...entry, detail: { ms, bytes } }, err);
     } finally {
-      releaseDownload();
+      // the lock outlives a script that is still shutting down, so a new backup never overlaps it
+      if (child.exitCode !== null || child.signalCode !== null || child.pid === undefined) releaseDownload();
+      else child.once('close', releaseDownload);
     }
   };
   child.once('error', (err) => { void finish(err); });
