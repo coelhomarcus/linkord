@@ -111,10 +111,6 @@ function setSessionCookie(request: FastifyRequest, reply: FastifyReply, rawToken
   reply.header('Set-Cookie', cookie);
 }
 
-function publicLoginUser(user: User) {
-  return { ...privateUser(user), adminUrl: config.ADMIN_ORIGIN?.url };
-}
-
 function adminIdentity(user: { id: string; username: string; locale: string }) {
   return { id: user.id, username: user.username, locale: resolveLocale(user.locale) };
 }
@@ -196,7 +192,7 @@ async function handleRegister(request: FastifyRequest, reply: FastifyReply): Pro
   log.info('account registered', { userId: user.id, username: user.username });
   // A new account has no friends or shared conversations, so scoped presence would deliver this
   // event to nobody.
-  sendJson(reply, 201, { user: publicLoginUser(user) });
+  sendJson(reply, 201, { user: privateUser(user) });
 }
 
 async function handleLogin(request: FastifyRequest, reply: FastifyReply, scope: SessionScope = 'app'): Promise<void> {
@@ -280,7 +276,7 @@ function failedLoginName(user: User | null, typed: string): { userId: string } |
  * the answer says so, for the client to tell the person. */
 async function signedIn(request: FastifyRequest, user: User): Promise<{ user: ReturnType<typeof privateUser>; deletionCancelled?: true }> {
   const cancelled = await cancelScheduledDeletion({ id: user.id, username: user.username }, request.id);
-  return { user: publicLoginUser(user), ...(cancelled ? { deletionCancelled: true } : {}) };
+  return { user: privateUser(user), ...(cancelled ? { deletionCancelled: true } : {}) };
 }
 
 function accountDeletedError(reply: FastifyReply): void {
@@ -411,7 +407,6 @@ async function handleMe(request: FastifyRequest, reply: FastifyReply): Promise<v
       profileLinks: sess.profileLinks,
       role: sess.role,
       locale: sess.locale,
-      adminUrl: config.ADMIN_ORIGIN?.url,
     },
     // the settings that follow the account (modules/users/preferences.ts); null until a device seeds them
     preferences: await getPreferences(sess.userId),
@@ -427,10 +422,6 @@ function adminOnly(handler: ScopedAuthHandler) {
 }
 
 async function handleAdminMe(request: FastifyRequest, reply: FastifyReply): Promise<void> {
-  if (!config.ADMIN_ORIGIN) {
-    sendError(reply, 404, 'not_found', 'Não encontrado.');
-    return;
-  }
   const sess = await requireAdminSession(request, reply);
   if (sess) sendJson(reply, 200, { user: adminIdentity({ id: sess.userId, username: sess.username, locale: sess.locale }) });
 }

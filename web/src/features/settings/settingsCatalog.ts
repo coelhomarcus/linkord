@@ -1,5 +1,5 @@
 import type { ParseKeys } from 'i18next';
-import { BellIcon, ChatCircleTextIcon, DesktopIcon, DownloadSimpleIcon, GameControllerIcon, IdentificationCardIcon, KeyIcon, LockIcon, MicrophoneIcon, PaintBrushIcon, PlugsConnectedIcon, ShieldCheckIcon, TranslateIcon, type IconComponent } from '@/shared/ui/icons';
+import { BellIcon, ChatCircleTextIcon, DesktopIcon, DownloadSimpleIcon, GameControllerIcon, IdentificationCardIcon, KeyIcon, LockIcon, MicrophoneIcon, PaintBrushIcon, PlugsConnectedIcon, TranslateIcon, type IconComponent } from '@/shared/ui/icons';
 
 import type { SettingsTab } from '@/shared/lib/routes';
 
@@ -10,7 +10,6 @@ export interface SettingsCategory {
   id: SettingsTab;
   labelKey: SettingsKey;
   icon: IconComponent;
-  adminOnly?: boolean;
   /** only inside the desktop app, which has settings of its own */
   desktopOnly?: boolean;
 }
@@ -62,23 +61,17 @@ export const SETTINGS_GROUPS: SettingsGroup[] = [
       { id: 'downloads', labelKey: 'catalog.categories.downloads', icon: DownloadSimpleIcon },
     ],
   },
-  {
-    labelKey: 'catalog.groups.admin',
-    categories: [
-      { id: 'moderation', labelKey: 'catalog.categories.moderation', icon: ShieldCheckIcon, adminOnly: true },
-    ],
-  },
 ];
 
-/** Whether this page may show a category: admin-only ones to admins, desktop-only ones in the desktop app. */
-export function categoryVisible(category: Pick<SettingsCategory, 'adminOnly' | 'desktopOnly'>, isAdmin: boolean, isDesktop: boolean): boolean {
-  return (isAdmin || !category.adminOnly) && (isDesktop || !category.desktopOnly);
+/** Whether this page may show a category: desktop-only pages need the desktop app. */
+export function categoryVisible(category: Pick<SettingsCategory, 'desktopOnly'>, isDesktop: boolean): boolean {
+  return isDesktop || !category.desktopOnly;
 }
 
 /** The groups this account may see here. */
-export function visibleGroups(isAdmin: boolean, isDesktop: boolean): SettingsGroup[] {
+export function visibleGroups(isDesktop: boolean): SettingsGroup[] {
   return SETTINGS_GROUPS
-    .map((group) => ({ ...group, categories: group.categories.filter((category) => categoryVisible(category, isAdmin, isDesktop)) }))
+    .map((group) => ({ ...group, categories: group.categories.filter((category) => categoryVisible(category, isDesktop)) }))
     .filter((group) => group.categories.length > 0);
 }
 

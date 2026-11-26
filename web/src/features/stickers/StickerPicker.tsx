@@ -5,7 +5,7 @@ import { useTranslation } from 'react-i18next';
 
 import { cn } from '@/shared/lib/utils';
 import { useOptionalRoomSelector } from '@/state/RoomContext';
-import { ServerIcon } from '@/features/servers/ServerIcon';
+import { ServerIcon } from '@linkord/frontend-shared/ui/ServerIcon';
 import { can } from '@/features/servers/serverUtils';
 import { PERMISSIONS } from '@/features/servers/permissionBits';
 import { noteExpressionUse, useFrequentExpressions } from '@/features/emoji/frequentExpressions';

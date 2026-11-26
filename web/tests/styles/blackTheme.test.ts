@@ -35,13 +35,13 @@ describe('black theme accent', () => {
   });
 
   it('leaves the Old theme accent in the base palette', () => {
-    const base = readFileSync(join(process.cwd(), 'src/styles/index.css'), 'utf8');
+    const base = readFileSync(join(process.cwd(), '../packages/frontend-shared/src/styles/base.css'), 'utf8');
     expect(base).toContain('--color-accent-primary: oklch(55.00% 0.1500 248.00);');
     expect(base).toContain('--primary-foreground: #ffffff;');
   });
 
   it('draws the mark in the logo blue unless a theme paints it its own colour', () => {
-    const base = readFileSync(join(process.cwd(), 'src/styles/index.css'), 'utf8');
+    const base = readFileSync(join(process.cwd(), '../packages/frontend-shared/src/styles/base.css'), 'utf8');
     expect(base).toContain('--color-logo: #2b99e7;');
     expect(black).not.toContain('--color-logo');
     expect(graphite).not.toContain('--color-logo');

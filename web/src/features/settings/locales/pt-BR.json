@@ -15,8 +15,7 @@
       "social": "Perfil e social",
       "display": "Aparência e idioma",
       "communication": "Voz, vídeo e chat",
-      "app": "Aplicativo",
-      "admin": "Administração"
+      "app": "Aplicativo"
     },
     "categories": {
       "account": "Minha conta",
@@ -30,8 +29,7 @@
       "notifications": "Notificações",
       "language": "Idioma e hora",
       "downloads": "Baixar o app",
-      "desktop": "Aplicativo",
-      "moderation": "Administração"
+      "desktop": "Aplicativo"
     },
     "sections": {
       "accountInfo": "Informações da conta",
@@ -46,7 +44,6 @@
       "sounds": "Sons",
       "language": "Idioma",
       "timeFormat": "Formato de tempo",
-      "adminArea": "Área administrativa",
       "presence": "Status",
       "password": "Senha",
       "twoFactor": "Verificação em duas etapas",
@@ -129,10 +126,6 @@
     "timeFormat": {
       "title": "Formato de tempo",
       "keywords": "hora, horário, 12 horas, 24 horas, am, pm"
-    },
-    "adminArea": {
-      "title": "Área administrativa",
-      "keywords": "admin, denúncia, auditoria, usuários, servidores"
     },
     "presence": {
       "title": "Status",
@@ -302,11 +295,6 @@
       "requestFailed": "Não foi possível pedir a cópia. Tente de novo.",
       "loadFailed": "Não foi possível carregar o estado da sua cópia."
     }
-  },
-  "adminLink": {
-    "label": "Usuários, servidores, denúncias e auditoria",
-    "description": "Toda ação pede um motivo e fica registrada.",
-    "open": "Abrir a área administrativa"
   },
   "av": {
     "microphone": "Microfone",

@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { ErrorBoundary } from '@/app/layout/ErrorBoundary';
+import { ErrorBoundary } from '@linkord/frontend-shared/ui/ErrorBoundary';
 import { logger } from '@/shared/lib/logger';
 
 afterEach(() => vi.restoreAllMocks());

@@ -118,7 +118,7 @@ function Shell() {
   const roomError = state.roomError;
   const navigate = useNavigate();
   const location = useLocation();
-  // Settings and administration are modals over the app: while one is open the
+  // Settings opens in a modal over the app: while it is open the
   // URL names it, and the page underneath stays the last real page, so the
   // conversation, a running call's stage and the rail do not change behind it.
   const modal = modalForPath(location.pathname);
@@ -436,7 +436,7 @@ function Shell() {
         )}
         <TileMenu onOpenProfile={openProfile} />
         <ProfileModal userId={profileTarget?.userId ?? null} initialTab={profileTarget?.tab} onClose={() => setProfileTarget(null)} onOpenProfile={openProfile} />
-        <AppModals modal={modal} onClose={closeModal} onOpenProfile={openProfile} />
+        {modal && <AppModals onClose={closeModal} onOpenProfile={openProfile} />}
         <EmojiUploadHost />
         <StickerEditorHost />
         <ReactionSheetHost />

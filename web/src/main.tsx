@@ -1,9 +1,9 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { App } from './app/App';
-import { ErrorBoundary } from './app/layout/ErrorBoundary';
+import { ErrorBoundary } from '@linkord/frontend-shared/ui/ErrorBoundary';
 import { DesktopFrame } from './app/layout/DesktopFrame';
-import { installGlobalErrorHandlers } from './shared/lib/logger';
+import { installGlobalErrorHandlers } from '@/shared/lib/logger';
 import './styles/index.css';
 import { initI18n } from '@/shared/i18n/init';
 import { followAppearance } from '@/features/settings/appearancePreferences';

@@ -55,8 +55,7 @@ Linkord is a self-hosted place to chat and call with friends. Talk in direct mes
 - Installable as a web app (PWA), with share-to-Linkord on Android.
 
 **Administration**
-- An `/admin` area for users, servers, webhooks, reports, audit history, and uploads.
-- A [separate administration site](docs/DEPLOY.md#separate-administration-site) can run on its own hostname with a dedicated sign-in.
+- An optional [administration site](docs/DEPLOY.md#separate-administration-site) with a dedicated hostname and sign-in for managing users, servers, webhooks, reports, audit history and uploads.
 
 ## ⚡ Quick start
 

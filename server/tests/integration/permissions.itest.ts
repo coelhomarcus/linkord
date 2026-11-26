@@ -11,7 +11,7 @@ import { canSendDirectMessage } from '../../src/modules/friendships/friendshipsR
 import { createInvitations } from '../../src/modules/servers/serverInvitationsRepository.js';
 import { invalidateAllServers } from '../../src/modules/servers/serverAccess.js';
 import { PERMISSIONS } from '../../src/modules/servers/permissions.js';
-import { befriend, db, makeServerWithMembers, makeUser, pool } from './helpers.js';
+import { adminHeaders, befriend, db, makeAdminSession, makeServerWithMembers, makeUser, pool } from './helpers.js';
 
 // The permission matrix of docs/contratos.md, executed over HTTP against a real
 // database: for each action, who may do it and, for everyone else, WHICH error
@@ -22,7 +22,7 @@ let app: FastifyInstance;
 before(async () => { app = createApp(); await app.ready(); });
 after(async () => { await app.close(); await pool.end(); });
 
-interface Actor { id: string; username: string; token: string }
+interface Actor { id: string; username: string; token: string; adminToken?: string }
 async function actor(prefix: string, role: 'user' | 'admin' = 'user'): Promise<Actor> {
   const user = await makeUser(prefix, role);
   return { ...user, token: (await createSession(user.id)).rawToken };
@@ -30,7 +30,8 @@ async function actor(prefix: string, role: 'user' | 'admin' = 'user'): Promise<A
 
 interface Reply { status: number; code?: string; body: any }
 async function call(as: Actor | null, method: 'GET' | 'POST' | 'DELETE' | 'PATCH' | 'PUT', url: string, payload?: unknown): Promise<Reply> {
-  const res = await app.inject({ method, url, payload: payload as object | undefined, headers: as ? { cookie: `${config.SESSION_COOKIE}=${as.token}` } : {} });
+  const headers = url.startsWith('/api/admin/') ? adminHeaders(as?.adminToken) : as ? { cookie: `${config.SESSION_COOKIE}=${as.token}` } : {};
+  const res = await app.inject({ method, url, payload: payload as object | undefined, headers });
   const body = res.body ? JSON.parse(res.body) : null;
   return { status: res.statusCode, code: body?.error?.code, body };
 }
@@ -89,6 +90,7 @@ describe('matrix: admin routes', () => {
     const demoted = await actor('dm', 'admin');
     await db.update(users).set({ role: 'user' }).where(eq(users.id, demoted.id)); // session still carries role=admin
     const suspended = await actor('sp', 'admin');
+    for (const account of [plain, demoted, suspended]) account.adminToken = await makeAdminSession(account.id);
     await db.update(users).set({ status: 'suspended' }).where(eq(users.id, suspended.id));
 
     for (const [name, method, url] of routes) {
@@ -101,6 +103,10 @@ describe('matrix: admin routes', () => {
 
   it('an active admin reads; without a reason it does not act; it does not act on itself', async () => {
     const admin = await actor('ad', 'admin');
+    expectDenied(await call(admin, 'GET', '/api/admin/users'), 401, 'unauthenticated', 'app session');
+    const publicResponse = await app.inject({ method: 'GET', url: '/api/admin/users', headers: { cookie: `${config.SESSION_COOKIE}=${admin.token}` } });
+    assert.equal(publicResponse.statusCode, 404);
+    admin.adminToken = await makeAdminSession(admin.id);
     for (const url of ['/api/admin/users', '/api/admin/servers', '/api/admin/webhooks', '/api/admin/reports', '/api/admin/system', '/api/admin/audit']) {
       assert.equal((await call(admin, 'GET', url)).status, 200, url);
     }

@@ -4,17 +4,18 @@ Run the frontend and backend on your machine. PostgreSQL is required, and LiveKi
 
 ## Prerequisites
 
-- Bun 1.4.5 for the server, web app and browser tests
+- Bun 1.4.5 for the server, both frontends and browser tests
 - Node.js 22 and npm for desktop development and packaging
 - Docker for running local dependencies in containers. The browser tests also need the Compose plugin.
 
 ## Set up the repository
 
-The root package, web app and browser tests each have a Bun lockfile.
+The root package, both frontends and browser tests each have a Bun lockfile.
 
 ```bash
 bun install --frozen-lockfile
 bun install --frozen-lockfile --cwd web
+bun install --frozen-lockfile --cwd admin
 cp .env.example .env
 ```
 
@@ -101,7 +102,7 @@ Creates four accounts (`ana`, `bruno`, `carla`, `davi`; the shared password is p
 bun run admin:grant <your-username>
 ```
 
-To develop the separate panel, start the backend with `ADMIN_URL=http://127.0.0.1:5174` and run `bun run --cwd web dev --mode admin` in a second terminal. Open `http://127.0.0.1:5174` and sign in with the administrator account. The public Vite app stays at `http://localhost:5173`.
+To develop the separate panel, start the backend with `ADMIN_URL=http://127.0.0.1:5174` and run `bun run dev:admin` in a second terminal. Open `http://127.0.0.1:5174` and sign in with the administrator account. The public Vite app stays at `http://localhost:5173`. Without `ADMIN_URL`, the backend starts with the administration API disabled.
 
 ## Desktop app
 
@@ -140,12 +141,12 @@ The server keeps the newest 20 activities per account (`activity_history`, for t
 bun run check
 ```
 
-Runs the server test typecheck, the web lint, the dependency audit, the server and web tests and the production build. None of these tests needs PostgreSQL (`.env.test` supplies a placeholder `DATABASE_URL`). For desktop changes, also run `npm run typecheck --prefix desktop` and `npm test --prefix desktop`. See [End-to-end tests](#end-to-end-tests) for browser verification.
+Runs the server test typecheck, lint for both frontends, the dependency audit, the server and frontend tests and the production builds. None of these tests needs PostgreSQL (`.env.test` supplies a placeholder `DATABASE_URL`). For desktop changes, also run `npm run typecheck --prefix desktop` and `npm test --prefix desktop`. See [End-to-end tests](#end-to-end-tests) for browser verification.
 
-- **CI** (`.github/workflows/ci.yml`) runs the server, web, desktop, and audit and dead code checks in parallel on pushes to `main` and `develop` and on pull requests that change more than documentation. A separate job runs `bun run test:integration` against a disposable PostgreSQL 17 service on the runner.
-- **End-to-end** (`.github/workflows/e2e.yml`) runs the `features`, `restart` and `upgrade` projects in parallel on pull requests into `main`, and on demand from the Actions tab. A failed job uploads the Playwright report and traces.
+- **CI** (`.github/workflows/ci.yml`) runs the server, both frontends, desktop, and audit and dead code checks in parallel on pushes to `main` and `develop` and on pull requests that change more than documentation. A separate job runs `bun run test:integration` against a disposable PostgreSQL 17 service on the runner.
+- **End-to-end** (`.github/workflows/e2e.yml`) runs the `features`, `restart`, `upgrade` and `split` projects in parallel on pull requests into `main`, and on demand from the Actions tab. A failed job uploads the Playwright report and traces.
 - **Desktop installer** (`.github/workflows/desktop.yml`) runs only by hand; see [DEPLOY.md](DEPLOY.md#building-the-installer).
-- **Audit:** `bun audit --prod --audit-level=high` for the root and `web/`, so keep build-only packages (Tailwind, Vite plugins) in `devDependencies` of `web/`; the image ships only the build output.
+- **Audit:** `bun audit --prod --audit-level=high` for the root, `web/` and `admin/`. Keep build-only packages such as Tailwind and Vite plugins in `devDependencies`. The frontend images ship the build output.
 
 ## Scripts
 
@@ -154,18 +155,19 @@ Every script runs from the repository root.
 | Script | What it does |
 | --- | --- |
 | `bun run dev` | API (`:3000`) and web (`:5173`) in watch mode. |
+| `bun run dev:admin` | The [admin site](#create-an-administrator) on `:5174` in watch mode. |
 | `bun run dev:desktop` | The [desktop app](#desktop-app) against `LINKORD_URL` (default `http://localhost:5173`). Needs `npm install --prefix desktop`. |
 | `bun run package:desktop` | The Windows installer, see [DEPLOY.md](DEPLOY.md#building-the-installer). |
-| `bun run build` / `bun run start` | Production build of the server and the web app, and the built server. |
+| `bun run build` / `bun run start` | Builds the server and both frontends, or starts the built server. |
 | `bun run check` | Everything that should pass before pushing ([Run the checks](#run-the-checks)). |
-| `bun run test` | `test:server` and `test:web`. |
-| `bun run test:server` / `test:web` / `test:desktop` | Unit tests of one side (`bun test`, Vitest, `node --test`). `test:desktop` needs `desktop/` installed and is not part of `bun run test`. |
+| `bun run test` | `test:server`, `test:web` and `test:admin`. |
+| `bun run test:server` / `test:web` / `test:admin` / `test:desktop` | Unit tests of one side (`bun test`, Vitest, `node --test`). `test:desktop` needs `desktop/` installed and is not part of `bun run test`. |
 | `bun run test:server:coverage` | Server unit tests with Bun's coverage report. |
 | `bun run typecheck:server:tests` | Typechecks `server/tests/`. |
 | `bun run test:integration` | `server/tests/integration/*.itest.ts` against a throwaway database it creates and drops on your local Postgres. `bun run test:integration <name>` runs only the files whose name contains it. |
 | `bun run test:e2e` (and `:features`, `:restart`, `:upgrade`) | The browser suite ([End-to-end tests](#end-to-end-tests)). Needs Docker and Chrome. |
 | `bun run check:audit` | The dependency audit, part of `bun run check`. |
-| `bun run check:dead-code` | `knip`: unused files, exports and dependencies across `server/`, `web/`, `e2e/` and `desktop/` (all four installed). Runs in CI, not in `bun run check`. |
+| `bun run check:dead-code` | `knip`: unused files, exports and dependencies across `server/`, `web/`, `admin/`, `e2e/` and `desktop/` (all dependencies installed). Runs in CI, not in `bun run check`. |
 | `bun run db:migrate` | Applies pending migrations (the server also does it at boot unless `MIGRATE_ON_BOOT=0`). |
 | `bun run db:generate` | Generates a migration from `server/src/db/schema.ts`. Rename the file to describe the change. |
 | `bun run db:seed` | [Sample data](#sample-data). |
@@ -177,9 +179,9 @@ Every script runs from the repository root.
 | `bun run backup:rehearse` | Backup, restore and a boot on throwaway local databases ([below](#backup-scripts-locally)). |
 | `bun run admin:grant -- <username>` / `admin:revoke` | Gives or takes administrator access. |
 | `bun run emoji:data` | Rebuilds `web/public/emoji-data/<lang>/emojis.json` from the pinned `emojibase-data`, leaving out what the pinned `@discordapp/twemoji` cannot draw. Run it after bumping either. |
-| `bun run icons` | Rebuilds `web/src/shared/ui/icons/fluent.ts` from `@fluentui/svg-icons` for every icon imported from `@/shared/ui/icons`. A new icon needs a line in `FLUENT_ICONS` (`web/scripts/buildIcons.ts`) first; a test fails while the file is stale. |
+| `bun run icons` | Rebuilds `packages/frontend-shared/src/ui/icons/fluent.ts` from `@fluentui/svg-icons` for the icons used by both frontends. A new icon needs a line in `FLUENT_ICONS` (`web/scripts/buildIcons.ts`) first; a test fails while the file is stale. |
 
-`build:server`/`build:web` and `dev:server`/`dev:web` are the parts of `build` and `dev`. The root calls scripts in `web/` (`dev`, `build`, `lint`, `preview`, `test`, `test:coverage`), `desktop/` (`start`, `build`, `typecheck`, `test`, `package`) and `e2e/` (`test`, `test:features`, `test:restart`, `test:upgrade`, `report`, `typecheck`). Run web and E2E scripts with `bun run --cwd <package> <script>`, and desktop scripts with `npm run <script> --prefix desktop`.
+`build:server`, `build:web` and `build:admin` are the parts of `build`. The root calls scripts in `web/` and `admin/` (`dev`, `build`, `lint`, `preview`, `test`, `test:coverage`), `desktop/` (`start`, `build`, `typecheck`, `test`, `package`) and `e2e/` (`test`, `test:features`, `test:restart`, `test:upgrade`, `report`, `typecheck`). Run frontend and E2E scripts with `bun run --cwd <package> <script>`, and desktop scripts with `npm run <script> --prefix desktop`.
 
 The scripts behind `db:*`, `admin:*`, `backup*`, `restore` and `test:integration` live in `server/src/scripts/`, each with a header comment on how to call it.
 
@@ -232,7 +234,7 @@ Playwright runs on Bun and uses the installed Google Chrome. Its CLI scripts use
 | `features/stickers` | Uploading, sending across servers, replying to one, a deleted sticker. |
 | `features/profile` | Profile edits reaching a friend, animated photo and banner, the games widgets and Wall editing, the phone layout. |
 | `features/activity` | Ranked activity and the summary published on the Wall from the desktop history. |
-| `features/reports-admin` | Reporting a message, the admin deleting it, suspending an account. |
+| `features/admin-disabled` | An administrator can use the public app without `ADMIN_URL`. The old routes and admin HTTP API return `404`. |
 | `features/settings` | Language and theme following the account to another browser; text size staying on the device. |
 | `features/security` | No framing, a foreign script refused and reported, YouTube as a sandboxed iframe. |
 | `features/presence` | Status and custom status reaching other devices and friends, invisible, status kept across a reload. |

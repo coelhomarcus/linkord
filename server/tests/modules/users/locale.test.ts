@@ -5,10 +5,10 @@ import { describe, it } from 'node:test';
 import { DEFAULT_LOCALE, isLocale, LOCALES, resolveLocale } from '../../../src/modules/users/locale.js';
 import { localeText } from '../../../src/modules/users/localeText.js';
 
-const WEB_LANGUAGES = path.resolve(import.meta.dirname, '../../../../web/src/shared/i18n/languages.ts');
+const WEB_LANGUAGES = path.resolve(import.meta.dirname, '../../../../packages/frontend-shared/src/i18n/languages.ts');
 
 describe('locale', () => {
-  it('lists the same languages as the web app', () => {
+  it('lists the same languages as the frontends', () => {
     const source = fs.readFileSync(WEB_LANGUAGES, 'utf8');
     const webCodes = [...source.matchAll(/code: '([^']+)'/g)].map((m) => m[1]);
     assert.deepEqual([...LOCALES], webCodes);

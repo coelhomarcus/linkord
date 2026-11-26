@@ -57,23 +57,6 @@ function twemojiAssets(): Plugin {
   };
 }
 
-function adminEntry(): Plugin {
-  return {
-    name: 'admin-entry',
-    transformIndexHtml: {
-      order: 'pre',
-      handler: (html) => html
-        .replace('<html lang="pt-BR">', '<html lang="pt-BR" data-admin-site>')
-        .replace('/src/main.tsx', '/src/admin.tsx')
-        .replace('/favicon.svg', '/src/features/admin/admin-mark.svg?no-inline')
-        .replace(/    <link rel="(?:manifest|apple-touch-icon)"[^\n]+\n/g, '')
-        .replace('<title>Linkord</title>', '<title>Linkord Admin</title>')
-        .replace("        document.title = language === 'en-US' ? 'Linkord' : 'Linkord';\n", '')
-        .replace('Chat, chamadas de voz e vídeo e compartilhamento de tela em tempo real.', 'Painel de administração do Linkord.'),
-    },
-  };
-}
-
 // REACT_COMPILER_LOG=1 lists every component or hook the compiler left as
 // written (a Rules of React violation, or syntax it does not handle yet such
 // as try/finally); those still work, they are just not memoized.
@@ -90,21 +73,18 @@ function reactCompilerOptions() {
   };
 }
 
-export default defineConfig(({ mode }) => ({
-  plugins: [react(), babel({ presets: [reactCompilerPreset(reactCompilerOptions())] }), tailwindcss(), Icons({ compiler: 'jsx', jsx: 'react' }), mode === 'admin' ? adminEntry() : twemojiAssets(), cspStyleSources()],
+export default defineConfig({
+  plugins: [react(), babel({ presets: [reactCompilerPreset(reactCompilerOptions())] }), tailwindcss(), Icons({ compiler: 'jsx', jsx: 'react' }), twemojiAssets(), cspStyleSources()],
   define: {
     __TWEMOJI_PATH__: JSON.stringify(TWEMOJI_PATH),
     __EMOJI_DATA_VERSION__: JSON.stringify(`${EMOJIBASE_VERSION}-${TWEMOJI_VERSION}`),
   },
   resolve: {
-    alias: {
-      '@': path.resolve(import.meta.dirname, './src'),
-      '@tests': path.resolve(import.meta.dirname, './tests'),
-    },
+    tsconfigPaths: true,
+    preserveSymlinks: true,
   },
   server: {
-    port: mode === 'admin' ? 5174 : 5173,
-    strictPort: mode === 'admin',
+    port: 5173,
     proxy: {
       '/ws': { target: 'http://localhost:3000', ws: true },
       '/api': { target: 'http://localhost:3000' },
@@ -112,7 +92,7 @@ export default defineConfig(({ mode }) => ({
     },
   },
   build: {
-    outDir: mode === 'admin' ? 'dist/admin' : 'dist',
+    outDir: 'dist',
     emptyOutDir: true,
   },
   test: {
@@ -124,4 +104,4 @@ export default defineConfig(({ mode }) => ({
       reporter: ['text', 'html'],
     },
   },
-}));
+});

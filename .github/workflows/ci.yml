@@ -66,23 +66,27 @@ jobs:
         env:
           DATABASE_URL: postgres://linkord:linkord@127.0.0.1:${{ job.services.postgres.ports['5432'] }}/linkord
 
-  web:
-    name: Web
+  frontend:
+    name: Frontend (${{ matrix.package }})
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        package: [web, admin]
     steps:
       - uses: actions/checkout@v7
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: ${{ env.BUN_VERSION }}
-      - run: bun install --frozen-lockfile --cwd web
+      - run: bun install --frozen-lockfile --cwd ${{ matrix.package }}
       - name: Lint
-        run: bun run --cwd web lint
+        run: bun run --cwd ${{ matrix.package }} lint
       - name: Test
-        run: bun run test:web
+        run: bun run test:${{ matrix.package }}
       # `tsc -b` typechecks the app before `vite build`
       - name: Typecheck and build
-        run: bun run build:web
+        run: bun run build:${{ matrix.package }}
 
   desktop:
     name: Desktop
@@ -123,6 +127,7 @@ jobs:
       - run: |
           bun install --frozen-lockfile
           bun install --frozen-lockfile --cwd web
+          bun install --frozen-lockfile --cwd admin
           bun install --frozen-lockfile --cwd e2e
           npm ci --prefix desktop
         env:

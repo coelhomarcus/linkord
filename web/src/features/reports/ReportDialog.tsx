@@ -8,8 +8,8 @@ import { Textarea } from '@/shared/ui/primitives/textarea';
 import { ApiError, submitReport } from '@/shared/api/api';
 import { cn } from '@/shared/lib/utils';
 import { i18n } from '@/shared/i18n/init';
-import { MAX_REPORT_DETAILS, REPORT_CATEGORIES } from './reportCategories';
-import type { ReportCategory, ReportTarget } from './reportCategories';
+import { MAX_REPORT_DETAILS, REPORT_CATEGORIES } from '@linkord/frontend-shared/reports/reportCategories';
+import type { ReportCategory, ReportTarget } from '@linkord/frontend-shared/reports/reportCategories';
 
 function describeError(err: unknown): string {
   if (err instanceof ApiError) {

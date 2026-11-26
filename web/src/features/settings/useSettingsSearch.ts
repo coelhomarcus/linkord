@@ -20,14 +20,14 @@ export interface SettingsSearchResult {
   categoryLabel: string;
 }
 
-export function useSettingsSearch(isAdmin: boolean) {
+export function useSettingsSearch() {
   const { t } = useTranslation('settings');
   const [query, setQuery] = useState('');
   const desktop = hasDesktopSettings();
 
   const visibleEntries = useMemo(
-    () => SETTINGS_SEARCH_INDEX.filter((entry) => categoryVisible(findCategory(entry.categoryId), isAdmin, desktop) && (isAdmin || !entry.adminOnly)),
-    [isAdmin, desktop],
+    () => SETTINGS_SEARCH_INDEX.filter((entry) => categoryVisible(findCategory(entry.categoryId), desktop)),
+    [desktop],
   );
 
   const results = useMemo((): SettingsSearchResult[] => {

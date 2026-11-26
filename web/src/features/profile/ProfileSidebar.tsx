@@ -5,7 +5,7 @@ import { Avatar } from '@/shared/Avatar';
 import { Button } from '@/shared/ui/primitives/button';
 import { Tabs, TabsIndicator, TabsList, TabsPanel, TabsTrigger } from '@/shared/ui/primitives/tabs';
 import { useRoom } from '@/state/RoomContext';
-import { ServerIcon } from '@/features/servers/ServerIcon';
+import { ServerIcon } from '@linkord/frontend-shared/ui/ServerIcon';
 import { ProfileWall, type WallDraft } from './ProfileWall';
 import type { ProfileDetails } from '@/shared/api/api';
 import { UserStatusDot } from '@/features/status/UserStatus';
