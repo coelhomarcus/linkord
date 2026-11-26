@@ -3,7 +3,7 @@ import type { SettingsTab } from '@/shared/lib/routes';
 export interface SearchEntry {
   categoryId: SettingsTab;
   /** Matches a `<SettingsSection id="...">` — the destination becomes
-   * `/app/settings/:categoryId#:sectionId`. Without one the result opens the
+   * `/settings/:categoryId#:sectionId`. Without one the result opens the
    * tab at its top: Connections is a single page, and Activity is the whole tab. */
   sectionId?: string;
   /** `search.<searchKey>.title` / `.keywords` (comma separated) in the

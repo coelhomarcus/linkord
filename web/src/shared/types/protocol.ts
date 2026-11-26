@@ -28,9 +28,8 @@ export type ReactionEmoji = string;
 
 /** Wire protocol version this build speaks; the server refuses older ones
  * (client_outdated). Keep in sync with server/src/realtime/protocolVersion.ts
- * — version 38 removes playgrounds: no `playground-token`, no `voiceMode` or `playgroundChatId` on
- * channels. */
-export const PROTOCOL_VERSION = 38;
+ * — version 39 moves the app to the root: a `notice`'s `path` no longer starts with `/app`. */
+export const PROTOCOL_VERSION = 39;
 
 export interface LiveNotice {
   kind: 'friend_request' | 'friend_accepted' | 'server_invitation';

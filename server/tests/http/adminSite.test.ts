@@ -104,7 +104,7 @@ describe('with ADMIN_URL, the same process serves the admin site on its host', (
     assert.equal((await onApp('/admin/users')).statusCode, 404);
     assert.equal((await onApp('/api/admin/users')).statusCode, 404);
     assert.equal((await onApp('/sw.js')).statusCode, 200);
-    assert.doesNotMatch((await onApp('/app/friends')).body, /data-admin-site/);
+    assert.doesNotMatch((await onApp('/friends')).body, /data-admin-site/);
   });
 
   it('refuses the public socket on the admin host', () => {

@@ -242,7 +242,7 @@ describe('the export', () => {
     assert.equal(res.status, 404);
     const anonymous = await download(undefined, body.latest.id);
     assert.equal(anonymous.status, 302);
-    assert.equal(anonymous.headers.location, '/app/settings/privacy#data-export');
+    assert.equal(anonymous.headers.location, '/settings/privacy#data-export');
   });
 
   it('expires: the link answers 410 and the sweep deletes the file', async () => {

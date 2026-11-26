@@ -38,7 +38,7 @@ function renderBar(callId: string | null = null, onReturnToCall = vi.fn()) {
   return renderSocial(
     <NotificationStateProvider><MobileTabBar activeCallConversationId={callId} onReturnToCall={onReturnToCall} /><WhereAmI /></NotificationStateProvider>,
     {
-      path: '/app/friends',
+      path: '/friends',
       room: {
         state: { ...initialRoomState, me: { ...initialRoomState.me, userId: 'me', displayName: 'Mar' } },
         conversations: [conversation, direct], servers: [server], unreadByConversation: new Map([['c1', 2], ['d1', 1]]),
@@ -51,7 +51,7 @@ describe('MobileTabBar', () => {
   it('links to four top-level pages with active state and unread badges', async () => {
     renderBar();
     const links = screen.getAllByRole('link');
-    expect(links.map((link) => link.getAttribute('href'))).toEqual(['/app/channels/s1', '/app/channels/@me', '/app/notifications', '/app/profile']);
+    expect(links.map((link) => link.getAttribute('href'))).toEqual(['/channels/s1', '/channels/@me', '/notifications', '/profile']);
     expect(screen.getByRole('link', { name: /^Mensagens/ })).toHaveAttribute('aria-current', 'page');
     expect(screen.getByRole('link', { name: 'Servidores, 2 não lidas' })).toHaveTextContent('2');
     expect(screen.getByRole('link', { name: 'Mensagens, 1 não lida' })).toHaveTextContent('1');
@@ -70,6 +70,6 @@ describe('MobileTabBar', () => {
     const user = userEvent.setup();
     renderBar();
     await user.click(screen.getByRole('link', { name: /^Servidores/ }));
-    expect(screen.getByTestId('where')).toHaveTextContent('REPLACE /app/channels/s1');
+    expect(screen.getByTestId('where')).toHaveTextContent('REPLACE /channels/s1');
   });
 });

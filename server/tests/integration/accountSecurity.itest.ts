@@ -836,7 +836,7 @@ describe('new sign-in alerts', () => {
     assert.match(mail.text, /Browser: Chrome on macOS/);
     assert.ok(mail.text.includes(`IP address: ${ip}`));
     assert.match(mail.text, /Time: .* UTC/);
-    assert.ok(mail.text.includes(`${config.APP_URL}/app/settings/security#sessions`));
+    assert.ok(mail.text.includes(`${config.APP_URL}/settings/security#sessions`));
   });
 
   it('is written in the account language', async () => {

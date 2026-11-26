@@ -39,7 +39,7 @@ test.describe('one call per account across tabs', () => {
     await b.expectRemoteAudio(1);
 
     // opened after the call started: its first snapshot has to carry the other tab's call
-    const second = await secondTab(alice, `/app/channels/${server.id}/${server.text.id}`);
+    const second = await secondTab(alice, `/channels/${server.id}/${server.text.id}`);
     const members = second.page.getByRole('list', { name: `Na chamada de ${server.voice.name}` });
     await expect(members.getByText(alice.username)).toBeVisible();
     await expect(second.page.getByText('Canal de voz em outra aba ou dispositivo')).toBeVisible();
@@ -82,7 +82,7 @@ test.describe('one call per account across tabs', () => {
     await b.page.getByRole('button', { name: 'Atender' }).click();
     await first.expectRemoteAudio(1);
 
-    const second = await secondTab(alice, `/app/channels/@me/${encodeURIComponent(dmId)}`);
+    const second = await secondTab(alice, `/channels/@me/${encodeURIComponent(dmId)}`);
     await expect(second.page.getByText('Chamada privada em outra aba ou dispositivo')).toBeVisible();
 
     await callDm(second);
@@ -107,7 +107,7 @@ test.describe('one call per account across tabs', () => {
     const first = await alice.app();
     await first.openChannel(server.id, server.text.id);
     await first.joinVoice(server.voice.name);
-    const second = await secondTab(alice, `/app/channels/${server.id}/${server.text.id}`);
+    const second = await secondTab(alice, `/channels/${server.id}/${server.text.id}`);
     await expect(second.page.getByText('Canal de voz em outra aba ou dispositivo')).toBeVisible();
 
     const b = await bob.app();

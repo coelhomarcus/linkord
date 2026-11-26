@@ -21,9 +21,9 @@ vi.mock('@/shared/PageHeader', () => ({
 }));
 vi.mock('@/features/settings/PrivacyTab', () => ({ PrivacyTab: () => <p>lista de bloqueados</p> }));
 
-function renderSettings(overrides: Partial<RoomContextValue> = {}, path = '/app/settings/account', onOpenProfile = vi.fn()) {
+function renderSettings(overrides: Partial<RoomContextValue> = {}, path = '/settings/account', onOpenProfile = vi.fn()) {
   const router = createMemoryRouter(
-    [{ path: '/app/settings/:tab?', element: <SettingsPage onOpenProfile={onOpenProfile} /> }],
+    [{ path: '/settings/:tab?', element: <SettingsPage onOpenProfile={onOpenProfile} /> }],
     { initialEntries: [path] },
   );
   return { ...renderWithRoom(<RouterProvider router={router} />, overrides), router };
@@ -31,30 +31,30 @@ function renderSettings(overrides: Partial<RoomContextValue> = {}, path = '/app/
 
 describe('SettingsPage — activity', () => {
   it('has a tab of its own, outside Data & privacy', () => {
-    renderSettings({}, '/app/settings/activity');
+    renderSettings({}, '/settings/activity');
     expect(screen.getByText('compartilhar atividade')).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Atividade' })).toBeInTheDocument();
     expect(screen.queryByText('lista de bloqueados')).not.toBeInTheDocument();
   });
 
   it('opens the tab from an old link to the Data & privacy section', () => {
-    const { router } = renderSettings({}, '/app/settings/privacy#activity');
-    expect(router.state.location.pathname).toBe('/app/settings/activity');
+    const { router } = renderSettings({}, '/settings/privacy#activity');
+    expect(router.state.location.pathname).toBe('/settings/activity');
     expect(screen.getByText('compartilhar atividade')).toBeInTheDocument();
   });
 
   it('is found by searching for a game', async () => {
     const user = userEvent.setup();
-    renderRouted({}, '/app/settings/account');
+    renderRouted({}, '/settings/account');
     await user.type(screen.getByLabelText('Buscar'), 'jogando');
     await user.click(screen.getByText('Compartilhar atividade'));
-    expect(screen.getByTestId('where')).toHaveTextContent('/app/settings/activity');
+    expect(screen.getByTestId('where')).toHaveTextContent('/settings/activity');
   });
 });
 
 describe('SettingsPage — connections', () => {
   it('lists the connections on their own tab', () => {
-    renderSettings({}, '/app/settings/connections');
+    renderSettings({}, '/settings/connections');
     expect(screen.getByText('Conexões', { selector: 'section' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Conexões' })).toBeInTheDocument();
   });
@@ -72,9 +72,9 @@ function Where() {
   return <p data-testid="where">{location.pathname}</p>;
 }
 
-function renderRouted(overrides: Partial<RoomContextValue> = {}, path = '/app/settings/account') {
+function renderRouted(overrides: Partial<RoomContextValue> = {}, path = '/settings/account') {
   const router = createMemoryRouter(
-    [{ path: '/app/settings/:tab?', element: <><Where /><SettingsPage onOpenProfile={vi.fn()} /></> }],
+    [{ path: '/settings/:tab?', element: <><Where /><SettingsPage onOpenProfile={vi.fn()} /></> }],
     { initialEntries: [path] },
   );
   return { ...renderWithRoom(<RouterProvider router={router} />, overrides), router };
@@ -87,34 +87,34 @@ describe('SettingsPage — category navigation', () => {
   beforeEach(() => { mockMode = 'wide'; });
 
   it('opens the category named in the URL and marks it as the current page', () => {
-    renderSettings({ state: userState }, '/app/settings/privacy');
+    renderSettings({ state: userState }, '/settings/privacy');
     expect(screen.getByText('lista de bloqueados')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Dados e privacidade' })).toHaveAttribute('aria-current', 'page');
   });
 
   it('keeps the sidebar one level deep: an open category lists no sections under it', () => {
-    renderSettings({ state: userState }, '/app/settings/account');
+    renderSettings({ state: userState }, '/settings/account');
     expect(screen.getByRole('link', { name: 'Minha conta' })).toHaveAttribute('aria-current', 'page');
     expect(screen.queryByRole('list', { name: /Seções de/ })).not.toBeInTheDocument();
   });
 
   it('with no category in the URL, wide mode shows the account at the same URL (no redirect)', () => {
-    renderRouted({ state: userState }, '/app/settings');
+    renderRouted({ state: userState }, '/settings');
     expect(screen.getByRole('heading', { level: 2, name: 'Minha conta' })).toBeInTheDocument();
-    expect(screen.getByTestId('where')).toHaveTextContent('/app/settings');
+    expect(screen.getByTestId('where')).toHaveTextContent('/settings');
     expect(screen.getByRole('link', { name: 'Minha conta' })).toHaveAttribute('aria-current', 'page');
   });
 
   it('an unknown category, or the old profile one, falls back to the account instead of an empty page', () => {
-    renderRouted({ state: userState }, '/app/settings/naoexiste');
-    expect(screen.getByTestId('where')).toHaveTextContent('/app/settings/account');
-    renderRouted({ state: userState }, '/app/settings/profile');
-    expect(screen.getAllByTestId('where').at(-1)).toHaveTextContent('/app/settings/account');
+    renderRouted({ state: userState }, '/settings/naoexiste');
+    expect(screen.getByTestId('where')).toHaveTextContent('/settings/account');
+    renderRouted({ state: userState }, '/settings/profile');
+    expect(screen.getAllByTestId('where').at(-1)).toHaveTextContent('/settings/account');
   });
 
   it('the old Preferences tab lands on Appearance, where its first setting now lives', () => {
-    renderRouted({ state: userState }, '/app/settings/prefs');
-    expect(screen.getByTestId('where')).toHaveTextContent('/app/settings/appearance');
+    renderRouted({ state: userState }, '/settings/prefs');
+    expect(screen.getByTestId('where')).toHaveTextContent('/settings/appearance');
   });
 
   it('groups the categories under headings by topic: account, profile, display, communication, app', () => {
@@ -129,14 +129,14 @@ describe('SettingsPage — category navigation', () => {
   });
 
   it('administration does not appear for a non-admin (not even by URL)', () => {
-    renderRouted({ state: userState }, '/app/settings/moderation');
-    expect(screen.getByTestId('where')).toHaveTextContent('/app/settings/account');
+    renderRouted({ state: userState }, '/settings/moderation');
+    expect(screen.getByTestId('where')).toHaveTextContent('/settings/account');
     expect(screen.queryByRole('link', { name: 'Administração' })).not.toBeInTheDocument();
   });
 
   it('opens the list with who you are, and editing the profile opens your own profile', async () => {
     const onOpenProfile = vi.fn();
-    renderSettings({ state: userState }, '/app/settings/account', onOpenProfile);
+    renderSettings({ state: userState }, '/settings/account', onOpenProfile);
     const shortcut = within(screen.getByRole('navigation', { name: 'Categorias de ajustes' })).getByRole('button', { name: /Editar perfil/ });
     expect(shortcut).toHaveTextContent('Ana');
     expect(screen.queryByRole('link', { name: 'Perfil' })).not.toBeInTheDocument();
@@ -153,7 +153,7 @@ describe('SettingsPage — category navigation', () => {
     const user = userEvent.setup();
     renderRouted({ state: userState });
     await user.click(screen.getByRole('link', { name: 'Dados e privacidade' }));
-    expect(screen.getByTestId('where')).toHaveTextContent('/app/settings/privacy');
+    expect(screen.getByTestId('where')).toHaveTextContent('/settings/privacy');
     expect(screen.getByText('lista de bloqueados')).toBeInTheDocument();
   });
 
@@ -163,7 +163,7 @@ describe('SettingsPage — category navigation', () => {
     await user.type(screen.getByLabelText('Buscar'), 'camera');
     await user.click(screen.getByText('Vídeo'));
 
-    expect(screen.getByTestId('where')).toHaveTextContent('/app/settings/av');
+    expect(screen.getByTestId('where')).toHaveTextContent('/settings/av');
     expect(document.activeElement?.id).toBe('video');
   });
 });
@@ -175,7 +175,7 @@ describe('SettingsPage — compact mode (index and detail)', () => {
   afterEach(() => { mockMode = 'wide'; });
 
   it('the index shows the same headings and order as the sidebar', () => {
-    renderRouted({ state: userState }, '/app/settings');
+    renderRouted({ state: userState }, '/settings');
     const nav = screen.getByRole('navigation', { name: 'Categorias de ajustes' });
     expect(within(nav).getAllByRole('link').map((link) => link.textContent)).toEqual([
       'Minha conta', 'Segurança', 'Dados e privacidade', 'Conexões', 'Atividade', 'Aparência', 'Idioma e hora', 'Voz e vídeo', 'Chat', 'Notificações', 'Baixar o app',
@@ -187,22 +187,22 @@ describe('SettingsPage — compact mode (index and detail)', () => {
 
   it('a category opens directly by link, with an accessible way back to the index', async () => {
     const user = userEvent.setup();
-    renderRouted({ state: userState }, '/app/settings/privacy');
+    renderRouted({ state: userState }, '/settings/privacy');
     expect(screen.getByText('lista de bloqueados')).toBeInTheDocument();
     expect(screen.queryByRole('navigation', { name: 'Categorias de ajustes' })).not.toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: 'Voltar às configurações' }));
-    expect(screen.getByTestId('where')).toHaveTextContent(/^\/app\/settings$/);
+    expect(screen.getByTestId('where')).toHaveTextContent(/^\/settings$/);
     expect(screen.getByRole('link', { name: 'Dados e privacidade' })).toBeInTheDocument();
   });
 
   it('from the index, opening a category and going back walks the history (does not push the index again)', async () => {
     const user = userEvent.setup();
-    renderRouted({ state: userState }, '/app/settings');
+    renderRouted({ state: userState }, '/settings');
     await user.click(screen.getByRole('link', { name: 'Dados e privacidade' }));
-    expect(screen.getByTestId('where')).toHaveTextContent('/app/settings/privacy');
+    expect(screen.getByTestId('where')).toHaveTextContent('/settings/privacy');
     await user.click(screen.getByRole('button', { name: 'Voltar às configurações' }));
-    expect(screen.getByTestId('where')).toHaveTextContent(/^\/app\/settings$/);
+    expect(screen.getByTestId('where')).toHaveTextContent(/^\/settings$/);
     expect(screen.getByRole('navigation', { name: 'Categorias de ajustes' })).toBeInTheDocument();
   });
 });

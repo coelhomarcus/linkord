@@ -94,7 +94,7 @@ export async function sendLoginAlertEmail(
     localeText(locale, 'email.loginAlertTime', { time }),
   ];
   const action = localeText(locale, 'email.loginAlertAction');
-  const link = config.APP_URL ? `${config.APP_URL}/app/settings/security#sessions` : '';
+  const link = config.APP_URL ? `${config.APP_URL}/settings/security#sessions` : '';
   const optOut = localeText(locale, 'email.loginAlertOptOut');
 
   await deliverEmail({

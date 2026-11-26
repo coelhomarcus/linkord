@@ -113,7 +113,7 @@ describe('MicQuickMenu', () => {
     await user.click(screen.getByRole('button', { name: 'Configurações do microfone' }));
     await user.click(await screen.findByText('Configurações de voz'));
 
-    expect(navigate).toHaveBeenCalledWith('/app/settings/av');
+    expect(navigate).toHaveBeenCalledWith('/settings/av');
   });
 });
 

@@ -50,7 +50,7 @@ function wrap(id: string, username: string, password: string, context: BrowserCo
     return app;
   };
   const app = async () => {
-    first ??= await open('/app');
+    first ??= await open('/');
     return first;
   };
   return {

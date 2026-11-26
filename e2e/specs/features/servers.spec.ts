@@ -29,7 +29,7 @@ test.describe('servers', () => {
     await expect(b.page.getByRole('menuitemradio', { name: 'Somente @menções' })).toHaveAttribute('aria-checked', 'true');
 
     // away from the channel, plain traffic leaves no badge on the muted server's icon...
-    await b.page.goto('/app/friends');
+    await b.page.goto('/friends');
     const rail = b.page.getByRole('navigation', { name: 'Servidores' });
     const plain = b.waitForSocketEvent('chat');
     await a.send('mensagem comum');
@@ -40,7 +40,7 @@ test.describe('servers', () => {
     await expect(rail.getByRole('button', { name: `${server.name}, 1 mensagem não lida` })).toBeVisible();
 
     // another tab (another device) gets both settings from the server
-    const second = await bob.newTab(`/app/channels/${server.id}/${server.text.id}`);
+    const second = await bob.newTab(`/channels/${server.id}/${server.text.id}`);
     await expect(second.composer()).toBeVisible();
     await second.page.getByRole('button', { name: server.name, exact: true, expanded: false }).click();
     await expect(second.page.getByRole('menuitem', { name: /^Reativar servidor/ })).toBeVisible();
@@ -173,7 +173,7 @@ test.describe('servers', () => {
     await a.openChannel(server.id, readOnly);
     await a.send('só a dona escreve aqui');
     const b = await bob.app();
-    await b.page.goto(`/app/channels/${server.id}/${readOnly}`);
+    await b.page.goto(`/channels/${server.id}/${readOnly}`);
     await b.expectMessage('só a dona escreve aqui');
     await expect(b.composer()).toHaveCount(0);
   });

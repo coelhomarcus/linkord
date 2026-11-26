@@ -120,6 +120,8 @@ What the window does, and how to try each part:
 
 - **Navigation and permissions.** Only the server's origin opens inside the app; other sites open in the system browser, other schemes are dropped. The page gets microphone, camera, screen capture, output device selection, notifications, image copy and fullscreen on that origin only. It sees `window.overcordDesktop` (typed in `web/src/shared/desktop.ts`) and nothing else from Node or Electron.
 - **`overcord://` links** open `invite/<code>`, `channels/@me/<id>` (a DM) and `channels/<server>/<channel>`, optionally followed by a message id. Anything that does not match the strict patterns in `deepLink.ts` is ignored, and a start from a link ignores `--url`, so another program cannot pick the server. A development run registers the scheme only when started with `npm start --prefix desktop -- --register-protocol`; try a link with `start overcord://invite/<code>` in `cmd`. On the web, an invite opened in a browser on Windows offers **Abrir no app** when the server has a desktop release.
+
+  The web app removes the `/app` prefix from channel links handed off by older desktop versions.
 - **Title bar.** The page draws it (`TopBar` on wide screens, `DesktopFrame` elsewhere) with Windows 11's caption buttons. On a Mac, `OVERCORD_TITLE_BAR=windows` shows the Windows bar.
 - **Screen sharing.** Electron has no picker, so the page shows its own (`DesktopSourcePicker`) and the app grants only the chosen source to the next `getDisplayMedia`. On a Mac it needs Screen Recording permission for Electron and shares video only.
 - **Notifications.** No Web Push: the page shows a native Windows toast for each new message, friend request and invitation while the app runs, with a picture it draws itself (`web/src/shared/notificationIcon.ts`), and a click opens the conversation. What the page may send is checked in `notificationLayout.ts`.
@@ -217,12 +219,13 @@ Playwright runs on Bun and uses the installed Google Chrome. Its CLI scripts use
 | `features/auth` | Sign-up with and without the code, login, logout, two-step login on and off, ending another session. |
 | `features/account-data` | A data export built, emailed and downloaded; deleting the account and cancelling it by signing in. |
 | `features/friends` | Requests accepted, declined and cancelled; block and unblock. |
+| `features/legacy-app-paths` | Permanent redirects for old `/app` links, including the friends view selected by a query and the settings section selected by a fragment. |
 | `features/dm` | Talking in a DM, unread counts, no DM without friendship, muting a DM across tabs. |
 | `features/chat` | Send, typing, reply, edit, delete, reactions, search, image and video attachments, the new-messages line, marking as read. |
 | `features/voice-messages` | Recording and playing a voice message; recording refused during a call without breaking its microphone. |
 | `features/servers` | Creating, invites, permissions (`SPEAK`, hidden and read-only channels), kick, ban, deleting, an animated icon, mute levels. |
 | `features/pins` | Pinning and unpinning, the `PIN_MESSAGES` permission, saved messages. |
-| `features/search` | The header search's filters, sort, jump to message and history. |
+| `features/search` | The header search's filters, keyboard submission with suggestions open, sort, jump to message and history. |
 | `features/voice` | Hearing each other, mute, camera, screen share, moving and disconnecting a member. |
 | `features/call-membership` | A LiveKit client using a kept token is removed from the room after leaving or being banned. |
 | `features/dm-call` | Decline, cancel, an answered call with audio both ways, a video call. |
@@ -393,7 +396,7 @@ Providers' limits and failures are in [INTEGRATIONS.md](INTEGRATIONS.md#myanimel
 
 `web/public/manifest.webmanifest` declares a `share_target`, so the installed app appears in Android Chrome's share sheet (not on iOS, and not for a plain browser tab).
 
-- The share is a `multipart/form-data` POST to `/share-target` that the service worker (`web/public/sw.js`) answers, so it needs a production build with the worker registered. The worker stores the files in Cache Storage (`overcord-share-v1`) and redirects to `/app/share?id=<id>`; nothing reaches the server yet.
+- The share is a `multipart/form-data` POST to `/share-target` that the service worker (`web/public/sw.js`) answers, so it needs a production build with the worker registered. The worker stores the files in Cache Storage (`overcord-share-v1`) and redirects to `/share?id=<id>`; nothing reaches the server yet.
 - `features/share/SharePage.tsx` lets the person pick a DM or channel and hands the files and text to its composer, so the usual size and count limits apply. Unfinished shares expire after an hour. The cache name, path and expiry exist in both `sw.js` and `features/share/sharedPayload.ts`; change them together.
 - To try it: serve the build over HTTPS (or `localhost`), install the app on an Android phone and share a picture. `chrome://inspect` shows the worker and its Cache Storage.
 

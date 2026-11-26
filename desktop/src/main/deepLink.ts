@@ -45,7 +45,7 @@ export function deepLinkPath(link: string): string | null {
       if (place !== HOME && !ID.test(place)) return null;
       if (!ID.test(conversation)) return null;
       if (message !== undefined && !MESSAGE_ID.test(message)) return null;
-      const path = `/app/channels/${place}/${conversation}`;
+      const path = `/channels/${place}/${conversation}`;
       return message === undefined ? path : `${path}?message=${message}`;
     }
     default:

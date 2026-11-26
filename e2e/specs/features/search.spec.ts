@@ -23,15 +23,19 @@ const field = (app: AppPage) => app.page.getByRole('combobox', { name: 'Buscar m
 const results = (app: AppPage) => app.page.getByRole('complementary', { name: 'Buscar mensagens' });
 
 test.describe('header search', () => {
-  test('de: picked from the list, then Ir para mensagem', async ({ users }) => {
+  test('de: picked with the keyboard, then Ir para mensagem', async ({ users }) => {
     const { bob, a, b } = await twoInAChannel(users);
     await b.send('mensagem do bob');
     await a.send('mensagem da alice');
     await a.expectMessage('mensagem do bob');
 
     await field(a).click();
-    await a.page.getByRole('option', { name: /De um usuário específico/ }).click();
-    await a.page.getByRole('option', { name: new RegExp(bob.username) }).click();
+    await field(a).press('ArrowDown');
+    await field(a).press('Space');
+    await field(a).fill(bob.username);
+    await expect(a.page.getByRole('option', { name: new RegExp(bob.username) })).toBeVisible();
+    await field(a).press('ArrowDown');
+    await field(a).press('Space');
     await field(a).press('Enter');
     await expect(results(a).getByText('1 resultado')).toBeVisible();
     await expect(results(a).getByText('mensagem do bob')).toBeVisible();
@@ -59,6 +63,8 @@ test.describe('header search', () => {
 
     await field(a).fill('tem:');
     await a.page.getByRole('option', { name: 'imagem' }).click();
+    await a.page.getByRole('option', { name: /De um usuário específico/ }).hover();
+    await field(a).press('ArrowDown');
     await field(a).press('Enter');
     await expect(results(a).getByText('1 resultado')).toBeVisible();
     await expect(results(a).getByText('olha a foto')).toBeVisible();
@@ -78,9 +84,11 @@ test.describe('header search', () => {
     await results(a).getByRole('button', { name: 'Filtros' }).click();
     const dialog = a.page.getByRole('dialog', { name: 'Filtros' });
     await dialog.getByRole('button', { name: 'Em' }).click();
-    await a.page.getByRole('option', { name: 'segundo' }).click();
-    await a.page.keyboard.press('Escape');
-    await dialog.getByRole('button', { name: 'Aplicar filtros' }).click();
+    const selected = a.page.getByRole('option', { name: 'segundo' });
+    await selected.press('Space');
+    await expect(selected).toHaveAttribute('aria-selected', 'true');
+    await a.page.getByRole('option', { name: 'geral', exact: true }).press('Enter');
+    await expect(dialog).toBeHidden();
     await expect(results(a).getByText('1 resultado')).toBeVisible();
     await expect(results(a).getByText('relatório no segundo')).toBeVisible();
 

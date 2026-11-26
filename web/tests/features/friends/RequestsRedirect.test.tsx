@@ -12,7 +12,7 @@ function at(path: string) {
   return render(
     <MemoryRouter initialEntries={[path]}>
       <Routes>
-        <Route path="/app/requests" element={<RequestsRedirect />} />
+        <Route path="/requests" element={<RequestsRedirect />} />
         <Route path="*" element={<Where />} />
       </Routes>
     </MemoryRouter>,
@@ -20,18 +20,18 @@ function at(path: string) {
 }
 
 describe('RequestsRedirect (links antigos)', () => {
-  it('/app/requests vai para as solicitacoes recebidas', () => {
-    at('/app/requests');
-    expect(screen.getByTestId('where')).toHaveTextContent('/app/friends?tab=pending#received');
+  it('/requests vai para as solicitacoes recebidas', () => {
+    at('/requests');
+    expect(screen.getByTestId('where')).toHaveTextContent('/friends?tab=pending#received');
   });
 
-  it('/app/requests?tab=invitations vai para os convites', () => {
-    at('/app/requests?tab=invitations');
-    expect(screen.getByTestId('where')).toHaveTextContent('/app/friends?tab=pending#invitations');
+  it('/requests?tab=invitations vai para os convites', () => {
+    at('/requests?tab=invitations');
+    expect(screen.getByTestId('where')).toHaveTextContent('/friends?tab=pending#invitations');
   });
 
   it('com barra final e tab desconhecida ainda cai nas recebidas', () => {
-    at('/app/requests/?tab=outra');
-    expect(screen.getByTestId('where')).toHaveTextContent('/app/friends?tab=pending#received');
+    at('/requests/?tab=outra');
+    expect(screen.getByTestId('where')).toHaveTextContent('/friends?tab=pending#received');
   });
 });

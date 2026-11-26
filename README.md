@@ -20,7 +20,7 @@ Overcord is a self-hosted place to chat and call with friends. Talk in direct me
 **Chat**
 - Direct messages and private servers with text channels, organized into categories.
 - Replies, reactions, edits, deletes, mentions (members, roles, `@everyone`, `@here`) and `||spoilers||`.
-- Message search with filters for author, channel, content type, mentions and dates, as in Discord.
+- Message search with filters for author, channel, content type, mentions and dates. Use Enter to search with your chosen filters, or use the arrow keys and Space to choose a suggestion in the search field.
 - Pinned messages per channel and DM, and private saved messages.
 - Attachments, voice messages, and link cards with YouTube and Twitch players.
 - A video player with keyboard shortcuts and picture-in-picture, and a media viewer with zoom and a thumbnail strip.
@@ -53,6 +53,7 @@ Overcord is a self-hosted place to chat and call with friends. Talk in direct me
 - Username and password changes, account deletion, and a download of your data.
 - Themes, density, fonts, languages (Portuguese and English) and notification sounds, synced across your devices.
 - Installable as a web app (PWA), with share-to-Overcord on Android.
+- The web app opens at the root of its domain. Existing `/app` links redirect to their new addresses.
 
 **Administration**
 - An optional [administration site](docs/DEPLOY.md#administration-site) with a dedicated hostname and sign-in for managing users, servers, webhooks, reports, audit history and uploads.

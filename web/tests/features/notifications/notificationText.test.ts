@@ -30,9 +30,9 @@ describe('notificationText', () => {
   });
 
   it('each type leads to its own page', () => {
-    expect(notificationTarget(base)).toBe('/app/friends?tab=pending#received');
-    expect(notificationTarget({ ...base, kind: 'friend_accepted' })).toBe('/app/friends');
-    expect(notificationTarget({ ...base, kind: 'server_invitation' })).toBe('/app/friends?tab=pending#invitations');
+    expect(notificationTarget(base)).toBe('/friends?tab=pending#received');
+    expect(notificationTarget({ ...base, kind: 'friend_accepted' })).toBe('/friends');
+    expect(notificationTarget({ ...base, kind: 'server_invitation' })).toBe('/friends?tab=pending#invitations');
   });
 
   it('relative time', () => {

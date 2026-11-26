@@ -13,13 +13,13 @@ describe('deepLinkPath', () => {
   });
 
   it('opens a DM and a channel', () => {
-    assert.equal(deepLinkPath(`overcord://channels/@me/${UUID}`), `/app/channels/@me/${UUID}`);
-    assert.equal(deepLinkPath(`overcord://channels/${UUID}/${OTHER}`), `/app/channels/${UUID}/${OTHER}`);
+    assert.equal(deepLinkPath(`overcord://channels/@me/${UUID}`), `/channels/@me/${UUID}`);
+    assert.equal(deepLinkPath(`overcord://channels/${UUID}/${OTHER}`), `/channels/${UUID}/${OTHER}`);
   });
 
   it('opens a conversation at a message', () => {
-    assert.equal(deepLinkPath(`overcord://channels/@me/${UUID}/42`), `/app/channels/@me/${UUID}?message=42`);
-    assert.equal(deepLinkPath(`overcord://channels/${UUID}/${OTHER}/9007199254740`), `/app/channels/${UUID}/${OTHER}?message=9007199254740`);
+    assert.equal(deepLinkPath(`overcord://channels/@me/${UUID}/42`), `/channels/@me/${UUID}?message=42`);
+    assert.equal(deepLinkPath(`overcord://channels/${UUID}/${OTHER}/9007199254740`), `/channels/${UUID}/${OTHER}?message=9007199254740`);
   });
 
   it('ignores invite codes outside the server\'s alphabet and length', () => {

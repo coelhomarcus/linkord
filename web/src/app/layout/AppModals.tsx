@@ -11,7 +11,7 @@ export function AppModals({ onClose, onOpenProfile }: {
   return (
     <AppModal label={t('layout.settings')} size="form" onClose={onClose}>
       <Routes>
-        <Route path="/app/settings/:tab?" element={<SettingsPage onOpenProfile={onOpenProfile} />} />
+        <Route path="/settings/:tab?" element={<SettingsPage onOpenProfile={onOpenProfile} />} />
       </Routes>
     </AppModal>
   );

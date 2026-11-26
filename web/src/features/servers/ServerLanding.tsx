@@ -6,7 +6,7 @@ import { useSidebar } from '@/shared/ui/motion/sidebar-context';
 import { EmptyState } from '@/shared/ui/empty-state';
 import { landingChannel } from './serverUtils';
 
-/** `/app/channels/<server>`: straight to its last (or first) text channel.
+/** `/channels/<server>`: straight to its last (or first) text channel.
  * On a phone this URL is the server's channel list page (the sidebar draws
  * it), so nothing is opened over it. */
 export function ServerLanding() {

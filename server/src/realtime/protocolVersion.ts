@@ -116,9 +116,13 @@
 // is always false. An old tab already shows a channel without `voiceMode` as a voice channel and, told
 // false, no longer offers to create a playground (one asked for anyway is made a plain voice channel), so
 // the minimum stays at 7.
+// Version 39 moves the web app from /app to the root of its origin: a `notice`'s `path` is now
+// `/friends?tab=pending#received` and the like. An old tab only follows paths under /app, so a click
+// on the notice opens its notifications page, which lists the same notice, instead; the server
+// redirects any /app URL it loads. So the minimum stays at 7.
 // Raising MIN_PROTOCOL_VERSION also drops open tabs out of their calls (they are refused and
 // disconnect), so keep it for changes an old client cannot tolerate.
-export const PROTOCOL_VERSION = 38;
+export const PROTOCOL_VERSION = 39;
 export const MIN_PROTOCOL_VERSION = 7;
 export const MIC_STARTING_PROTOCOL_VERSION = 18;
 export const CALL_ELSEWHERE_PROTOCOL_VERSION = 20;

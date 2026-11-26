@@ -75,12 +75,14 @@ export function SearchField({ scope, scopeName, onOpenFilters, fullWidth = false
 
   function startKey(key: TokenKey) {
     setPendingKey(key);
-    setActive(0);
+    setActive(-1);
     focusField();
   }
 
   function submit(query: SearchQuery = draft) {
+    setDraft(query);
     setOpen(false);
+    setActive(-1);
     setPendingKey(null);
     if (isEmptyQuery(query)) {
       closeMessageSearch();
@@ -148,10 +150,10 @@ export function SearchField({ scope, scopeName, onOpenFilters, fullWidth = false
   const historyOptions: Option[] = showHistory ? history.slice(0, HISTORY_SHOWN).map((entry, index) => ({
     id: `history-${index}`,
     content: <HistoryOption query={entry} kindLabel={kindLabel} />,
-    pick: () => { setDraft(entry); submit(entry); },
+    pick: () => submit(entry),
   })) : [];
   const all = [...options, ...historyOptions];
-  const activeOption = active >= 0 ? all[active] : undefined;
+  const activeOption = open && active >= 0 ? all[active] : undefined;
 
   function handleChange(value: string) {
     // typing "de:" starts the chip, as picking it from the list does
@@ -159,11 +161,10 @@ export function SearchField({ scope, scopeName, onOpenFilters, fullWidth = false
     if (typed) {
       setPendingKey(TYPED_KEYS[typed[1]!.toLowerCase()]!);
       setDraft((current) => ({ ...current, text: typed[2] ?? '' }));
-      setActive(0);
     } else {
       setDraft((current) => ({ ...current, text: value }));
-      setActive(pendingKey ? 0 : -1);
     }
+    setActive(-1);
     setOpen(true);
   }
 
@@ -177,13 +178,16 @@ export function SearchField({ scope, scopeName, onOpenFilters, fullWidth = false
       setActive((current) => (current < 0 ? (step > 0 ? 0 : all.length - 1) : (current + step + all.length) % all.length));
     } else if (event.key === 'Enter') {
       event.preventDefault();
-      if (open && activeOption) activeOption.pick();
-      else if (!pendingKey) submit();
+      // Text in an unfinished filter only narrows its suggestions.
+      submit(pendingKey ? { ...draft, text: '' } : draft);
+    } else if (event.key === ' ' && activeOption) {
+      event.preventDefault();
+      activeOption.pick();
     } else if (event.key === 'Backspace' && !event.currentTarget.value) {
-      if (pendingKey) setPendingKey(null);
+      if (pendingKey) { setPendingKey(null); setActive(-1); }
       else if (draft.tokens.length) setDraft((current) => ({ ...current, tokens: current.tokens.slice(0, -1) }));
     } else if (event.key === 'Escape') {
-      if (open) setOpen(false);
+      if (open) { setOpen(false); setActive(-1); }
       else if (!isEmptyQuery(draft) || messageSearch) clearAll();
       else event.currentTarget.blur();
     }
@@ -206,6 +210,7 @@ export function SearchField({ scope, scopeName, onOpenFilters, fullWidth = false
             data-autofocus={autoFocus || undefined}
             role="combobox"
             aria-label={t('field')}
+            aria-description={t('keyboardHint')}
             aria-expanded={open}
             aria-controls={listId}
             aria-autocomplete="list"
@@ -224,7 +229,7 @@ export function SearchField({ scope, scopeName, onOpenFilters, fullWidth = false
             // a click on the field it already has focus in, after Escape closed the list
             onClick={() => setOpen(true)}
             // a click in the list lands before the field loses focus
-            onBlur={() => setOpen(false)}
+            onBlur={() => { setOpen(false); setActive(-1); }}
             className="h-6 min-w-12 flex-1 bg-transparent px-0.5 text-label text-text-primary outline-none placeholder:text-text-muted"
           />
         </div>
@@ -246,7 +251,7 @@ export function SearchField({ scope, scopeName, onOpenFilters, fullWidth = false
           {heading && <p className="select-none px-4 pb-1 pt-1 text-label font-semibold text-text-secondary">{heading}</p>}
           <ul id={listId} role="listbox" aria-label={heading ?? t('field')} className="flex max-h-[min(26rem,60dvh)] flex-col overflow-y-auto px-2">
             {options.map((option) => (
-              <OptionRow key={option.id} id={`${listId}-${option.id}`} option={option} active={option === activeOption} onHover={() => setActive(all.indexOf(option))} />
+              <OptionRow key={option.id} id={`${listId}-${option.id}`} option={option} active={option === activeOption} />
             ))}
             {!options.length && <li className="select-none px-2 py-2 text-label text-text-muted">{t('sections.noMatch')}</li>}
             {showHistory && (
@@ -258,7 +263,7 @@ export function SearchField({ scope, scopeName, onOpenFilters, fullWidth = false
                   </button>
                 </li>
                 {historyOptions.map((option) => (
-                  <OptionRow key={option.id} id={`${listId}-${option.id}`} option={option} active={option === activeOption} onHover={() => setActive(all.indexOf(option))} />
+                  <OptionRow key={option.id} id={`${listId}-${option.id}`} option={option} active={option === activeOption} />
                 ))}
               </>
             )}
@@ -269,15 +274,14 @@ export function SearchField({ scope, scopeName, onOpenFilters, fullWidth = false
   );
 }
 
-function OptionRow({ id, option, active, onHover }: { id: string; option: Option; active: boolean; onHover: () => void }) {
+function OptionRow({ id, option, active }: { id: string; option: Option; active: boolean }) {
   return (
     <li
       id={id}
       role="option"
       aria-selected={active}
       onClick={option.pick}
-      onMouseMove={onHover}
-      className={cn('flex min-h-9 cursor-pointer items-center rounded-md px-2 py-1.5 text-body text-text-primary', active && 'bg-bg-hover')}
+      className={cn('flex min-h-9 cursor-pointer items-center rounded-md px-2 py-1.5 text-body text-text-primary hover:bg-bg-hover', active && 'bg-bg-hover')}
     >
       {option.content}
     </li>

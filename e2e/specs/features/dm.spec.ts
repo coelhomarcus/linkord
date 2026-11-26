@@ -13,7 +13,7 @@ test.describe('direct messages', () => {
     await a.send('primeira mensagem na DM');
 
     // Bob is on the friends page, not in the DM: the DM shows up with an unread count
-    await b.page.goto('/app/friends');
+    await b.page.goto('/friends');
     await expect(b.page.getByLabel(`${alice.username}, 1 não lidas`)).toBeVisible();
 
     await b.openDm(dm);
@@ -31,8 +31,8 @@ test.describe('direct messages', () => {
     await a.send('primeira');
 
     const b = await bob.app();
-    await b.page.goto('/app/friends');
-    const other = await bob.newTab('/app/friends');
+    await b.page.goto('/friends');
+    const other = await bob.newTab('/friends');
     const row = (tab: typeof b) => tab.page.locator(`li[data-conversation-id="${dm}"] > button`).first();
     await expect(row(b)).toHaveAttribute('aria-label', `${alice.username}, 1 não lidas`);
 
@@ -57,7 +57,7 @@ test.describe('direct messages', () => {
     const alice = await users.create('alice');
     const stranger = await users.create('strange');
     const page = await stranger.page();
-    await page.goto('/app/friends');
+    await page.goto('/friends');
     await expect(page.getByRole('button', { name: `Enviar mensagem para ${alice.username}` })).toHaveCount(0);
   });
 });

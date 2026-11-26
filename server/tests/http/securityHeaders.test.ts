@@ -202,7 +202,7 @@ describe('security headers on responses', () => {
   });
 
   it('a deep link that falls back to the page carries it too', async () => {
-    const response = await app.inject({ method: 'GET', url: '/app/friends' });
+    const response = await app.inject({ method: 'GET', url: '/friends' });
     assert.match(String(response.headers['content-security-policy']), /script-src 'self'/);
     assert.equal(response.headers['x-frame-options'], 'DENY');
   });

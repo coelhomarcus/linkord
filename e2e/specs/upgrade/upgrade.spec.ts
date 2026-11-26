@@ -39,6 +39,8 @@ test('tabs opened on the production version keep working with tabs on the new on
   // old JavaScript, loaded from the old server
   const a = await alice.app();
   const b = await bob.app();
+  a.routePrefix = base.routePrefix;
+  b.routePrefix = base.routePrefix;
   await a.openChannel(server.id, server.text.id);
   await b.openChannel(server.id, server.text.id);
   await a.send('antes do deploy');

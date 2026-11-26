@@ -8,13 +8,13 @@ test.describe('friends', () => {
     const a = await alice.app();
     const b = await bob.app();
 
-    await a.page.goto('/app/friends');
+    await a.page.goto('/friends');
     await a.page.getByRole('button', { name: 'Adicionar amigo' }).first().click();
     await a.page.getByPlaceholder('@nomedeusuario').fill(bob.username);
     await a.page.getByRole('button', { name: 'Enviar', exact: true }).click();
     await expect(a.page.getByText(`Solicitação enviada para @${bob.username}.`)).toBeVisible();
 
-    await b.page.goto('/app/friends');
+    await b.page.goto('/friends');
     await b.page.getByRole('link', { name: /^Pendentes/ }).click();
     await b.page.getByRole('button', { name: 'Aceitar' }).first().click();
     await expect(b.page.getByText('Solicitação aceita.')).toBeVisible();
@@ -101,7 +101,7 @@ test.describe('friends', () => {
     await expect(b.page.getByRole('button', { name: 'Ligar', exact: true })).toBeDisabled();
 
     expect((await alice.api.delete(`/api/blocks/${bob.id}`)).ok()).toBe(true);
-    await b.page.goto(`/app/channels/@me/${dm}`);
+    await b.page.goto(`/channels/@me/${dm}`);
     await expect(b.page.getByText('Vocês precisam ser amigos para trocar mensagens e fazer chamadas aqui.', { exact: false })).toBeVisible();
   });
 });

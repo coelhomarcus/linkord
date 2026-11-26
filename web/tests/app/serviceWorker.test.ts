@@ -38,7 +38,7 @@ describe('push service worker', () => {
     expect(showNotification).toHaveBeenCalledWith('Conversa', expect.objectContaining({
       icon: '/icons/icon-192.png',
       badge: '/icons/notification-badge-96.png',
-      data: { path: '/app/conversations/abc' },
+      data: { path: '/conversations/abc' },
     }));
   });
 
@@ -115,23 +115,41 @@ describe('push service worker', () => {
     expect(showNotification).toHaveBeenCalledOnce();
   });
 
-  it('opens the target after all pages have closed', async () => {
+  it('moves a push from before the app left /app to the root, and keeps every target in the app', async () => {
+    const { handlers, showNotification } = worker();
+    const push = async (navigate: unknown) => {
+      let pending: Promise<unknown> = Promise.resolve();
+      handlers.get('push')!({
+        data: { json: () => ({ notification: { title: 'Ana', body: 'oi', navigate, tag: 'chat-abc' } }) },
+        waitUntil: (promise) => { pending = promise; },
+      });
+      await pending;
+      return (showNotification.mock.lastCall as unknown as [string, { data: { path: string } }])[1].data.path;
+    };
+    expect(await push('https://overcord.test/app/friends?tab=pending#received')).toBe('/friends?tab=pending#received');
+    expect(await push('https://overcord.test/app')).toBe('/');
+    expect(await push('https://evil.test/friends')).toBe('/channels/@me');
+    expect(await push('https://overcord.test/api/me')).toBe('/channels/@me');
+    expect(await push(undefined)).toBe('/channels/@me');
+  });
+
+  it('opens an old notification target at the root after all pages have closed', async () => {
     const { handlers, openWindow } = worker();
     let pending: Promise<unknown> = Promise.resolve();
     handlers.get('notificationclick')!({
-      notification: { data: { path: '/app/friends?tab=invitations' }, close: vi.fn() },
+      notification: { data: { path: '/app/friends?tab=pending#invitations' }, close: vi.fn() },
       waitUntil: (promise) => { pending = promise; },
     });
     await pending;
-    expect(openWindow).toHaveBeenCalledWith('/app/friends?tab=invitations');
+    expect(openWindow).toHaveBeenCalledWith('/friends?tab=pending#invitations');
   });
 
-  it('focuses an open app and forwards the target to its memory router', async () => {
+  it('focuses an open app and forwards the target in the format older tabs also accept', async () => {
     const client = { url: 'https://overcord.test/', focus: vi.fn(async () => {}), postMessage: vi.fn() };
     const { handlers, openWindow } = worker([client]);
     let pending: Promise<unknown> = Promise.resolve();
     handlers.get('notificationclick')!({
-      notification: { data: { path: '/app/conversations/abc' }, close: vi.fn() },
+      notification: { data: { path: '/conversations/abc' }, close: vi.fn() },
       waitUntil: (promise) => { pending = promise; },
     });
     await pending;
@@ -170,7 +188,7 @@ describe('share target', () => {
 
     expect(response?.status).toBe(303);
     const location = new URL(response!.headers.get('location')!);
-    expect(location.pathname).toBe('/app/share');
+    expect(location.pathname).toBe('/share');
     const id = location.searchParams.get('id')!;
     expect(id).toMatch(/^[0-9a-f-]{36}$/);
     const store = await caches.open(SHARE_CACHE);

@@ -48,7 +48,7 @@ test.describe('auth', () => {
     const alice = await users.create('alice');
     const email = `${alice.username}@example.test`;
     const page = await alice.page();
-    await page.goto('/app/settings/security');
+    await page.goto('/settings/security');
 
     const toggle = page.getByRole('switch', { name: 'Código por e-mail ao entrar' });
     await toggle.click();
@@ -81,7 +81,7 @@ test.describe('auth', () => {
     const alice = await users.create('alice');
     const email = `${alice.username}@example.test`;
     const page = await alice.page();
-    await page.goto('/app/settings/security');
+    await page.goto('/settings/security');
 
     const toggle = page.getByRole('switch', { name: 'Código por e-mail ao entrar' });
     await toggle.click();
@@ -111,7 +111,7 @@ test.describe('auth', () => {
     const phonePage = await phone.page();
     await expect(phonePage.getByText(alice.username).first()).toBeVisible();
 
-    await laptop.goto('/app/settings/security');
+    await laptop.goto('/settings/security');
     const sessions = laptop.getByRole('list', { name: 'Sessões ativas' });
     await expect(sessions.getByRole('listitem')).toHaveCount(2);
     await expect(sessions.getByText('Esta sessão')).toBeVisible();

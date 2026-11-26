@@ -30,9 +30,9 @@ function Where() {
 
 function renderPage(search: string) {
   return renderWithRoom(
-    <MemoryRouter initialEntries={[`/app/share${search}`]}>
+    <MemoryRouter initialEntries={[`/share${search}`]}>
       <Routes>
-        <Route path="/app/share" element={<SharePage />} />
+        <Route path="/share" element={<SharePage />} />
         <Route path="*" element={<Where />} />
       </Routes>
     </MemoryRouter>,
@@ -91,7 +91,7 @@ describe('SharePage', () => {
 
     await user.click(await screen.findByRole('button', { name: '# geral' }));
 
-    expect(screen.getByTestId('where')).toHaveTextContent('/app/channels/s1/ch-open');
+    expect(screen.getByTestId('where')).toHaveTextContent('/channels/s1/ch-open');
     const share = takeShare('me', 'ch-open');
     expect(share?.text).toBe('olha');
     expect(share?.files.map((file) => file.name)).toEqual(['doc.pdf']);
@@ -116,7 +116,7 @@ describe('SharePage', () => {
 
     expect(await screen.findByText('Nada para enviar')).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Ir para o início' }));
-    expect(screen.getByTestId('where')).toHaveTextContent('/app/channels/@me');
+    expect(screen.getByTestId('where')).toHaveTextContent('/channels/@me');
   });
 
   it('tells the user when the worker could not store the share', () => {

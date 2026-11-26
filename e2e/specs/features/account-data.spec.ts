@@ -10,7 +10,7 @@ test.describe('your data', () => {
     const email = `${alice.username}@example.test`;
     const mailsBefore = await emailCount(email);
     const page = await alice.page();
-    await page.goto('/app/settings/privacy#data-export');
+    await page.goto('/settings/privacy#data-export');
 
     await page.getByRole('button', { name: 'Pedir cópia' }).click();
     // the page looks again every few seconds while the copy is built
@@ -27,7 +27,7 @@ test.describe('your data', () => {
   test('deleting the account signs out, and signing in again cancels it', async ({ users }) => {
     const alice = await users.create('leaving');
     const page = await alice.page();
-    await page.goto('/app/settings/account#delete-account');
+    await page.goto('/settings/account#delete-account');
 
     await page.getByRole('button', { name: 'Excluir conta', exact: true }).click();
     await page.getByLabel('Senha atual').fill(alice.password);

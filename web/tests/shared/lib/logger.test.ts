@@ -6,7 +6,7 @@ function setup(over: { level?: 'debug' | 'warn' } = {}) {
   let t = 1_000_000;
   const send = vi.fn<(p: ClientLogPayload) => void>();
   const print = vi.fn();
-  const log = createLogger({ level: over.level ?? 'debug', send, print, now: () => t, route: () => '/app/x' });
+  const log = createLogger({ level: over.level ?? 'debug', send, print, now: () => t, route: () => '/x' });
   return { log, send, print, advance: (ms: number) => { t += ms; } };
 }
 
@@ -45,7 +45,7 @@ describe('logger — sending to the server', () => {
     for (let i = 0; i < 8; i++) log.info(`step ${i}`);
     log.error('render error', new Error('boom'));
     const payload = send.mock.calls[0]![0];
-    expect(payload).toMatchObject({ level: 'error', message: 'render error: boom', route: '/app/x' });
+    expect(payload).toMatchObject({ level: 'error', message: 'render error: boom', route: '/x' });
     expect(payload.stack).toMatch(/boom/);
     expect(payload.breadcrumbs).toHaveLength(5);
     expect(payload.breadcrumbs.at(-1)).toMatch(/step 7/);
@@ -116,10 +116,10 @@ describe('logger — route of a report', () => {
   it('names the in-app route when one is set, since the address bar never changes', () => {
     const send = vi.fn<(p: ClientLogPayload) => void>();
     const log = createLogger({ level: 'debug', send, print: vi.fn() });
-    setLogRoute(() => '/app/friends');
+    setLogRoute(() => '/friends');
     try {
       log.error('boom', new Error('x'));
-      expect(send.mock.calls[0]![0].route).toBe('/app/friends');
+      expect(send.mock.calls[0]![0].route).toBe('/friends');
     } finally {
       setLogRoute(null);
     }

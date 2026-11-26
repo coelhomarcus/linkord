@@ -12,7 +12,7 @@ test.describe('profile', () => {
     const b = await bob.app();
     await b.openDmWith(alice.username);
 
-    await a.page.goto('/app/profile');
+    await a.page.goto('/profile');
     // the user panel has an icon button with the same name; this one has the text
     await a.page.getByRole('button', { name: 'Meu perfil' }).filter({ hasText: 'Meu perfil' }).click();
     await a.page.getByLabel('Nome de exibição').fill('Alice Testes');
@@ -30,7 +30,7 @@ test.describe('profile', () => {
   test('a GIF picked as photo and as banner is cut on the server and stays animated', async ({ users }) => {
     const alice = await users.create('alice');
     const a = await alice.app();
-    await a.page.goto('/app/profile');
+    await a.page.goto('/profile');
     await a.page.getByRole('button', { name: 'Meu perfil' }).filter({ hasText: 'Meu perfil' }).click();
 
     const profile = async () => (await (await alice.api.get(`/api/users/${alice.id}/profile`)).json() as { user: { avatar: string; avatarPoster: string; banner: string } }).user;
@@ -79,7 +79,7 @@ test.describe('profile', () => {
     await befriend(alice, bob);
     const a = await alice.app();
 
-    await a.page.goto('/app/profile');
+    await a.page.goto('/profile');
     await a.page.getByRole('button', { name: 'Meu perfil' }).filter({ hasText: 'Meu perfil' }).click();
     await a.page.getByRole('tab', { name: 'Mural' }).click();
     await a.page.getByRole('button', { name: 'Adicionar widget' }).click();
@@ -116,7 +116,7 @@ test.describe('profile', () => {
     expect(connected.status()).toBe(201);
 
     const app = await viewer.app();
-    await app.page.goto('/app/friends');
+    await app.page.goto('/friends');
     await app.page.getByRole('button', { name: `Ver perfil de ${owner.username}`, exact: true }).click();
     const links = app.page.getByRole('dialog').getByRole('region', { name: 'Conexões' });
     const link = links.getByRole('link', { name: 'Abrir @octocat em GitHub' });
@@ -154,7 +154,7 @@ test.describe('profile', () => {
       await route.fulfill({ response, json: { ...await response.json(), widgets, available: widgets } });
     });
 
-    await page.goto('/app/profile');
+    await page.goto('/profile');
     await page.getByRole('button', { name: 'Meu perfil' }).filter({ hasText: 'Meu perfil' }).click();
     await page.getByRole('tab', { name: 'Mural' }).click();
 
@@ -186,7 +186,7 @@ test.describe('profile', () => {
     ] } });
     expect(saved.status()).toBe(200);
     const a = await alice.app();
-    await a.page.goto('/app/profile');
+    await a.page.goto('/profile');
     await a.page.getByRole('button', { name: 'Meu perfil' }).filter({ hasText: 'Meu perfil' }).click();
     await a.page.getByRole('tab', { name: 'Mural' }).click();
 
@@ -271,7 +271,7 @@ test.describe('profile on a phone', () => {
     expect(saved.status()).toBe(200);
     const a = await alice.app();
     const page = a.page;
-    await page.goto('/app/profile');
+    await page.goto('/profile');
     await page.getByRole('button', { name: 'Meu perfil' }).filter({ hasText: 'Meu perfil' }).tap();
 
     const dialog = page.getByRole('dialog', { name: /^Perfil de / });
@@ -320,7 +320,7 @@ test.describe('profile on a phone', () => {
   test('the colour picker is sized for a finger and its hex field does not make iOS zoom', async ({ users }) => {
     const alice = await users.create('alice', { device: 'phone' });
     const a = await alice.app();
-    await a.page.goto('/app/profile');
+    await a.page.goto('/profile');
     await a.page.getByRole('button', { name: 'Meu perfil' }).filter({ hasText: 'Meu perfil' }).tap();
     await a.page.getByRole('button', { name: /^Cor do perfil: / }).tap();
 

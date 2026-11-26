@@ -3,8 +3,8 @@ import { act, renderHook } from '@testing-library/react';
 import { LOCAL_STORAGE_KEYS } from '@/shared/lib/localStorage';
 import { useMemberListOpen } from '@/features/servers/memberListPreference';
 
-const CHANNEL = '/app/channels/s1/c1';
-const OTHER_CHANNEL = '/app/channels/s1/c2';
+const CHANNEL = '/channels/s1/c1';
+const OTHER_CHANNEL = '/channels/s1/c2';
 
 function renderMemberList(wide: boolean, pathname = CHANNEL) {
   return renderHook(({ wide, pathname }) => useMemberListOpen(wide, pathname), { initialProps: { wide, pathname } });

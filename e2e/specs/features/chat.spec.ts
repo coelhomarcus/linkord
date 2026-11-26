@@ -369,7 +369,7 @@ test.describe('unread', () => {
     await acceptInvite(bob.api, await createInvite(alice.api, server.id));
     const b = await bob.app();
     await b.openChannel(server.id, server.text.id);
-    const other = await bob.newTab('/app/friends');
+    const other = await bob.newTab('/friends');
 
     const a = await alice.app();
     await a.openChannel(server.id, second);
