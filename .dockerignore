@@ -13,7 +13,4 @@ docs
 .env.*
 !.env.example
 backups
-/docker/*
-!/docker/web
-/docker/web/traefik*.yml
-/docker/web/Caddyfile
+docker

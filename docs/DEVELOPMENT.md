@@ -144,9 +144,9 @@ bun run check
 Runs the server test typecheck, lint for both frontends, the dependency audit, the server and frontend tests and the production builds. None of these tests needs PostgreSQL (`.env.test` supplies a placeholder `DATABASE_URL`). For desktop changes, also run `npm run typecheck --prefix desktop` and `npm test --prefix desktop`. See [End-to-end tests](#end-to-end-tests) for browser verification.
 
 - **CI** (`.github/workflows/ci.yml`) runs the server, both frontends, desktop, and audit and dead code checks in parallel on pushes to `main` and `develop` and on pull requests that change more than documentation. A separate job runs `bun run test:integration` against a disposable PostgreSQL 17 service on the runner.
-- **End-to-end** (`.github/workflows/e2e.yml`) runs the `features`, `restart`, `upgrade` and `split` projects in parallel on pull requests into `main`, and on demand from the Actions tab. A failed job uploads the Playwright report and traces.
+- **End-to-end** (`.github/workflows/e2e.yml`) runs the `features`, `restart` and `upgrade` projects in parallel on pull requests into `main`, and on demand from the Actions tab. A failed job uploads the Playwright report and traces.
 - **Desktop installer** (`.github/workflows/desktop.yml`) runs only by hand; see [DEPLOY.md](DEPLOY.md#building-the-installer).
-- **Audit:** `bun audit --prod --audit-level=high` for the root, `web/` and `admin/`. Keep build-only packages such as Tailwind and Vite plugins in `devDependencies`. The frontend images ship the build output.
+- **Audit:** `bun audit --prod --audit-level=high` for the root, `web/` and `admin/`. Keep build-only packages such as Tailwind and Vite plugins in `devDependencies`. The image ships only the frontends' build output.
 
 ## Scripts
 
@@ -187,7 +187,7 @@ The scripts behind `db:*`, `admin:*`, `backup*`, `restore` and `test:integration
 
 ## End-to-end tests
 
-`e2e/` drives the real app in Chrome with several accounts at once. The Docker stack runs the app behind Traefik alongside a LiveKit dev server, a disposable in-memory Postgres and a mail sink. Chrome connects to LiveKit through a published port, while the backend reaches the room management API on the Compose network. Stop `overcord-dev-livekit` and `overcord-dev-mailsink` before the standard tests if they are running, since those ports overlap. The split deploy test uses separate ports.
+`e2e/` drives the real app in Chrome with several accounts at once. The Docker stack runs the app behind Traefik alongside a LiveKit dev server, a disposable in-memory Postgres and a mail sink. Chrome connects to LiveKit through a published port, while the backend reaches the room management API on the Compose network. Stop `overcord-dev-livekit` and `overcord-dev-mailsink` before the tests if they are running, since those ports overlap. The app answers `http://localhost:8080` and, as the admin site, `http://127.0.0.1:8080`.
 
 ```bash
 PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1 bun install --frozen-lockfile --cwd e2e   # once; uses the installed Chrome
@@ -196,7 +196,6 @@ bun run test:e2e
 
 - `test:e2e:features`: every feature on the working tree's build.
 - `test:e2e:restart`: what a redeploy of the same build must survive.
-- `bun run --cwd e2e test:split` checks routing, cache headers, a call through a frontend-only deploy, and admin site sign-in and session isolation.
 - `test:e2e:upgrade`: tabs opened on the production version (`origin/main`, or `E2E_BASE_REF`) while the server is upgraded to the working tree. It adapts to what the base version supports and says so in the report's annotations.
 
 Each run builds `overcord-e2e:head` from the working tree (uncommitted changes included), starts the stack, runs and removes it. `E2E_KEEP_STACK=1` leaves it up at `http://localhost:8080`, `E2E_HEADED=1` shows the browsers, `E2E_RETRIES=0` turns retries off, and `E2E_HEAD_IMAGE=<tag>` tests an image you built yourself. A failure keeps a trace, video and screenshot: `bun run --cwd e2e report` opens the report, `bun --bun playwright show-trace <trace.zip>` (from `e2e/`) replays it.
@@ -234,7 +233,8 @@ Playwright runs on Bun and uses the installed Google Chrome. Its CLI scripts use
 | `features/stickers` | Uploading, sending across servers, replying to one, a deleted sticker. |
 | `features/profile` | Profile edits reaching a friend, animated photo and banner, the games widgets and Wall editing, the phone layout. |
 | `features/activity` | Ranked activity and the summary published on the Wall from the desktop history. |
-| `features/admin-disabled` | An administrator can use the public app without `ADMIN_URL`. The old routes and admin HTTP API return `404`. |
+| `features/admin-site` | The admin site on its own host and session: sign-in, suspending an account, the retired public routes returning `404`, the phone layout, login codes bound to the site that asked. |
+| `features/reports-admin` | A reported message reaching the admin, who deletes it for everyone. |
 | `features/settings` | Language and theme following the account to another browser; text size staying on the device. |
 | `features/security` | No framing, a foreign script refused and reported, YouTube as a sandboxed iframe. |
 | `features/presence` | Status and custom status reaching other devices and friends, invisible, status kept across a reload. |
@@ -327,7 +327,7 @@ See [AGENTS.md](../AGENTS.md#realtime-compatibility-and-deploys) for the rules t
 
 ## Content-Security-Policy
 
-The page policy lives in `server/src/http/pageSecurityPolicy.ts`. Fastify uses it at startup when serving the monolith. In the split deploy, `docker/web/generate-headers.ts` uses it when building the Nginx image. To see the policy, run the production build (`bun run build`, then `bun run start` on port 3000) or the end-to-end suite. The Vite dev server serves without this policy.
+The page policy lives in `server/src/http/pageSecurityPolicy.ts`. Fastify builds it at startup from the web build, and a second one from the admin build for `ADMIN_URL`'s host. To see the policy, run the production build (`bun run build`, then `bun run start` on port 3000) or the end-to-end suite. The Vite dev server serves without this policy.
 
 - **Scripts** only from our origin. The SHA-256 hashes are computed from the built versions of `web/index.html` and `web/public/offline.html`. Inline event handlers cannot be hashed (use `addEventListener`), and `eval`, `new Function` and WebAssembly stay blocked. Embed a provider's player as an iframe to avoid loading its third-party script.
 - **Styles:** stylesheets from our origin, and `<style>` elements only when their text matches a hash from the build (the offline page, the theme bootstrap, and the crop dialog's sheet in `csp-style-sources.json`). Style attributes stay allowed, since React, Motion and Base UI set them while rendering.

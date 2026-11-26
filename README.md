@@ -55,7 +55,7 @@ Overcord is a self-hosted place to chat and call with friends. Talk in direct me
 - Installable as a web app (PWA), with share-to-Overcord on Android.
 
 **Administration**
-- An optional [administration site](docs/DEPLOY.md#separate-administration-site) with a dedicated hostname and sign-in for managing users, servers, webhooks, reports, audit history and uploads.
+- An optional [administration site](docs/DEPLOY.md#administration-site) with a dedicated hostname and sign-in for managing users, servers, webhooks, reports, audit history and uploads.
 
 ## ⚡ Quick start
 
@@ -78,7 +78,7 @@ A Windows desktop app lives in `desktop/`: an Electron window that opens your Ov
 
 ## 🐳 Deployment
 
-Deploy the [standalone image](docs/DEPLOY.md#the-image-on-its-own) or run [separate frontend and backend images](docs/DEPLOY.md#routing-a-split-deploy) behind one HTTPS proxy. The [deployment guide](docs/DEPLOY.md) also covers environment variables, storage, backups and rollback.
+Overcord ships as one image and runs as one service: a single Bun process that serves the app, the administration site, the API and realtime, with PostgreSQL and LiveKit as its only outside dependencies. Run the [standalone image](docs/DEPLOY.md#the-image-on-its-own) behind an HTTPS proxy or [on Dokploy](docs/DEPLOY.md#dokploy). The [deployment guide](docs/DEPLOY.md) also covers environment variables, storage, backups and rollback.
 
 ## 🧰 Commands
 

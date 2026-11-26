@@ -1,9 +1,0 @@
-chat.example.com {
-	@backend path_regexp ^/(api|ws|uploads)(/|$)|^/(healthz|readyz)$
-	handle @backend {
-		reverse_proxy 127.0.0.1:3000
-	}
-	handle {
-		reverse_proxy 127.0.0.1:8080
-	}
-}

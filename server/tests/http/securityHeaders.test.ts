@@ -219,6 +219,7 @@ describe('security headers on responses', () => {
   });
 
   it('a build without the page still starts, with no hashes', () => {
+    assert.ok(securityHeaders(path.join(dir, 'missing')));
     assert.deepEqual(readBuildScriptHashes(path.join(dir, 'missing')), []);
   });
 });

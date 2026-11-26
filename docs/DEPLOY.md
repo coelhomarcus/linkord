@@ -4,7 +4,7 @@ How to run Overcord in production, what the container expects from the host, and
 
 ## What gets deployed
 
-The [`Dockerfile`](../Dockerfile) provides four deployment targets. The default `monolith` image serves the web app, API, uploads and Socket.IO from Bun on port **3000**. Use this image for standalone installs. For independent deploys, the `backend` target serves the API, uploads and Socket.IO on **3000**, and the `frontend` and `admin` targets serve the public site and administration site on **8080**. Both Bun images include the backup scripts and PostgreSQL client tools.
+The [`Dockerfile`](../Dockerfile) builds one image, and production runs one container from it: a single Bun process on port **3000** that serves the web app, the [administration site](#administration-site) on its own domain, the API, uploads and Socket.IO. The image also carries the backup scripts and the PostgreSQL client tools. The application's only outside dependencies are **PostgreSQL** and **LiveKit**. Email, push, GIFs and the other [integrations](INTEGRATIONS.md#overview) are optional APIs set through the environment.
 
 - **Health checks:** both public, both answer only `{ ok: … }`.
   - `GET /healthz` (liveness): `200` while the process serves HTTP. The image's `HEALTHCHECK`, Dokploy and the end-to-end stack use it.
@@ -27,6 +27,7 @@ Start with [`.env.example`](../.env.example) and set the values for your product
 | --- | --- |
 | `DATABASE_URL` | The database the app owns. `DATABASE_SSL=1` when it is reached over TLS. `DATABASE_POOL_MAX` (default 10) is how many connections it keeps open; keep it below the server's `max_connections`. |
 | `APP_URL` | The public origin, `https://chat.example.com`, no trailing slash. Used in emails, push, the origin check and the Content-Security-Policy. |
+| `ADMIN_URL` | Optional. The [administration site](#administration-site)'s own HTTPS origin, such as `https://admin.example.com`. Unset, the admin site and its API are off. |
 | `REGISTRATION_CODE` | Empty means nobody can sign up. Set a code and share it with the people you invite. |
 | `LIVEKIT_URL`, `LIVEKIT_API_KEY`, `LIVEKIT_API_SECRET` | The URL browsers really use to reach LiveKit (`wss://…`). The CSP only lets the browser connect there. |
 
@@ -36,7 +37,7 @@ After the first start, make yourself an administrator by running `bun --no-env-f
 
 ## The image on its own
 
-Provision PostgreSQL and LiveKit, then build the image and run it behind a TLS reverse proxy. Start from `.env.example` and set `DATABASE_URL`, the public HTTPS `APP_URL`, and the `LIVEKIT_*` values. The addresses must be reachable from the container. If PostgreSQL is on a Docker network, attach Overcord to that network with `--network <name>` and use the database service name in `DATABASE_URL`.
+Provision PostgreSQL and LiveKit, then build the image and run it behind a TLS reverse proxy. Start from `.env.example` and set `DATABASE_URL`, the public HTTPS `APP_URL`, `ADMIN_URL` if you want the admin site, and the `LIVEKIT_*` values. The addresses must be reachable from the container. If PostgreSQL is on a Docker network, attach Overcord to that network with `--network <name>` and use the database service name in `DATABASE_URL`.
 
 ```bash
 docker build -t overcord .
@@ -48,81 +49,30 @@ docker run -d --name overcord --restart unless-stopped --env-file .env \
   --log-opt max-size=10m --log-opt max-file=5 overcord
 ```
 
-Point the entire public HTTPS domain at `127.0.0.1:3000`. The port stays on loopback because the image trusts `X-Forwarded-For`. Send the original host and HTTPS scheme from the proxy and forward WebSocket upgrades.
+Point the public HTTPS domain, and the admin domain when `ADMIN_URL` is set, at `127.0.0.1:3000`. The [example Caddyfile](../docker/Caddyfile) does that for both hostnames. The port stays on loopback because the image trusts `X-Forwarded-For`. Send the original `Host` and HTTPS scheme from the proxy, since the process picks the admin site by `Host`, and forward WebSocket upgrades.
 
 When migrating an older bundled installation, keep its PostgreSQL data and the upload and backup volumes. Take a [backup](#backups) before switching, then mount those volumes in place of the bind mounts above or restore into the new installation.
 
-## Routing a split deploy
+## Administration site
 
-Point DNS at a reverse proxy serving a single public HTTPS origin, for example `https://chat.example.com`. The browser uses that origin for the page, session cookies, API and Socket.IO. The path determines which service receives the request.
+With `ADMIN_URL` set, the same process answers that host with the administration site's build (`admin/dist`) and its own Content-Security-Policy. On that host it reaches only `/api/admin/*`, `/api/csp-reports`, `/uploads/` (profile and server images) and the health checks. Everything else answers `404`, including the public API, `/ws` and `/sw.js`. The public host answers `404` for `/admin`, its subpaths and `/api/admin/*`.
 
-| Public paths | Destination |
-| --- | --- |
-| `/api`, `/ws` and `/uploads`, including their subpaths | Backend on port `3000` |
-| Exactly `/healthz` and `/readyz` | Backend on port `3000` |
-| All other paths, including `/`, `/assets/…` and `/sw.js` | Frontend on port `8080` |
+`ADMIN_URL` must be a different origin from `APP_URL` and use HTTPS (plain HTTP only on loopback). The admin session lasts up to 12 hours, uses the account's existing two-step setting and is revocable from its session list. Chat and voice moderation still run in the main app.
 
-Keep both destination ports private. Forward the original `Host`, path and query string, and pass the public HTTPS scheme and client IP through trusted forwarding headers. `/ws` needs both HTTP polling and WebSocket upgrades. Run the proxy independently of the frontend so replacing the static site does not interrupt backend connections.
-
-The frontend image generates its Content Security Policy at build time. Set its `APP_URL` and `LIVEKIT_URL` build arguments to the same public URLs as the backend. Set `KLIPY_ENABLED=1` when the backend has a KLIPY key, and match its `MEDIA_PROXY` and `CSP_REPORT_ONLY` settings if they differ from the defaults (`1` and `0`). Rebuild the frontend when these public settings change. Database and integration credentials belong in the backend's runtime environment.
-
-### Split deploy with Caddy
-
-Provision PostgreSQL and LiveKit, then build the two targets. Replace the example URLs with the values in the backend's `.env`.
-
-```bash
-docker build --target backend -t overcord-backend .
-docker build --target frontend -t overcord-web \
-  --build-arg APP_URL=https://chat.example.com \
-  --build-arg LIVEKIT_URL=wss://livekit.example.com .
-```
-
-Start the backend with the [standalone `docker run` command](#the-image-on-its-own), using `overcord-backend` as the image. Start the frontend on loopback too.
-
-```bash
-docker run -d --name overcord-web --restart unless-stopped \
-  -p 127.0.0.1:8080:8080 overcord-web
-```
-
-Use the [example Caddyfile](../docker/web/Caddyfile) with your public hostname. It assumes Caddy terminates HTTPS directly and can reach both published loopback ports. If Caddy runs in Docker, put it on a shared network with both services and replace the loopback destinations with their Docker DNS names and ports. Point DNS at Caddy and allow inbound TCP ports `80` and `443` for [automatic HTTPS](https://caddyserver.com/docs/automatic-https).
+To check, the admin domain's `/api/admin/auth/me` answers `401` before login, the public domain answers `404` for `/admin` and `/api/admin/users`, and an active admin can sign in and out.
 
 ## Dokploy
 
-Use two **Applications** in the same project and environment, both with the GitHub repository root as the build context, branch `main` and Dockerfile `./Dockerfile`. Both applications must be reachable by service name from Traefik on the Dokploy network.
+Use one **Application** with the GitHub repository root as the build context, branch `main`, Dockerfile `./Dockerfile`, no build stage and no build arguments. Under **Domains**, add the `APP_URL` hostname and the `ADMIN_URL` hostname, both on port `3000` with HTTPS. Every file in the repository can change the image, so leave **Watch Paths** empty.
 
-| Application | Docker Build Stage | Port | Watch Paths |
-| --- | --- | --- | --- |
-| `overcord-backend` | `backend` | `3000` | `server/**`, `package.json`, `bun.lock`, `bunfig.toml`, `Dockerfile`, `.dockerignore` |
-| `overcord-web` | `frontend` | `8080` | `web/**`, `packages/frontend-shared/**`, `docker/web/generate-headers.ts`, `docker/web/nginx.conf`, `docker/web/public-routes.conf`, `server/src/http/pageSecurityPolicy.ts`, `server/src/modules/link-preview/playerHosts.ts`, `Dockerfile`, `.dockerignore` |
-
-Keep one replica of the backend. Its environment holds the database and integration settings above. Keep the existing bind mounts for `/app/uploads` and `/app/backups` during a rename, even if the host folders use the old name. Keep an existing `LIVEKIT_ROOM_NAME` value so active calls can reconnect across deploys. For a new installation, create the source folders on the host as root for uid 1000:
+Keep one replica. Its environment holds the settings above. Mount `/app/uploads` and `/app/backups` from the host, and keep an existing `LIVEKIT_ROOM_NAME` value so active calls can reconnect across deploys. For a new installation, create the source folders on the host as root for uid 1000:
 
 ```bash
 mkdir -p /srv/overcord/uploads /srv/overcord/backups
 chown -R 1000:1000 /srv/overcord/uploads /srv/overcord/backups
 ```
 
-In `overcord-web`, enter the [frontend build arguments](#routing-a-split-deploy) in **Environment → Build-time Arguments**, one assignment per line. Leave the runtime environment and volume settings empty and keep **Create .env File** off.
-
-Fill in the [Traefik template](../docker/web/traefik.dokploy.yml) and install it in `overcord-web` under **Advanced → Traefik**.
-
-| Placeholder | Replace with |
-| --- | --- |
-| `__APP_DOMAIN__` | The hostname from `APP_URL`, such as `chat.example.com` |
-| `__BACKEND_APP_NAME__` | The internal Dokploy service name for the `backend` application |
-| `__FRONTEND_APP_NAME__` | The internal Dokploy service name for the `frontend` application |
-
-The backend router has higher priority than the frontend's catch-all. The template uses Dokploy's `web` and `websecure` entry points and its `redirect-to-https@file` middleware. Both HTTPS routers inherit TLS from `websecure`. If your installation configures TLS per router, add `tls.certResolver` to both HTTPS routers for a configured certificate resolver, or `tls: {}` to use a certificate already loaded in Traefik. [Traefik TLS settings](https://doc.traefik.io/traefik/reference/routing-configuration/http/tls/overview/)
-
-For a fresh split deploy, leave **Domains** empty on both applications. The installed Traefik file owns routing for the hostname. When migrating an existing monolith, check that its previous catch-all router is disabled after the cutover, even if the old domain record still appears in Dokploy.
-
-The web image sends `private, no-cache, no-store, max-age=0` for `/sw.js` so browsers can check for updates even behind a CDN. Verify that the CDN preserves those directives on the public domain. HTML still uses `no-cache` and versioned assets use immutable caching.
-
-**Upgrading from a separate profile sync worker.** Confirm that the backend has the [credentials for the providers you use](INTEGRATIONS.md#overview). Disable Auto Deploy on `overcord-connection-sync` before merging a revision that removes its build target. Keep the worker running until the new backend passes `/readyz`, then stop it. Keep the worker configuration for rollback. If you need to roll back to a revision that uses the separate worker, start the worker before rolling back the backend.
-
-**Migrating a monolith on Dokploy.** Run `bun run --cwd e2e test:split` with Docker and Chrome. Before merging to `main`, pause Auto Deploy on the existing Application and record its deployed commit, build settings and Traefik configuration. Bring up the frontend and add its routing above the existing monolith route. Check HTTPS, a direct link, a signed-in session, `/readyz`, uploads and the socket. Then redeploy the existing Application with the `backend` target. After it is healthy, retire its old catch-all router, verify both route priorities and enable Auto Deploy with the listed Watch Paths.
-
-**Rollback.** Before the backend changes, restoring the previous Traefik configuration puts the monolith back in front immediately. After the switch, restore the old backend route and redeploy the saved commit as the default monolith image on the existing Application. Wait for readiness before removing the split routes. For a frontend-only rollback, point the web Application at a temporary branch at the last working frontend commit, deploy that Application, then restore its `main` source and Watch Paths. The backend remains connected during a frontend-only deploy or rollback.
+Overcord sends `private, no-cache, no-store, max-age=0` for `/sw.js` so browsers can check for updates even behind a CDN. Verify that a CDN in front preserves those directives. HTML uses `no-cache` and versioned assets use immutable caching.
 
 **Restart policy.** The app relies on being restarted when it exits: an uncaught exception or an unhandled promise rejection is logged as `fatal uncaughtException, shutting down` (or `unhandledRejection`), the server shuts down the same way as for a deploy (calls are restored by the next process) and exits with code 1. The standalone `docker run` command uses `--restart unless-stopped`. On Dokploy, the Swarm service's default restart policy (`condition: any`) already restarts it; if you changed it under the application's Swarm settings, keep the condition at `any` or `on-failure`. To check:
 
@@ -136,24 +86,16 @@ Dokploy runs the app as a Swarm service, so the container's name changes with ev
 docker ps --format '{{.Names}}' | grep <app-name>
 ```
 
-### Separate administration site
+### Migrating from the split deploy
 
-Set up a third Dokploy Application, `overcord-admin`, in the same environment. Use the same repository and branch as `overcord-web`, the `admin` Docker target, and port `8080`. Set the build argument `APP_URL` to the admin site's HTTPS origin and point its DNS at the same Traefik instance. Add these Watch Paths to the admin Application:
+Earlier releases ran three Applications: `overcord-backend` (the `backend` target), `overcord-web` (`frontend`) and `overcord-admin` (`admin`), routed by Traefik files installed on the web and admin Applications. `overcord-backend` becomes the single Application. It keeps its environment, volumes and replica, so sessions, uploads and calls carry over.
 
-- `admin/**`
-- `packages/frontend-shared/**`
-- `docker/web/generate-headers.ts`
-- `docker/web/nginx.conf`
-- `server/src/http/pageSecurityPolicy.ts`
-- `server/src/modules/link-preview/playerHosts.ts`
-- `Dockerfile`
-- `.dockerignore`
+1. Take a [backup](#backups). Pause Auto Deploy on all three Applications and write down each one's deployed commit, build stage and Traefik configuration.
+2. In `overcord-backend`, clear **Docker Build Stage** and **Watch Paths**, check that `ADMIN_URL` is the admin site's origin, and deploy the new revision. The current routes still send it only `/api`, `/ws`, `/uploads` and the health checks, so nothing visible changes yet. Wait for `/readyz`.
+3. Route both hostnames to `overcord-backend`. Either install a Traefik file on it with a catch-all router per hostname at a higher priority than the web and admin routers, or remove the Traefik files from `overcord-web` and `overcord-admin` and add both hostnames under the backend's **Domains**. Then check HTTPS, a direct link such as `/app/friends`, a signed-in session, an upload, the socket, a call, and the [admin site checks](#administration-site).
+4. Stop `overcord-web` and `overcord-admin` and remove their Traefik files. Keep both Applications, stopped, until the next release in case you need to roll back, then delete them. Turn Auto Deploy back on for `overcord-backend`.
 
-Deploy the admin image and install the [admin Traefik template](../docker/web/traefik.admin.dokploy.yml) under the new Application's **Advanced → Traefik**. Substitute its hostname, its internal service name, and the existing backend service name. Leave **Domains** empty when the Traefik file manages routing. Verify the admin root serves its HTML over HTTPS. Its API goes to the existing backend with the original `Host` header. The `/uploads/` route serves only profile and server images to that site.
-
-In the backend Application's **Environment** settings, set `ADMIN_URL` to the same HTTPS origin as a runtime variable, then redeploy the backend with the image's default command. The admin HTTP API is available only on that origin and requires a dedicated admin session after sign-in. Leaving `ADMIN_URL` unset disables the admin HTTP API while the main app starts as usual. The public host returns `404` for `/admin`, its subpaths and `/api/admin/*`. The admin session lasts up to 12 hours, uses the account's existing two-step setting and is revocable from its session list. Chat and voice moderation still run in the main app.
-
-After changing the Watch Paths, deploy the admin site, the public web app and the backend. Check that the admin domain's `/api/admin/auth/me` returns `401` before login, the public domain returns `404` for `/admin` and `/api/admin/users`, and an active admin can sign in and out. To roll back a frontend or backend, deploy its last working revision as described in the [split deploy rollback instructions](#dokploy).
+**Rollback.** Before step 4, remove the backend's catch-all routers (or its Domains) so the web and admin routers take over again, and redeploy the backend from the recorded commit with the `backend` build stage. After step 4, start the two stopped Applications first and restore their Traefik files.
 
 ## Upgrading from a version with playgrounds
 
@@ -189,7 +131,7 @@ Every folder listed must belong to UID/GID 1000. When one does not, the server l
 
 ## Updating
 
-On Dokploy, frontend releases replace only the static service. Existing sockets and calls keep their backend connection. Changes touching API or realtime contracts need to work across versions while the two builds deploy independently. A backend release replaces the Bun container while people are connected:
+Every release replaces the one Bun container while people are connected:
 
 - **Calls continue.** Audio and video flow between the browsers and LiveKit, and the server keeps who is in which call in PostgreSQL, so after the restart it waits `CALL_RESTORE_GRACE_MS` (90 s by default) for everyone to reconnect to the same call.
 - **Messages and uploads wait.** A message sent while the server is down is sent again once it is back, and an upload retries for up to 60 seconds of outage.
@@ -199,9 +141,9 @@ See [Restarting the server during a call](DEVELOPMENT.md#restarting-the-server-d
 
 ## Security headers
 
-Fastify sets the backend headers. In the split deploy the frontend image generates its own headers from the same policy code and its own build files. The reverse proxy should pass these headers through.
+Fastify sets every header at runtime, with a separate policy for the [administration site](#administration-site). The reverse proxy should pass these headers through.
 
-- `Content-Security-Policy`, generated from the public origin, LiveKit URL, integration flags and the frontend build. A wrong `LIVEKIT_URL` blocks calls in the browser even when the server reaches LiveKit. How it is built and how to allow a new host: [DEVELOPMENT.md](DEVELOPMENT.md#content-security-policy).
+- `Content-Security-Policy`, generated from the public origin, LiveKit URL, integration flags and the web build. A wrong `LIVEKIT_URL` blocks calls in the browser even when the server reaches LiveKit. How it is built and how to allow a new host: [DEVELOPMENT.md](DEVELOPMENT.md#content-security-policy).
 - `X-Frame-Options: DENY` and `frame-ancestors 'none'`: no other site can frame Overcord.
 - `Strict-Transport-Security` (one year, without `includeSubDomains`) on HTTPS requests.
 
