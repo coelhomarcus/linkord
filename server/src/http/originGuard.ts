@@ -53,8 +53,11 @@ export async function originGuard(request: FastifyRequest, reply: FastifyReply):
   }
 }
 
-/** Socket handshake check (same rule). */
+/** Socket handshake check (same rule). The admin host shares this process but
+ * never carries the public app's socket. */
 export function isSocketOriginAllowed(headers: { origin?: string | string[]; host?: string | string[] }): boolean {
   const one = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v);
-  return isOriginAllowed(currentInput(one(headers.origin), one(headers.host)));
+  const host = one(headers.host)?.toLowerCase();
+  if (config.ADMIN_ORIGIN && host === config.ADMIN_ORIGIN.host) return false;
+  return isOriginAllowed(currentInput(one(headers.origin), host));
 }
