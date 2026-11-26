@@ -52,7 +52,10 @@
     "settings": "Configurações do servidor",
     "createChannel": "Criar canal",
     "createCategory": "Criar categoria",
-    "leave": "Sair do servidor"
+    "leave": "Sair do servidor",
+    "moveUp": "Mover para cima",
+    "moveDown": "Mover para baixo",
+    "orderFailed": "Não foi possível salvar a ordem dos servidores."
   },
   "leave": {
     "title": "Sair de \"{{name}}\"",
@@ -91,7 +94,8 @@
     "willBe": "O canal vai se chamar {{name}}",
     "createFailed": "Não foi possível criar.",
     "invite": "Criar convite",
-    "edit": "Editar canal"
+    "edit": "Editar canal",
+    "copyLink": "Copiar link do canal"
   },
   "members": {
     "bio": "Bio",
@@ -217,9 +221,9 @@
     "sync": "Sincronizar com a categoria"
   },
   "deleteChannel": {
-    "title": "Excluir #{{name}}",
     "description": "Excluir {{name}} apaga todas as mensagens e arquivos dele.",
-    "confirm": "Tem certeza? Isso não pode ser desfeito."
+    "dialogTitle": "Excluir {{name}}",
+    "dialogDescription": "As mensagens e os arquivos de {{name}} serão apagados permanentemente."
   },
   "overwrite": {
     "allow": "Permitir",
@@ -526,5 +530,13 @@
     "emptyFilteredText": "Ajuste ou limpe os filtros para ver tudo."
   },
   "noChannelsCanCreate": "Crie o primeiro canal para a conversa começar.",
-  "noChannelsText": "Quando houver um canal que você possa ver, ele aparece aqui."
+  "noChannelsText": "Quando houver um canal que você possa ver, ele aparece aqui.",
+  "category": {
+    "rename": "Renomear categoria",
+    "delete": "Excluir categoria",
+    "deleteTitle": "Excluir categoria {{name}}",
+    "deleteDescription": "Os canais ficarão na lista sem categoria e manterão suas permissões.",
+    "expand": "Expandir categoria",
+    "collapse": "Recolher categoria"
+  }
 }

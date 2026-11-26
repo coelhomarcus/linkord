@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { screen } from '@testing-library/react';
+import { fireEvent, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { renderSocial } from '@tests/fixtures/socialFixture';
 import { ChannelList } from '@/features/servers/ChannelList';
@@ -22,6 +22,18 @@ describe('ChannelList', () => {
     expect(settings).toHaveLength(2);
     expect(settings[0]!.parentElement!.className).toContain('[@media(hover:none)]:flex');
     expect(screen.getAllByRole('button', { name: 'Criar convite', hidden: true })).toHaveLength(2);
+  });
+
+  it('marks a text channel read when the unread marker still shows', async () => {
+    const markConversationRead = vi.fn();
+    renderSocial(<ChannelList server={server} activeChannelId={null} onOpenProfile={vi.fn()} />, {
+      room: { servers: [server], unreadStartByConversation: new Map([['c1', 9]]), markConversationRead },
+      path: '/channels/s1',
+    });
+
+    fireEvent.contextMenu(screen.getByRole('button', { name: 'geral' }));
+    await userEvent.click(await screen.findByRole('menuitem', { name: 'Marcar como lida' }));
+    expect(markConversationRead).toHaveBeenCalledWith('c1');
   });
 
   it('a server with no visible channel offers to create one only to who can', async () => {

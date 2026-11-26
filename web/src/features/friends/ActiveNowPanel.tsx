@@ -1,8 +1,11 @@
-import { SpeakerHighIcon } from '@/shared/ui/icons';
+import { ChatCircleIcon, SpeakerHighIcon, UserIcon } from '@/shared/ui/icons';
 import { useId, useMemo } from 'react';
 import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { RowMenu, RowMenuButton } from '@/shared/RowMenu';
+import { useRowMenu } from '@/shared/hooks/useRowMenu';
+import { DropdownMenuItem } from '@/shared/ui/primitives/dropdown-menu';
 import { Avatar } from '@/shared/Avatar';
 import { Button } from '@/shared/ui/primitives/button';
 import { EmptyState } from '@/shared/ui/empty-state';
@@ -133,25 +136,39 @@ function CardHeader({ person, title, subtitle, trailing, onOpenProfile }: {
 }) {
   const { t } = useTranslation('friends');
   const subtitleId = useId();
+  const menu = useRowMenu();
+  const { openDirect, requestChatView, friendUserIds } = useRoom('openDirect', 'requestChatView', 'friendUserIds');
   return (
-    <button
-      type="button"
-      data-user-id={person.userId}
-      onClick={() => onOpenProfile(person.userId)}
-      aria-label={t('row.viewProfile', { name: person.displayName })}
-      aria-describedby={subtitleId}
-      className="cutout-subtle flex w-full items-center gap-3 bg-fill-subtle px-4 py-3 text-left transition-colors focus-ring focus-visible:ring-inset hover:cutout-active hover:bg-fill-active"
-    >
-      <span className="relative flex-none">
-        <Avatar id={person.userId} name={person.displayName} avatar={person.avatar} poster={person.avatarPoster} avatarColor={person.avatarColor} size={32} />
-        <UserStatusDot userId={person.userId} className="absolute -right-0.5 -bottom-0.5 size-3.5 border-[3px] text-(--cutout)" />
-      </span>
-      <span className="min-w-0 flex-1">
-        <span className="block truncate text-label font-semibold text-text-primary">{title}</span>
-        <span id={subtitleId} className="block truncate text-caption text-text-muted">{subtitle}</span>
-      </span>
-      {trailing}
-    </button>
+    <div {...menu.rowProps} className="group/activity-row relative">
+      <button
+        {...menu.primaryProps}
+        type="button"
+        onClick={() => onOpenProfile(person.userId)}
+        aria-label={t('row.viewProfile', { name: person.displayName })}
+        aria-describedby={subtitleId}
+        className="cutout-subtle flex w-full items-center gap-3 bg-fill-subtle px-4 py-3 text-left transition-colors focus-ring focus-visible:ring-inset hover:cutout-active hover:bg-fill-active"
+      >
+        <span className="relative flex-none">
+          <Avatar id={person.userId} name={person.displayName} avatar={person.avatar} poster={person.avatarPoster} avatarColor={person.avatarColor} size={32} />
+          <UserStatusDot userId={person.userId} className="absolute -right-0.5 -bottom-0.5 size-3.5 border-[3px] text-(--cutout)" />
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="block truncate text-label font-semibold text-text-primary">{title}</span>
+          <span id={subtitleId} className="block truncate text-caption text-text-muted">{subtitle}</span>
+        </span>
+        {trailing}
+      </button>
+      <RowMenuButton menu={menu} name={person.displayName}
+        className="sr-only right-1 top-2 size-6 bg-surface-400 focus-visible:not-sr-only focus-visible:absolute" />
+      <RowMenu menu={menu}>
+        <DropdownMenuItem onClick={() => onOpenProfile(person.userId)}><UserIcon size={16} />{t('list.viewProfile')}</DropdownMenuItem>
+        {friendUserIds.has(person.userId) && (
+          <DropdownMenuItem onClick={() => { openDirect(person.userId); requestChatView(); }}>
+            <ChatCircleIcon size={16} />{t('profile.message')}
+          </DropdownMenuItem>
+        )}
+      </RowMenu>
+    </div>
   );
 }
 

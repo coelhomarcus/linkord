@@ -67,6 +67,7 @@
     "peopleSent_other": "{{count}} people sent messages"
   },
   "contextMenu": {
+    "moreFor": "More actions for {{name}}",
     "reply": "Reply",
     "allReactions": "View all reactions",
     "copyText": "Copy text",
@@ -86,8 +87,7 @@
     "removeAttachmentDescription": "\"{{name}}\" is removed from the message for everyone and deleted. The rest of the message remains.",
     "remove": "Remove",
     "messageFrom": "message from {{name}}",
-    "markAsRead": "Mark as read",
-    "markServerAsRead": "Mark server as read"
+    "markAsRead": "Mark as read"
   },
   "room": {
     "full": "The room is full. Try again later.",

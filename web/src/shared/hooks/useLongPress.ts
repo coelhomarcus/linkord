@@ -84,6 +84,35 @@ export function useLongPress(options: LongPressOptions) {
   useEffect(() => { optionsRef.current = options; });
   const pressRef = useRef<ActivePress | null>(null);
   const swallowClickRef = useRef(false);
+  const compatibilityTarget = useRef<Element | null>(null);
+
+  useEffect(() => {
+    function clearCompatibilityTarget() {
+      compatibilityTarget.current = null;
+      swallowClickRef.current = false;
+    }
+    function swallowCompatibilityEvent(event: MouseEvent) {
+      const target = compatibilityTarget.current;
+      if (!target || !(event.target instanceof Element) || event.button !== 0 || (event.isTrusted && event.detail === 0)) return;
+      if (!target.contains(event.target) && !event.target.contains(target)) return;
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      if (event.type === 'click') clearCompatibilityTarget();
+    }
+
+    // On touch release the browser may synthesize a mouse press on the row.
+    // Stop it before the popup's document listener treats it as an outside press.
+    window.addEventListener('pointerdown', clearCompatibilityTarget, true);
+    window.addEventListener('mousedown', swallowCompatibilityEvent, true);
+    window.addEventListener('mouseup', swallowCompatibilityEvent, true);
+    window.addEventListener('click', swallowCompatibilityEvent, true);
+    return () => {
+      window.removeEventListener('pointerdown', clearCompatibilityTarget, true);
+      window.removeEventListener('mousedown', swallowCompatibilityEvent, true);
+      window.removeEventListener('mouseup', swallowCompatibilityEvent, true);
+      window.removeEventListener('click', swallowCompatibilityEvent, true);
+    };
+  }, []);
 
   const finish = useCallback((end: LongPressEnd) => {
     const press = pressRef.current;
@@ -161,6 +190,7 @@ export function useLongPress(options: LongPressOptions) {
       press.timer = null;
       press.fired = true;
       swallowClickRef.current = true;
+      if (DEFAULT_POINTER_TYPES.some((type) => type === press.pointerType)) compatibilityTarget.current = press.target;
       lightHaptic();
       optionsRef.current.onLongPress(press);
     }, delay);
@@ -169,7 +199,7 @@ export function useLongPress(options: LongPressOptions) {
   }, [finish]);
 
   const onClickCapture = useCallback((event: ReactMouseEvent<Element>) => {
-    if (!swallowClickRef.current) return;
+    if (!swallowClickRef.current || (event.isTrusted && event.detail === 0)) return;
     swallowClickRef.current = false;
     event.preventDefault();
     event.stopPropagation();

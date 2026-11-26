@@ -1,6 +1,7 @@
 import { useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router';
+import { DropdownMenuItem, DropdownMenuSeparator } from '@/shared/ui/primitives/dropdown-menu';
 import { Button } from '@/shared/ui/primitives/button';
 import { EmptyState } from '@/shared/ui/empty-state';
 import { friendsView } from '@/shared/lib/routes';
@@ -90,17 +91,27 @@ export function FriendRequestList({ direction, search = '', headingId, onOpenPro
       <RevealList restored={list.restored}>
         {list.items.map(({ user, at }) => {
           const busy = pending.isPending(user.id);
+          const actions = direction === 'incoming' ? [
+            { label: t('requests.accept'), success: t('requests.accepted'), action: acceptFriendRequest, primary: true },
+            { label: t('requests.decline'), success: t('requests.declined'), action: declineFriendRequest },
+          ] : [
+            { label: t('requests.cancel'), success: t('requests.cancelled'), action: cancelFriendRequest },
+          ];
+          const run = (choice: typeof actions[number]) => void act(user.id, choice.action, choice.success);
           return (
             <RevealRow key={user.id}>
-              <SocialUserRow user={user} subtitle={formatWhen(at)} onOpenProfile={() => onOpenProfile(user.id)}>
-                {direction === 'incoming' ? (
+              <SocialUserRow user={user} subtitle={formatWhen(at)} onOpenProfile={() => onOpenProfile(user.id)} pending={busy}
+                actions={(
                   <>
-                    <Button type="button" size="sm" disabled={busy} onClick={() => void act(user.id, acceptFriendRequest, t('requests.accepted'))}>{t('requests.accept')}</Button>
-                    <Button type="button" variant="ghost" size="sm" disabled={busy} onClick={() => void act(user.id, declineFriendRequest, t('requests.declined'))}>{t('requests.decline')}</Button>
+                    <DropdownMenuSeparator />
+                    {actions.map((choice) => <DropdownMenuItem key={choice.label} disabled={busy} onClick={() => run(choice)}>{choice.label}</DropdownMenuItem>)}
                   </>
-                ) : (
-                  <Button type="button" variant="ghost" size="sm" disabled={busy} onClick={() => void act(user.id, cancelFriendRequest, t('requests.cancelled'))}>{t('requests.cancel')}</Button>
-                )}
+                )}>
+                {actions.map((choice) => (
+                  <Button key={choice.label} type="button" variant={choice.primary ? 'default' : 'ghost'} size="sm" disabled={busy} onClick={() => run(choice)}>
+                    {choice.label}
+                  </Button>
+                ))}
               </SocialUserRow>
             </RevealRow>
           );

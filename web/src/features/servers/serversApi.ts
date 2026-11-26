@@ -45,6 +45,8 @@ export const createChannel = (serverId: string, input: { name: string; type: 'te
 export const updateChannel = (channelId: string, patch: { name?: string; topic?: string; permissionsSynced?: true }) => apiFetch(`/api/channels/${id(channelId)}`, json('PATCH', patch));
 export const deleteChannel = (channelId: string) => apiFetch(`/api/channels/${id(channelId)}`, json('DELETE'));
 export const createCategory = (serverId: string, name: string) => apiFetch<{ categoryId: string }>(`/api/servers/${id(serverId)}/categories`, json('POST', { name }));
+export const updateCategory = (categoryId: string, name: string) => apiFetch(`/api/categories/${id(categoryId)}`, json('PATCH', { name }));
+export const deleteCategory = (categoryId: string) => apiFetch(`/api/categories/${id(categoryId)}`, json('DELETE'));
 
 export interface Overwrite { roleId: string | null; userId: string | null; allow: number; deny: number }
 export function fetchOverwrites(serverId: string, targetId: string): Promise<{ items: Overwrite[] }> {

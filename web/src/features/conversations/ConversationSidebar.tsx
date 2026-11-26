@@ -4,6 +4,8 @@ import { useNavigate } from 'react-router';
 import { useTranslation } from 'react-i18next';
 
 import { ActiveFill } from '@/shared/ui/active-fill';
+import { RowMenu, RowMenuButton } from '@/shared/RowMenu';
+import { useRowMenu } from '@/shared/hooks/useRowMenu';
 import { EmptyState } from '@/shared/ui/empty-state';
 import { Button } from '@/shared/ui/primitives/button';
 import { Sidebar } from '@/shared/ui/motion/sidebar';
@@ -20,6 +22,7 @@ import { useFriends } from '@/features/friends/FriendsContext';
 import { ServerRail } from '@/features/servers/ServerRail';
 import { ChannelList } from '@/features/servers/ChannelList';
 import { conversationMatchesQuery, conversationTitle, directUser } from './conversationUtils';
+import { DirectMenuItems } from './DirectMenuItems';
 import { NewDirectDialog } from './NewDirectDialog';
 import { StatusDot } from '@/features/status/StatusDot';
 import { CustomStatusText } from '@/features/status/CustomStatusText';
@@ -27,11 +30,12 @@ import { useCustomStatus, useUserStatus } from '@/features/status/statusDisplay'
 import { useUserActivity } from '@/features/activity/activityDisplay';
 import { UserActivityInline } from '@/features/activity/ActivityLine';
 
-function DirectRow({ conversation, active, onClick, onClose }: {
-  conversation: Conversation; active: boolean; onClick: () => void; onClose: () => void;
+function DirectRow({ conversation, active, onClick, onClose, onOpenProfile }: {
+  conversation: Conversation; active: boolean; onClick: () => void; onClose: () => void; onOpenProfile: (userId: string) => void;
 }) {
   const { t } = useTranslation('conversations');
   const { t: tn } = useTranslation('notifications');
+  const menu = useRowMenu();
   const { allUsers, badgeByConversation, notificationPolicyFor, activeCallConversationId } = useRoom('allUsers', 'badgeByConversation', 'notificationPolicyFor', 'activeCallConversationId');
   const state = useRoomState('me');
   const title = conversationTitle(conversation, state.me.userId, allUsers);
@@ -43,8 +47,9 @@ function DirectRow({ conversation, active, onClick, onClose }: {
   const activity = useUserActivity(other?.id);
   const inCall = activeCallConversationId === conversation.id;
   return (
-    <li data-conversation-id={conversation.id} data-user-id={other?.id} className="group/dm relative mx-2">
+    <li {...menu.rowProps} data-conversation-id={conversation.id} data-user-id={other?.id} className="group/dm relative mx-2">
       <button
+        {...menu.primaryProps}
         type="button"
         onClick={onClick}
         data-avatar-hover
@@ -53,7 +58,7 @@ function DirectRow({ conversation, active, onClick, onClose }: {
         className={cn(
           'relative isolate flex w-full items-center gap-3 rounded-lg px-2 text-left focus-ring',
           inCall ? 'min-h-row-dm py-1' : 'min-h-row-dm',
-          unread > 0 ? 'pr-10' : 'group-hover/dm:pr-10 group-focus-within/dm:pr-10',
+          'pr-9 group-hover/dm:pr-16 group-focus-within/dm:pr-16',
           active ? 'cutout-active text-text-primary' : cn('cutout md:hover:cutout-subtle md:hover:bg-nav-hover', unread ? 'text-text-primary' : 'text-text-muted md:hover:text-text-primary'),
         )}
       >
@@ -86,20 +91,25 @@ function DirectRow({ conversation, active, onClick, onClose }: {
         </span>
       </button>
       {unread > 0 && (
-        <CountBadge decorative className="pointer-events-none absolute right-2 top-1/2 h-5 min-w-5 -translate-y-1/2 px-1.5 text-micro transition-transform duration-200 ease-out group-hover/dm:-translate-x-7 group-focus-within/dm:-translate-x-7">
+        <CountBadge decorative className="pointer-events-none absolute right-2 top-1/2 h-5 min-w-5 -translate-y-1/2 px-1.5 text-micro transition-transform duration-200 ease-out group-hover/dm:-translate-x-14 group-focus-within/dm:-translate-x-14">
           {unread > 99 ? '99+' : unread}
         </CountBadge>
       )}
+      <RowMenuButton menu={menu} name={title}
+        className="absolute right-2 top-1/2 size-6 -translate-y-1/2 opacity-0 group-hover/dm:opacity-100 group-focus-within/dm:opacity-100 focus-visible:opacity-100 touch-first:sr-only touch-first:focus-visible:not-sr-only" />
       <button type="button" onClick={onClose} aria-label={t('sidebar.close', { name: title })}
-        className="pointer-events-none absolute right-2 top-1/2 grid size-6 -translate-y-1/2 scale-90 place-items-center rounded-md text-text-muted opacity-0 transition-all duration-150 group-hover/dm:pointer-events-auto group-hover/dm:scale-100 group-hover/dm:opacity-100 group-focus-within/dm:pointer-events-auto group-focus-within/dm:scale-100 group-focus-within/dm:opacity-100 hover:bg-fill-hover hover:text-text-primary focus-visible:pointer-events-auto focus-visible:scale-100 focus-visible:opacity-100">
+        className="pointer-events-none absolute right-9 top-1/2 grid size-6 -translate-y-1/2 scale-90 place-items-center rounded-md text-text-muted opacity-0 transition-all duration-150 group-hover/dm:pointer-events-auto group-hover/dm:scale-100 group-hover/dm:opacity-100 group-focus-within/dm:pointer-events-auto group-focus-within/dm:scale-100 group-focus-within/dm:opacity-100 hover:bg-fill-hover hover:text-text-primary focus-visible:pointer-events-auto focus-visible:scale-100 focus-visible:opacity-100">
         <XIcon size={16} />
       </button>
+      <RowMenu menu={menu}>
+        <DirectMenuItems id={conversation.id} onClose={onClose} onOpenProfile={other ? () => onOpenProfile(other.id) : undefined} />
+      </RowMenu>
     </li>
   );
 }
 
 /** Home's column: find a conversation, Friends, and the DMs. */
-function DirectList({ onNavigate }: { onNavigate: () => void }) {
+function DirectList({ onNavigate, onOpenProfile }: { onNavigate: () => void; onOpenProfile: (userId: string) => void }) {
   const { t } = useTranslation('conversations');
   const { conversations, allUsers, closeConversation } = useRoom('conversations', 'allUsers', 'closeConversation');
   const state = useRoomState('me');
@@ -158,6 +168,7 @@ function DirectList({ onNavigate }: { onNavigate: () => void }) {
               conversation={conversation}
               active={conversation.id === visibleId}
               onClick={() => select(conversation.id)}
+              onOpenProfile={onOpenProfile}
               onClose={() => { closeConversation(conversation.id); if (visibleId === conversation.id) navigate(ROUTES.home, { replace: true }); }}
             />
           ))}
@@ -196,8 +207,8 @@ export function ConversationSidebar({ onOpenProfile }: { onOpenProfile: (userId:
   const server = serverId ? servers.find((s) => s.id === serverId) ?? null : null;
   const afterNavigate = () => { if (isOverlay) setOpenMobile(false); };
   const content = server
-    ? <ChannelList server={server} activeChannelId={conversationIdFromPath(pathname)} onNavigate={afterNavigate} onOpenProfile={onOpenProfile} />
-    : <DirectList onNavigate={afterNavigate} />;
+    ? <ChannelList key={server.id} server={server} activeChannelId={conversationIdFromPath(pathname)} onNavigate={afterNavigate} onOpenProfile={onOpenProfile} />
+    : <DirectList onNavigate={afterNavigate} onOpenProfile={onOpenProfile} />;
 
   if (isMobile) {
     // a phone shows the column as its own page, only where nothing is open
@@ -205,7 +216,7 @@ export function ConversationSidebar({ onOpenProfile }: { onOpenProfile: (userId:
     if (listPage) {
       return (
         <main aria-label={server?.name ?? t('sidebar.title')} className="flex min-h-0 min-w-0 flex-1 bg-bg-primary pb-[var(--mobile-navigation-height)] text-text-primary">
-          <ServerRail />
+          <ServerRail onOpenProfile={onOpenProfile} />
           <div className="flex min-w-0 flex-1 flex-col rounded-tl-xl bg-bg-secondary">{content}</div>
         </main>
       );
@@ -214,7 +225,7 @@ export function ConversationSidebar({ onOpenProfile }: { onOpenProfile: (userId:
     return (
       <Sidebar ariaLabel={server?.name ?? t('sidebar.title')} fromRail={false} className="text-text-primary">
         <div className="flex h-full min-h-0">
-          <ServerRail />
+          <ServerRail onOpenProfile={onOpenProfile} />
           <div className="flex min-h-0 min-w-0 flex-1 flex-col bg-bg-secondary">{content}</div>
         </div>
       </Sidebar>

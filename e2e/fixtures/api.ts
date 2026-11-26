@@ -22,6 +22,7 @@ export interface CreatedServer {
 }
 
 export const PERMISSIONS = {
+  MANAGE_CHANNELS: 1 << 3,
   VIEW_CHANNEL: 1 << 7,
   SEND_MESSAGES: 1 << 8,
   SPEAK: 1 << 14,
@@ -40,8 +41,13 @@ export async function createServer(api: APIRequestContext, name: string): Promis
   return { id: body.server.id, name: body.server.name, channels, text, voice, everyoneRoleId: everyone.id, everyonePermissions: everyone.permissions };
 }
 
-export async function createChannel(api: APIRequestContext, serverId: string, name: string, type: 'text' | 'voice' = 'text'): Promise<string> {
-  const body = await ok<{ channelId: string }>(await api.post(`/api/servers/${serverId}/channels`, { data: { name, type } }), 'create channel');
+export async function createCategory(api: APIRequestContext, serverId: string, name: string): Promise<string> {
+  const body = await ok<{ categoryId: string }>(await api.post(`/api/servers/${serverId}/categories`, { data: { name } }), 'create category');
+  return body.categoryId;
+}
+
+export async function createChannel(api: APIRequestContext, serverId: string, name: string, type: 'text' | 'voice' = 'text', categoryId?: string): Promise<string> {
+  const body = await ok<{ channelId: string }>(await api.post(`/api/servers/${serverId}/channels`, { data: { name, type, categoryId } }), 'create channel');
   return body.channelId;
 }
 

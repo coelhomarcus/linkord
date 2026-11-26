@@ -2,15 +2,13 @@ import { CameraIcon, CheckIcon, MinusIcon, XIcon } from '@/shared/ui/icons';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { ChangeEvent } from 'react';
 import type { Area } from 'react-easy-crop';
-import { useNavigate } from 'react-router';
 import { useTranslation } from 'react-i18next';
-import { ConfirmDialog } from '@/shared/ConfirmDialog';
+import { ChannelDeleteDialog } from './ChannelDeleteDialog';
 import { FloatingBar } from '@/shared/FloatingBar';
 import { Button } from '@/shared/ui/primitives/button';
 import { Input } from '@/shared/ui/primitives/input';
 import { Textarea } from '@/shared/ui/primitives/textarea';
 import { describeApiError } from '@/shared/api/errorText';
-import { ROUTES } from '@/shared/lib/routes';
 import { cn } from '@/shared/lib/utils';
 import type { ChannelSummary, ServerSummary } from '@/shared/types/protocol';
 import { WebhookUrlReveal } from '@/features/bots/WebhookUrlReveal';
@@ -23,7 +21,7 @@ import { canManageRole, grantableBits } from './roleHierarchy';
 import { useRoomState } from '@/state/RoomContext';
 import { SectionTitle, SettingsShell, type SettingsTab } from './SettingsShell';
 import {
-  createWebhook, deleteChannel, deleteWebhook, fetchOverwrites, fetchWebhooks, rotateWebhook, setOverwrite, updateChannel, updateWebhook,
+  createWebhook, deleteWebhook, fetchOverwrites, fetchWebhooks, rotateWebhook, setOverwrite, updateChannel, updateWebhook,
   type Overwrite, type WebhookInfo,
 } from './serversApi';
 import { channelSettingsTabs, type ChannelSettingsTab } from './serverUtils';
@@ -224,16 +222,16 @@ function Webhooks({ channel }: { channel: ChannelSummary }) {
 
 export function ChannelSettingsModal({ server, channel, onClose }: { server: ServerSummary; channel: ChannelSummary; onClose: () => void }) {
   const { t } = useTranslation('servers');
-  const navigate = useNavigate();
   const [name, setName] = useState(channel.name);
   const [topic, setTopic] = useState(channel.topic);
   const [confirmDelete, setConfirmDelete] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   useEffect(() => { setName(channel.name); setTopic(channel.topic); }, [channel.name, channel.topic]);
   const bar = useSaveBar({ name, topic }, name !== channel.name || topic !== channel.topic);
   const tabs: (SettingsTab & { key: TabKey })[] = channelSettingsTabs(server, channel)
     .map((key) => ({ key, label: t(`channelSettings.${key}`), danger: key === 'delete' || undefined }));
-  const [tab, setTab] = useState<TabKey>(tabs[0]?.key ?? 'overview');
+  const [selectedTab, setTab] = useState<TabKey>(tabs[0]?.key ?? 'overview');
+  const tab = tabs.some(({ key }) => key === selectedTab) ? selectedTab : tabs[0]?.key;
+  if (!tab) return null;
   const heading = channel.type === 'text' ? `# ${channel.name}` : channel.name;
 
   return (
@@ -264,13 +262,8 @@ export function ChannelSettingsModal({ server, channel, onClose }: { server: Ser
         <>
           <SectionTitle>{t('channelSettings.delete')}</SectionTitle>
           <p className="text-label text-text-secondary">{t('deleteChannel.description', { name: channel.name })}</p>
-          {error && <p role="alert" className="text-label text-red-text">{error}</p>}
           <Button type="button" variant="destructive" className="self-start" onClick={() => setConfirmDelete(true)}>{t('channelSettings.delete')}</Button>
-          <ConfirmDialog open={confirmDelete} onOpenChange={setConfirmDelete} title={t('deleteChannel.title', { name: channel.name })} description={t('deleteChannel.confirm')}
-            destructive confirmLabel={t('channelSettings.delete')}
-            onConfirm={() => {
-              deleteChannel(channel.id).then(() => { onClose(); navigate(ROUTES.server(server.id), { replace: true }); }).catch((err: unknown) => setError(describeApiError(err)));
-            }} />
+          {confirmDelete && <ChannelDeleteDialog channel={channel} onClose={() => setConfirmDelete(false)} onDeleted={onClose} />}
         </>
       )}
     </SettingsShell>

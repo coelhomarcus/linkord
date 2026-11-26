@@ -30,7 +30,7 @@ function renderInMenu(overrides: Partial<ChatMessage>, state = me) {
   const removeChatAttachment = vi.fn(async () => {});
   const suppressChatEmbed = vi.fn(async () => {});
   renderWithRoom(
-    <GlobalContextMenu onOpenProfile={vi.fn()}>
+    <GlobalContextMenu>
       <MessageRow message={message} showHeader highlighted={false} allUsers={new Map()} mentionLookup={new Map()} onOpenProfile={vi.fn()} onReply={vi.fn()} onJumpTo={vi.fn()} />
     </GlobalContextMenu>,
     { state, removeChatAttachment, suppressChatEmbed, activeConversationId: 'c', messagesByConversation: new Map([['c', [message]]]) },

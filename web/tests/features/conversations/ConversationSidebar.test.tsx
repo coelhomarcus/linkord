@@ -133,7 +133,7 @@ describe('ConversationSidebar — a server', () => {
   it('shows the server, its categories and channels, and who is in each voice channel', () => {
     renderSidebar('/channels/s1/ch-geral', { participants: new Map([['p-bea', inVoice()]]) });
     expect(screen.getByText('Os Xerecas')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Canais de texto/ })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Canais de texto' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'geral' })).toHaveAttribute('aria-current', 'page');
     expect(screen.getByRole('button', { name: 'Geral' })).toBeInTheDocument();
     expect(screen.getByText('Bea')).toBeInTheDocument();
@@ -152,7 +152,7 @@ describe('ConversationSidebar — a server', () => {
 
   it('collapsing a category hides its channels', async () => {
     renderSidebar('/channels/s1/ch-geral');
-    await userEvent.setup().click(screen.getByRole('button', { name: /Canais de voz/ }));
+    await userEvent.setup().click(screen.getByRole('button', { name: 'Canais de voz' }));
     expect(screen.queryByRole('button', { name: 'Geral' })).not.toBeInTheDocument();
   });
 });

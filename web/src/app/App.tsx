@@ -361,7 +361,7 @@ function Shell() {
   if (!state.joined) return <LoadingScreen reconnecting={state.reconnecting} onRetry={retryConnection} />;
 
   return (
-    <GlobalContextMenu onOpenProfile={openProfile}>
+    <GlobalContextMenu>
       <ContentLocationProvider value={contentLocation}>
       <ServerSettingsProvider onOpenProfile={openProfile}>
       <div className="flex h-full min-h-0 flex-col bg-surface-rail">
@@ -376,7 +376,7 @@ function Shell() {
         <AccessNotice />
         <AccountNotice />
         <DesktopAppAnnouncement />
-        <ServerRail className="hidden md:flex" />
+        <ServerRail className="hidden md:flex" onOpenProfile={openProfile} />
         {/* Discord's one framed panel: the list and the content side by side
             under a shared hairline, rounded once at its top-left corner. It is
             positioned so the tablet drawer opens inside it, out of the rail. */}
@@ -406,7 +406,7 @@ function Shell() {
                   onToggleDetails={() => { setDetails(directShown ? !(membersVisible || profileVisible) : !memberListOpen); }}
                   aside={searchVisible && wide ? <div className="flex w-[420px] flex-none border-l border-border-subtle">{searchPanel}</div>
                     : profilePanelUser ? <DirectProfilePanel user={profilePanelUser} onOpenProfile={openProfile} />
-                    : membersVisible && currentServer && wide ? <MemberListPanel server={currentServer} onOpenProfile={openProfile} /> : null}
+                    : membersVisible && currentServer && wide ? <MemberListPanel key={currentServer.id} server={currentServer} onOpenProfile={openProfile} /> : null}
                 />
               )}
             />
@@ -440,7 +440,7 @@ function Shell() {
         {mobileMainPage && <MobileTabBar activeCallConversationId={activeCallConversationId} onReturnToCall={handleReturnToCall} />}
         {currentServer && !wide && (
           <Sheet open={membersVisible} onOpenChange={setMemberListPreference} side="right" ariaLabel={currentServer.name} className="w-[264px]">
-            <MemberListPanel server={currentServer} onOpenProfile={openProfile} active={membersVisible} />
+            <MemberListPanel key={currentServer.id} server={currentServer} onOpenProfile={openProfile} active={membersVisible} />
           </Sheet>
         )}
         <TileMenu onOpenProfile={openProfile} />

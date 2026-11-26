@@ -1,12 +1,17 @@
-import { PlusIcon, SidebarSimpleIcon, SpeakerHighIcon } from '@/shared/ui/icons';
+import { ArrowDownIcon, ArrowUpIcon, PlusIcon, SidebarSimpleIcon, SpeakerHighIcon } from '@/shared/ui/icons';
 import { useMemo, useRef, useState } from 'react';
-import type { CSSProperties, DragEvent, HTMLAttributes, ReactNode } from 'react';
+import type { CSSProperties, DragEvent, HTMLAttributes, PointerEvent, ReactNode } from 'react';
 import { DndContext, PointerSensor, closestCenter, useSensor, useSensors } from '@dnd-kit/core';
 import type { DragEndEvent, Modifier } from '@dnd-kit/core';
 import { SortableContext, arrayMove, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { useNavigate } from 'react-router';
 import { useTranslation } from 'react-i18next';
+import { RowMenu, RowMenuButton } from '@/shared/RowMenu';
+import { useRowMenu } from '@/shared/hooks/useRowMenu';
+import { DropdownMenuItem } from '@/shared/ui/primitives/dropdown-menu';
+import { announce } from '@/shared/lib/announce';
+import { DirectMenuItems } from '@/features/conversations/DirectMenuItems';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/shared/ui/primitives/tooltip';
 import { ROUTES, callConversationIdFromPath, conversationIdFromPath, isHomePath, serverIdFromPath } from '@/shared/lib/routes';
 import { cn } from '@/shared/lib/utils';
@@ -23,6 +28,7 @@ import { CreateServerDialog } from './CreateServerDialog';
 import { liveCallIds, serverHasLiveCall, serverUnread } from './serverUtils';
 import { railDirects } from './railDirects';
 import { saveServerOrder } from './serversApi';
+import { ServerActionDialog, ServerMenuItems, type ServerMenuAction } from './ServerMenu';
 
 // the rail is one column: a dragged server only travels up and down it
 const alongRail: Modifier = ({ transform }) => ({ ...transform, x: 0 });
@@ -53,10 +59,10 @@ function Pill({ active, unread }: { active: boolean; unread: boolean }) {
 // a 4px offset it sat on top of it.
 const CORNER = 'pointer-events-none absolute ring-4 ring-surface-rail';
 
-function RailItem({ label, active, unread, badge, badgeLabel, badgeClassName, liveCall, onClick, children, dragging = false, sortable, serverId, conversationId }: {
+function RailItem({ label, active, unread, badge, badgeLabel, badgeClassName, liveCall, onClick, children, dragging = false, sortable, serverId, conversationId, menuItems }: {
   label: string; active: boolean; unread: boolean; badge?: number; onClick: () => void; children: ReactNode;
-  /** what the app's context menu offers on a right-click: a server's or a DM's own items */
   serverId?: string;
+  menuItems?: ReactNode;
   conversationId?: string;
   /** what the count means, for the item's accessible name; without it the count is left out of the name */
   badgeLabel?: string;
@@ -68,11 +74,13 @@ function RailItem({ label, active, unread, badge, badgeLabel, badgeClassName, li
   /** what makes the item a handle of the rail's sortable list */
   sortable?: { ref: (node: HTMLElement | null) => void; style: CSSProperties; props: HTMLAttributes<HTMLElement> };
 }) {
+  const menu = useRowMenu();
   const accessibleName = [label, badge ? badgeLabel : undefined, liveCall].filter(Boolean).join(', ');
-  return (
+  const button = (
     <Tooltip disabled={dragging}>
       <TooltipTrigger
         {...sortable?.props}
+        {...(menuItems ? menu.primaryProps : undefined)}
         ref={sortable?.ref}
         style={sortable?.style}
         onClick={onClick}
@@ -82,7 +90,7 @@ function RailItem({ label, active, unread, badge, badgeLabel, badgeClassName, li
         aria-label={accessibleName}
         aria-current={active ? 'page' : undefined}
         className={cn(
-          'group/server relative grid size-10 flex-none touch-none select-none place-items-center rounded-[12px] focus-ring [-webkit-user-drag:none]',
+          'group/server relative grid size-10 flex-none touch-pan-y select-none place-items-center rounded-[12px] focus-ring [-webkit-user-drag:none]',
           dragging && 'z-10 cursor-grabbing',
         )}
       >
@@ -110,18 +118,32 @@ function RailItem({ label, active, unread, badge, badgeLabel, badgeClassName, li
       </TooltipContent>
     </Tooltip>
   );
+  if (!menuItems) return button;
+  return (
+    <div {...menu.rowProps} className="relative flex-none">
+      {button}
+      <RowMenuButton menu={menu} name={label}
+        className="sr-only z-10 size-6 bg-surface-400 focus-visible:not-sr-only focus-visible:absolute focus-visible:-bottom-1 focus-visible:-right-1" />
+      <RowMenu menu={menu}>{menuItems}</RowMenu>
+    </div>
+  );
 }
 
 /** A server in the rail that can be dragged to a new place in it. */
-function SortableServerItem({ id, suppressClick, ...item }: Omit<Parameters<typeof RailItem>[0], 'sortable' | 'dragging'> & { id: string; suppressClick: () => boolean }) {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
+function SortableServerItem({ id, suppressClick, reorderDisabled, ...item }: Omit<Parameters<typeof RailItem>[0], 'sortable' | 'dragging'> & { id: string; suppressClick: () => boolean; reorderDisabled: boolean }) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id, disabled: reorderDisabled });
   return (
     <RailItem
       {...item}
       // the press that ends a drag is not a click on the server it dropped
       onClick={() => { if (!suppressClick()) item.onClick(); }}
       dragging={isDragging}
-      sortable={{ ref: setNodeRef, style: { transform: CSS.Translate.toString(transform), transition }, props: { ...attributes, ...listeners } }}
+      sortable={{ ref: setNodeRef, style: { transform: CSS.Translate.toString(transform), transition }, props: {
+        ...attributes, ...listeners,
+        onPointerDown: (event: PointerEvent<HTMLElement>) => {
+          if (event.pointerType === 'mouse') listeners?.onPointerDown?.(event);
+        },
+      } }}
     />
   );
 }
@@ -129,11 +151,11 @@ function SortableServerItem({ id, suppressClick, ...item }: Omit<Parameters<type
 /** The far-left column: home (friends and DMs) on top, then every server the
  * account is in, then creating or joining one. Servers are dragged to reorder
  * them, as in Discord's rail; the order is the account's own. */
-export function ServerRail({ className }: { className?: string }) {
+export function ServerRail({ className, onOpenProfile }: { className?: string; onOpenProfile?: (userId: string) => void }) {
   const { t } = useTranslation('servers');
   const navigate = useNavigate();
   const { pathname } = useContentLocation();
-  const { servers, conversations, badgeByConversation, reorderServers, activeCallConversationId, allUsers, dmCall } = useRoom('servers', 'conversations', 'badgeByConversation', 'reorderServers', 'activeCallConversationId', 'allUsers', 'dmCall');
+  const { servers, conversations, badgeByConversation, reorderServers, activeCallConversationId, allUsers, dmCall, closeConversation } = useRoom('servers', 'conversations', 'badgeByConversation', 'reorderServers', 'activeCallConversationId', 'allUsers', 'dmCall', 'closeConversation');
   const state = useRoomState('me');
   const roster = useCallRoster();
   const callIds = useMemo(() => liveCallIds(roster.values(), activeCallConversationId), [roster, activeCallConversationId]);
@@ -142,14 +164,34 @@ export function ServerRail({ className }: { className?: string }) {
   const draggedAtRef = useRef(0);
   const suppressClick = () => Date.now() - draggedAtRef.current < 250;
 
+  const orderPending = useRef(false);
+  const [savingOrder, setSavingOrder] = useState(false);
+  const [action, setAction] = useState<{ serverId: string; action: ServerMenuAction } | null>(null);
+  const actionServer = servers.find((server) => server.id === action?.serverId);
+
+  async function moveServer(id: string, to: number) {
+    if (orderPending.current) return;
+    const before = servers.map((server) => server.id);
+    const from = before.indexOf(id);
+    if (from < 0 || to < 0 || to >= before.length || from === to) return;
+    const after = arrayMove(before, from, to);
+    orderPending.current = true;
+    setSavingOrder(true);
+    reorderServers(after);
+    try {
+      await saveServerOrder(after);
+      reorderServers(after);
+    } catch {
+      reorderServers(before);
+      announce(t('menu.orderFailed'));
+    }
+    orderPending.current = false;
+    setSavingOrder(false);
+  }
+
   function handleDragEnd({ active, over }: DragEndEvent) {
     draggedAtRef.current = Date.now();
-    if (!over || active.id === over.id) return;
-    const before = servers.map((s) => s.id);
-    const after = arrayMove(before, before.indexOf(String(active.id)), before.indexOf(String(over.id)));
-    reorderServers(after);
-    // the rail already moved; a refused save puts it back
-    saveServerOrder(after).catch(() => reorderServers(before));
+    if (over) void moveServer(String(active.id), servers.findIndex((server) => server.id === over.id));
   }
   const { pendingIncomingCount } = useFriends();
   const [createOpen, setCreateOpen] = useState(false);
@@ -199,6 +241,12 @@ export function ServerRail({ className }: { className?: string }) {
             liveCall={row.inCall ? t('rail.liveCall') : undefined}
             conversationId={row.conversationId}
             onClick={() => go(ROUTES.direct(row.conversationId))}
+            menuItems={<DirectMenuItems id={row.conversationId}
+              onOpenProfile={onOpenProfile && (() => onOpenProfile(row.peerId))}
+              onClose={() => {
+                closeConversation(row.conversationId);
+                if (openConversationId === row.conversationId) navigate(ROUTES.home, { replace: true });
+              }} />}
           >
             <Avatar id={row.peerId} name={name} avatar={person?.avatar ?? ''} poster={person?.avatarPoster} avatarColor={person?.avatarColor ?? ''} size={40} />
           </RailItem>
@@ -207,7 +255,7 @@ export function ServerRail({ className }: { className?: string }) {
       <span aria-hidden className="h-px w-8 flex-none bg-border-subtle" />
       <DndContext sensors={sensors} collisionDetection={closestCenter} modifiers={[alongRail]} onDragStart={() => { draggedAtRef.current = Date.now(); }} onDragEnd={handleDragEnd} onDragCancel={() => { draggedAtRef.current = Date.now(); }}>
         <SortableContext items={servers.map((s) => s.id)} strategy={verticalListSortingStrategy}>
-          {servers.map((server) => {
+          {servers.map((server, index) => {
             const unread = serverUnread(server, badgeByConversation);
             return (
               <SortableServerItem
@@ -215,6 +263,18 @@ export function ServerRail({ className }: { className?: string }) {
                 id={server.id}
                 serverId={server.id}
                 suppressClick={suppressClick}
+                reorderDisabled={savingOrder}
+                menuItems={<ServerMenuItems server={server} onAction={(next) => setAction({ serverId: server.id, action: next })}
+                  orderActions={servers.length > 1 && (
+                    <>
+                      <DropdownMenuItem disabled={savingOrder || index === 0} onClick={() => void moveServer(server.id, index - 1)}>
+                        <ArrowUpIcon size={16} />{t('menu.moveUp')}
+                      </DropdownMenuItem>
+                      <DropdownMenuItem disabled={savingOrder || index === servers.length - 1} onClick={() => void moveServer(server.id, index + 1)}>
+                        <ArrowDownIcon size={16} />{t('menu.moveDown')}
+                      </DropdownMenuItem>
+                    </>
+                  )} />}
                 label={server.name}
                 active={server.id === currentServerId}
                 unread={unread > 0}
@@ -235,6 +295,7 @@ export function ServerRail({ className }: { className?: string }) {
           <PlusIcon size={20} weight="fill" />
         </span>
       </RailItem>
+      {actionServer && action && <ServerActionDialog key={actionServer.id} server={actionServer} action={action.action} onClose={() => setAction(null)} />}
       <CreateServerDialog open={createOpen} onOpenChange={setCreateOpen} />
     </nav>
   );

@@ -218,12 +218,12 @@ Playwright runs on Bun and uses the installed Google Chrome. Its CLI scripts use
 | --- | --- |
 | `features/auth` | Sign-up with and without the code, login, logout, two-step login on and off, ending another session. |
 | `features/account-data` | A data export built, emailed and downloaded; deleting the account and cancelling it by signing in. |
-| `features/friends` | Requests accepted, declined and cancelled; block and unblock. |
+| `features/friends` | Friend requests, including acceptance from the row menu. Messaging from the friends menu, blocking, and unblocking. |
 | `features/legacy-app-paths` | Permanent redirects for old `/app` links, including the friends view selected by a query and the settings section selected by a fragment. |
-| `features/dm` | Talking in a DM, unread counts, no DM without friendship, muting a DM across tabs. |
+| `features/dm` | Talking in a DM, unread counts, no DM without friendship, row menus in the list and rail, muting a DM across tabs. |
 | `features/chat` | Send, typing, reply, edit, delete, reactions, search, image and video attachments, the new-messages line, marking as read. |
 | `features/voice-messages` | Recording and playing a voice message; recording refused during a call without breaking its microphone. |
-| `features/servers` | Creating, invites, permissions (`SPEAK`, hidden and read-only channels), kick, ban, deleting, an animated icon, mute levels. |
+| `features/servers` | Creating, invites, permissions, an animated icon, mute levels, and context menus for category and channel management, member moderation, and reordering servers by touch. |
 | `features/pins` | Pinning and unpinning, the `PIN_MESSAGES` permission, saved messages. |
 | `features/search` | The header search's filters, keyboard submission with suggestions open, sort, jump to message and history. |
 | `features/voice` | Hearing each other, mute, camera, screen share, moving and disconnecting a member. |

@@ -94,6 +94,16 @@ describe('ServerRail', () => {
   });
 });
 
+describe('ServerRail — row menu', () => {
+  it('marks a server read when one of its channels still shows the unread marker', async () => {
+    const markServerRead = vi.fn();
+    renderRail(vi.fn(), [withChannels], { unreadStartByConversation: new Map([['c-text', 9]]), markServerRead });
+    fireEvent.contextMenu(screen.getByRole('button', { name: 'Squad' }));
+    await userEvent.click(await screen.findByRole('menuitem', { name: 'Marcar como lido' }));
+    expect(markServerRead).toHaveBeenCalledWith('s1');
+  });
+});
+
 describe('ServerRail — live call seal', () => {
   const original = window.matchMedia;
   afterEach(() => { window.matchMedia = original; });
