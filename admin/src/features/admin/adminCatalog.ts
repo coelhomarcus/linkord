@@ -1,9 +1,9 @@
-import { FlagIcon, HardDrivesIcon, ScrollIcon, SquaresFourIcon, UsersIcon, WebhooksLogoIcon, type IconComponent } from '@overcord/frontend-shared/ui/icons';
+import { FileArchiveIcon, FlagIcon, HardDrivesIcon, ScrollIcon, SquaresFourIcon, UsersIcon, WebhooksLogoIcon, type IconComponent } from '@overcord/frontend-shared/ui/icons';
 
 
 export interface AdminSection {
   /** first path segment under /admin */
-  id: 'users' | 'servers' | 'webhooks' | 'reports' | 'audit' | 'system';
+  id: 'users' | 'servers' | 'webhooks' | 'reports' | 'audit' | 'system' | 'backup';
   labelKey: string;
   icon: IconComponent;
 }
@@ -33,6 +33,7 @@ export const ADMIN_GROUPS: AdminGroup[] = [
     sections: [
       { id: 'audit', labelKey: 'nav.audit', icon: ScrollIcon },
       { id: 'system', labelKey: 'nav.system', icon: HardDrivesIcon },
+      { id: 'backup', labelKey: 'nav.backup', icon: FileArchiveIcon },
     ],
   },
 ];
