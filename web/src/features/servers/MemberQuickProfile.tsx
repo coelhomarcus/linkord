@@ -42,6 +42,7 @@ interface MemberQuickProfileProps {
   onOpenChange: (open: boolean) => void;
   onOpenProfile: (userId: string, tab?: ProfileTab) => void;
   onRoleIdsChange: (roleIds: string[]) => void;
+  menuControlProps?: { 'data-row-menu-control': string; 'aria-keyshortcuts': string };
 }
 
 /** The whole card's shape until what it shows was read once, so it lands in
@@ -60,7 +61,7 @@ function QuickProfileSkeleton({ label }: { label: string }) {
   );
 }
 
-export function MemberQuickProfile({ server, member, currentUser, offline, open, onOpenChange, onOpenProfile, onRoleIdsChange }: MemberQuickProfileProps) {
+export function MemberQuickProfile({ server, member, currentUser, offline, open, onOpenChange, onOpenProfile, onRoleIdsChange, menuControlProps }: MemberQuickProfileProps) {
   const { t } = useTranslation('servers');
   const { t: tChat } = useTranslation('chat');
   const { t: tProfile } = useTranslation('profile');
@@ -145,6 +146,7 @@ export function MemberQuickProfile({ server, member, currentUser, offline, open,
       <PopoverTrigger
         render={
           <button
+            {...menuControlProps}
             type="button"
             data-avatar-hover
             aria-label={t('members.openProfile', { name: user.displayName })}

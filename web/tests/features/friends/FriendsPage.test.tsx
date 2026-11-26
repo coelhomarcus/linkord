@@ -126,7 +126,7 @@ describe('FriendsPage', () => {
     await screen.findByText('Ana');
     await user.click(screen.getByRole('button', { name: 'Mais ações para Ana' }));
     const items = await screen.findAllByRole('menuitem');
-    expect(items.map((item) => item.textContent)).toEqual(['Ver perfil', 'Remover amizade', 'Bloquear']);
+    expect(items.map((item) => item.textContent)).toEqual(['Ver perfil', 'Mensagem', 'Remover amizade', 'Bloquear']);
     for (const item of items) expect(item.querySelector('svg')).not.toBeNull();
   });
 

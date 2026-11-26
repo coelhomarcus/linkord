@@ -18,7 +18,7 @@ describe('GlobalContextMenu', () => {
   it('does not block contextmenu on the call stage so local handlers (e.g. TileMenu) can run', async () => {
     const onTileMenu = vi.fn();
     renderWithRoom(
-      <GlobalContextMenu onOpenProfile={vi.fn()}>
+      <GlobalContextMenu>
         <main data-stage data-testid="stage">
           <div data-tile-kind="camera" data-testid="tile" onContextMenu={onTileMenu} />
         </main>
@@ -37,7 +37,7 @@ describe('GlobalContextMenu', () => {
   it('leaves someone in a voice channel list to the voice member menu, even though it carries a user', async () => {
     const onMemberMenu = vi.fn();
     renderWithRoom(
-      <GlobalContextMenu onOpenProfile={vi.fn()}>
+      <GlobalContextMenu>
         <li data-voice-member="p-bea" data-user-id="u-bea" data-testid="member" onContextMenu={onMemberMenu} />
       </GlobalContextMenu>,
       { state: userState },
@@ -55,7 +55,7 @@ describe('GlobalContextMenu', () => {
     const user = userEvent.setup();
     const message = { msgId: 7, conversationId: 'dm-1', id: 'u-ana', name: 'Ana', avatar: '', text: 'Oi, tudo bem?', ts: 0 };
     renderWithRoom(
-      <GlobalContextMenu onOpenProfile={vi.fn()}>
+      <GlobalContextMenu>
         <div data-message-id="7" data-testid="row">{message.text}</div>
       </GlobalContextMenu>,
       { state: userState, activeConversationId: 'dm-1', messagesByConversation: new Map([['dm-1', [message]]]) },
@@ -80,7 +80,7 @@ describe('GlobalContextMenu', () => {
       vi.useFakeTimers();
       const onMemberMenu = vi.fn();
       renderWithRoom(
-        <GlobalContextMenu onOpenProfile={vi.fn()}>
+        <GlobalContextMenu>
           <li data-voice-member="p-bea" onContextMenu={(event) => onMemberMenu(event.clientX, event.clientY)}>
             <button type="button">Bea</button>
           </li>
@@ -97,7 +97,7 @@ describe('GlobalContextMenu', () => {
       const onTileMenu = vi.fn();
       const onAvatarMenu = vi.fn();
       renderWithRoom(
-        <GlobalContextMenu onOpenProfile={vi.fn()}>
+        <GlobalContextMenu>
           <main data-stage><div role="button" data-tile-kind="camera" data-testid="tile" onContextMenu={onTileMenu} /></main>
           <div data-dm-call-avatar="p-1" data-testid="avatar" onContextMenu={(event) => { event.preventDefault(); event.stopPropagation(); onAvatarMenu(); }} />
         </GlobalContextMenu>,
@@ -112,7 +112,7 @@ describe('GlobalContextMenu', () => {
     it('a right-click on a DM call avatar reaches it too', () => {
       const onAvatarMenu = vi.fn();
       renderWithRoom(
-        <GlobalContextMenu onOpenProfile={vi.fn()}>
+        <GlobalContextMenu>
           <div data-dm-call-avatar="p-1" data-testid="avatar" onContextMenu={onAvatarMenu} />
         </GlobalContextMenu>,
         { state: userState },
@@ -125,7 +125,7 @@ describe('GlobalContextMenu', () => {
       vi.useFakeTimers();
       const onStageMenu = vi.fn();
       renderWithRoom(
-        <GlobalContextMenu onOpenProfile={vi.fn()}>
+        <GlobalContextMenu>
           <main data-stage data-testid="stage" onContextMenu={onStageMenu} />
           <div data-testid="empty-area" />
         </GlobalContextMenu>,
@@ -139,7 +139,7 @@ describe('GlobalContextMenu', () => {
     it("Base UI's own touch timer no longer opens the menu", async () => {
       vi.useFakeTimers();
       renderWithRoom(
-        <GlobalContextMenu onOpenProfile={vi.fn()}>
+        <GlobalContextMenu>
           <p data-message-id="7" data-testid="msg">oi</p>
         </GlobalContextMenu>,
         { state: userState, activeConversationId: 'c1', messagesByConversation: new Map([['c1', [{ msgId: 7, conversationId: 'c1', id: 'other', name: 'Ana', avatar: '', text: 'oi', ts: 1 } as never]]]) },
@@ -152,7 +152,7 @@ describe('GlobalContextMenu', () => {
 
   it('does not offer hide-audio-only on the call stage', async () => {
     renderWithRoom(
-      <GlobalContextMenu onOpenProfile={vi.fn()}>
+      <GlobalContextMenu>
         <main data-stage data-testid="stage" />
       </GlobalContextMenu>,
       { state: userState }
@@ -168,7 +168,7 @@ describe('GlobalContextMenu', () => {
 
   it('does not open an empty popup when the target has no actions', () => {
     renderWithRoom(
-      <GlobalContextMenu onOpenProfile={vi.fn()}>
+      <GlobalContextMenu>
         <div data-testid="empty-area">no actions</div>
       </GlobalContextMenu>,
       { state: userState }
@@ -181,107 +181,35 @@ describe('GlobalContextMenu', () => {
 
   it('still opens when the target has visible actions', async () => {
     renderWithRoom(
-      <GlobalContextMenu onOpenProfile={vi.fn()}>
-        <div data-user-id="u-1" data-testid="user-row">Fulana</div>
+      <GlobalContextMenu>
+        <div data-download-url="/example" data-testid="downloadable">File</div>
       </GlobalContextMenu>,
       { state: userState }
     );
 
-    fireEvent.contextMenu(screen.getByTestId('user-row'));
+    fireEvent.contextMenu(screen.getByTestId('downloadable'));
 
-    expect(await screen.findByText('Ver perfil')).toBeInTheDocument();
+    expect(await screen.findByText('Baixar')).toBeInTheDocument();
   });
 
   it('closes the open menu when the next target has no actions', async () => {
     renderWithRoom(
-      <GlobalContextMenu onOpenProfile={vi.fn()}>
+      <GlobalContextMenu>
         <div>
-          <div data-user-id="u-1" data-testid="user-row">Fulana</div>
+          <div data-download-url="/example" data-testid="downloadable">File</div>
           <div data-testid="empty-area">no actions</div>
         </div>
       </GlobalContextMenu>,
       { state: userState }
     );
 
-    fireEvent.contextMenu(screen.getByTestId('user-row'));
-    expect(await screen.findByText('Ver perfil')).toBeInTheDocument();
+    fireEvent.contextMenu(screen.getByTestId('downloadable'));
+    expect(await screen.findByText('Baixar')).toBeInTheDocument();
 
     fireEvent.contextMenu(screen.getByTestId('empty-area'));
 
     await waitFor(() => {
-    expect(screen.queryByText('Ver perfil')).not.toBeInTheDocument();
-    });
-  });
-
-  it('shows "Ver perfil" for a data-user-id target and triggers onOpenProfile with the right id', async () => {
-    const onOpenProfile = vi.fn();
-    renderWithRoom(
-      <GlobalContextMenu onOpenProfile={onOpenProfile}>
-        <div data-user-id="u-42" data-testid="user-row">Fulana</div>
-      </GlobalContextMenu>,
-      { state: userState }
-    );
-
-    fireEvent.contextMenu(screen.getByTestId('user-row'));
-    const item = await screen.findByText('Ver perfil');
-    fireEvent.click(item);
-
-    expect(onOpenProfile).toHaveBeenCalledWith('u-42');
-  });
-
-  describe('mark as read', () => {
-    const conversation = (id: string, type: 'direct' | 'text') => ({
-      id, type, title: '', memberIds: [], serverId: type === 'text' ? 's1' : null, lastMessageAt: null, createdAt: 0, updatedAt: 0,
-    });
-    const server = {
-      id: 's1', name: 'Equipe', icon: '', ownerId: 'me', status: 'active' as const, createdAt: 0, memberCount: 2, position: 0,
-      permissions: 0, myRoleIds: [], roles: [], categories: [],
-      channels: [{ id: 'c1', serverId: 's1', type: 'text' as const, name: 'geral', topic: '', categoryId: null, position: 0, permissionsSynced: true, permissions: 0 }],
-    };
-
-    it('a channel or DM row with unread messages offers it and marks that conversation', async () => {
-      const user = userEvent.setup();
-      const markConversationRead = vi.fn();
-      renderWithRoom(
-        <GlobalContextMenu onOpenProfile={vi.fn()}>
-          <div data-conversation-id="c1" data-testid="channel"><button type="button">geral</button></div>
-        </GlobalContextMenu>,
-        { state: userState, conversations: [conversation('c1', 'text')], unreadByConversation: new Map([['c1', 3]]), markConversationRead },
-      );
-
-      fireEvent.contextMenu(screen.getByTestId('channel'));
-      await user.click(await screen.findByRole('menuitem', { name: 'Marcar como lida' }));
-
-      expect(markConversationRead).toHaveBeenCalledWith('c1');
-    });
-
-    it('is there but disabled when nothing is unread', async () => {
-      renderWithRoom(
-        <GlobalContextMenu onOpenProfile={vi.fn()}>
-          <div data-conversation-id="d1" data-testid="dm">Ana</div>
-        </GlobalContextMenu>,
-        { state: userState, conversations: [conversation('d1', 'direct')] },
-      );
-
-      fireEvent.contextMenu(screen.getByTestId('dm'));
-
-      expect(await screen.findByRole('menuitem', { name: 'Marcar como lida' })).toHaveAttribute('aria-disabled', 'true');
-    });
-
-    it("a server's icon offers marking the whole server read", async () => {
-      const user = userEvent.setup();
-      const markServerRead = vi.fn();
-      renderWithRoom(
-        <GlobalContextMenu onOpenProfile={vi.fn()}>
-          <button type="button" data-server-id="s1" data-testid="server">Equipe</button>
-        </GlobalContextMenu>,
-        { state: userState, servers: [server], unreadStartByConversation: new Map([['c1', 9]]), markServerRead },
-      );
-
-      fireEvent.contextMenu(screen.getByTestId('server'));
-      await user.click(await screen.findByRole('menuitem', { name: 'Marcar servidor como lido' }));
-
-      expect(markServerRead).toHaveBeenCalledWith('s1');
+    expect(screen.queryByText('Baixar')).not.toBeInTheDocument();
     });
   });
 
@@ -295,7 +223,7 @@ describe('GlobalContextMenu', () => {
       ...overrides,
     });
     const renderMessage = (overrides: Record<string, unknown> = {}) => renderWithRoom(
-      <GlobalContextMenu onOpenProfile={vi.fn()}>
+      <GlobalContextMenu>
         <p data-message-id="7" data-testid="msg">oi</p>
       </GlobalContextMenu>,
       room(overrides),
@@ -305,7 +233,7 @@ describe('GlobalContextMenu', () => {
       const setReplyingTo = vi.fn();
       const second = { msgId: 8, conversationId: 'c1', id: 'other', name: 'Ana', avatar: '', text: 'second', ts: 1 } as never;
       renderWithRoom(
-        <GlobalContextMenu onOpenProfile={vi.fn()}>
+        <GlobalContextMenu>
           <div><p data-message-id="7">first</p><p data-message-id="8" data-testid="second">second</p></div>
         </GlobalContextMenu>,
         room({ setReplyingTo, messagesByConversation: new Map([['c1', [message, second]]]) }),
@@ -320,7 +248,7 @@ describe('GlobalContextMenu', () => {
 
     it('lights the row for exactly as long as the press, with the timer\'s own duration', async () => {
       renderWithRoom(
-        <GlobalContextMenu onOpenProfile={vi.fn()}>
+        <GlobalContextMenu>
           <div data-message-id="7" data-testid="msg"><span>oi</span> <a href="https://example.com">link</a></div>
         </GlobalContextMenu>,
         room(),
@@ -347,7 +275,7 @@ describe('GlobalContextMenu', () => {
 
     it('leaves a link inside a message to the browser', async () => {
       renderWithRoom(
-        <GlobalContextMenu onOpenProfile={vi.fn()}>
+        <GlobalContextMenu>
           <div data-message-id="7" data-testid="msg"><a href="https://example.com">link</a></div>
         </GlobalContextMenu>,
         room(),

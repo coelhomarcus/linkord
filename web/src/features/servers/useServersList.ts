@@ -73,11 +73,14 @@ export function useServersList() {
 
   /** Optimistic: the rail moves at once, the server keeps the order. */
   const reorderLocally = useCallback((serverIds: string[]) => {
-    const byId = new Map(serversRef.current.map((s) => [s.id, s]));
-    commit(serverIds.flatMap((id, position) => {
-      const server = byId.get(id);
-      return server ? [{ ...server, position }] : [];
-    }));
+    const remaining = new Map(serversRef.current.map((server) => [server.id, server]));
+    const requested = serverIds.flatMap((id) => {
+      const server = remaining.get(id);
+      remaining.delete(id);
+      return server ? [server] : [];
+    });
+    // A membership update can arrive while an order is being saved.
+    commit([...requested, ...remaining.values()].map((server, position) => ({ ...server, position })));
   }, [commit]);
 
   const channelConversations = useMemo(

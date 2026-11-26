@@ -1,10 +1,20 @@
+import { ChatCircleIcon, ProhibitIcon, UserIcon, UserMinusIcon } from '@/shared/ui/icons';
+import { ConfirmDialog } from '@/shared/ConfirmDialog';
+import { RowMenu, RowMenuButton } from '@/shared/RowMenu';
+import { useRowMenu } from '@/shared/hooks/useRowMenu';
+import { DropdownMenuItem, DropdownMenuSeparator } from '@/shared/ui/primitives/dropdown-menu';
+import { rememberProfilePreview } from '@/features/profile/profileCache';
+import type { ComponentProps } from 'react';
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useRoom, useRoomState } from '@/state/RoomContext';
 import type { ServerSummary } from '@/shared/types/protocol';
-import { fetchAllServerMembers, type ServerMemberEntry } from './serversApi';
+import { banMember, fetchAllServerMembers, kickMember, type ServerMemberEntry } from './serversApi';
 import { Skeleton, SkeletonGroup } from '@/shared/ui/primitives/skeleton';
 import { MemberQuickProfile } from './MemberQuickProfile';
+import { PERMISSIONS } from './permissionBits';
+import { outranks } from './roleHierarchy';
+import { can } from './serverUtils';
 import type { ProfileTab } from '@/features/profile/ProfileSidebar';
 
 interface Section { key: string; label: string; members: ServerMemberEntry[] }
@@ -27,6 +37,52 @@ export function groupMembers(server: ServerSummary, members: ServerMemberEntry[]
     .map((s) => ({ ...s, members: [...s.members].sort(byName) }));
 }
 
+type ModerationAction = 'kick' | 'ban';
+
+function canModerate(server: ServerSummary, meId: string | null, member: ServerMemberEntry, action: ModerationAction) {
+  return can(server, action === 'kick' ? PERMISSIONS.KICK_MEMBERS : PERMISSIONS.BAN_MEMBERS)
+    && outranks(server, meId, { userId: member.user.id, roleIds: member.roleIds, isOwner: member.isOwner });
+}
+
+function MemberRow({ onModerate, ...profile }: ComponentProps<typeof MemberQuickProfile> & {
+  onModerate: (action: ModerationAction) => void;
+}) {
+  const { t } = useTranslation('servers');
+  const { t: tc } = useTranslation('common');
+  const { me } = useRoomState('me');
+  const { openDirect, requestChatView, friendUserIds } = useRoom('openDirect', 'requestChatView', 'friendUserIds');
+  const menu = useRowMenu();
+  const { server, member } = profile;
+  const { user } = member;
+  const mayKick = canModerate(server, me.userId, member, 'kick');
+  const mayBan = canModerate(server, me.userId, member, 'ban');
+
+  return (
+    <li {...menu.rowProps} data-user-id={user.id} className="group/member relative flex items-center">
+      <div className="min-w-0 flex-1">
+        <MemberQuickProfile {...profile} menuControlProps={menu.primaryProps} />
+      </div>
+      <RowMenuButton menu={menu} name={user.displayName}
+        className="mr-1 size-6 opacity-0 group-hover/member:opacity-100 group-focus-within/member:opacity-100 touch-first:opacity-100" />
+      <RowMenu menu={menu}>
+        <DropdownMenuItem onClick={() => {
+          rememberProfilePreview(user);
+          profile.onOpenChange(false);
+          profile.onOpenProfile(user.id);
+        }}><UserIcon size={16} />{tc('contextMenu.viewProfile')}</DropdownMenuItem>
+        {me.userId !== user.id && friendUserIds.has(user.id) && (
+          <DropdownMenuItem onClick={() => { openDirect(user.id); requestChatView(); }}>
+            <ChatCircleIcon size={16} />{t('voiceMembers.menu.message')}
+          </DropdownMenuItem>
+        )}
+        {(mayKick || mayBan) && <DropdownMenuSeparator />}
+        {mayKick && <DropdownMenuItem variant="destructive" onClick={() => onModerate('kick')}><UserMinusIcon size={16} />{t('members.kick')}</DropdownMenuItem>}
+        {mayBan && <DropdownMenuItem variant="destructive" onClick={() => onModerate('ban')}><ProhibitIcon size={16} />{t('members.ban')}</DropdownMenuItem>}
+      </RowMenu>
+    </li>
+  );
+}
+
 /** `active` is false while a closed sheet keeps this mounted for its
  * animation: nothing is fetched until it is shown. */
 export function MemberListPanel({ server, onOpenProfile, active = true }: { server: ServerSummary; onOpenProfile: (userId: string, tab?: ProfileTab) => void; active?: boolean }) {
@@ -36,6 +92,8 @@ export function MemberListPanel({ server, onOpenProfile, active = true }: { serv
   const revision = serverMemberRevision.get(server.id) ?? 0;
   const [members, setMembers] = useState<ServerMemberEntry[] | null>(null);
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
+  const [moderation, setModeration] = useState<{ userId: string; action: ModerationAction } | null>(null);
+  const moderationMember = members?.find((member) => member.user.id === moderation?.userId);
 
   useEffect(() => {
     if (!active) return;
@@ -65,30 +123,41 @@ export function MemberListPanel({ server, onOpenProfile, active = true }: { serv
         <section key={section.key} className="mb-4">
           <h3 className="select-none px-2 pb-1 text-label font-medium text-text-secondary">{t('members.section', { name: section.label, count: section.members.length })}</h3>
           <ul>
-            {section.members.map((entry) => {
-              const member = entry;
+            {section.members.map((member) => {
               const offline = section.key === 'offline';
               return (
-                <li key={member.user.id} data-user-id={member.user.id}>
-                  <MemberQuickProfile
-                    server={server}
-                    member={member}
-                    currentUser={allUsers.get(member.user.id)}
-                    offline={offline}
-                    open={selectedUserId === member.user.id}
-                    onOpenChange={(open) => setSelectedUserId(open ? member.user.id : null)}
-                    onOpenProfile={onOpenProfile}
-                    onRoleIdsChange={(roleIds) => {
-                      setMembers((current) => current?.map((item) => item.user.id === member.user.id ? { ...item, roleIds } : item) ?? null);
-                      setServerMemberSnapshot(server.id, (members ?? []).map((item) => ({ userId: item.user.id, roleIds: item.user.id === member.user.id ? roleIds : item.roleIds })));
-                    }}
-                  />
-                </li>
+                <MemberRow
+                  key={member.user.id}
+                  server={server}
+                  member={member}
+                  currentUser={allUsers.get(member.user.id)}
+                  offline={offline}
+                  open={selectedUserId === member.user.id}
+                  onOpenChange={(open) => setSelectedUserId(open ? member.user.id : null)}
+                  onOpenProfile={onOpenProfile}
+                  onModerate={(action) => {
+                    setSelectedUserId(null);
+                    setModeration({ userId: member.user.id, action });
+                  }}
+                  onRoleIdsChange={(roleIds) => {
+                    setMembers((current) => current?.map((item) => item.user.id === member.user.id ? { ...item, roleIds } : item) ?? null);
+                    setServerMemberSnapshot(server.id, (members ?? []).map((item) => ({ userId: item.user.id, roleIds: item.user.id === member.user.id ? roleIds : item.roleIds })));
+                  }}
+                />
               );
             })}
           </ul>
         </section>
       ))}
+      {moderation && moderationMember && canModerate(server, meId, moderationMember, moderation.action) && (
+        <ConfirmDialog open onOpenChange={(open) => { if (!open) setModeration(null); }}
+          title={t(`members.${moderation.action}Title`, { name: moderationMember.user.displayName })}
+          description={t(`members.${moderation.action}Description`)} destructive
+          confirmLabel={t(`members.${moderation.action}`)}
+          onConfirmAsync={() => moderation.action === 'kick'
+            ? kickMember(server.id, moderation.userId) : banMember(server.id, moderation.userId)}
+        />
+      )}
     </aside>
   );
 }

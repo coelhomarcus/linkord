@@ -34,12 +34,14 @@ Overcord is a self-hosted place to chat and call with friends. Talk in direct me
 
 **Servers**
 - Roles, channel permissions, invite links, kicks, and bans.
+- Right-click or long-press a server, category, channel, or member for its actions. The More actions button and Shift+F10 open the same menu. Channels and categories can be edited or deleted by members with permission. Deleting a category moves its channels to the uncategorized list and preserves their permissions.
+- Drag text and voice channels to reorder each type or move a channel between categories. On touch screens or with a keyboard, use the channel menu. Moving preserves the channel’s access rules.
 - Server templates to get started quickly.
 - Audit log of moderation and settings changes.
 - Webhooks so deploys, monitors, and other services can post into a channel ([guide](docs/WEBHOOK.md)).
 
 **People**
-- Friends by exact `@username`, friend requests, and blocking.
+- Friends by exact `@username`, friend requests, and blocking. The friends and direct message lists offer row actions by right-click, long press, or keyboard.
 - Presence (available, idle, do not disturb, invisible) and custom statuses.
 - Activity: the desktop app shows what you are playing or using on your profile, in member lists and in your friends' Active Now, including what games send through Discord Rich Presence. It can be turned off or limited per game.
 - A profile with connected accounts and a Wall of widgets: MyAnimeList, GitHub, games from IGDB, Steam, Twitch, and your own playtime.
@@ -53,6 +55,7 @@ Overcord is a self-hosted place to chat and call with friends. Talk in direct me
 - Two-step login by email, sign-in alerts, and a list of active sessions you can end.
 - Username and password changes, account deletion, and a download of your data.
 - Themes, density, fonts, languages (Portuguese and English) and notification sounds, synced across your devices.
+- Custom empty-state illustrations use shades of the selected theme’s accent color.
 - Installable as a web app (PWA), with share-to-Overcord on Android.
 - The web app opens at the root of its domain. Existing `/app` links redirect to their new addresses.
 

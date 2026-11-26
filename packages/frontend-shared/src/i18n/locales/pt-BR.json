@@ -67,6 +67,7 @@
     "peopleSent_other": "{{count}} pessoas enviaram mensagens"
   },
   "contextMenu": {
+    "moreFor": "Mais ações para {{name}}",
     "reply": "Responder",
     "allReactions": "Ver todas as reações",
     "copyText": "Copiar texto",
@@ -86,8 +87,7 @@
     "removeAttachmentDescription": "\"{{name}}\" sai da mensagem para todo mundo e é apagado. O resto da mensagem continua.",
     "remove": "Remover",
     "messageFrom": "mensagem de {{name}}",
-    "markAsRead": "Marcar como lida",
-    "markServerAsRead": "Marcar servidor como lido"
+    "markAsRead": "Marcar como lida"
   },
   "room": {
     "full": "Sala cheia, tente mais tarde.",

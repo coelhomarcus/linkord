@@ -16,10 +16,16 @@ test.describe('friends', () => {
 
     await b.page.goto('/friends');
     await b.page.getByRole('link', { name: /^Pendentes/ }).click();
-    await b.page.getByRole('button', { name: 'Aceitar' }).first().click();
+    await b.page.getByRole('button', { name: `Ver perfil de ${alice.username}` }).click({ button: 'right' });
+    await b.page.getByRole('menuitem', { name: 'Aceitar' }).click();
     await expect(b.page.getByText('Solicitação aceita.')).toBeVisible();
 
-    const dm = await a.openDmWith(bob.username);
+    await a.page.goto('/friends');
+    await a.page.getByRole('button', { name: `Ver perfil de ${bob.username}` }).press('Shift+F10');
+    await expect(a.page.getByRole('menuitem', { name: 'Remover amizade' })).toBeVisible();
+    const opened = a.waitForSocketEvent('conversation-opened');
+    await a.page.getByRole('menuitem', { name: 'Mensagem' }).click();
+    const { conversationId: dm } = await opened as { conversationId: string };
     await a.send('agora somos amigos');
     await b.openDm(dm);
     await b.expectMessage('agora somos amigos');

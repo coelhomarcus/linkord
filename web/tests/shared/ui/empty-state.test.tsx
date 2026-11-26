@@ -24,8 +24,13 @@ describe('EmptyState', () => {
     expect(screen.queryByRole('button')).not.toBeInTheDocument();
   });
 
-  it('draws with the theme tokens, never a fixed colour', () => {
+  it('uses the theme accent for the palette and the local surface for the backdrop', () => {
     const { container } = render(<EmptyState illustration="bell" title="All caught up" />);
+    const svg = container.querySelector('svg')!;
+    for (const key of Array.from(svg.style)) {
+      expect(svg.style.getPropertyValue(key)).toContain('var(--color-accent-primary)');
+    }
+    expect(svg.style.getPropertyValue('--es-back')).toContain('var(--surface-base, var(--color-surface-app))');
     const painted = [...container.querySelectorAll('svg *')].flatMap((node) => [node.getAttribute('fill'), node.getAttribute('stroke')]).filter((value): value is string => !!value && value !== 'none');
     expect(painted.length).toBeGreaterThan(0);
     for (const value of painted) expect(value).toMatch(/^var\(--/);

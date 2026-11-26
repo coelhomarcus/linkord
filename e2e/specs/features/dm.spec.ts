@@ -35,6 +35,12 @@ test.describe('direct messages', () => {
     const other = await bob.newTab('/friends');
     const row = (tab: typeof b) => tab.page.locator(`li[data-conversation-id="${dm}"] > button`).first();
     await expect(row(b)).toHaveAttribute('aria-label', `${alice.username}, 1 não lidas`);
+    const rail = b.page.getByRole('navigation', { name: 'Servidores' });
+    await rail.getByRole('button', { name: new RegExp(`^${alice.username}, 1 mensagem não lida$`) }).click({ button: 'right' });
+    await expect(b.page.getByRole('menuitem', { name: 'Ver perfil' })).toBeVisible();
+    await expect(b.page.getByRole('menuitem', { name: 'Fechar conversa' })).toBeVisible();
+    await b.page.keyboard.press('Escape');
+
 
     await row(b).click({ button: 'right' });
     await b.page.getByRole('menuitem', { name: 'Silenciar conversa' }).hover();

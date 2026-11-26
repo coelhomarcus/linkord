@@ -1,5 +1,9 @@
 import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
+import { UserIcon } from '@/shared/ui/icons';
+import { RowMenu, RowMenuButton } from '@/shared/RowMenu';
+import { useRowMenu } from '@/shared/hooks/useRowMenu';
+import { DropdownMenuItem } from '@/shared/ui/primitives/dropdown-menu';
 import { Avatar } from '@/shared/Avatar';
 import type { SocialUser } from '@/shared/api/api';
 import { UserStatusDot } from '@/features/status/UserStatus';
@@ -9,23 +13,29 @@ import { useUserActivity } from '@/features/activity/activityDisplay';
 import { UserActivityInline } from '@/features/activity/ActivityLine';
 import { rememberProfilePreview } from '@/features/profile/profileCache';
 
-export function SocialUserRow({ user, online, subtitle, onOpenProfile, children }: {
+export function SocialUserRow({ user, online, subtitle, onOpenProfile, actions, menuButtonClassName, pending, children }: {
   user: SocialUser;
   /** undefined hides the presence dot (e.g. blocked users — presence isn't shown for them) */
   online?: boolean;
   subtitle?: string;
   onOpenProfile: () => void;
+  actions?: ReactNode;
+  menuButtonClassName?: string;
+  pending?: boolean;
   children?: ReactNode;
 }) {
   const { t } = useTranslation('friends');
+  const menu = useRowMenu();
+  const openProfile = () => { rememberProfilePreview(user); onOpenProfile(); };
   const customStatus = useCustomStatus(online !== undefined ? user.id : null);
   const activity = useUserActivity(online !== undefined ? user.id : null);
   return (
-    <div className="group/row cutout -mx-2.5 flex h-[62px] items-center gap-3 rounded-lg px-2.5 transition-colors hover:cutout-subtle hover:bg-nav-hover">
+    <div {...(actions ? menu.rowProps : undefined)} className="group/row cutout -mx-2.5 flex h-[62px] items-center gap-3 rounded-lg px-2.5 transition-colors hover:cutout-subtle hover:bg-nav-hover">
       <button
+        {...(actions ? menu.primaryProps : undefined)}
         type="button"
         // the row already knows the name and avatar: the profile opens with them while the rest is read
-        onClick={() => { rememberProfilePreview(user); onOpenProfile(); }}
+        onClick={openProfile}
         aria-label={t('row.viewProfile', { name: user.displayName })}
         className="flex min-w-0 flex-1 items-center gap-3 rounded-md text-left focus-ring"
       >
@@ -48,7 +58,14 @@ export function SocialUserRow({ user, online, subtitle, onOpenProfile, children 
           {online !== undefined && <span className="sr-only">{online ? t('row.online') : t('row.offline')}</span>}
         </div>
       </button>
-      {children && <div className="flex flex-none items-center gap-2.5">{children}</div>}
+      <div className="flex flex-none items-center gap-2.5">
+        {children}
+        {actions && <RowMenuButton menu={menu} name={user.displayName} className={menuButtonClassName ?? 'size-8'} disabled={pending} />}
+      </div>
+      {actions && <RowMenu menu={menu}>
+        <DropdownMenuItem onClick={openProfile}><UserIcon size={16} />{t('list.viewProfile')}</DropdownMenuItem>
+        {actions}
+      </RowMenu>}
     </div>
   );
 }

@@ -1,5 +1,6 @@
 import { asc, eq, inArray } from 'drizzle-orm';
 import { db } from '../../db/client.js';
+import type { Tx } from '../users/userPairLock.js';
 import {
   channelPermissionOverwrites, conversations, serverCategories, serverMemberRoles, serverMembers, serverRoles, servers,
   type Server, type ServerCategory, type ServerRole,
@@ -40,16 +41,16 @@ export interface ServerSnapshot {
 
 const cache = new Map<string, Promise<ServerSnapshot | null>>();
 
-async function loadSnapshot(serverId: string): Promise<ServerSnapshot | null> {
-  const [server] = await db.select().from(servers).where(eq(servers.id, serverId)).limit(1);
+export async function readServerSnapshot(serverId: string, executor: typeof db | Tx = db): Promise<ServerSnapshot | null> {
+  const [server] = await executor.select().from(servers).where(eq(servers.id, serverId)).limit(1);
   if (!server) return null;
   const [roles, memberRows, memberRoleRows, categories, channelRows, overwriteRows] = await Promise.all([
-    db.select().from(serverRoles).where(eq(serverRoles.serverId, serverId)).orderBy(asc(serverRoles.position)),
-    db.select().from(serverMembers).where(eq(serverMembers.serverId, serverId)),
-    db.select().from(serverMemberRoles).where(eq(serverMemberRoles.serverId, serverId)),
-    db.select().from(serverCategories).where(eq(serverCategories.serverId, serverId)).orderBy(asc(serverCategories.position), asc(serverCategories.createdAt)),
-    db.select().from(conversations).where(eq(conversations.serverId, serverId)).orderBy(asc(conversations.position), asc(conversations.createdAt)),
-    db.select().from(channelPermissionOverwrites).where(eq(channelPermissionOverwrites.serverId, serverId)),
+    executor.select().from(serverRoles).where(eq(serverRoles.serverId, serverId)).orderBy(asc(serverRoles.position)),
+    executor.select().from(serverMembers).where(eq(serverMembers.serverId, serverId)),
+    executor.select().from(serverMemberRoles).where(eq(serverMemberRoles.serverId, serverId)),
+    executor.select().from(serverCategories).where(eq(serverCategories.serverId, serverId)).orderBy(asc(serverCategories.position), asc(serverCategories.createdAt)),
+    executor.select().from(conversations).where(eq(conversations.serverId, serverId)).orderBy(asc(conversations.position), asc(conversations.createdAt)),
+    executor.select().from(channelPermissionOverwrites).where(eq(channelPermissionOverwrites.serverId, serverId)),
   ]);
   const members = new Map<string, { roleIds: string[]; position: number; joinedAt: Date }>();
   for (const row of memberRows) members.set(row.userId, { roleIds: [], position: row.position, joinedAt: row.joinedAt });
@@ -71,7 +72,7 @@ async function loadSnapshot(serverId: string): Promise<ServerSnapshot | null> {
 export function loadServerSnapshot(serverId: string): Promise<ServerSnapshot | null> {
   let entry = cache.get(serverId);
   if (!entry) {
-    entry = loadSnapshot(serverId);
+    entry = readServerSnapshot(serverId);
     cache.set(serverId, entry);
     entry.catch(() => { if (cache.get(serverId) === entry) cache.delete(serverId); });
   }

@@ -43,8 +43,16 @@ export const setMemberRoles = (serverId: string, userId: string, roleIds: string
 export const createChannel = (serverId: string, input: { name: string; type: 'text' | 'voice'; categoryId?: string | null }) =>
   apiFetch<{ channelId: string }>(`/api/servers/${id(serverId)}/channels`, json('POST', input));
 export const updateChannel = (channelId: string, patch: { name?: string; topic?: string; permissionsSynced?: true }) => apiFetch(`/api/channels/${id(channelId)}`, json('PATCH', patch));
+export interface ChannelDestination {
+  categoryId: string | null;
+  target?: { channelId: string; edge: 'before' | 'after' };
+}
+export const moveChannel = (channelId: string, destination: ChannelDestination) =>
+  apiFetch(`/api/channels/${id(channelId)}/position`, json('PATCH', destination));
 export const deleteChannel = (channelId: string) => apiFetch(`/api/channels/${id(channelId)}`, json('DELETE'));
 export const createCategory = (serverId: string, name: string) => apiFetch<{ categoryId: string }>(`/api/servers/${id(serverId)}/categories`, json('POST', { name }));
+export const updateCategory = (categoryId: string, name: string) => apiFetch(`/api/categories/${id(categoryId)}`, json('PATCH', { name }));
+export const deleteCategory = (categoryId: string) => apiFetch(`/api/categories/${id(categoryId)}`, json('DELETE'));
 
 export interface Overwrite { roleId: string | null; userId: string | null; allow: number; deny: number }
 export function fetchOverwrites(serverId: string, targetId: string): Promise<{ items: Overwrite[] }> {

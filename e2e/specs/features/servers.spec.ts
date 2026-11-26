@@ -1,5 +1,5 @@
 import { test, expect } from '../../fixtures/test';
-import { PERMISSIONS, acceptInvite, createChannel, createInvite, createServer, setChannelOverwrite } from '../../fixtures/api';
+import { PERMISSIONS, acceptInvite, createCategory, createChannel, createInvite, createServer, grantEveryone, setChannelOverwrite } from '../../fixtures/api';
 import { gifInfo, threeFrameGif } from '../../fixtures/images';
 
 test.describe('servers', () => {
@@ -161,6 +161,191 @@ test.describe('servers', () => {
     expect(read.status()).toBe(403);
   });
 
+  test('category actions update both accounts and keep the channels and their access', async ({ users }) => {
+    const alice = await users.create('alice');
+    const bob = await users.create('bob');
+    const server = await createServer(alice.api, 'E2E categories');
+    await acceptInvite(bob.api, await createInvite(alice.api, server.id));
+    const category = await createCategory(alice.api, server.id, 'Projetos');
+    const text = await createChannel(alice.api, server.id, 'planejamento', 'text', category);
+    const hidden = await createChannel(alice.api, server.id, 'restrito', 'text', category);
+    await setChannelOverwrite(alice.api, server.id, category, server.everyoneRoleId, 0, PERMISSIONS.VIEW_CHANNEL);
+    expect((await alice.api.patch(`/api/channels/${hidden}`, { data: { permissionsSynced: true } })).ok()).toBe(true);
+    await setChannelOverwrite(alice.api, server.id, text, server.everyoneRoleId, PERMISSIONS.VIEW_CHANNEL, 0);
+
+    const a = await alice.app();
+    const b = await bob.app();
+    await a.openChannel(server.id, server.text.id);
+    await b.openChannel(server.id, server.text.id);
+    const categoryRow = (tab: typeof a, name: string) => tab.page.getByRole('button', { name, exact: true, expanded: true });
+
+    await categoryRow(b, 'Projetos').click({ button: 'right' });
+    await expect(b.page.getByRole('menuitem', { name: 'Recolher categoria' })).toBeVisible();
+    await expect(b.page.getByRole('menuitem', { name: 'Renomear categoria' })).toHaveCount(0);
+    await expect(b.page.getByRole('menuitem', { name: 'Excluir categoria' })).toHaveCount(0);
+    await b.page.keyboard.press('Escape');
+
+    await categoryRow(a, 'Projetos').click({ button: 'right' });
+    await a.page.getByRole('menuitem', { name: 'Renomear categoria' }).click();
+    const rename = a.page.getByRole('dialog', { name: 'Renomear categoria' });
+    await expect(rename.getByLabel('Nome da categoria')).toHaveValue('Projetos');
+    await rename.getByLabel('Nome da categoria').fill('Planejamento');
+    await rename.getByRole('button', { name: 'Salvar' }).click();
+    await expect(categoryRow(b, 'Planejamento')).toBeVisible();
+    await expect(categoryRow(a, 'Planejamento')).toBeVisible();
+
+    await categoryRow(a, 'Planejamento').press('Shift+F10');
+    await a.page.getByRole('menuitem', { name: 'Excluir categoria' }).click();
+    const confirm = a.page.getByRole('dialog', { name: 'Excluir categoria Planejamento' });
+    await expect(confirm.getByText('Os canais ficarão na lista sem categoria e manterão suas permissões.')).toBeVisible();
+    await confirm.getByRole('button', { name: 'Cancelar' }).click();
+    await expect(categoryRow(a, 'Planejamento')).toBeVisible();
+
+    await a.page.getByRole('button', { name: 'Mais ações para Planejamento' }).click();
+    await a.page.getByRole('menuitem', { name: 'Excluir categoria' }).click();
+    await confirm.getByRole('button', { name: 'Excluir categoria' }).click();
+    await expect(categoryRow(b, 'Planejamento')).toHaveCount(0);
+    await expect(b.page.getByRole('button', { name: 'planejamento', exact: true })).toBeVisible();
+    await expect(a.page.getByRole('button', { name: 'restrito', exact: true })).toBeVisible();
+    await expect(b.page.getByRole('button', { name: 'restrito', exact: true })).toHaveCount(0);
+  });
+
+  test('channel menus offer links and permission-aware deletion with a retry', async ({ users }) => {
+    const alice = await users.create('alice');
+    const bob = await users.create('bob');
+    const server = await createServer(alice.api, 'E2E channel actions');
+    await acceptInvite(bob.api, await createInvite(alice.api, server.id));
+    const text = await createChannel(alice.api, server.id, 'avisos');
+    const voice = await createChannel(alice.api, server.id, 'Conversa', 'voice');
+    await setChannelOverwrite(alice.api, server.id, text, server.everyoneRoleId, PERMISSIONS.MANAGE_CHANNELS, 0);
+
+    const a = await alice.app();
+    const b = await bob.app();
+    await a.openChannel(server.id, text);
+    await b.openChannel(server.id, text);
+    const channel = (tab: typeof a, name: string) => tab.page.getByRole('navigation', { name: 'Canais' }).getByRole('button', { name, exact: true });
+    await channel(b, 'avisos').click({ button: 'right' });
+    await expect(b.page.getByRole('menuitem', { name: 'Excluir canal' })).toBeVisible();
+    await b.page.keyboard.press('Escape');
+    await channel(b, 'Conversa').click({ button: 'right' });
+    await expect(b.page.getByRole('menuitem', { name: 'Copiar link do canal' })).toBeVisible();
+    await expect(b.page.getByRole('menuitem', { name: 'Excluir canal' })).toHaveCount(0);
+    await b.page.keyboard.press('Escape');
+
+    await alice.context.grantPermissions(['clipboard-read', 'clipboard-write']);
+    await channel(a, 'Conversa').click({ button: 'right' });
+    await a.page.getByRole('menuitem', { name: 'Copiar link do canal' }).click();
+    await expect.poll(() => a.page.evaluate(() => navigator.clipboard.readText())).toBe(new URL(`/channels/${server.id}/${voice}`, a.page.url()).href);
+
+    await channel(a, 'Conversa').click({ button: 'right' });
+    await a.page.getByRole('menuitem', { name: 'Excluir canal' }).click();
+    await a.page.getByRole('dialog', { name: 'Excluir Conversa' }).getByRole('button', { name: 'Excluir canal' }).click();
+    await expect(channel(b, 'Conversa')).toHaveCount(0);
+    await expect(a.page.getByPlaceholder('Conversar em #avisos')).toBeVisible();
+
+    const endpoint = `**/api/channels/${text}`;
+    await a.page.route(endpoint, (route) => route.fulfill({ status: 500, json: { error: { code: 'internal' } } }), { times: 1 });
+    await channel(a, 'avisos').click({ button: 'right' });
+    await a.page.getByRole('menuitem', { name: 'Excluir canal' }).click();
+    const confirm = a.page.getByRole('dialog', { name: 'Excluir #avisos' });
+    await confirm.getByRole('button', { name: 'Excluir canal' }).click();
+    await expect(confirm.getByRole('alert')).toBeVisible();
+    await expect(channel(b, 'avisos')).toBeVisible();
+    await confirm.getByRole('button', { name: 'Excluir canal' }).click();
+    for (const tab of [a, b]) {
+      await expect(channel(tab, 'avisos')).toHaveCount(0);
+      await expect(tab.page.getByPlaceholder('Conversar em #geral')).toBeVisible();
+    }
+  });
+
+  test('channel drag and menu moves sync across accounts and preserve access', async ({ users }) => {
+    const alice = await users.create('alice');
+    const bob = await users.create('bob');
+    const server = await createServer(alice.api, 'E2E channel layout');
+    await acceptInvite(bob.api, await createInvite(alice.api, server.id));
+    await grantEveryone(alice.api, server, PERMISSIONS.MANAGE_CHANNELS);
+    const projects = await createCategory(alice.api, server.id, 'Projetos');
+    const team = await createCategory(alice.api, server.id, 'Equipe reservada');
+    const planning = await createChannel(alice.api, server.id, 'planejamento', 'text', projects);
+    const notices = await createChannel(alice.api, server.id, 'avisos', 'text', projects);
+    await createChannel(alice.api, server.id, 'Sala A', 'voice', projects);
+    await createChannel(alice.api, server.id, 'Sala B', 'voice', projects);
+    const secret = await createChannel(alice.api, server.id, 'segredo', 'text', team);
+    await setChannelOverwrite(alice.api, server.id, team, server.everyoneRoleId, 0, PERMISSIONS.VIEW_CHANNEL);
+    await setChannelOverwrite(alice.api, server.id, notices, server.everyoneRoleId, 0, PERMISSIONS.MANAGE_CHANNELS);
+
+    const a = await alice.app();
+    const b = await bob.app();
+    await a.openChannel(server.id, server.text.id);
+    await b.openChannel(server.id, server.text.id);
+    const list = (tab: typeof a) => tab.page.getByRole('navigation', { name: 'Canais', exact: true });
+    const row = (tab: typeof a, name: string) => list(tab).getByRole('button', { name, exact: true });
+    const namesIn = (tab: typeof a, name: string) => row(tab, name).locator('xpath=ancestor::section[1]').locator('li[data-channel-id] button[data-row-menu-control]');
+    const leading = { targetPosition: { x: 20, y: 3 } };
+
+    await expect(row(b, 'avisos')).toHaveAttribute('draggable', 'false');
+    await row(b, 'avisos').click({ button: 'right' });
+    await expect(b.page.getByRole('menuitem', { name: 'Mover para cima' })).toHaveCount(0);
+    await b.page.keyboard.press('Escape');
+    const denied = await bob.api.patch(`/api/channels/${notices}/position`, { data: { categoryId: team } });
+    expect(denied.status()).toBe(403);
+
+    await row(a, 'avisos').dragTo(row(a, 'planejamento'), leading);
+    await expect(namesIn(b, 'Projetos')).toHaveText(['avisos', 'planejamento', 'Sala A', 'Sala B']);
+    await row(a, 'Sala B').dragTo(row(a, 'Sala A'), leading);
+    await expect(namesIn(b, 'Projetos')).toHaveText(['avisos', 'planejamento', 'Sala B', 'Sala A']);
+
+    await row(a, 'Equipe reservada').click();
+    await expect(row(a, 'Equipe reservada')).toHaveAttribute('aria-expanded', 'false');
+    await row(a, 'planejamento').dragTo(row(a, 'Equipe reservada'));
+    // The public channel remains visible to Bob under a restricted category.
+    await expect(namesIn(b, 'Equipe reservada')).toHaveText(['planejamento']);
+    await row(a, 'Equipe reservada').click();
+    await expect(namesIn(a, 'Equipe reservada')).toHaveText(['segredo', 'planejamento']);
+
+    await row(a, 'segredo').press('Shift+F10');
+    await a.page.getByRole('menuitem', { name: 'Mover para categoria' }).hover();
+    await a.page.getByRole('menuitem', { name: 'Projetos' }).click();
+    await expect(namesIn(a, 'Projetos')).toHaveText(['avisos', 'segredo', 'Sala B', 'Sala A']);
+    await expect(row(b, 'segredo')).toHaveCount(0);
+    expect((await bob.api.patch(`/api/channels/${secret}/position`, { data: { categoryId: null } })).status()).toBe(403);
+
+    await row(a, 'planejamento').press('Shift+F10');
+    await a.page.getByRole('menuitem', { name: 'Mover para categoria' }).hover();
+    await a.page.getByRole('menuitem', { name: 'Sem categoria' }).click();
+    await expect(list(b).locator('li[data-channel-id]').first()).toHaveAttribute('data-channel-id', planning);
+    await b.page.reload();
+    await expect(list(b).locator('li[data-channel-id]').first()).toHaveAttribute('data-channel-id', planning);
+    await expect(namesIn(b, 'Projetos')).toHaveText(['avisos', 'Sala B', 'Sala A']);
+  });
+
+  test('a phone can reorder servers from the long-press menu', async ({ users }) => {
+    const alice = await users.create('alice', { device: 'phone' });
+    const first = await createServer(alice.api, 'Primeiro');
+    await createServer(alice.api, 'Segundo');
+    const a = await alice.app();
+    await a.page.goto(`/channels/${first.id}`);
+    const rail = a.page.getByRole('navigation', { name: 'Servidores' });
+    const second = rail.getByRole('button', { name: 'Segundo', exact: true });
+    await expect(second).toBeVisible();
+    const box = await second.boundingBox();
+    if (!box) throw new Error('server icon has no bounds');
+    const cdp = await a.page.context().newCDPSession(a.page);
+    await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: box.x + box.width / 2, y: box.y + box.height / 2 }] });
+    const move = a.page.getByRole('menuitem', { name: 'Mover para cima' });
+    await expect(move).toBeVisible();
+    await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+    const saved = a.page.waitForResponse((res) => res.url().endsWith('/api/servers/order') && res.ok());
+    await move.tap();
+    await saved;
+    await expect(a.page.getByRole('main', { name: 'Primeiro' })).toBeVisible();
+    await a.page.goto(`/channels/${first.id}`);
+    await expect(second).toBeVisible();
+    const firstBox = await rail.getByRole('button', { name: 'Primeiro', exact: true }).boundingBox();
+    const secondBox = await second.boundingBox();
+    expect(secondBox!.y).toBeLessThan(firstBox!.y);
+  });
+
   test('a channel where @everyone cannot post shows no composer to a member', async ({ users }) => {
     const alice = await users.create('alice');
     const bob = await users.create('bob');
@@ -187,11 +372,21 @@ test.describe('servers', () => {
     const b = await bob.app();
     await b.openChannel(server.id, server.text.id);
 
-    expect((await alice.api.delete(`/api/servers/${server.id}/members/${bob.id}`)).ok()).toBe(true);
+    const a = await alice.app();
+    await a.openChannel(server.id, server.text.id);
+    const members = a.page.getByRole('complementary', { name: 'Membros' });
+    const member = members.getByRole('button', { name: `Abrir perfil de ${bob.username}` });
+    await member.click({ button: 'right' });
+    await a.page.getByRole('menuitem', { name: 'Expulsar' }).click();
+    await a.page.getByRole('dialog', { name: `Expulsar ${bob.username}` }).getByRole('button', { name: 'Expulsar' }).click();
     await expect(b.page.getByPlaceholder('Conversar em #geral')).toHaveCount(0);
-    await acceptInvite(bob.api, code); // a kick is not a ban
+    await expect(member).toHaveCount(0);
+    await acceptInvite(bob.api, code);
 
-    expect((await alice.api.put(`/api/servers/${server.id}/bans/${bob.id}`, { data: {} })).ok()).toBe(true);
+    await member.click({ button: 'right' });
+    await a.page.getByRole('menuitem', { name: 'Banir' }).click();
+    await a.page.getByRole('dialog', { name: `Banir ${bob.username}` }).getByRole('button', { name: 'Banir' }).click();
+    await expect(member).toHaveCount(0);
     expect((await bob.api.post(`/api/invites/${code}/accept`, { data: {} })).ok()).toBe(false);
 
     expect((await alice.api.delete(`/api/servers/${server.id}/bans/${bob.id}`)).ok()).toBe(true);

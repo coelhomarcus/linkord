@@ -52,7 +52,10 @@
     "settings": "Server Settings",
     "createChannel": "Create Channel",
     "createCategory": "Create Category",
-    "leave": "Leave Server"
+    "leave": "Leave Server",
+    "moveUp": "Move up",
+    "moveDown": "Move down",
+    "orderFailed": "Could not save the server order."
   },
   "leave": {
     "title": "Leave \"{{name}}\"",
@@ -91,7 +94,8 @@
     "willBe": "The channel will be called {{name}}",
     "createFailed": "Could not create it.",
     "invite": "Create Invite",
-    "edit": "Edit Channel"
+    "edit": "Edit Channel",
+    "copyLink": "Copy channel link"
   },
   "members": {
     "bio": "Bio",
@@ -217,9 +221,9 @@
     "sync": "Sync with Category"
   },
   "deleteChannel": {
-    "title": "Delete #{{name}}",
     "description": "Deleting {{name}} erases all of its messages and files.",
-    "confirm": "Are you sure? This can't be undone."
+    "dialogTitle": "Delete {{name}}",
+    "dialogDescription": "Messages and files in {{name}} will be deleted permanently."
   },
   "overwrite": {
     "allow": "Allow",
@@ -488,6 +492,8 @@
       }
     },
     "fields": {
+      "category": "Category",
+      "position": "Position",
       "name": "Name",
       "icon": "Icon",
       "topic": "Topic",
@@ -526,5 +532,19 @@
     "emptyFilteredText": "Adjust or clear the filters to see everything."
   },
   "noChannelsCanCreate": "Create the first channel to get the conversation going.",
-  "noChannelsText": "When there is a channel you can see, it shows up here."
+  "noChannelsText": "When there is a channel you can see, it shows up here.",
+  "channelLayout": {
+    "moveTo": "Move to category",
+    "uncategorized": "Uncategorized",
+    "moved": "Moved {{name}}.",
+    "failed": "Could not move the channel. Try again."
+  },
+  "category": {
+    "rename": "Rename category",
+    "delete": "Delete category",
+    "deleteTitle": "Delete category {{name}}",
+    "deleteDescription": "The channels will move to the uncategorized list and keep their permissions.",
+    "expand": "Expand category",
+    "collapse": "Collapse category"
+  }
 }

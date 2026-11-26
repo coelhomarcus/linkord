@@ -1,4 +1,4 @@
-import { ArrowBendUpLeftIcon, BookmarkSimpleIcon, ChecksIcon, CopyIcon, DownloadSimpleIcon, FileXIcon, FlagIcon, LinkBreakIcon, PencilSimpleIcon, PushPinIcon, PushPinSlashIcon, TrashIcon, UserIcon, UsersIcon, XIcon } from '@/shared/ui/icons';
+import { ArrowBendUpLeftIcon, BookmarkSimpleIcon, CopyIcon, DownloadSimpleIcon, FileXIcon, FlagIcon, LinkBreakIcon, PencilSimpleIcon, PushPinIcon, PushPinSlashIcon, TrashIcon, UsersIcon } from '@/shared/ui/icons';
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { ReactNode } from 'react';
@@ -16,16 +16,14 @@ import { useKeepPopoverWarm } from '@/shared/hooks/useKeepPopoverWarm';
 import { messagePermissions } from '@/features/chat/messageActions';
 import { useMessageDeleteConfirm } from '@/features/chat/useMessageDeleteConfirm';
 import { useMessagePinConfirm } from '@/features/pins/useMessagePinConfirm';
-import { serverUnread } from '@/features/servers/serverUtils';
-import { NotificationMenuItems } from '@/features/notifications/NotificationMenuItems';
 import { useRoom, useRoomState } from '@/state/RoomContext';
 import { copyToClipboard } from '@/shared/lib/clipboard';
+import { isRowMenuTarget, NATIVE_PRESS, ROW_MENU } from '@/shared/hooks/useRowMenu';
 import { downloadFile } from '@/shared/lib/download';
 import { isTouchContextMenu, LONG_PRESS_DELAY_MS, useLongPress } from '@/shared/hooks/useLongPress';
 
 interface GlobalContextMenuProps {
   children: ReactNode;
-  onOpenProfile: (userId: string) => void;
 }
 
 function isEditableTarget(target: EventTarget | null): boolean {
@@ -39,7 +37,7 @@ function isEditableTarget(target: EventTarget | null): boolean {
 /** Call stage / tiles and a DM call's avatars open TileMenu locally, and
  * someone in a voice channel's list opens the voice member menu — the global
  * menu must not swallow their contextmenu. */
-const DELEGATED_MENU = '[data-stage], [data-tile-kind], [data-dm-call-avatar], [data-voice-member]';
+const DELEGATED_MENU = `${ROW_MENU}, [data-stage], [data-tile-kind], [data-dm-call-avatar], [data-voice-member]`;
 function isDelegatedContextMenuTarget(element: Element | null): boolean {
   return !!element?.closest(DELEGATED_MENU);
 }
@@ -47,28 +45,27 @@ function isDelegatedContextMenuTarget(element: Element | null): boolean {
 /** What a finger may long-press for a menu. Anything else, and any control
  * inside these, keeps the browser's own long press (link and image menus,
  * text selection) — except the control that *is* the row. */
-const PRESSABLE = '[data-message-id], [data-conversation-id], [data-tile-kind], [data-dm-call-avatar], [data-voice-member]';
-const ROW_CONTROL = ':is([data-conversation-id] > button, [data-voice-member] button, :is([data-attachment-id], [data-embed-link]) button)';
-const NATIVE_PRESS = 'a, button, input, textarea, select, [contenteditable], [data-download-url], [role="slider"]';
+const PRESSABLE = `${ROW_MENU}, [data-message-id], [data-tile-kind], [data-dm-call-avatar], [data-voice-member]`;
+const ROW_CONTROL = ':is([data-voice-member] button, :is([data-attachment-id], [data-embed-link]) button)';
 
 function shouldLongPress(element: Element): boolean {
   const surface = element.closest(PRESSABLE);
   if (!surface || window.getSelection()?.toString()) return false;
   if (element.closest('[data-text-selection-enabled]')) return false;
+  if (surface.matches(ROW_MENU)) return isRowMenuTarget(element, surface);
   const control = element.closest(NATIVE_PRESS);
   return !control || !surface.contains(control) || control.matches(ROW_CONTROL);
 }
 
 /** The surfaces that light up under a held finger: the row, not the whole stage. */
-const PRESS_FEEDBACK = '[data-message-id], [data-conversation-id], [data-voice-member]';
+const PRESS_FEEDBACK = `${ROW_MENU}, [data-message-id], [data-voice-member]`;
 
-export function GlobalContextMenu({ children, onOpenProfile }: GlobalContextMenuProps) {
+export function GlobalContextMenu({ children }: GlobalContextMenuProps) {
   const { t } = useTranslation('common');
   const {
     activeConversationId, messagesByConversation, reactToChatMessage, setReplyingTo, setEditingMsgId,
-    conversations, servers, closeConversation, openReactionParticipants, removeChatAttachment, suppressChatEmbed,
-    unreadByConversation, unreadStartByConversation, markConversationRead, markServerRead, savedMessageIds, saveChatMessage,
-  } = useRoom('activeConversationId', 'messagesByConversation', 'reactToChatMessage', 'setReplyingTo', 'setEditingMsgId', 'conversations', 'servers', 'closeConversation', 'openReactionParticipants', 'removeChatAttachment', 'suppressChatEmbed', 'unreadByConversation', 'unreadStartByConversation', 'markConversationRead', 'markServerRead', 'savedMessageIds', 'saveChatMessage');
+    conversations, servers, openReactionParticipants, removeChatAttachment, suppressChatEmbed, savedMessageIds, saveChatMessage,
+  } = useRoom('activeConversationId', 'messagesByConversation', 'reactToChatMessage', 'setReplyingTo', 'setEditingMsgId', 'conversations', 'servers', 'openReactionParticipants', 'removeChatAttachment', 'suppressChatEmbed', 'savedMessageIds', 'saveChatMessage');
   const { t: tPins } = useTranslation('pins');
   const { t: tSaved } = useTranslation('saved');
   const state = useRoomState('me');
@@ -84,11 +81,6 @@ export function GlobalContextMenu({ children, onOpenProfile }: GlobalContextMenu
   const [partRemoval, setPartRemoval] = useState<
     { kind: 'attachment'; msgId: number; id: string; name: string } | { kind: 'embed'; msgId: number; link: string } | null
   >(null);
-  const [conversationTarget, setConversationTarget] = useState<string | null>(null);
-  const [userTarget, setUserTarget] = useState<string | null>(null);
-  // a server's icon in the rail; only right-click reaches it (the rail drags
-  // under a finger), so the server's own header menu offers the same action
-  const [serverTarget, setServerTarget] = useState<string | null>(null);
   const [reportTarget, setReportTarget] = useState<ReportTarget | null>(null);
   // the full picker only replaces the quick row after "+"; every open starts on the row
   const [fullEmojiPicker, setFullEmojiPicker] = useState(false);
@@ -112,19 +104,9 @@ export function GlobalContextMenu({ children, onOpenProfile }: GlobalContextMenu
   const hasReactions = !!targetMessage && Object.values(targetMessage.reactions ?? {}).some((ids) => ids && ids.length > 0);
   const targetAttachment = can?.removeAttachment ? targetMessage?.attachments?.find((a) => a.id === attachmentTarget) : undefined;
   const targetEmbedLink = can?.removeEmbed ? embedTarget : null;
-  const targetConversation = conversationTarget ? conversations.find((c) => c.id === conversationTarget) : undefined;
-  const targetServer = serverTarget ? servers.find((s) => s.id === serverTarget) : undefined;
-  // what a "mark as read" would clear: a count, or a new-messages line still drawn
-  const conversationHasUnread = (id: string) => (unreadByConversation.get(id) ?? 0) > 0 || unreadStartByConversation.has(id);
-  const serverHasUnread = !!targetServer && (serverUnread(targetServer, unreadByConversation) > 0
-    || targetServer.channels.some((c) => unreadStartByConversation.has(c.id)));
-
   const showMessageBlock = !!targetMessage;
   const showDownloadBlock = !!downloadTarget;
   const showSelectionBlock = hasSelection;
-  const showConversationBlock = !!targetConversation;
-  const showUserBlock = !!userTarget;
-  const showServerBlock = !!targetServer;
 
   useEffect(() => {
     function clearSelectionMode(event: PointerEvent) {
@@ -147,6 +129,8 @@ export function GlobalContextMenu({ children, onOpenProfile }: GlobalContextMenu
         delegatedContextMenuRef.current = true;
         setContextMenuOpen(false);
         contextMenuActionsRef.current?.close();
+        const row = element?.closest(ROW_MENU);
+        if (row && element && !isRowMenuTarget(element, row)) e.stopPropagation();
         return;
       }
       delegatedContextMenuRef.current = false;
@@ -157,20 +141,12 @@ export function GlobalContextMenu({ children, onOpenProfile }: GlobalContextMenu
       const nextMessageTarget = messageEl ? Number(messageEl.dataset.messageId) : null;
       const attachmentEl = messageEl ? element?.closest<HTMLElement>('[data-attachment-id]') ?? null : null;
       const embedEl = messageEl ? element?.closest<HTMLElement>('[data-embed-link]') ?? null : null;
-      const conversationEl = element?.closest<HTMLElement>('[data-conversation-id]') ?? null;
-      const nextConversationTarget = conversationEl?.dataset.conversationId ?? null;
-      const userEl = element?.closest<HTMLElement>('[data-user-id]') ?? null;
-      const nextUserTarget = userEl?.dataset.userId ?? null;
-      const nextServerTarget = element?.closest<HTMLElement>('[data-server-id]')?.dataset.serverId ?? null;
       const nextHasSelection = !wantsNativeMenu && !!window.getSelection()?.toString();
 
       setDownloadTarget(downloadEl ? { url: downloadEl.dataset.downloadUrl!, name: downloadEl.dataset.downloadName || '' } : null);
       setMessageTarget(nextMessageTarget);
       setAttachmentTarget(attachmentEl?.dataset.attachmentId ?? null);
       setEmbedTarget(embedEl?.dataset.embedLink ?? null);
-      setConversationTarget(nextConversationTarget);
-      setUserTarget(nextUserTarget);
-      setServerTarget(nextServerTarget);
       setHasSelection(nextHasSelection);
 
       if (wantsNativeMenu) return;
@@ -179,10 +155,7 @@ export function GlobalContextMenu({ children, onOpenProfile }: GlobalContextMenu
         && !!messagesByConversation.get(activeConversationId)?.some((m) => m.msgId === nextMessageTarget);
       const hasVisibleItems = nextHasMessageBlock
         || !!downloadEl
-        || nextHasSelection
-        || !!nextConversationTarget
-        || !!nextUserTarget
-        || !!nextServerTarget;
+        || nextHasSelection;
 
       if (!hasVisibleItems) {
         contextMenuActionsRef.current?.close();
@@ -390,50 +363,6 @@ export function GlobalContextMenu({ children, onOpenProfile }: GlobalContextMenu
                 <CopyIcon size={16} />
                 <span>{t('contextMenu.copy')}</span>
               </ContextMenuItem>
-            </>
-          )}
-          {showUserBlock && userTarget && (
-            <>
-              <ContextMenuItem onClick={() => onOpenProfile(userTarget)}>
-                <UserIcon size={16} />
-                <span>{t('contextMenu.viewProfile')}</span>
-              </ContextMenuItem>
-              {showConversationBlock && <ContextMenuSeparator />}
-            </>
-          )}
-          {showConversationBlock && targetConversation && (
-            <>
-              {targetConversation.type !== 'voice' && (
-                <ContextMenuItem disabled={!conversationHasUnread(targetConversation.id)} onClick={() => markConversationRead(targetConversation.id)}>
-                  <ChecksIcon size={16} />
-                  <span>{t('contextMenu.markAsRead')}</span>
-                </ContextMenuItem>
-              )}
-              {targetConversation.type !== 'voice' && (
-                <>
-                  <ContextMenuSeparator />
-                  <NotificationMenuItems target={{ scope: 'conversation', id: targetConversation.id, serverId: targetConversation.serverId ?? null }} />
-                </>
-              )}
-              {targetConversation.type === 'direct' && (
-                <>
-                  <ContextMenuSeparator />
-                  <ContextMenuItem onClick={() => closeConversation(targetConversation.id)}>
-                    <XIcon size={16} />
-                    <span>{t('contextMenu.closeConversation')}</span>
-                  </ContextMenuItem>
-                </>
-              )}
-            </>
-          )}
-          {showServerBlock && targetServer && (
-            <>
-              <ContextMenuItem disabled={!serverHasUnread} onClick={() => markServerRead(targetServer.id)}>
-                <ChecksIcon size={16} />
-                <span>{t('contextMenu.markServerAsRead')}</span>
-              </ContextMenuItem>
-              <ContextMenuSeparator />
-              <NotificationMenuItems target={{ scope: 'server', id: targetServer.id }} />
             </>
           )}
         </ContextMenuContent>

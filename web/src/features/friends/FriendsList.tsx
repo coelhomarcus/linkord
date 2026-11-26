@@ -1,4 +1,4 @@
-import { ChatCircleIcon, DotsThreeVerticalIcon, ProhibitIcon, UserIcon, UserMinusIcon, UserPlusIcon } from '@/shared/ui/icons';
+import { ChatCircleIcon, ProhibitIcon, UserMinusIcon, UserPlusIcon } from '@/shared/ui/icons';
 import { useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router';
@@ -8,7 +8,7 @@ import { blockUser, fetchFriends, removeFriend } from '@/shared/api/api';
 import type { SocialEntry, SocialUser } from '@/shared/api/api';
 import { Button } from '@/shared/ui/primitives/button';
 import { EmptyState } from '@/shared/ui/empty-state';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/shared/ui/primitives/dropdown-menu';
+import { DropdownMenuItem, DropdownMenuSeparator } from '@/shared/ui/primitives/dropdown-menu';
 import { friendsView } from '@/shared/lib/routes';
 import { ActionFeedback } from './ActionFeedback';
 import type { Feedback } from './ActionFeedback';
@@ -144,31 +144,31 @@ export function FriendsList({ view, query, onQueryChange, onOpenProfile }: {
             </FadeIn>
           ) : (
             <RevealList restored={list.restored}>
-              {visible.map(({ user }) => (
-                <RevealRow key={user.id}>
-                  <SocialUserRow user={user} online={onlineUserIds.has(user.id)} onOpenProfile={() => onOpenProfile(user.id)}>
-                    <button type="button" onClick={() => handleMessage(user)} aria-label={t('list.messageTo', { name: user.displayName })} className={ROW_ACTION}>
-                      <ChatCircleIcon size={20} weight="fill" />
-                    </button>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger
-                        render={<button type="button" disabled={pending.isPending(user.id)} aria-label={t('list.moreFor', { name: user.displayName })} className={ROW_ACTION} />}
-                      >
-                        <DotsThreeVerticalIcon size={20} weight="fill" />
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" className="w-max min-w-0">
-                        <DropdownMenuItem onClick={() => onOpenProfile(user.id)}><UserIcon size={16} />{t('list.viewProfile')}</DropdownMenuItem>
-                        <DropdownMenuItem variant="destructive" onClick={() => setConfirm({ kind: 'remove', userId: user.id, displayName: user.displayName })}>
-                          <UserMinusIcon size={16} />{t('list.removeFriend')}
-                        </DropdownMenuItem>
-                        <DropdownMenuItem variant="destructive" onClick={() => setConfirm({ kind: 'block', userId: user.id, displayName: user.displayName })}>
-                          <ProhibitIcon size={16} />{t('list.block')}
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </SocialUserRow>
-                </RevealRow>
-              ))}
+              {visible.map(({ user }) => {
+                const busy = pending.isPending(user.id);
+                return (
+                  <RevealRow key={user.id}>
+                    <SocialUserRow user={user} online={onlineUserIds.has(user.id)} onOpenProfile={() => onOpenProfile(user.id)}
+                      pending={busy} menuButtonClassName={ROW_ACTION}
+                      actions={(
+                        <>
+                          <DropdownMenuItem onClick={() => handleMessage(user)}><ChatCircleIcon size={16} />{t('profile.message')}</DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem disabled={busy} variant="destructive" onClick={() => setConfirm({ kind: 'remove', userId: user.id, displayName: user.displayName })}>
+                            <UserMinusIcon size={16} />{t('list.removeFriend')}
+                          </DropdownMenuItem>
+                          <DropdownMenuItem disabled={busy} variant="destructive" onClick={() => setConfirm({ kind: 'block', userId: user.id, displayName: user.displayName })}>
+                            <ProhibitIcon size={16} />{t('list.block')}
+                          </DropdownMenuItem>
+                        </>
+                      )}>
+                      <button type="button" onClick={() => handleMessage(user)} aria-label={t('list.messageTo', { name: user.displayName })} className={ROW_ACTION}>
+                        <ChatCircleIcon size={20} weight="fill" />
+                      </button>
+                    </SocialUserRow>
+                  </RevealRow>
+                );
+              })}
             </RevealList>
           )}
         </section>
