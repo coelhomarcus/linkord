@@ -1,0 +1,5 @@
+# One Overcord container serves both domains on port 3000. The admin domain
+# must match ADMIN_URL; leave its block out when ADMIN_URL is unset.
+chat.example.com, admin.example.com {
+	reverse_proxy 127.0.0.1:3000
+}
