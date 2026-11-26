@@ -3,7 +3,7 @@ import { describe, it } from 'node:test';
 import { liveNoticeKind, liveNoticeMessage } from '../../../src/modules/notifications/liveNotices.js';
 
 const notice = {
-  title: 'Fulano quer ser seu amigo', body: '@fulano', path: '/app/friends?tab=pending#received',
+  title: 'Fulano quer ser seu amigo', body: '@fulano', path: '/friends?tab=pending#received',
   tag: 'social-1', avatar: '/uploads/0123456789abcdef0123456789abcdef', renotify: true,
   person: { id: 'u1', name: 'Fulano', avatar: '/uploads/0123456789abcdef0123456789abcdef', avatarColor: 'teal' },
 };

@@ -26,10 +26,10 @@ const DUE = '2026-11-26T12:00:00.000Z';
 /** Inside the settings page's route, with the home route marked so a test sees where the app went. */
 function render(ui: ReactElement) {
   return renderUi(
-    <MemoryRouter initialEntries={['/app/settings/account']}>
+    <MemoryRouter initialEntries={['/settings/account']}>
       <Routes>
-        <Route path="/app/settings/account" element={ui} />
-        <Route path="/app/channels/@me" element={<p>home</p>} />
+        <Route path="/settings/account" element={ui} />
+        <Route path="/channels/@me" element={<p>home</p>} />
       </Routes>
     </MemoryRouter>,
   );
@@ -65,7 +65,7 @@ describe('DeleteAccountSettings', () => {
     expect(requestAccountDeletion).toHaveBeenCalledWith('minha senha');
     await waitFor(() => expect(leaveAfterDeletion).toHaveBeenCalledWith(DUE));
     // the sign-in that may cancel it should land on the app, not back on settings
-    expect(screen.getByText('home')).toBeInTheDocument();
+    expect(await screen.findByText('home')).toBeInTheDocument();
   });
 
   it('says when the password is wrong and stays open', async () => {

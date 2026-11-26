@@ -159,7 +159,7 @@ export function ServerRail({ className }: { className?: string }) {
   const drawer = isOverlay && !isMobile;
   const go = (to: string) => { navigate(to); if (drawer) setOpenMobile(true); };
   const currentServerId = serverIdFromPath(pathname);
-  const home = isHomePath(pathname) || pathname.startsWith('/app/calls/');
+  const home = isHomePath(pathname) || pathname.startsWith('/calls/');
   const directs = useMemo(() => railDirects({
     conversations, myUserId: state.me.userId, unreadByConversation: badgeByConversation, activeCallConversationId, dmCall,
   }), [conversations, state.me.userId, badgeByConversation, activeCallConversationId, dmCall]);

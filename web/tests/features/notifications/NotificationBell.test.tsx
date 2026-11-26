@@ -63,7 +63,7 @@ describe('NotificationBell', () => {
     expect(await screen.findByText('@eu viu o deploy?')).toBeInTheDocument();
     await user.click(screen.getByText(/mencionou você em #geral · Squad/));
     expect(jumpToMessage).toHaveBeenCalledWith('g1', 42);
-    expect(screen.getByTestId('where')).toHaveTextContent('/app/channels/s1/g1');
+    expect(screen.getByTestId('where')).toHaveTextContent('/channels/s1/g1');
     expect(mocked.markNotificationsRead).toHaveBeenCalledWith({ ids: ['n1'] });
   });
 
@@ -75,7 +75,7 @@ describe('NotificationBell', () => {
     await user.click(await screen.findByRole('button', { name: 'Caixa de Entrada, 1 não lida' }));
     await user.click(await screen.findByText('Ana convidou você para o servidor Squad'));
     expect(mocked.markNotificationsRead).toHaveBeenCalledWith({ ids: ['n1'] });
-    expect(screen.getByTestId('where')).toHaveTextContent('/app/friends?tab=pending#invitations');
+    expect(screen.getByTestId('where')).toHaveTextContent('/friends?tab=pending#invitations');
   });
 
   it('an already-read item does not call the API on click', async () => {
@@ -86,7 +86,7 @@ describe('NotificationBell', () => {
     await user.click(screen.getByRole('button', { name: 'Caixa de Entrada' }));
     await user.click(await screen.findByText('Ana aceitou sua solicitação de amizade'));
     expect(mocked.markNotificationsRead).not.toHaveBeenCalled();
-    expect(screen.getByTestId('where')).toHaveTextContent('/app/friends');
+    expect(screen.getByTestId('where')).toHaveTextContent('/friends');
   });
 
   it('marking all as read', async () => {
@@ -160,9 +160,9 @@ describe('NotificationsPage', () => {
   it('shows the same notification actions in a full page', async () => {
     mocked.fetchUnreadNotificationCount.mockResolvedValue({ unread: 1 });
     mocked.fetchNotifications.mockResolvedValue({ items: [entry()], nextCursor: null });
-    renderSocial(<NotificationStateProvider><NotificationsPage /><Where /></NotificationStateProvider>, { path: '/app/notifications' });
+    renderSocial(<NotificationStateProvider><NotificationsPage /><Where /></NotificationStateProvider>, { path: '/notifications' });
     expect(await screen.findByText('Ana enviou uma solicitação de amizade')).toBeInTheDocument();
     await userEvent.setup().click(screen.getByText('Ana enviou uma solicitação de amizade'));
-    expect(screen.getByTestId('where')).toHaveTextContent('/app/friends?tab=pending#received');
+    expect(screen.getByTestId('where')).toHaveTextContent('/friends?tab=pending#received');
   });
 });

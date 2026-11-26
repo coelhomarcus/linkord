@@ -9,7 +9,7 @@ import { findDownload, getExportStatus, requestDataExport } from './dataExport.j
 
 // /api/account/data-export — asking for a copy of your data, its state, and downloading it.
 
-const SETTINGS_SECTION = '/app/settings/privacy#data-export';
+const SETTINGS_SECTION = '/settings/privacy#data-export';
 
 function sessionFor(request: FastifyRequest) {
   return resolveSession(parseCookies(request.headers.cookie || '')[config.SESSION_COOKIE]);

@@ -64,7 +64,8 @@ import { MobileTabBar } from '@/features/navigation/MobileTabBar';
 import { RequestsRedirect } from '@/features/friends/RequestsRedirect';
 import { AppModals } from '@/app/layout/AppModals';
 import {
-  AWAITING_OPEN, ROUTES, callConversationIdFromPath, conversationIdFromPath, conversationPath, isChannelsPath, isHomePath, modalForPath, serverIdFromPath,
+  AWAITING_OPEN, ROUTES, callConversationIdFromPath, conversationIdFromPath, conversationPath, inAppPath, isChannelsPath, isHomePath, modalForPath, serverIdFromPath,
+  withoutLegacyAppPrefix,
 } from '@/shared/lib/routes';
 import { Sheet } from '@/shared/ui/motion/sheet';
 import { useMediaQuery } from '@/shared/hooks/useMediaQuery';
@@ -82,7 +83,7 @@ import { useMemberListOpen } from '@/features/servers/memberListPreference';
 import { TooltipProvider } from '@/shared/ui/primitives/tooltip';
 
 // where the content area sits when the very first URL already names a modal
-// (a refresh on /app/settings/av): behind it, home
+// (a refresh on /settings/av): behind it, home
 const DEFAULT_CONTENT_LOCATION: Location = { pathname: ROUTES.home, search: '', hash: '', state: null, key: 'default' };
 
 /** A link from before servers: a group's id is now its first text channel's,
@@ -92,6 +93,13 @@ function LegacyConversationRedirect() {
   const { conversations } = useRoom('conversations');
   const conversation = conversations.find((c) => c.id === conversationId);
   return <Navigate to={conversation ? conversationPath(conversation) : ROUTES.home} replace />;
+}
+
+/** A URL from when the app lived under /app that reached the app without
+ * the server's redirect (an in-app link, history): the same page at the root. */
+function LegacyAppPathRedirect() {
+  const { pathname, search, hash } = useLocation();
+  return <Navigate to={`${withoutLegacyAppPrefix(pathname)}${search}${hash}`} replace />;
 }
 
 /** Where the current entry sits in this tab's history: the browser router
@@ -379,10 +387,10 @@ function Shell() {
           <Routes location={contentLocation}>
             <Route path={ROUTES.home} element={<FriendsPage onOpenProfile={openProfile} />} />
             <Route path={ROUTES.friends} element={<FriendsPage onOpenProfile={openProfile} />} />
-            <Route path="/app/channels" element={<Navigate to={ROUTES.home} replace />} />
-            <Route path="/app/channels/:serverId" element={<ServerLanding />} />
+            <Route path="/channels" element={<Navigate to={ROUTES.home} replace />} />
+            <Route path="/channels/:serverId" element={<ServerLanding />} />
             <Route
-              path="/app/channels/:serverId/:conversationId"
+              path="/channels/:serverId/:conversationId"
               element={voiceChannelOnPath ? (
                 showStage
                   ? <Stage allIds={callIds} onBack={() => navigate(ROUTES.server(voiceChannelOnPath.serverId!))} />
@@ -402,13 +410,14 @@ function Shell() {
                 />
               )}
             />
-            <Route path="/app/calls/:conversationId" element={dmStageId ? <Navigate to={ROUTES.direct(dmStageId)} replace /> : <Navigate to={ROUTES.home} replace />} />
+            <Route path="/calls/:conversationId" element={dmStageId ? <Navigate to={ROUTES.direct(dmStageId)} replace /> : <Navigate to={ROUTES.home} replace />} />
             <Route path="/invite/:code" element={<InvitePage />} />
             <Route path={ROUTES.notifications} element={<NotificationsPage />} />
             <Route path={ROUTES.share} element={<SharePage />} />
             <Route path={ROUTES.profile} element={<ProfilePage onOpenProfile={openProfile} />} />
             <Route path={ROUTES.requests} element={<RequestsRedirect />} />
-            <Route path="/app/conversations/:conversationId" element={<LegacyConversationRedirect />} />
+            <Route path="/conversations/:conversationId" element={<LegacyConversationRedirect />} />
+            <Route path="/app/*" element={<LegacyAppPathRedirect />} />
             <Route path="*" element={<Navigate to={ROUTES.home} replace />} />
           </Routes>
           </div>
@@ -519,8 +528,10 @@ function AppProviders() {
     if (!('serviceWorker' in navigator)) return;
     const onPushNavigation = (event: MessageEvent) => {
       const data = event.data as { type?: unknown; path?: unknown } | null;
-      if (data?.type !== 'overcord-push-navigation' || typeof data.path !== 'string' || !data.path.startsWith('/app/')) return;
-      navigate(data.path);
+      if (data?.type !== 'overcord-push-navigation' || typeof data.path !== 'string') return;
+      // a worker from before the move to the root still sends /app paths
+      const path = inAppPath(data.path);
+      if (path) navigate(path);
     };
     navigator.serviceWorker.addEventListener('message', onPushNavigation);
     return () => navigator.serviceWorker.removeEventListener('message', onPushNavigation);

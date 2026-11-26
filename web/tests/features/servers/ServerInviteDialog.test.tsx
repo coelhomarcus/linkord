@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { act, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { ServerInviteDialog } from '@/features/servers/ServerInviteDialog';
 import * as serversApi from '@/features/servers/serversApi';
@@ -23,9 +23,11 @@ describe('ServerInviteDialog — invite link', () => {
 
   it('copies the link, reads "Copiado" for a moment and announces it', async () => {
     const user = userEvent.setup();
-    render(<ServerInviteDialog server={server} open onOpenChange={() => {}} />);
+    await act(async () => {
+      render(<ServerInviteDialog server={server} open onOpenChange={() => {}} />);
+    });
 
-    expect(await screen.findByText(`${window.location.origin}/invite/abc123`)).toBeInTheDocument();
+    expect(screen.getByText(`${window.location.origin}/invite/abc123`)).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Copiar' }));
 
     await expect(navigator.clipboard.readText()).resolves.toBe(`${window.location.origin}/invite/abc123`);

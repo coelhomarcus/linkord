@@ -46,6 +46,7 @@ import { registerBotRoutes } from '../modules/bots/bots.js';
 import { registerWebhookIngressRoutes } from '../modules/bots/webhookIngress.js';
 import { logger } from '../lib/logger.js';
 import { loggablePath } from './requestPath.js';
+import { registerLegacyAppRedirect } from './legacyAppPaths.js';
 
 const log = logger.child({ component: 'http' });
 
@@ -136,6 +137,7 @@ export function createApp(): FastifyInstance {
   registerCspReportRoutes(fastify);
   registerNotificationRoutes(fastify);
   registerAdminRoutes(fastify);
+  registerLegacyAppRedirect(fastify);
 
   // static files from the frontend build (web/dist) — wildcard:false so it
   // doesn't compete with setNotFoundHandler below for the same catch-all.

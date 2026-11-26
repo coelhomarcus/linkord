@@ -235,7 +235,7 @@ describe('ConversationPanel — phone list route', () => {
       matches: query === '(max-width: 767px)', media: query, onchange: null,
       addListener: () => {}, removeListener: () => {}, addEventListener: () => {}, removeEventListener: () => {}, dispatchEvent: () => false,
     }) as MediaQueryList);
-    renderAt('/app/channels/s1');
+    renderAt('/channels/s1');
     expect(screen.queryByRole('button', { name: 'Voltar para conversas' })).not.toBeInTheDocument();
   });
 
@@ -244,7 +244,7 @@ describe('ConversationPanel — phone list route', () => {
       matches: query === '(max-width: 767px)', media: query, onchange: null,
       addListener: () => {}, removeListener: () => {}, addEventListener: () => {}, removeEventListener: () => {}, dispatchEvent: () => false,
     }) as MediaQueryList);
-    renderAt('/app/channels/s1/g1');
+    renderAt('/channels/s1/g1');
     expect(screen.getByRole('button', { name: 'Voltar para conversas' })).toBeInTheDocument();
   });
 });
@@ -268,7 +268,7 @@ describe('ConversationPanel — edge swipe opens the list', () => {
       <SidebarProvider openMobile={false} onOpenMobileChange={onOpenMobileChange}>
         <ConversationPanel onOpenProfile={() => {}} onOpenCall={() => {}} onOpenSearch={() => {}} onOpenSearchFilters={() => {}} detailsOpen={false} onOpenDetails={() => {}} onToggleDetails={() => {}} />
       </SidebarProvider>,
-      { path: '/app/channels/@me/c1', room: { state: { ...joinedState, me: { ...joinedState.me, userId: 'me' } }, conversations: [direct], activeConversationId: 'c1' } },
+      { path: '/channels/@me/c1', room: { state: { ...joinedState, me: { ...joinedState.me, userId: 'me' } }, conversations: [direct], activeConversationId: 'c1' } },
     );
     const panel = screen.getByRole('main');
     vi.spyOn(panel, 'getBoundingClientRect').mockReturnValue(new DOMRect(0, 0, 390, 800));
@@ -296,7 +296,7 @@ describe('ConversationPanel — edge swipe opens the list', () => {
       <SidebarProvider openMobile onOpenMobileChange={onOpenMobileChange}>
         <ConversationPanel onOpenProfile={() => {}} onOpenCall={() => {}} onOpenSearch={() => {}} onOpenSearchFilters={() => {}} detailsOpen={false} onOpenDetails={() => {}} onToggleDetails={() => {}} />
       </SidebarProvider>,
-      { path: '/app/channels/@me/c1', room: { state: { ...joinedState, me: { ...joinedState.me, userId: 'me' } }, conversations: [direct], activeConversationId: 'c1' } },
+      { path: '/channels/@me/c1', room: { state: { ...joinedState, me: { ...joinedState.me, userId: 'me' } }, conversations: [direct], activeConversationId: 'c1' } },
     );
     const touch = (x: number, y: number) => ({ pointerType: 'touch', pointerId: 1, button: 0, clientX: x, clientY: y });
     fireEvent.pointerDown(document.body, touch(200, 200));
@@ -336,36 +336,36 @@ describe('ConversationPanel — phone Voltar', () => {
 
   // the same place an iPhone back swipe lands
   it('opened from the list, it steps back to that entry', () => {
-    renderFrom(['/app/channels/s1', { pathname: '/app/channels/s1/g1', state: { from: '/app/channels/s1' } }]);
+    renderFrom(['/channels/s1', { pathname: '/channels/s1/g1', state: { from: '/channels/s1' } }]);
     fireEvent.click(screen.getByRole('button', { name: 'Voltar para conversas' }));
-    expect(screen.getByTestId('where')).toHaveTextContent('POP /app/channels/s1');
+    expect(screen.getByTestId('where')).toHaveTextContent('POP /channels/s1');
   });
 
   it('opened from elsewhere, the list takes its place', () => {
-    renderFrom(['/app/notifications', '/app/channels/s1/g1']);
+    renderFrom(['/notifications', '/channels/s1/g1']);
     fireEvent.click(screen.getByRole('button', { name: 'Voltar para conversas' }));
-    expect(screen.getByTestId('where')).toHaveTextContent('REPLACE /app/channels/s1');
+    expect(screen.getByTestId('where')).toHaveTextContent('REPLACE /channels/s1');
   });
 
   // the same place an iPhone forward swipe lands after a back swipe
   it('opened from the list, forward returns to the chat after Voltar', () => {
-    renderFrom(['/app/channels/s1', { pathname: '/app/channels/s1/g1', state: { from: '/app/channels/s1' } }]);
+    renderFrom(['/channels/s1', { pathname: '/channels/s1/g1', state: { from: '/channels/s1' } }]);
     fireEvent.click(screen.getByRole('button', { name: 'Voltar para conversas' }));
-    expect(screen.getByTestId('where')).toHaveTextContent('POP /app/channels/s1');
+    expect(screen.getByTestId('where')).toHaveTextContent('POP /channels/s1');
     fireEvent.click(screen.getByRole('button', { name: 'forward' }));
-    expect(screen.getByTestId('where')).toHaveTextContent('POP /app/channels/s1/g1');
+    expect(screen.getByTestId('where')).toHaveTextContent('POP /channels/s1/g1');
   });
 
   it('opened from another chat, it steps back instead of replacing history', () => {
     const other: Conversation = { ...group, id: 'g2', title: 'Other' };
     renderFrom([
-      '/app/channels/s1',
-      { pathname: '/app/channels/s1/g1', state: { from: '/app/channels/s1' } },
-      { pathname: '/app/channels/s1/g2', state: { from: '/app/channels/s1/g1' } },
+      '/channels/s1',
+      { pathname: '/channels/s1/g1', state: { from: '/channels/s1' } },
+      { pathname: '/channels/s1/g2', state: { from: '/channels/s1/g1' } },
     ], [group, other]);
     fireEvent.click(screen.getByRole('button', { name: 'Voltar para conversas' }));
-    expect(screen.getByTestId('where')).toHaveTextContent('POP /app/channels/s1/g1');
+    expect(screen.getByTestId('where')).toHaveTextContent('POP /channels/s1/g1');
     fireEvent.click(screen.getByRole('button', { name: 'forward' }));
-    expect(screen.getByTestId('where')).toHaveTextContent('POP /app/channels/s1/g2');
+    expect(screen.getByTestId('where')).toHaveTextContent('POP /channels/s1/g2');
   });
 });

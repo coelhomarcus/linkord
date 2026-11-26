@@ -194,7 +194,7 @@ describe('notifyIncomingChatMessage — in the desktop app', () => {
 describe('notifyLiveNotice', () => {
   const friendRequest: LiveNotice = {
     kind: 'friend_request', title: 'Fulano quer ser seu amigo', body: '@fulano',
-    path: '/app/friends?tab=pending#received', tag: 'social-n1',
+    path: '/friends?tab=pending#received', tag: 'social-n1',
   };
 
   afterEach(() => {
@@ -234,7 +234,7 @@ describe('notifyLiveNotice', () => {
     notifyLiveNotice(friendRequest);
     await vi.runAllTimersAsync();
     created[0]!.onclick?.();
-    expect(navigate).toHaveBeenCalledWith('/app/friends?tab=pending#received');
+    expect(navigate).toHaveBeenCalledWith('/friends?tab=pending#received');
     expect(focusWindow).toHaveBeenCalled();
     delete window.overcordDesktop;
   });
@@ -245,7 +245,7 @@ describe('notifyLiveNotice', () => {
     notifyLiveNotice({ ...friendRequest, path: 'https://example.com/app/friends' });
     await vi.runAllTimersAsync();
     created[0]!.onclick?.();
-    expect(navigate).toHaveBeenCalledWith('/app/notifications');
+    expect(navigate).toHaveBeenCalledWith('/notifications');
   });
 
   it('stays quiet when a push subscription already shows it', async () => {
@@ -312,11 +312,11 @@ describe('notifications through the desktop app’s own notifier', () => {
   it('a notice goes to the social group, without a picture when there is none to draw', async () => {
     const navigate = vi.fn();
     setNoticeNavigationHandler(navigate);
-    notifyLiveNotice({ kind: 'friend_accepted', title: 'Fulano aceitou seu pedido', body: '', path: '/app/friends', tag: 'social-n2' });
+    notifyLiveNotice({ kind: 'friend_accepted', title: 'Fulano aceitou seu pedido', body: '', path: '/friends', tag: 'social-n2' });
     await vi.runAllTimersAsync();
     expect(show).toHaveBeenCalledWith({ id: 'social-n2', title: 'Fulano aceitou seu pedido', body: '', icon: null, group: 'social' });
     clicked?.('social-n2');
-    expect(navigate).toHaveBeenCalledWith('/app/friends');
+    expect(navigate).toHaveBeenCalledWith('/friends');
   });
 
   it('falls back to a web notification when the app does not show it', async () => {

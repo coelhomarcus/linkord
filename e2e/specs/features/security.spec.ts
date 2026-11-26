@@ -13,7 +13,7 @@ test.describe('security headers', () => {
       // another site, served by the test itself: a page of the app would block the frame with its own frame-src first
       await page.route('http://attacker.test/', (route) => route.fulfill({
         contentType: 'text/html',
-        body: `<!doctype html><iframe src="${BASE_URL}/app" width="800" height="600"></iframe>`,
+        body: `<!doctype html><iframe src="${BASE_URL}/" width="800" height="600"></iframe>`,
       }));
       await page.goto('http://attacker.test/');
       const framed = () => page.frames().find((frame) => frame !== page.mainFrame());

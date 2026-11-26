@@ -25,7 +25,7 @@ export function SettingsSections({ className, ...props }: ComponentProps<'div'>)
 }
 
 export function SettingsSection({ id, title, description, children, className, contentClassName }: {
-  /** stable id, also the hash target (/app/settings/av#voice) */
+  /** stable id, also the hash target (/settings/av#voice) */
   id?: string;
   title: string;
   description?: ReactNode;

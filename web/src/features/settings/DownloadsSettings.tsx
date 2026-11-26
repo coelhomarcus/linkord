@@ -197,7 +197,7 @@ function WebAppInstall({ recommended }: { recommended: boolean }) {
 }
 
 interface AppCardProps {
-  /** also the search result's target (`/app/settings/downloads#web-app`) */
+  /** also the search result's target (`/settings/downloads#web-app`) */
   id: string;
   icon: IconComponent;
   platforms: string;

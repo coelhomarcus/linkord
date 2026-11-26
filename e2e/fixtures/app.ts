@@ -7,6 +7,10 @@ export class AppPage {
   /** reasons the socket reported for each disconnect, from the app's own log line */
   readonly socketDisconnects: string[] = [];
 
+  /** Where the app's pages live on the server this page talks to: the root,
+   * or '/app' on a version from before the move (the upgrade spec's base). */
+  routePrefix = '';
+
   private readonly socketEvents: { name: string; waiters: ((payload: unknown) => void)[] }[] = [];
 
   /** Attach before the page navigates: the app opens its socket on load. */
@@ -58,14 +62,14 @@ export class AppPage {
   }
 
   async openChannel(serverId: string, channelId: string): Promise<void> {
-    await this.page.goto(`/app/channels/${serverId}/${channelId}`);
+    await this.page.goto(`${this.routePrefix}/channels/${serverId}/${channelId}`);
     await expect(this.composer()).toBeVisible();
   }
 
   /** Opens (or creates) the DM with a friend from the friends page, like a
    * person would, and returns its conversation id. */
   async openDmWith(username: string): Promise<string> {
-    await this.page.goto('/app/friends');
+    await this.page.goto(`${this.routePrefix}/friends`);
     // the URL is not a reliable source here (the app may keep it as is), but the
     // server always answers the open with the conversation
     const opened = this.waitForSocketEvent('conversation-opened');
@@ -76,7 +80,7 @@ export class AppPage {
   }
 
   async openDm(conversationId: string): Promise<void> {
-    await this.page.goto(`/app/channels/@me/${encodeURIComponent(conversationId)}`);
+    await this.page.goto(`${this.routePrefix}/channels/@me/${encodeURIComponent(conversationId)}`);
     await expect(this.composer()).toBeVisible();
   }
 

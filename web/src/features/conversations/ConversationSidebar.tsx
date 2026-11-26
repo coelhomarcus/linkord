@@ -201,7 +201,7 @@ export function ConversationSidebar({ onOpenProfile }: { onOpenProfile: (userId:
 
   if (isMobile) {
     // a phone shows the column as its own page, only where nothing is open
-    const listPage = pathname === ROUTES.home || pathname === '/app/channels' || (!!serverId && !conversationIdFromPath(pathname));
+    const listPage = pathname === ROUTES.home || pathname === '/channels' || (!!serverId && !conversationIdFromPath(pathname));
     if (listPage) {
       return (
         <main aria-label={server?.name ?? t('sidebar.title')} className="flex min-h-0 min-w-0 flex-1 bg-bg-primary pb-[var(--mobile-navigation-height)] text-text-primary">

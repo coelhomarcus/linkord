@@ -8,20 +8,20 @@ function Path() {
   return <p>{useContentLocation().pathname}</p>;
 }
 
-const behind: Location = { pathname: '/app/friends', search: '', hash: '', state: null, key: 'k' };
+const behind: Location = { pathname: '/friends', search: '', hash: '', state: null, key: 'k' };
 
 describe('useContentLocation', () => {
   it('is the URL when no modal is holding the page behind it', () => {
-    render(<MemoryRouter initialEntries={['/app/conversations']}><Path /></MemoryRouter>);
-    expect(screen.getByText('/app/conversations')).toBeInTheDocument();
+    render(<MemoryRouter initialEntries={['/conversations']}><Path /></MemoryRouter>);
+    expect(screen.getByText('/conversations')).toBeInTheDocument();
   });
 
   it('is the page behind the modal while one is open', () => {
     render(
-      <MemoryRouter initialEntries={['/app/settings/av']}>
+      <MemoryRouter initialEntries={['/settings/av']}>
         <ContentLocationProvider value={behind}><Path /></ContentLocationProvider>
       </MemoryRouter>,
     );
-    expect(screen.getByText('/app/friends')).toBeInTheDocument();
+    expect(screen.getByText('/friends')).toBeInTheDocument();
   });
 });

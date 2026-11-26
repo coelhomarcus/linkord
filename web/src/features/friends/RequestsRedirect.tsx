@@ -1,7 +1,7 @@
 import { Navigate, useSearchParams } from 'react-router';
 import { friendsSection } from '@/shared/lib/routes';
 
-/** /app/requests no longer exists as a page: old links, bookmarks and
+/** /requests no longer exists as a page: old links, bookmarks and
  * notifications still land on the right view of Friends. */
 export function RequestsRedirect() {
   const [params] = useSearchParams();

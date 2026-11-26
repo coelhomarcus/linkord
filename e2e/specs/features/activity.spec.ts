@@ -39,7 +39,7 @@ test('publishes ranked activity and the summary from the desktop history', async
   await befriend(alice, bob);
   await fakeDesktop(alice.context);
   const a = await alice.app();
-  await a.page.goto('/app/profile');
+  await a.page.goto('/profile');
   await a.page.getByRole('button', { name: 'Meu perfil' }).filter({ hasText: 'Meu perfil' }).click();
   await a.page.getByRole('tab', { name: 'Mural' }).click();
   const add = a.page.getByRole('button', { name: 'Adicionar widget' });
@@ -64,7 +64,7 @@ test('publishes ranked activity and the summary from the desktop history', async
   await setDesktopActivity(a.page, null);
 
   const b = await bob.app();
-  await b.page.goto('/app/friends');
+  await b.page.goto('/friends');
   await b.page.getByRole('button', { name: `Ver perfil de ${alice.username}`, exact: true }).click();
   await b.page.getByRole('tab', { name: 'Mural' }).click();
   const top = b.page.getByRole('article').filter({ has: b.page.getByRole('heading', { name: 'Mais jogados' }) });

@@ -38,7 +38,7 @@ function inVoice(): Participant {
 
 function CurrentPath() { return <span data-testid="current-path">{useLocation().pathname}</span>; }
 
-function renderSidebar(path = '/app/channels/@me', overrides: { presenceByUser?: Map<string, VisiblePresence>; unreadByConversation?: Map<string, number>; participants?: Map<string, Participant>; openCall?: () => void; activeCallConversationId?: string | null } = {}) {
+function renderSidebar(path = '/channels/@me', overrides: { presenceByUser?: Map<string, VisiblePresence>; unreadByConversation?: Map<string, number>; participants?: Map<string, Participant>; openCall?: () => void; activeCallConversationId?: string | null } = {}) {
   const conversations = [direct('dm-bea', 'u-bea'), direct('dm-caio', 'u-caio'), ...server.channels.map((c) => channelConversation(server, c))];
   return renderSocial(
     <SidebarProvider open onOpenChange={vi.fn()} openMobile={false} onOpenMobileChange={vi.fn()}>
@@ -74,7 +74,7 @@ function setViewport(width: number) {
 describe('ConversationSidebar — home', () => {
   it('shows what the other person is playing in place of their custom status', () => {
     const activity = { key: 'minecraft', kind: 'playing' as const, name: 'Minecraft', icon: null, startedAt: new Date().toISOString() };
-    renderSidebar('/app/channels/@me', { presenceByUser: new Map([
+    renderSidebar('/channels/@me', { presenceByUser: new Map([
       ['u-bea', { status: 'online', customStatus: { emoji: '', text: 'estudando', expiresAt: null }, activity }],
       ['u-caio', { status: 'online', customStatus: { emoji: '', text: 'estudando', expiresAt: null } }],
     ]) });
@@ -95,7 +95,7 @@ describe('ConversationSidebar — home', () => {
   it('opens a DM at its home URL', async () => {
     renderSidebar();
     await userEvent.setup().click(screen.getByRole('button', { name: 'Bea' }));
-    expect(screen.getByTestId('current-path')).toHaveTextContent('/app/channels/@me/dm-bea');
+    expect(screen.getByTestId('current-path')).toHaveTextContent('/channels/@me/dm-bea');
   });
 
   it('filters the DMs by name', async () => {
@@ -117,13 +117,13 @@ describe('ConversationSidebar — home', () => {
   });
 
   it('shows that this DM is in a call', () => {
-    renderSidebar('/app/channels/@me', { activeCallConversationId: 'dm-bea' });
+    renderSidebar('/channels/@me', { activeCallConversationId: 'dm-bea' });
     expect(screen.getByRole('button', { name: 'Bea' })).toHaveTextContent('Em uma chamada');
     expect(screen.getByRole('button', { name: 'Caio' })).not.toHaveTextContent('Em uma chamada');
   });
 
   it('shows a DM\'s unread count on its row', () => {
-    renderSidebar('/app/channels/@me', { unreadByConversation: new Map([['dm-bea', 3]]) });
+    renderSidebar('/channels/@me', { unreadByConversation: new Map([['dm-bea', 3]]) });
     const row = screen.getByRole('button', { name: 'Bea, 3 não lidas' }).closest('li');
     expect(row).toHaveTextContent('3');
   });
@@ -131,7 +131,7 @@ describe('ConversationSidebar — home', () => {
 
 describe('ConversationSidebar — a server', () => {
   it('shows the server, its categories and channels, and who is in each voice channel', () => {
-    renderSidebar('/app/channels/s1/ch-geral', { participants: new Map([['p-bea', inVoice()]]) });
+    renderSidebar('/channels/s1/ch-geral', { participants: new Map([['p-bea', inVoice()]]) });
     expect(screen.getByText('Os Xerecas')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Canais de texto/ })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'geral' })).toHaveAttribute('aria-current', 'page');
@@ -142,16 +142,16 @@ describe('ConversationSidebar — a server', () => {
 
   it('a text channel opens at its URL; a voice channel joins its call', async () => {
     const openCall = vi.fn();
-    renderSidebar('/app/channels/s1/ch-geral', { openCall });
+    renderSidebar('/channels/s1/ch-geral', { openCall });
     const user = userEvent.setup();
     await user.click(screen.getByRole('button', { name: 'Geral' }));
     expect(openCall).toHaveBeenCalledWith('ch-voz');
     await user.click(screen.getByRole('button', { name: 'geral' }));
-    expect(screen.getByTestId('current-path')).toHaveTextContent('/app/channels/s1/ch-geral');
+    expect(screen.getByTestId('current-path')).toHaveTextContent('/channels/s1/ch-geral');
   });
 
   it('collapsing a category hides its channels', async () => {
-    renderSidebar('/app/channels/s1/ch-geral');
+    renderSidebar('/channels/s1/ch-geral');
     await userEvent.setup().click(screen.getByRole('button', { name: /Canais de voz/ }));
     expect(screen.queryByRole('button', { name: 'Geral' })).not.toBeInTheDocument();
   });
@@ -170,13 +170,13 @@ describe('ConversationSidebar — on a phone', () => {
 
   it("a server's page is its channel list, named after it", () => {
     setViewport(390);
-    renderSidebar('/app/channels/s1');
+    renderSidebar('/channels/s1');
     expect(screen.getByRole('main', { name: 'Os Xerecas' })).toHaveTextContent('geral');
   });
 
   it('while a conversation is open the list is a closed drawer, not a page', () => {
     setViewport(390);
-    renderSidebar('/app/channels/@me/dm-bea');
+    renderSidebar('/channels/@me/dm-bea');
     expect(screen.queryByRole('main', { name: 'Mensagens diretas' })).not.toBeInTheDocument();
     const drawer = document.body.querySelector('[role="dialog"][aria-label="Mensagens diretas"]');
     expect(drawer).toHaveAttribute('inert');

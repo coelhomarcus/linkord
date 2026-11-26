@@ -20,7 +20,7 @@ export interface SettingsGroup {
 }
 
 // One catalog feeds the desktop sidebar and the compact index, so the two can't
-// drift apart. Ids are the public URLs (/app/settings/:id): labels can change,
+// drift apart. Ids are the public URLs (/settings/:id): labels can change,
 // ids can't (a retired id goes to LEGACY_SETTINGS_TABS). Labels are i18n keys,
 // resolved where they are rendered so a language switch needs no reload.
 export const SETTINGS_GROUPS: SettingsGroup[] = [

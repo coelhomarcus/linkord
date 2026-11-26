@@ -29,7 +29,7 @@ describe('live notices (real Postgres)', () => {
       await drainNow(asked.id);
       const [request] = noticesIn(askedTab.sent);
       assert.equal(request?.kind, 'friend_request');
-      assert.equal(request?.path, '/app/friends?tab=pending#received');
+      assert.equal(request?.path, '/friends?tab=pending#received');
       assert.match(request?.title ?? '', new RegExp(asker.username));
       assert.equal(noticesIn(askerTab.sent).length, 0);
 

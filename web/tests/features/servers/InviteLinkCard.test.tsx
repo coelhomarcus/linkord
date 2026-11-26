@@ -19,9 +19,9 @@ const preview = (isMember = false): serversApi.InvitePreview => ({
 
 function renderCard(code: string, own = false) {
   return renderWithRoom(
-    <MemoryRouter initialEntries={['/app/channels/@me/dm']}>
+    <MemoryRouter initialEntries={['/channels/@me/dm']}>
       <Routes>
-        <Route path="/app/channels/@me/dm" element={<InviteLinkCard code={code} own={own} />} />
+        <Route path="/channels/@me/dm" element={<InviteLinkCard code={code} own={own} />} />
         <Route path="*" element={<p data-testid="landed" />} />
       </Routes>
     </MemoryRouter>,

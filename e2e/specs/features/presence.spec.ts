@@ -45,7 +45,7 @@ test.describe('presence status', () => {
     await pickStatus(desktop, /^Invisível/);
     await expect(dot).toHaveAttribute('data-status', 'offline');
     await expect(row).not.toContainText('testando a presença');
-    await b.page.goto('/app/friends');
+    await b.page.goto('/friends');
     await b.page.getByRole('link', { name: 'Online' }).click();
     await expect(b.page.getByRole('button', { name: `Enviar mensagem para ${alice.username}` })).toHaveCount(0);
 

@@ -18,7 +18,7 @@ function renderDock(room: Parameters<typeof renderWithRoom>[1] = {}, {
   onReturnToCall = vi.fn(),
   onOpenProfile = vi.fn(),
   layout = 'wide',
-  path = '/app/conversations',
+  path = '/conversations',
 }: {
   onReturnToCall?: () => void;
   onOpenProfile?: (userId: string) => void;
@@ -71,7 +71,7 @@ describe('CallDock — settings', () => {
   });
 
   it('marks the gear as open while settings are', () => {
-    renderDock({}, { path: '/app/settings/av' });
+    renderDock({}, { path: '/settings/av' });
     expect(screen.getByRole('button', { name: 'Ajustes' })).toHaveAttribute('aria-expanded', 'true');
   });
 });

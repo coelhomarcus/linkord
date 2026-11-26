@@ -75,8 +75,8 @@ export function retryAfterDelayMs(headers: unknown, now = Date.now()): number {
 /** Where a tap on the notification takes the reader. */
 function conversationPath(conversation: Pick<Conversation, 'id' | 'serverId'>): string {
   return conversation.serverId
-    ? `/app/channels/${encodeURIComponent(conversation.serverId)}/${encodeURIComponent(conversation.id)}`
-    : `/app/channels/@me/${encodeURIComponent(conversation.id)}`;
+    ? `/channels/${encodeURIComponent(conversation.serverId)}/${encodeURIComponent(conversation.id)}`
+    : `/channels/@me/${encodeURIComponent(conversation.id)}`;
 }
 
 async function lastReadMessageId(conversation: Conversation, userId: string): Promise<number> {
@@ -181,7 +181,7 @@ async function noticeFor(event: OutboxEvent, locale: Locale, showContent: boolea
     const text = serverInvitationNoticeText({ inviterName: inviter.displayName || inviter.username, serverName: invitation.serverName }, locale);
     const icon = serverIconPath(invitation.serverIcon);
     return {
-      ...text, path: '/app/friends?tab=pending#invitations', tag: `social-${row.id}`, avatar: pushAvatarPath(inviter),
+      ...text, path: '/friends?tab=pending#invitations', tag: `social-${row.id}`, avatar: pushAvatarPath(inviter),
       person: noticePerson(inviter), server: { id: invitation.serverId, name: invitation.serverName, ...(icon ? { icon } : {}) },
     };
   }
@@ -193,7 +193,7 @@ async function noticeFor(event: OutboxEvent, locale: Locale, showContent: boolea
   if (!person) return null;
   const text = kind === 'friend_request' ? friendRequestNoticeText(person, locale) : friendAcceptedNoticeText(person, locale);
   return {
-    ...text, path: kind === 'friend_request' ? '/app/friends?tab=pending#received' : '/app/friends', tag: `social-${row.id}`,
+    ...text, path: kind === 'friend_request' ? '/friends?tab=pending#received' : '/friends', tag: `social-${row.id}`,
     avatar: pushAvatarPath(person), person: noticePerson(person),
   };
 }

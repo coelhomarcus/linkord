@@ -36,6 +36,8 @@ export interface BaseVersion {
    * An older one sent each socket a disconnect, after which Socket.IO only
    * reconnects when the tab is focused again. */
   shutdownLetsTabsReconnect: boolean;
+  /** Where that version's web app lives: '/app' before it moved to the root. */
+  routePrefix: '' | '/app';
 }
 
 function showFile(sha: string, file: string): string {
@@ -63,6 +65,7 @@ export function baseVersion(): BaseVersion {
     minProtocolVersion: readConstant(protocol, 'MIN_PROTOCOL_VERSION'),
     restoresCalls: showFile(sha, 'server/src/db/schema.ts').includes("pgTable('call_presence'"),
     shutdownLetsTabsReconnect: !showFile(sha, 'server/src/app/bootstrap.ts').includes('.disconnect(true)'),
+    routePrefix: showFile(sha, 'web/src/shared/lib/routes.ts').includes("home: '/app/") ? '/app' : '',
   };
   if (!imageExists(image)) {
     const checkout = mkdtempSync(path.join(tmpdir(), 'overcord-e2e-base-'));

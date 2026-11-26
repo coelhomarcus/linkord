@@ -58,7 +58,7 @@ function renderList({ permissions = MEMBER, participants = [bea], room = {} }: {
       state: { ...initialRoomState, me, participants: new Map(participants.map((p) => [p.id, p])) },
       ...room,
     },
-    path: '/app/channels/s1',
+    path: '/channels/s1',
   });
   return { onOpenProfile, moveToCall, kickFromCall, sendWs, openCall };
 }

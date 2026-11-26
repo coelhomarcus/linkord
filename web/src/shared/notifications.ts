@@ -4,6 +4,7 @@ import { LOCAL_STORAGE_KEYS, localStorageStore } from '@/shared/lib/localStorage
 import { isDoNotDisturb } from '@/shared/doNotDisturb';
 import { desktopApp, isDesktopApp, type DesktopNotifications } from '@/shared/desktop';
 import type { LiveNotice } from '@/shared/types/protocol';
+import { ROUTES, inAppPath } from '@/shared/lib/routes';
 import { FALLBACK_NOTIFICATION_ICON, notificationIcon, type NoticePicture } from '@/shared/notificationIcon';
 
 export function loadNotificationsEnabled(): boolean {
@@ -157,7 +158,7 @@ function flush(conversationId: string): void {
     icon,
     badge: '/icons/notification-badge-96.png',
     tag: `chat-${conversationId}`,
-    data: { path: `/app/conversations/${encodeURIComponent(conversationId)}` },
+    data: { path: `/conversations/${encodeURIComponent(conversationId)}` },
   }, () => onClick?.(conversationId), conversationId)).catch(() => {});
 }
 
@@ -165,7 +166,7 @@ function flush(conversationId: string): void {
 export function notifyLiveNotice(notice: LiveNotice): void {
   if (!canShowNotifications()) return;
   // the server only sends app paths; anything else would make a click leave the app
-  const path = notice.path.startsWith('/app/') ? notice.path : '/app/notifications';
+  const path = inAppPath(notice.path) ?? ROUTES.notifications;
   const person: NoticePicture | null = notice.person
     ? { id: notice.person.id, name: notice.person.name, src: notice.person.avatar, color: notice.person.avatarColor, shape: 'circle' }
     : null;

@@ -19,9 +19,9 @@ function renderLanding(width: number) {
     return { matches: max ? width <= Number(max[1]) : false, media: query, onchange: null, addListener: () => {}, removeListener: () => {}, addEventListener: () => {}, removeEventListener: () => {}, dispatchEvent: () => false } as unknown as MediaQueryList;
   }) as typeof window.matchMedia;
   renderWithRoom(
-    <MemoryRouter initialEntries={['/app/channels/s1']}>
+    <MemoryRouter initialEntries={['/channels/s1']}>
       <SidebarProvider open onOpenChange={vi.fn()} openMobile={false} onOpenMobileChange={vi.fn()}>
-        <Routes><Route path="/app/channels/:serverId/:channelId?" element={<><ServerLanding /><Where /></>} /></Routes>
+        <Routes><Route path="/channels/:serverId/:channelId?" element={<><ServerLanding /><Where /></>} /></Routes>
       </SidebarProvider>
     </MemoryRouter>,
     { servers: [server] },
@@ -34,11 +34,11 @@ describe('ServerLanding', () => {
 
   it('on a wide screen opens the first text channel', () => {
     renderLanding(1440);
-    expect(screen.getByTestId('where')).toHaveTextContent('/app/channels/s1/geral');
+    expect(screen.getByTestId('where')).toHaveTextContent('/channels/s1/geral');
   });
 
   it('on a phone stays on the server: its channel list is the page', () => {
     renderLanding(390);
-    expect(screen.getByTestId('where')).toHaveTextContent(/^\/app\/channels\/s1$/);
+    expect(screen.getByTestId('where')).toHaveTextContent(/^\/channels\/s1$/);
   });
 });

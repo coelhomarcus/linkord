@@ -95,7 +95,9 @@ Earlier releases ran three Applications: `overcord-backend` (the `backend` targe
 1. Take a [backup](#backups). Pause Auto Deploy on all three Applications and write down each one's deployed commit, build stage, Traefik file and Swarm labels.
 2. In `overcord-backend`, clear **Docker Build Stage** and **Watch Paths**, check that `ADMIN_URL` is the admin site's origin, and deploy the new revision. The current routes still send it only `/api`, `/ws`, `/uploads` and the health checks, so nothing visible changes yet. Wait for `/readyz`.
 3. Add the `ADMIN_URL` hostname under the backend's **Domains**, next to the `APP_URL` one. The old routers keep a higher priority, so traffic does not move yet.
-4. Stop `overcord-web` and `overcord-admin`. Their labelled routers go away with their tasks, and both hostnames fall through to the backend's Domains. Check HTTPS, a direct link such as `/app/friends`, a signed-in session, an upload, the socket, a call, and the [admin site checks](#administration-site). Then delete both Applications, which also removes their Traefik files, and turn Auto Deploy back on for `overcord-backend`.
+4. Stop `overcord-web` and `overcord-admin`. Their labelled routers go away with their tasks, and both hostnames fall through to the backend's Domains. Check HTTPS, a direct link such as `/friends`, a signed-in session, an upload, the socket, a call, and the [admin site checks](#administration-site). Then delete both Applications, which also removes their Traefik files, and turn Auto Deploy back on for `overcord-backend`.
+
+On the public app host, a `GET` or `HEAD` to `/app` or `/app/*` returns `301` to the corresponding root path with the original query string. Browsers carry the URL fragment across the redirect.
 
 Route only through **Domains**. Do not edit or empty Traefik files by hand: Traefik refuses a file with an empty `routers` map, and one invalid file makes it drop every file in `/etc/dokploy/traefik/dynamic`, which takes down every site on the server, the Dokploy panel included. If a change does not seem to apply, read `docker logs --tail 60 dokploy-traefik` before reloading Traefik.
 

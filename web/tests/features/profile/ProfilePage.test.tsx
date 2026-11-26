@@ -12,13 +12,13 @@ describe('ProfilePage', () => {
   it('opens the own profile and navigates to settings', async () => {
     const onOpenProfile = vi.fn();
     renderSocial(<><ProfilePage onOpenProfile={onOpenProfile} /><CurrentPath /></>, {
-      path: '/app/profile',
+      path: '/profile',
       room: { state: { ...initialRoomState, me: { ...initialRoomState.me, userId: 'me', name: 'mar', displayName: 'Mar' } } },
     });
     const user = userEvent.setup();
     await user.click(screen.getByRole('button', { name: 'Meu perfil' }));
     expect(onOpenProfile).toHaveBeenCalledWith('me');
     await user.click(screen.getByRole('button', { name: 'Ajustes' }));
-    expect(screen.getByTestId('path')).toHaveTextContent('/app/settings');
+    expect(screen.getByTestId('path')).toHaveTextContent('/settings');
   });
 });

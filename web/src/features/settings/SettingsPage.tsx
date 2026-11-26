@@ -72,7 +72,7 @@ export function SettingsPage({ onOpenProfile }: SettingsPageProps) {
   const category = findCategory(current);
 
   // opening another category starts at its top, with its title focused; a hash
-  // (/app/settings/av#video) wins and scrolls to — and focuses — that section
+  // (/settings/av#video) wins and scrolls to — and focuses — that section
   // instead (a search result is exactly this: SettingsSection carries
   // tabIndex={-1} on purpose for this to land somewhere real).
   useEffect(() => {

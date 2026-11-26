@@ -28,7 +28,7 @@ function renderRail(onOpenMobileChange = vi.fn(), servers: ServerSummary[] = [se
     <SidebarProvider open onOpenChange={vi.fn()} openMobile={false} onOpenMobileChange={onOpenMobileChange}>
       <ServerRail /><Where />
     </SidebarProvider>,
-    { room: { servers, ...room }, path: '/app/channels/@me' },
+    { room: { servers, ...room }, path: '/channels/@me' },
   );
   return onOpenMobileChange;
 }
@@ -61,7 +61,7 @@ describe('ServerRail', () => {
     setViewport(1440);
     renderRail();
     await userEvent.setup().click(screen.getByRole('button', { name: 'Squad' }));
-    expect(screen.getByTestId('where')).toHaveTextContent('/app/channels/s1');
+    expect(screen.getByTestId('where')).toHaveTextContent('/channels/s1');
     expect(screen.queryByRole('button', { name: 'Mostrar canais e conversas' })).not.toBeInTheDocument();
   });
 

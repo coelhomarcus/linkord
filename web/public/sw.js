@@ -10,7 +10,24 @@ const SHARE_CACHE = 'overcord-share-v1';
 const SHARE_PATH = '/share-target';
 const SHARE_TTL_MS = 60 * 60 * 1000;
 const OFFLINE_URL = '/offline.html';
+// where a notification without a usable page opens: home
+const HOME_PATH = '/channels/@me';
 let badgeRequestId = 0;
+
+// The page a notification opens: a path on this origin that the app shows,
+// never the API or an upload. A push sent before the app moved to the root
+// names an /app path, which loses the prefix here (the server would redirect it).
+function appPath(raw) {
+  try {
+    const target = new URL(raw, self.location.origin);
+    if (target.origin !== self.location.origin) return null;
+    const pathname = target.pathname.replace(/^\/app(?=\/|$)/, '').replace(/^\/+/, '/') || '/';
+    if (/^\/(?:api|uploads|ws|admin)(?:\/|$)/.test(pathname)) return null;
+    return pathname + target.search + target.hash;
+  } catch {
+    return null;
+  }
+}
 
 self.addEventListener('install', (event) => {
   event.waitUntil(caches.open(CACHE).then((cache) => cache.add(new Request(OFFLINE_URL, { cache: 'reload' }))));
@@ -50,7 +67,7 @@ async function sweepShares() {
 }
 
 async function receiveShare(request) {
-  const landing = (query) => Response.redirect(new URL(`/app/share${query}`, self.location.origin).href, 303);
+  const landing = (query) => Response.redirect(new URL(`/share${query}`, self.location.origin).href, 303);
   try {
     const form = await request.formData();
     const field = (name) => (typeof form.getAll(name)[0] === 'string' ? form.getAll(name)[0] : '');
@@ -117,11 +134,7 @@ self.addEventListener('push', (event) => {
   try { notice = event.data?.json()?.notification; } catch { /* still show a visible fallback */ }
   const title = typeof notice?.title === 'string' && notice.title ? notice.title : 'Overcord';
   const body = typeof notice?.body === 'string' ? notice.body : 'Você tem uma nova notificação.';
-  let path = '/app/conversations';
-  try {
-    const target = new URL(notice?.navigate, self.location.origin);
-    if (target.origin === self.location.origin && target.pathname.startsWith('/app/')) path = target.pathname + target.search + target.hash;
-  } catch { /* keep the safe default */ }
+  const path = (typeof notice?.navigate === 'string' && appPath(notice.navigate)) || HOME_PATH;
   const tag = typeof notice?.tag === 'string' ? notice.tag : 'overcord';
   const notification = (async () => {
     const avatar = typeof notice?.avatar === 'string' ? await avatarIcon(notice.avatar) : null;
@@ -158,13 +171,16 @@ self.addEventListener('push', (event) => {
 
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
-  const path = event.notification.data?.path || '/app/conversations';
+  const storedPath = event.notification.data?.path;
+  const path = (typeof storedPath === 'string' && storedPath && appPath(storedPath)) || HOME_PATH;
   event.waitUntil((async () => {
     const windows = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
     const existing = windows.find((client) => new URL(client.url).origin === self.location.origin);
     if (existing) {
       await existing.focus();
-      existing.postMessage({ type: 'overcord-push-navigation', path });
+      // This worker can take control of an open tab running the old app,
+      // whose message listener only accepts paths under /app/.
+      existing.postMessage({ type: 'overcord-push-navigation', path: `/app${path}` });
     } else {
       await self.clients.openWindow(path);
     }

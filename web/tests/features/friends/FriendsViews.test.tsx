@@ -31,14 +31,14 @@ beforeEach(() => {
 
 describe('Amigos — the view comes from the URL', () => {
   it('no tab opens on Todos; the current view is marked as the current page', async () => {
-    at('/app/friends');
+    at('/friends');
     expect(await screen.findByText('Ana')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Todos' })).toHaveAttribute('aria-current', 'page');
   });
 
   it('?tab=pending opens Pendentes with requests and invitations on the same page', async () => {
     mocked.fetchFriendRequests.mockImplementation(async (direction) => (direction === 'incoming' ? page(ana) : page(bea)));
-    at('/app/friends?tab=pending');
+    at('/friends?tab=pending');
     expect(await screen.findByRole('heading', { level: 2, name: 'Recebidas' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { level: 2, name: 'Enviadas' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { level: 2, name: 'Convites de servidor' })).toBeInTheDocument();
@@ -48,42 +48,42 @@ describe('Amigos — the view comes from the URL', () => {
   });
 
   it('?tab=invitations lands on Pendentes, where the invitations are', async () => {
-    at('/app/friends?tab=invitations');
+    at('/friends?tab=invitations');
     expect(await screen.findByText('Nenhum convite de servidor')).toBeInTheDocument();
     expect(screen.getByRole('heading', { level: 2, name: 'Recebidas' })).toBeInTheDocument();
     expect(screen.queryByRole('link', { name: 'Convites' })).not.toBeInTheDocument();
   });
 
   it('?tab=add opens the form and the username to share', async () => {
-    at('/app/friends?tab=add');
+    at('/friends?tab=add');
     expect(await screen.findByPlaceholderText('@nomedeusuario')).toBeInTheDocument();
     expect(screen.getByText('@fulana')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Adicionar amigo' })).toHaveAttribute('aria-current', 'page');
   });
 
   it('an unknown tab falls back to Todos (no empty page)', async () => {
-    at('/app/friends?tab=naoexiste');
+    at('/friends?tab=naoexiste');
     expect(await screen.findByText('Ana')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Todos' })).toHaveAttribute('aria-current', 'page');
   });
 
   it('switching views navigates via the URL', async () => {
     const user = userEvent.setup();
-    at('/app/friends');
+    at('/friends');
     await screen.findByText('Ana');
     await user.click(screen.getByRole('link', { name: /Pendentes/ }));
     expect(await screen.findByRole('heading', { level: 2, name: 'Recebidas' })).toBeInTheDocument();
   });
 
   it('the search comes from ?q= and goes to the server', async () => {
-    at('/app/friends?q=an');
+    at('/friends?q=an');
     await waitFor(() => expect(mocked.fetchFriends).toHaveBeenCalledWith(null, 'an', undefined));
     expect(screen.getByLabelText('Buscar nos seus amigos')).toHaveValue('an');
   });
 
   it('the Pendentes badge counts requests and invitations together', async () => {
     mocked.fetchRequestSummary.mockResolvedValue({ incoming: 2, invitations: 1 });
-    at('/app/friends');
+    at('/friends');
     expect(await screen.findByLabelText('3 aguardando resposta')).toBeInTheDocument();
     expect(screen.queryByRole('link', { name: 'Convites' })).not.toBeInTheDocument();
   });
@@ -94,7 +94,7 @@ describe('Amigos — Pendentes', () => {
     const user = userEvent.setup();
     mocked.fetchFriendRequests.mockImplementation(async (direction) => (direction === 'incoming' ? page(ana) : page()));
     mocked.acceptFriendRequest.mockResolvedValue({});
-    at('/app/friends?tab=pending');
+    at('/friends?tab=pending');
 
     expect(await screen.findByText('Ana')).toBeInTheDocument();
     expect(mocked.fetchFriendRequests).toHaveBeenCalledWith('incoming', null, '');
@@ -106,7 +106,7 @@ describe('Amigos — Pendentes', () => {
     const user = userEvent.setup();
     mocked.fetchFriendRequests.mockImplementation(async (direction) => (direction === 'incoming' ? page(ana) : page()));
     mocked.declineFriendRequest.mockResolvedValue({});
-    at('/app/friends?tab=pending');
+    at('/friends?tab=pending');
     await user.click(await screen.findByRole('button', { name: 'Recusar' }));
     expect(mocked.declineFriendRequest).toHaveBeenCalledWith('u-ana');
   });
@@ -115,7 +115,7 @@ describe('Amigos — Pendentes', () => {
     const user = userEvent.setup();
     mocked.fetchFriendRequests.mockImplementation(async (direction) => (direction === 'incoming' ? page() : page(bea)));
     mocked.cancelFriendRequest.mockResolvedValue({});
-    at('/app/friends?tab=pending');
+    at('/friends?tab=pending');
 
     expect(await screen.findByText('Bea')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Aceitar' })).not.toBeInTheDocument();
@@ -127,7 +127,7 @@ describe('Amigos — Pendentes', () => {
     const user = userEvent.setup();
     mocked.fetchFriendRequests.mockImplementation(async (direction) => (direction === 'incoming' ? page(ana) : page()));
     mocked.acceptFriendRequest.mockRejectedValue(new Error('x'));
-    at('/app/friends?tab=pending');
+    at('/friends?tab=pending');
 
     await user.click(await screen.findByRole('button', { name: 'Aceitar' }));
     expect(await screen.findByRole('alert')).toHaveTextContent(/Não foi possível concluir/);
@@ -135,7 +135,7 @@ describe('Amigos — Pendentes', () => {
   });
 
   it('each section says when it is empty, without looking like an error', async () => {
-    at('/app/friends?tab=pending');
+    at('/friends?tab=pending');
     expect(await screen.findByText('Nenhuma solicitação recebida')).toBeInTheDocument();
     expect(screen.getByText('Nenhuma solicitação enviada')).toBeInTheDocument();
     expect(screen.getByText('Nenhum convite de servidor')).toBeInTheDocument();
@@ -144,7 +144,7 @@ describe('Amigos — Pendentes', () => {
 
 describe('Amigos — search in Pendentes (on the server, before pagination)', () => {
   it('Pendentes sends ?q= to both received and sent', async () => {
-    at('/app/friends?tab=pending&q=ana');
+    at('/friends?tab=pending&q=ana');
     await waitFor(() => {
       expect(mocked.fetchFriendRequests).toHaveBeenCalledWith('incoming', null, 'ana');
       expect(mocked.fetchFriendRequests).toHaveBeenCalledWith('outgoing', null, 'ana');
@@ -153,13 +153,13 @@ describe('Amigos — search in Pendentes (on the server, before pagination)', ()
   });
 
   it('a search with no results says so (not "nenhuma solicitacao")', async () => {
-    at('/app/friends?tab=pending&q=zzz');
+    at('/friends?tab=pending&q=zzz');
     // The two sections load independently, so wait for both rather than the first to appear.
     await waitFor(() => expect(screen.getAllByText('Nenhum resultado')).toHaveLength(3));
   });
 
   it('the same search also filters invitations', async () => {
-    at('/app/friends?tab=invitations&q=squad');
+    at('/friends?tab=invitations&q=squad');
     await waitFor(() => expect(mocked.fetchReceivedInvitations).toHaveBeenCalledWith(null, 'squad'));
     // The sections load independently, so wait for all three rather than the first to appear.
     await waitFor(() => expect(screen.getAllByText('Nenhum resultado')).toHaveLength(3));
@@ -167,7 +167,7 @@ describe('Amigos — search in Pendentes (on the server, before pagination)', ()
 
   it('typing in the Pendentes search writes ?q= without switching views', async () => {
     const user = userEvent.setup();
-    at('/app/friends?tab=pending');
+    at('/friends?tab=pending');
     await user.type(await screen.findByLabelText('Buscar nas solicitações'), 'bia');
     await waitFor(() => expect(mocked.fetchFriendRequests).toHaveBeenCalledWith('incoming', null, 'bia'));
     expect(screen.getByRole('heading', { level: 2, name: 'Recebidas' })).toBeInTheDocument();
@@ -182,7 +182,7 @@ describe('Friends — group invitations', () => {
     mocked.fetchReceivedInvitations.mockResolvedValue({ items: [entry], nextCursor: null });
     mocked.acceptInvitation.mockResolvedValue({ invitation: {} as never });
     mocked.declineInvitation.mockResolvedValue({ invitation: {} as never });
-    at('/app/friends?tab=pending');
+    at('/friends?tab=pending');
 
     expect(await screen.findByText('Squad')).toBeInTheDocument();
     expect(screen.getByText(/3 membros$/)).toBeInTheDocument(); // regression: a stray "}" once trailed it
@@ -196,7 +196,7 @@ describe('Friends — group invitations', () => {
     const user = userEvent.setup();
     mocked.fetchReceivedInvitations.mockResolvedValue({ items: [entry], nextCursor: null });
     mocked.acceptInvitation.mockRejectedValue(new api.ApiError(409, 'server_full', 'x'));
-    at('/app/friends?tab=pending');
+    at('/friends?tab=pending');
 
     await user.click(await screen.findByRole('button', { name: 'Entrar' }));
     expect(await screen.findByRole('alert')).toHaveTextContent('O servidor está cheio.');
@@ -223,7 +223,7 @@ describe('Amigos — robust actions and lists (E5)', () => {
     incoming(ana, bea);
     let finish!: () => void;
     mocked.acceptFriendRequest.mockImplementation(() => new Promise((resolve) => { finish = () => resolve({}); }));
-    at('/app/friends?tab=pending');
+    at('/friends?tab=pending');
 
     await screen.findByText('Ana');
     const accept = screen.getAllByRole('button', { name: 'Aceitar' });
@@ -240,7 +240,7 @@ describe('Amigos — robust actions and lists (E5)', () => {
     incoming(ana, bea);
     // once accepted, the server no longer lists her
     mocked.acceptFriendRequest.mockImplementation(async () => { incoming(bea); return {}; });
-    at('/app/friends?tab=pending');
+    at('/friends?tab=pending');
 
     await screen.findByText('Ana');
     await user.click(screen.getAllByRole('button', { name: 'Aceitar' })[0]!);
@@ -254,7 +254,7 @@ describe('Amigos — robust actions and lists (E5)', () => {
     const user = userEvent.setup();
     incoming(ana);
     mocked.acceptFriendRequest.mockRejectedValue(new Error('x'));
-    at('/app/friends?tab=pending');
+    at('/friends?tab=pending');
 
     await user.click(await screen.findByRole('button', { name: 'Aceitar' }));
     expect(await screen.findByRole('alert')).toHaveTextContent(/Não foi possível concluir/);
@@ -268,7 +268,7 @@ describe('Amigos — robust actions and lists (E5)', () => {
     const entry = { id: 'inv-1', at: '2026-01-01T00:00:00.000Z', server: { id: 'g', name: 'Squad', icon: '', memberCount: 3 }, inviter: ana };
     mocked.fetchReceivedInvitations.mockResolvedValue({ items: [entry], nextCursor: null });
     mocked.acceptInvitation.mockRejectedValue(new api.ApiError(409, 'server_full', 'x'));
-    at('/app/friends?tab=pending');
+    at('/friends?tab=pending');
     await user.click(await screen.findByRole('button', { name: 'Entrar' }));
     expect(await screen.findByRole('alert')).toHaveTextContent('O servidor está cheio.');
     await waitFor(() => expect(mocked.fetchReceivedInvitations.mock.calls.length).toBeGreaterThan(1));
@@ -282,7 +282,7 @@ describe('Amigos — robust actions and lists (E5)', () => {
       .mockResolvedValueOnce({ items: [{ user: ana, at: '2026-01-01T00:00:00.000Z' }], nextCursor: 'c1' })
       .mockRejectedValueOnce(new Error('rede'))
       .mockResolvedValueOnce({ items: [{ user: bea, at: '2026-01-01T00:00:00.000Z' }], nextCursor: null });
-    at('/app/friends');
+    at('/friends');
     await screen.findByText('Ana');
     await user.click(screen.getByRole('button', { name: 'Carregar mais' }));
     expect(await screen.findByText('Não foi possível carregar mais.')).toBeInTheDocument();
@@ -297,7 +297,7 @@ describe('Amigos — robust actions and lists (E5)', () => {
     incoming(ana);
     // the action fails, and so does the read that follows it
     mocked.acceptFriendRequest.mockImplementation(async () => { mocked.fetchFriendRequests.mockRejectedValue(new Error('rede')); throw new Error('x'); });
-    at('/app/friends?tab=pending');
+    at('/friends?tab=pending');
     await user.click(await screen.findByRole('button', { name: 'Aceitar' }));
     expect(await screen.findAllByText('Não foi possível atualizar a lista.')).not.toHaveLength(0);
     expect(screen.getByText('Ana')).toBeInTheDocument();
@@ -335,7 +335,7 @@ describe('FriendsContext — pending summary (E5)', () => {
   it('the number follows a notification that arrives while Amigos is open on another view', async () => {
     const user = userEvent.setup();
     mocked.fetchRequestSummary.mockResolvedValueOnce({ incoming: 0, invitations: 0 }).mockResolvedValue({ incoming: 1, invitations: 0 });
-    at('/app/friends?tab=online');
+    at('/friends?tab=online');
     expect(await screen.findByRole('link', { name: 'Pendentes' })).toBeInTheDocument(); // no badge yet
     // a `social-changed` from the server does exactly this: bumps the revision
     window.dispatchEvent(new Event('focus'));
