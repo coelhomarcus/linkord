@@ -1,4 +1,4 @@
-import { useId, useState, type ReactNode } from 'react';
+import { useId, useState, type KeyboardEvent, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { CaretDownIcon, CheckIcon } from '@/shared/ui/icons';
 
@@ -21,13 +21,14 @@ const fold = (text: string) => text.normalize('NFD').replace(/\p{Diacritic}/gu, 
 /** The filters dialog's pickers: the chosen values as chips in the trigger,
  * and a filterable list with checkboxes under it, as in Discord's. A chip goes
  * by unticking it in the list: the trigger is one button, with none inside. */
-export function MultiSelect({ label, placeholder, options, value, onChange }: {
+export function MultiSelect({ label, placeholder, options, value, onChange, onSubmit }: {
   /** names the trigger and the list; the visible label is the caller's */
   label: string;
   placeholder: string;
   options: MultiSelectOption[];
   value: string[];
   onChange: (next: string[]) => void;
+  onSubmit: () => void;
 }) {
   const { t } = useTranslation('search');
   const [open, setOpen] = useState(false);
@@ -37,10 +38,17 @@ export function MultiSelect({ label, placeholder, options, value, onChange }: {
   const shown = options.filter((o) => !filter || fold(`${o.label} ${o.keywords ?? ''}`).includes(fold(filter)));
   const toggle = (v: string) => onChange(value.includes(v) ? value.filter((x) => x !== v) : [...value, v]);
 
+  function handleKeyDown(event: KeyboardEvent) {
+    if (event.key !== 'Enter' || event.nativeEvent.isComposing) return;
+    event.preventDefault();
+    onSubmit();
+  }
+
   return (
     <Popover open={open} onOpenChange={(next) => { setOpen(next); if (!next) setFilter(''); }}>
       <PopoverTrigger
         aria-label={label}
+        onKeyDown={open ? handleKeyDown : undefined}
         className="flex min-h-10 w-full items-center gap-2 rounded-lg border border-border-field bg-fill-inset px-2.5 py-1.5 text-left text-body transition-colors hover:border-border-strong focus-ring aria-expanded:border-border-accent"
       >
         <span className="flex min-w-0 flex-1 flex-wrap items-center gap-1">
@@ -53,7 +61,7 @@ export function MultiSelect({ label, placeholder, options, value, onChange }: {
         </span>
         <CaretDownIcon size={18} className="flex-none text-text-secondary" aria-hidden />
       </PopoverTrigger>
-      <PopoverContent align="start" sideOffset={6} className="w-(--anchor-width) gap-1 p-1.5">
+      <PopoverContent align="start" sideOffset={6} onKeyDown={handleKeyDown} className="w-(--anchor-width) gap-1 p-1.5">
         {options.length > 6 && (
           <input
             value={filter}

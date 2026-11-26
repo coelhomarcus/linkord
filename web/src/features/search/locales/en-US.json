@@ -2,6 +2,7 @@
   "placeholder": "Search {{name}}",
   "placeholderDirect": "Search",
   "field": "Search messages",
+  "keyboardHint": "Use the arrow keys to highlight a suggestion, Space to select it, and Enter to search.",
   "clear": "Clear search",
   "removeChip": "Remove filter {{label}}",
   "keys": {

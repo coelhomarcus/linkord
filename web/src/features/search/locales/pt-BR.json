@@ -2,6 +2,7 @@
   "placeholder": "Buscar {{name}}",
   "placeholderDirect": "Buscar",
   "field": "Buscar mensagens",
+  "keyboardHint": "Use as setas para destacar uma sugestão, Espaço para selecioná-la e Enter para buscar.",
   "clear": "Limpar busca",
   "removeChip": "Remover filtro {{label}}",
   "keys": {

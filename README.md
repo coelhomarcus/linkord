@@ -20,7 +20,7 @@ Overcord is a self-hosted place to chat and call with friends. Talk in direct me
 **Chat**
 - Direct messages and private servers with text channels, organized into categories.
 - Replies, reactions, edits, deletes, mentions (members, roles, `@everyone`, `@here`) and `||spoilers||`.
-- Message search with filters for author, channel, content type, mentions and dates, as in Discord.
+- Message search with filters for author, channel, content type, mentions and dates. Use Enter to search with your chosen filters, or use the arrow keys and Space to choose a suggestion in the search field.
 - Pinned messages per channel and DM, and private saved messages.
 - Attachments, voice messages, and link cards with YouTube and Twitch players.
 - A video player with keyboard shortcuts and picture-in-picture, and a media viewer with zoom and a thumbnail strip.

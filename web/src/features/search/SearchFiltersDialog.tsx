@@ -81,6 +81,7 @@ function FiltersForm({ scope, initial, onApply, onCancel }: { scope: SearchScope
   const usernameOf = (id: string) => members.find((u) => u.id === id)?.username ?? id;
   const channelNameOf = (id: string) => channels.find((c) => c.id === id)?.title ?? id;
   const count = activeFilterCount(draft);
+  const apply = () => onApply(draft);
   const toggleAuthorType = (type: AuthorType) => setDraft((current) => ({
     ...current,
     authorTypes: current.authorTypes.includes(type) ? current.authorTypes.filter((t) => t !== type) : [...current.authorTypes, type],
@@ -90,18 +91,18 @@ function FiltersForm({ scope, initial, onApply, onCancel }: { scope: SearchScope
     <>
       <div className="flex min-h-0 flex-col gap-6 overflow-y-auto px-6 py-5">
         <Field label={t('dialog.from.label')} hint={t('dialog.from.hint')}>
-          <MultiSelect label={t('dialog.from.label')} placeholder={t('dialog.from.placeholder', { example })} options={memberOptions} value={values('from')} onChange={pick('from', memberOptions, usernameOf)} />
+          <MultiSelect label={t('dialog.from.label')} placeholder={t('dialog.from.placeholder', { example })} options={memberOptions} value={values('from')} onChange={pick('from', memberOptions, usernameOf)} onSubmit={apply} />
         </Field>
         {serverId && (
           <Field label={t('dialog.in.label')} hint={t('dialog.in.hint')}>
-            <MultiSelect label={t('dialog.in.label')} placeholder={t('dialog.in.placeholder', { example: channels[0]?.title ?? 'geral' })} options={channelOptions} value={values('in')} onChange={pick('in', channelOptions, channelNameOf)} />
+            <MultiSelect label={t('dialog.in.label')} placeholder={t('dialog.in.placeholder', { example: channels[0]?.title ?? 'geral' })} options={channelOptions} value={values('in')} onChange={pick('in', channelOptions, channelNameOf)} onSubmit={apply} />
           </Field>
         )}
         <Field label={t('dialog.has.label')} hint={t('dialog.has.hint')}>
-          <MultiSelect label={t('dialog.has.label')} placeholder={t('dialog.has.placeholder')} options={kindOptions} value={values('has')} onChange={pick('has', kindOptions, (kind) => kind as ContentKind)} />
+          <MultiSelect label={t('dialog.has.label')} placeholder={t('dialog.has.placeholder')} options={kindOptions} value={values('has')} onChange={pick('has', kindOptions, (kind) => kind as ContentKind)} onSubmit={apply} />
         </Field>
         <Field label={t('dialog.mentions.label')} hint={t('dialog.mentions.hint')}>
-          <MultiSelect label={t('dialog.mentions.label')} placeholder={t('dialog.mentions.placeholder', { example })} options={memberOptions} value={values('mentions')} onChange={pick('mentions', memberOptions, usernameOf)} />
+          <MultiSelect label={t('dialog.mentions.label')} placeholder={t('dialog.mentions.placeholder', { example })} options={memberOptions} value={values('mentions')} onChange={pick('mentions', memberOptions, usernameOf)} onSubmit={apply} />
         </Field>
         <Field label={t('dialog.date.label')} hint={t('dialog.date.hint')}>
           {dateShown ? (
@@ -152,7 +153,7 @@ function FiltersForm({ scope, initial, onApply, onCancel }: { scope: SearchScope
           {count ? t('dialog.clearCount', { count }) : t('dialog.clear')}
         </Button>
         <Button type="button" variant="secondary" onClick={onCancel}>{t('dialog.cancel')}</Button>
-        <Button type="button" onClick={() => onApply(draft)}>{t('dialog.apply')}</Button>
+        <Button type="button" onClick={apply}>{t('dialog.apply')}</Button>
       </DialogFooter>
     </>
   );

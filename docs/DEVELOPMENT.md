@@ -225,7 +225,7 @@ Playwright runs on Bun and uses the installed Google Chrome. Its CLI scripts use
 | `features/voice-messages` | Recording and playing a voice message; recording refused during a call without breaking its microphone. |
 | `features/servers` | Creating, invites, permissions (`SPEAK`, hidden and read-only channels), kick, ban, deleting, an animated icon, mute levels. |
 | `features/pins` | Pinning and unpinning, the `PIN_MESSAGES` permission, saved messages. |
-| `features/search` | The header search's filters, sort, jump to message and history. |
+| `features/search` | The header search's filters, keyboard submission with suggestions open, sort, jump to message and history. |
 | `features/voice` | Hearing each other, mute, camera, screen share, moving and disconnecting a member. |
 | `features/call-membership` | A LiveKit client using a kept token is removed from the room after leaving or being banned. |
 | `features/dm-call` | Decline, cancel, an answered call with audio both ways, a video call. |
