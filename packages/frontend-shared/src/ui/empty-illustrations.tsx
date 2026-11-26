@@ -2,25 +2,25 @@ import type { CSSProperties, ReactNode } from 'react';
 
 import { MARK_BODY } from './OvercordMark';
 
-// Shape fills use solid shades so overlaps stay opaque. Grayscale neutralizes
-// the surface and foreground tints in both light and dark themes.
-const BASE = 'var(--surface-base, var(--color-surface-app))';
-const shade = (amount: number) => `color-mix(in oklab, var(--color-text-primary) ${amount}%, ${BASE})`;
+// The accent supplies the pigment for every scene. Mixing with the local
+// surface keeps props visible in panels and dialogs in both light and dark themes.
+const ACCENT = 'var(--color-accent-primary)';
+const SURFACE = 'var(--surface-base, var(--color-surface-app))';
+const tone = (amount: number, base: string) => `color-mix(in oklab, ${ACCENT} ${amount}%, ${base})`;
 
 const PALETTE = {
-  filter: 'grayscale(1)',
-  '--es-back': shade(9),
-  '--es-obj': shade(16),
-  '--es-front': shade(24),
-  '--es-line': shade(39),
-  '--es-detail': shade(57),
-  '--es-bold': shade(86),
-  '--es-mid': shade(68),
-  '--es-mascot': shade(61),
-  '--es-companion': shade(45),
-  '--es-blush': shade(30),
-  '--es-face': '#f1f1f1',
-  '--es-ink': '#222',
+  '--es-back': tone(23, SURFACE),
+  '--es-obj': tone(29, SURFACE),
+  '--es-front': tone(36, SURFACE),
+  '--es-line': tone(54, SURFACE),
+  '--es-detail': tone(77, SURFACE),
+  '--es-bold': ACCENT,
+  '--es-mid': tone(86, SURFACE),
+  '--es-mascot': tone(84, 'white'),
+  '--es-companion': tone(69, SURFACE),
+  '--es-blush': tone(78, 'black'),
+  '--es-face': tone(11, 'white'),
+  '--es-ink': tone(29, 'black'),
 } as CSSProperties;
 
 const BACK = 'var(--es-back)';
