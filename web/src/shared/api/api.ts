@@ -1,4 +1,5 @@
 
+import type { HeldBadge } from '@overcord/frontend-shared/badges/badgeCatalog';
 import type { InvitationCard, PublicUser } from '@/shared/types/protocol';
 import { i18n } from '@/shared/i18n/init';
 import type { Language } from '@/shared/i18n/languages';
@@ -283,6 +284,8 @@ export interface ProfileDetails {
   friendsSince: string | null;
   mutualFriends: { items: SocialUser[]; total: number };
   mutualServers: { items: SharedServer[]; total: number };
+  /** in catalog order; missing from a server older than badges */
+  badges?: HeldBadge[];
 }
 
 /** Same access, and the same 404 for "no" and "doesn't exist", as fetchUserProfile. */

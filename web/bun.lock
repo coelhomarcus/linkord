@@ -33,6 +33,7 @@
         "class-variance-authority": "^0.7.1",
         "clsx": "^2.1.1",
         "i18next": "^26.6.0",
+        "kubai-icons-react": "0.15.0",
         "lexical": "0.52.0",
         "livekit-client": "^2.22.0",
         "motion": "^13.2.0",
@@ -243,11 +244,11 @@
 
     "@lexical/yjs": ["@lexical/yjs@0.52.0", "", { "dependencies": { "@lexical/internal": "0.52.0", "@lexical/selection": "0.52.0", "lexical": "0.52.0" }, "peerDependencies": { "typescript": ">=5.2", "yjs": ">=13.5.37" }, "optionalPeers": ["typescript"] }, "sha512-6Qd9/AkMDxDNalsXDs1X7ddLTw2OsqUy42RRvpIWlv0ya1MO4CNedl4NvgwMtYzxtLzOkq0prtspCPvkirYkmA=="],
 
-    "@overcord/frontend-shared": ["@overcord/frontend-shared@link:../packages/frontend-shared", {}],
-
     "@livekit/mutex": ["@livekit/mutex@1.1.1", "", {}, "sha512-EsshAucklmpuUAfkABPxJNhzj9v2sG7JuzFDL4ML1oJQSV14sqrpTYnsaOudMAw9yOaW53NU3QQTlUQoRs4czw=="],
 
     "@livekit/protocol": ["@livekit/protocol@1.45.7", "", { "dependencies": { "@bufbuild/protobuf": "^1.10.0" } }, "sha512-UVYtWQohAwowygFFglMKfgjVZMQncCEmHmsQX2yJDhgBf1nZQdfANgUJg+ifxZDTfVpNnQWQjikWMHViq5fh2Q=="],
+
+    "@overcord/frontend-shared": ["@overcord/frontend-shared@link:../packages/frontend-shared", {}],
 
     "@oxc-project/types": ["@oxc-project/types@0.156.0", "", {}, "sha512-1Duyg48TdJNdyhEB8Xn1L36bT9Pv6GUtlKjHxOys8xkaF/rQq3XJE+bAurSK/AgIz5mGFsb77cn9Pb20+WCScw=="],
 
@@ -706,6 +707,10 @@
     "jsonfile": ["jsonfile@5.0.0", "", { "dependencies": { "universalify": "^0.1.2" }, "optionalDependencies": { "graceful-fs": "^4.1.6" } }, "sha512-NQRZ5CRo74MhMMC3/3r5g2k4fjodJ/wh8MxjFbCViWKFjxrnudWSY5vomh+23ZaXzAS7J3fBZIR2dV6WbmfM0w=="],
 
     "kleur": ["kleur@3.0.3", "", {}, "sha512-eTIzlVOSUR+JxdDFepEYcBMtZ9Qqdef+rnzWdRZuMbOywu5tO2w2N7rqjoANZ5k9vywhL6Br1VRjUIgTQx4E8w=="],
+
+    "kubai-icons": ["kubai-icons@0.15.0", "", {}, "sha512-qBnt+/hUwfA3Q//ECZMitcWbA3740Zdte3QH+858rOIQmDz/aGUlPAAllCx+dFBPnP7jeszErKiaUmhHfUopYQ=="],
+
+    "kubai-icons-react": ["kubai-icons-react@0.15.0", "", { "dependencies": { "kubai-icons": "0.15.0" }, "peerDependencies": { "react": ">=18" } }, "sha512-ROCuphbA7kXT0KWJDbBPq32G+9qPCe1Wm6FNiiSyHOwg5D3uYUiRz+zeEQieWRM10brCyHEWPKZLOp5q6FIM3Q=="],
 
     "lexical": ["lexical@0.52.0", "", { "dependencies": { "@lexical/internal": "0.52.0" }, "peerDependencies": { "typescript": ">=5.2" }, "optionalPeers": ["typescript"] }, "sha512-mePejqwCDaW0GR89IoofJTTlk/EiwwlGhbs1D8qOx/Iw6ieG5D3nh7PSPLv0Csia0UC58HpuV91DilJjqeAWSw=="],
 

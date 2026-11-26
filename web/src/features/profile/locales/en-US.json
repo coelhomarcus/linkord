@@ -274,5 +274,15 @@
     "label": "Color",
     "trigger": "Profile color: {{name}}",
     "darkNote": "A dark color: Wall widgets show it lighter, like the dot, so it stays visible."
+  },
+  "badges": {
+    "label": "Badges",
+    "more": "+{{count}}",
+    "moreLabel": "See all {{count}} badges",
+    "since": "Since {{date}}",
+    "dialogTitle": "{{name}}'s badges",
+    "dialogDescription": "The badges this account has earned on Overcord.",
+    "grantedOn": "Granted on {{date}}",
+    "about": "About this badge"
   }
 }

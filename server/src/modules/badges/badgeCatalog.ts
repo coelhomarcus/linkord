@@ -2,11 +2,11 @@
 // name its types. Keep in step with the web catalog (packages/frontend-shared/src/badges/badgeCatalog.tsx)
 // and with the user_badges check constraint.
 
-export const BADGE_IDS = ['developer', 'supporter'] as const;
+const BADGE_IDS = ['developer', 'supporter'] as const;
 export type BadgeId = (typeof BADGE_IDS)[number];
 
 /** Who manages a held badge: an admin by hand, or a rule that awards it on its own. */
-export const BADGE_SOURCES = ['admin', 'automatic'] as const;
+const BADGE_SOURCES = ['admin', 'automatic'] as const;
 export type BadgeSource = (typeof BADGE_SOURCES)[number];
 
 export function isBadgeId(value: unknown): value is BadgeId {

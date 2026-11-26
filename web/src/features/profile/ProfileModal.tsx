@@ -21,6 +21,7 @@ import { BANNER_ASPECT_RATIO } from './profileLinks';
 import { useCustomStatus, useUserStatus } from '@/features/status/statusDisplay';
 import { UserActivityCard } from '@/features/activity/ActivityLine';
 import { useLanguage } from '@/shared/i18n/useLanguage';
+import { ProfileBadges } from './ProfileBadges';
 
 // one row: the header is sr-only (absolutely positioned, no row of its own), so
 // the content takes the whole height and scrolls inside it. On a phone it is the
@@ -134,6 +135,7 @@ export function ProfileModal({ userId, initialTab, onClose, onOpenProfile }: Pro
                     user={user}
                     status={status}
                     customStatus={customStatus}
+                    badges={<ProfileBadges badges={details.details?.badges} user={user} />}
                     actions={(
                       <ProfileActions
                         userId={user.id}

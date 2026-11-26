@@ -43,6 +43,7 @@ Overcord is a self-hosted place to chat and call with friends. Talk in direct me
 - Presence (available, idle, do not disturb, invisible) and custom statuses.
 - Activity: the desktop app shows what you are playing or using on your profile, in member lists and in your friends' Active Now, including what games send through Discord Rich Presence. It can be turned off or limited per game.
 - A profile with connected accounts and a Wall of widgets: MyAnimeList, GitHub, games from IGDB, Steam, Twitch, and your own playtime.
+- Profile badges for Overcord developers and contributors and for supporters who helped fund the project, granted from the administration site. Clicking a badge lists every badge the account holds.
 
 **Notifications**
 - Web Push for messages, mentions, friend requests, and invites, plus an unread badge on the app icon.
@@ -56,7 +57,7 @@ Overcord is a self-hosted place to chat and call with friends. Talk in direct me
 - The web app opens at the root of its domain. Existing `/app` links redirect to their new addresses.
 
 **Administration**
-- An optional [administration site](docs/DEPLOY.md#administration-site) with a dedicated hostname and sign-in for managing users, servers, webhooks, reports, audit history and uploads.
+- An optional [administration site](docs/DEPLOY.md#administration-site) with a dedicated hostname and sign-in for managing users and their badges, servers, webhooks, reports, audit history and uploads.
 - [Full backups](docs/DEPLOY.md#backups) downloaded from the administration site as one ZIP of the database and every stored file, never kept on the server.
 
 ## ⚡ Quick start

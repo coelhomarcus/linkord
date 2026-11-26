@@ -1,6 +1,6 @@
 import fs from 'node:fs';
 import type { Page } from '@playwright/test';
-import { createServer } from '../../fixtures/api';
+import { befriend, createServer } from '../../fixtures/api';
 import { threeFrameGif } from '../../fixtures/images';
 import { expect, test, type User } from '../../fixtures/test';
 import { ADMIN_URL, BASE_URL, emailCount, grantAdmin, waitForEmailCode } from '../../stack/stack';
@@ -131,4 +131,34 @@ test('an admin downloads a full backup of the instance as one ZIP', async ({ use
   await expect(page.getByText('Cópia antes da atualização')).toBeVisible();
   const link = await signedIn.context.request.post(`${ADMIN_URL}/api/admin/backup/download`, { data: { reason: 'sem origem' } });
   expect(link.status()).toBe(403);
+});
+
+test('a badge an admin grants shows on the profile and opens with every badge', async ({ users }) => {
+  const admin = await users.create('admin');
+  const member = await users.create('member');
+  const friend = await users.create('friend');
+  await befriend(member, friend);
+  grantAdmin(admin.username);
+  const signedIn = await users.login(admin.username, admin.password);
+
+  const page = await signedIn.context.newPage();
+  await page.goto(`${ADMIN_URL}/admin/users/${member.id}?tab=badges`);
+  await signIn(page, signedIn);
+  await page.getByRole('button', { name: 'Conceder', exact: true }).last().click();
+  const dialog = page.getByRole('dialog', { name: 'Conceder insígnia' });
+  await dialog.getByRole('textbox', { name: 'Motivo (fica registrado na auditoria)', exact: true }).fill('Apoiou o projeto');
+  await dialog.getByRole('button', { name: 'Conceder', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'Remover', exact: true })).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Insígnias (1)' })).toBeVisible();
+
+  const app = await friend.app();
+  await app.page.goto('/friends');
+  await app.page.getByRole('button', { name: `Ver perfil de ${member.username}`, exact: true }).click();
+  const profile = app.page.getByRole('dialog', { name: `Perfil de ${member.username}` });
+  const badges = profile.getByRole('list', { name: 'Insígnias', exact: true });
+  await expect(badges.getByRole('button')).toHaveCount(1);
+  await badges.getByRole('button', { name: 'Apoiador do Overcord', exact: true }).click();
+  const all = app.page.getByRole('dialog', { name: `Insígnias de ${member.username}` });
+  await expect(all.getByRole('heading', { name: 'Apoiador do Overcord' })).toBeVisible();
+  await expect(all.getByText('Ajudou financeiramente a manter o Overcord no ar.')).toBeVisible();
 });

@@ -392,6 +392,14 @@ Most played and the summary (7 or 30 days, `period: 7` or `30`) and recently pla
 
 Providers' limits and failures are in [INTEGRATIONS.md](INTEGRATIONS.md#myanimelist).
 
+### Profile badges
+
+Badges show under the name in the mini profile and beside the username in the full profile and the DM panel. Clicking one opens every badge the account holds. They come with `GET /api/users/:userId/profile-details` as `badges: [{ id, grantedAt }]`, so they are read on every open and need no realtime event. A client ignores a badge id it does not know.
+
+An admin grants or removes one in the administration site (user → Badges), through `POST` and `DELETE /api/admin/users/:id/badges/:badge` with a reason, recorded as `user.grant_badge` or `user.revoke_badge`. Each `user_badges` row has a `source`: `admin` for these, `automatic` for a future rule that awards a badge on its own. Such a rule calls `grantBadge` and `revokeBadge` from `server/src/modules/badges/badgesRepository.ts` with `source: 'automatic'`, so it never removes a badge an admin gave.
+
+To add a badge, add its id to `server/src/modules/badges/badgeCatalog.ts`, to the `user_badges_badge_check` constraint (a migration) and to `packages/frontend-shared/src/badges/badgeCatalog.tsx` with its Kubai icon and colour, then add its name and description to every `badges` locale.
+
 ## Sharing into the app (Web Share Target)
 
 `web/public/manifest.webmanifest` declares a `share_target`, so the installed app appears in Android Chrome's share sheet (not on iOS, and not for a plain browser tab).
