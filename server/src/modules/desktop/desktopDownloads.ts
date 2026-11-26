@@ -6,7 +6,7 @@ import { fetchConnectionJson, list, record, textValue, type RequestJson } from '
 // for a while so a server full of people asks GitHub a handful of times an hour.
 
 const CACHE_MS = 15 * 60 * 1000;
-// a failure is retried sooner, but not on every request
+// An unavailable installer may appear when a release is published.
 const FAILURE_CACHE_MS = 60 * 1000;
 
 export interface DesktopDownloads {
@@ -48,7 +48,7 @@ export function createDesktopDownloads(options: { repo: string; request?: Reques
         headers: { Accept: 'application/vnd.github+json', 'User-Agent': 'overcord-server' },
       });
       const value = parseLatestRelease(body, repo);
-      cached = { value, until: now() + CACHE_MS };
+      cached = { value, until: now() + (value ? CACHE_MS : FAILURE_CACHE_MS) };
       return value;
     } catch {
       cached = { value: cached?.value ?? null, until: now() + FAILURE_CACHE_MS };

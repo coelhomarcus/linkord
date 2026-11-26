@@ -64,6 +64,18 @@ describe('createDesktopDownloads', () => {
     assert.equal((await latest())?.version, '0.3.0');
   });
 
+  test('finds a newly published installer after a minute', async () => {
+    let time = 0;
+    const latest = createDesktopDownloads({
+      repo: REPO,
+      now: () => time,
+      request: async () => time ? release() : release({ assets: [] }),
+    });
+    assert.equal(await latest(), null);
+    time = 60_000;
+    assert.equal((await latest())?.version, '0.3.0');
+  });
+
   test('says nothing without a repository', async () => {
     let calls = 0;
     const latest = createDesktopDownloads({ repo: '', request: async () => { calls++; return release(); } });
