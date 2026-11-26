@@ -7,8 +7,9 @@ export interface AdminOutletContext {
   mode: AdminMode;
   /** false until the area has been measured once: `mode` is only a guess before that */
   measured: boolean;
-  /** the content column is wide enough for a table of 5–6 columns (see ADMIN_TABLE_MIN) */
-  tableFits: boolean;
+  /** Width inside the main gutters, where each table and its filters actually render. */
+  contentWidth: number;
+  standalone: boolean;
   /** the scrolling column of the area, for pages that restore a position */
   scroller: RefObject<HTMLElement | null>;
 }
@@ -32,10 +33,12 @@ export function useAdminMeasured(): boolean {
   return useOutletContext<AdminOutletContext | undefined>()?.measured ?? true;
 }
 
-/** Whether lists render as tables (true) or as stacked rows. Not the same
- * question as `useAdminMode`: the sidebar needs the AREA to be wide, a table
- * needs the CONTENT column to be — with the conversation list open on a laptop
- * the area is wide while the column beside the sidebar is not. */
-export function useAdminTableFits(): boolean {
-  return useOutletContext<AdminOutletContext | undefined>()?.tableFits ?? true;
+/** Each list declares the width its columns need, independently of the sidebar. */
+export function useAdminTableFits(minWidth = 760): boolean {
+  const width = useOutletContext<AdminOutletContext | undefined>()?.contentWidth ?? 0;
+  return width === 0 || width >= minWidth;
+}
+
+export function useStandaloneAdmin(): boolean {
+  return useOutletContext<AdminOutletContext | undefined>()?.standalone ?? false;
 }

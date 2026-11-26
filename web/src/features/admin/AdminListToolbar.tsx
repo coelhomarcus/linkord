@@ -21,10 +21,10 @@ export function AdminSelectField<T extends string>({ label, value, onChange, opt
 }) {
   const selected = options.find((option) => option.value === value)?.label ?? value;
   return (
-    <label className={FIELD_LABEL}>
+    <label className={cn(FIELD_LABEL, 'flex-[1_1_8.5rem] @[720px]:flex-[0_1_9.5rem]')}>
       {label}
       <Select value={value} onValueChange={(next) => { if (next) onChange(next as T); }}>
-        <SelectTrigger aria-label={label} className="h-10 w-full min-w-36">
+        <SelectTrigger aria-label={label} className="h-10 w-full min-w-0">
           <SelectValue>{() => selected}</SelectValue>
         </SelectTrigger>
         <SelectContent align="start">
@@ -40,7 +40,7 @@ export function AdminSelectField<T extends string>({ label, value, onChange, opt
 /** A free-text filter (an id, a name) with its label above, like the select and period filters beside it. */
 export function AdminTextField({ label, value, placeholder, onChange }: { label: string; value: string; placeholder?: string; onChange: (next: string) => void }) {
   return (
-    <label className={cn(FIELD_LABEL, 'min-w-40 flex-1')}>
+    <label className={cn(FIELD_LABEL, 'flex-[1_1_9rem]')}>
       {label}
       <input aria-label={label} placeholder={placeholder} value={value} onChange={(event) => onChange(event.target.value)} className={cn(FIELD, 'placeholder:text-text-muted')} />
     </label>
@@ -50,9 +50,9 @@ export function AdminTextField({ label, value, placeholder, onChange }: { label:
 /** A period filter: one picker for both ends, which are `yyyy-mm-dd` and inclusive (`''` leaves one open). */
 export function AdminDateRangeField({ label, from, to, onChange }: { label: string; from: string; to: string; onChange: (next: DateRange) => void }) {
   return (
-    <label className={FIELD_LABEL}>
+    <label className={cn(FIELD_LABEL, 'w-full @[520px]:w-auto')}>
       {label}
-      <DateRangePicker label={label} value={{ from, to }} max={todayKey()} className="min-w-56" onChange={onChange} />
+      <DateRangePicker label={label} value={{ from, to }} max={todayKey()} className="w-full @[520px]:min-w-56" onChange={onChange} />
     </label>
   );
 }
@@ -82,7 +82,7 @@ export function AdminListToolbar({ search, filters, advanced, advancedActive, su
     <div className="flex flex-col gap-3">
       <div className="flex flex-wrap items-end gap-3">
         {search && (
-          <div className="flex h-10 min-w-56 flex-1 items-center gap-2 rounded-lg border border-border bg-fill-subtle px-3 focus-within:border-border-accent">
+          <div className="flex h-10 min-w-0 basis-full items-center gap-2 rounded-lg border border-border bg-fill-subtle px-3 focus-within:border-border-accent @[720px]:flex-[1_1_14rem]">
             <MagnifyingGlassIcon size={20} aria-hidden className="flex-none text-text-muted" />
             <input
               value={search.value}

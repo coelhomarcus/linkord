@@ -107,13 +107,13 @@ export function UsersPage() {
           <AdminTable caption={t('ui.accounts')}>
             <thead>
               <tr>
-                <AdminTh className="min-w-52">{t('nav.users')}</AdminTh><AdminTh>{t('ui.status')}</AdminTh><AdminTh>{t('ui.role')}</AdminTh><AdminTh>{t('ui.createdAt')}</AdminTh><AdminTh>{t('ui.lastSeen')}</AdminTh><AdminTh className="text-right">{t('ui.actions')}</AdminTh>
+                <AdminTh className="min-w-44">{t('nav.users')}</AdminTh><AdminTh>{t('ui.status')}</AdminTh><AdminTh>{t('ui.role')}</AdminTh><AdminTh>{t('ui.createdAt')}</AdminTh><AdminTh>{t('ui.lastSeen')}</AdminTh><AdminTh className="w-px text-right">{t('ui.actions')}</AdminTh>
               </tr>
             </thead>
             <tbody>
               {list.items.map((u) => (
                 <AdminTr key={u.id}>
-                  <AdminTd className="max-w-0 w-[40%]"><UserIdentity user={u} from={origin} /></AdminTd>
+                  <AdminTd className="w-[34%] max-w-0"><UserIdentity user={u} from={origin} /></AdminTd>
                   <AdminTd><Badge value={u.status} /></AdminTd>
                   <AdminTd><Badge value={u.role} /></AdminTd>
                   <AdminTd className="whitespace-nowrap">{formatDateShort(u.createdAt, language)}</AdminTd>

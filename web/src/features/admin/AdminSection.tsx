@@ -6,10 +6,10 @@ import { cn } from '@/shared/lib/utils';
  * the first section of a settings page opens it. */
 export function AdminPageTitle({ title, description, actions }: { title: string; description?: ReactNode; actions?: ReactNode }) {
   return (
-    <header className="mb-2 flex flex-wrap items-start justify-between gap-x-6 gap-y-3">
-      <div className="min-w-0 flex-1 basis-72">
+    <header className="admin-page-title mb-2 flex flex-wrap items-start justify-between gap-x-6 gap-y-3">
+      <div className="min-w-0 flex-1 basis-64">
         <h2 className="text-heading font-semibold text-text-strong">{title}</h2>
-        {description && <p className="mt-2 text-label text-text-muted">{description}</p>}
+        {description && <p className="mt-2 max-w-prose text-label text-text-muted">{description}</p>}
       </div>
       {actions && <div className="flex flex-none flex-wrap items-center gap-2">{actions}</div>}
     </header>

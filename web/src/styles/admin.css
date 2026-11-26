@@ -1,0 +1,50 @@
+:root[data-admin-site] {
+  color-scheme: dark;
+  --color-surface-app: #10131b;
+  --color-surface-panel: #151923;
+  --color-surface-raised: #191e2a;
+  --color-surface-overlay: #202634;
+  --color-surface-rail: #121620;
+  --color-bg-textarea: #121620;
+  --color-bg-selected: #242b3d;
+  --color-text-strong: #f4f5fb;
+  --color-text-primary: #e8ebf5;
+  --color-text-secondary: #bac2d6;
+  --color-text-muted: #9ba5bd;
+  --color-border-subtle: #242b3a;
+  --color-border-default: #2b3447;
+  --color-border-strong: #45516a;
+  --color-border-divider: var(--color-border-subtle);
+  --color-accent-primary: #aab3ff;
+  --color-accent-text: #bbc3ff;
+  --color-accent-hover: #c5ccff;
+  --color-border-accent: #8c98ee;
+  --color-link: var(--color-accent-text);
+  --color-nav-active: #242b45;
+  --primary-foreground: #161b32;
+}
+
+/* Replace the chat theme's early background while the first admin route loads. */
+:root[data-admin-site],
+:root[data-admin-site] body {
+  background: var(--color-surface-app);
+}
+
+.admin-login {
+  background-image: radial-gradient(ellipse at 50% 0%, #202743 0%, transparent 65%);
+}
+
+.admin-page-title h2 {
+  font-size: clamp(1.625rem, 1.35rem + 0.65vw, 2rem);
+  line-height: 1.18;
+  letter-spacing: -0.025em;
+}
+
+.admin-data-surface {
+  background: var(--color-surface-panel);
+  border-color: var(--color-border-default);
+}
+
+.admin-data-surface th {
+  background: var(--color-surface-raised);
+}
