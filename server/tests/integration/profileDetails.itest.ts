@@ -114,13 +114,19 @@ describe('GET /api/users/:userId/profile-details (real Postgres)', () => {
     assert.deepEqual(body.mutualServers.items.map((g: { id: string }) => g.id), [serverId]);
   });
 
-  it('on your own profile: member-since only, nothing in common with yourself', async () => {
+  it('returns the join date, empty badges and no mutuals on your own new profile', async () => {
     const me = await makeUser('me');
     const res = await app.inject({ method: 'GET', url: `/api/users/${me.id}/profile-details`, headers: await asUser(me.id) });
     assert.equal(res.statusCode, 200);
     const body = res.json() as Record<string, unknown>;
     assert.ok(typeof body.memberSince === 'string');
-    assert.deepEqual({ ...body, memberSince: 'x' }, { memberSince: 'x', friendsSince: null, mutualFriends: { items: [], total: 0 }, mutualServers: { items: [], total: 0 } });
+    assert.deepEqual(body, {
+      memberSince: body.memberSince,
+      friendsSince: null,
+      mutualFriends: { items: [], total: 0 },
+      mutualServers: { items: [], total: 0 },
+      badges: [],
+    });
   });
 
   it('a stranger gets the same 404 as an account that does not exist, and no session gets 401', async () => {
