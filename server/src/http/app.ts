@@ -146,9 +146,11 @@ export function createApp(): FastifyInstance {
     setHeaders(reply, filePath) {
       const isHashedAsset = filePath.startsWith(ASSETS_DIR);
       const isHtml = path.extname(filePath) === '.html';
-      // the service worker too: a stale copy would keep serving the old one for an hour after a deploy
-      const isServiceWorker = path.basename(filePath) === 'sw.js';
-      reply.header('Cache-Control', isHashedAsset ? 'public, max-age=31536000, immutable' : isHtml || isServiceWorker ? 'no-cache' : 'public, max-age=3600');
+      // The service worker is never stored, by the browser or a CDN in front: a stale copy
+      // would keep serving the old build after a deploy.
+      const isServiceWorker = filePath === path.join(PUBLIC_DIR, 'sw.js');
+      reply.header('Cache-Control', isServiceWorker ? 'private, no-cache, no-store, max-age=0'
+        : isHashedAsset ? 'public, max-age=31536000, immutable' : isHtml ? 'no-cache' : 'public, max-age=3600');
       reply.header('X-Content-Type-Options', 'nosniff');
       // 'same-origin' made the browser send no Referer to the YouTube
       // iframe — its player uses that to validate the embed's origin, so
