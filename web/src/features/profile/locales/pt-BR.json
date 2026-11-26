@@ -274,5 +274,15 @@
     "label": "Cor",
     "trigger": "Cor do perfil: {{name}}",
     "darkNote": "Cor escura: nos widgets do Mural ela aparece mais clara, como na bolinha, para continuar visível."
+  },
+  "badges": {
+    "label": "Insígnias",
+    "more": "+{{count}}",
+    "moreLabel": "Ver todas as {{count}} insígnias",
+    "since": "Desde {{date}}",
+    "dialogTitle": "Insígnias de {{name}}",
+    "dialogDescription": "As insígnias que essa conta conquistou no Overcord.",
+    "grantedOn": "Concedida em {{date}}",
+    "about": "Sobre a insígnia"
   }
 }

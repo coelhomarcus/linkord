@@ -61,6 +61,8 @@ interface ProfileCardProps {
   actions?: ReactNode;
   /** shown at the end of the name's line, above the username */
   nameAction?: ReactNode;
+  /** shown beside the username (the profile's badges) */
+  badges?: ReactNode;
   /** shown under the bio, in place of the link icons when `hideLinks` is set */
   footer?: ReactNode;
   /** leaves the link icons out, for a footer that lists them its own way */
@@ -104,7 +106,7 @@ export function ProfileCard({
   onBannerUpload, onBannerRemove, bannerUploading,
   className,
   onDisplayNameChange, onBioChange, onAvatarColorChange,
-  bare, fieldsDisabled, actions, nameAction, footer, hideLinks,
+  bare, fieldsDisabled, actions, nameAction, badges, footer, hideLinks,
 }: ProfileCardProps) {
   const { t } = useTranslation('profile');
   const links = (user.profileLinks ?? []).map(linkInfo).filter((item): item is LinkInfo => !!item);
@@ -240,7 +242,7 @@ export function ProfileCard({
               {nameAction && <div className="flex-none">{nameAction}</div>}
             </div>
           )}
-          <div className="flex min-w-0 items-center gap-2">
+          <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
             <p className="flex min-w-0 items-center gap-0.5 truncate text-label text-text-muted">
               <AtIcon size={14} className="flex-none" />
               <span className="truncate">{user.username}</span>
@@ -250,6 +252,7 @@ export function ProfileCard({
                 <SealCheckIcon size={13} /> {t('card.admin')}
               </span>
             )}
+            {badges}
           </div>
         </div>
 

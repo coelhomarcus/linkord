@@ -14,6 +14,7 @@ import { formatMB } from '@/shared/lib/formatBytes';
 import { AVATAR_MIME_TYPES, MAX_AVATAR_BYTES } from '@/shared/types/protocol';
 import { Button } from '@/shared/ui/primitives/button';
 import { ProfileCard } from './ProfileCard';
+import { ProfileBadges } from './ProfileBadges';
 import { FLOATING_BAR_SLOT_CLASS, FloatingBar, FloatingBarSlotProvider, SAVED_BAR_MS } from '@/shared/FloatingBar';
 import { ProfileConnections } from './ProfileConnections';
 import { ProfileSidebar } from './ProfileSidebar';
@@ -274,6 +275,7 @@ export function ProfileEditor({ status, customStatus, details, onClose, register
             }}
             status={status}
             customStatus={customStatus}
+            badges={<ProfileBadges badges={details.details?.badges} user={{ id: state.me.userId ?? state.me.id ?? 'preview', displayName: draft.displayName || state.me.name, avatar, avatarColor: draft.avatarColor }} />}
             onEditCustomStatus={() => { setCustomStatusError(null); customStatusActions.openEditor(); }}
             onClearCustomStatus={() => { setCustomStatusError(null); customStatusActions.clear(); }}
             onAvatarUpload={() => avatarFileInputRef.current?.click()}

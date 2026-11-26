@@ -16,6 +16,8 @@ import { dropUserConnections } from './accountEnforcement.js';
 import { decideAdminRoleChange, decideUserAction, pickSuccessor, type AdminRoleAction, type AdminRoleDecision, type UserActionDecision } from './adminPolicy.js';
 import { listAudit, recordAudit, recordAuditFailure, type AuditActor } from './auditLog.js';
 import { logger } from '../../lib/logger.js';
+import { grantBadge, listUserBadges, revokeBadge } from '../badges/badgesRepository.js';
+import type { BadgeId } from '../badges/badgeCatalog.js';
 
 const log = logger.child({ component: 'admin' });
 
@@ -117,6 +119,28 @@ export async function revokeUserSessions(ctx: Ctx, targetId: string): Promise<Us
   dropUserConnections(targetId);
   await recordAudit({ actor: ctx.actor, action: 'user.revoke_sessions', targetType: 'user', targetId, targetLabel: target.username, reason: ctx.reason, requestId: ctx.requestId });
   return { code: 'ok' };
+}
+
+export type BadgeActionResult = { code: 'ok' } | { code: 'not_found' | 'forbidden' | 'already_held' | 'not_held' };
+
+/** Gives or takes away a profile badge by hand. The badge and its trail are written in one
+ * transaction, and the actor is re-checked as an active admin under the same locks as the other
+ * account actions. Profiles read badges on every open, so nothing is pushed to clients. */
+export async function setUserBadge(ctx: Ctx, targetId: string, badge: BadgeId, action: 'grant' | 'revoke'): Promise<BadgeActionResult> {
+  return db.transaction(async (tx): Promise<BadgeActionResult> => {
+    const { target, actorStillAdmin } = await lockAdminsAndTarget(tx, targetId, ctx.actor.id);
+    if (!actorStillAdmin) return { code: 'forbidden' };
+    if (!target) return { code: 'not_found' };
+    const outcome = action === 'grant'
+      ? await grantBadge(tx, { userId: targetId, badge, source: 'admin', grantedBy: ctx.actor.id === CLI_ACTOR_ID ? null : ctx.actor.id })
+      : await revokeBadge(tx, { userId: targetId, badge });
+    if (outcome === 'already_held' || outcome === 'not_held') return { code: outcome };
+    await recordAudit({
+      actor: ctx.actor, action: action === 'grant' ? 'user.grant_badge' : 'user.revoke_badge', targetType: 'user', targetId,
+      targetLabel: target.username, reason: ctx.reason, detail: { badge }, requestId: ctx.requestId,
+    }, tx);
+    return { code: 'ok' };
+  });
 }
 
 interface LockedTarget {
@@ -296,7 +320,7 @@ export async function getAdminUser(userId: string) {
     .from(attachments)
     .innerJoin(messages, eq(messages.id, attachments.messageId))
     .where(and(eq(messages.authorId, userId), eq(attachments.isThumbnail, false)));
-  const history = await listAudit({ targetType: 'user', targetId: userId });
+  const [history, badges] = await Promise.all([listAudit({ targetType: 'user', targetId: userId }), listUserBadges(userId)]);
   return {
     user: {
       id: u.id, username: u.username, displayName: u.displayName.trim() || u.username, email: u.email, avatar: u.avatar, avatarColor: u.avatarColor,
@@ -306,6 +330,7 @@ export async function getAdminUser(userId: string) {
       online: listOnlineUserIds().includes(u.id),
     },
     servers: memberServers,
+    badges,
     storage: { bytes: usage?.bytes ?? 0, files: usage?.files ?? 0 },
     history: history === 'invalid_cursor' ? [] : history.items,
   };

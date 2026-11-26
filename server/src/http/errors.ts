@@ -148,6 +148,8 @@ export const ERROR_REGISTRY = {
   confirmation_mismatch: { statuses: [400], channel: 'http' },
   already_admin: { statuses: [409], channel: 'http' },
   not_admin: { statuses: [409], channel: 'http' },
+  already_held: { statuses: [409], channel: 'http' },
+  not_held: { statuses: [409], channel: 'http' },
   target_inactive: { statuses: [409], channel: 'http' },
   already_closed: { statuses: [409], channel: 'http' },
   not_open: { statuses: [409], channel: 'http' },

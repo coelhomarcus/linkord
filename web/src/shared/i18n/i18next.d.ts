@@ -13,6 +13,7 @@ import type calls from '@/features/calls/locales/pt-BR.json';
 import type profile from '@/features/profile/locales/pt-BR.json';
 import type media from '@/features/media/locales/pt-BR.json';
 import type reports from '@overcord/frontend-shared/reports/locales/pt-BR.json';
+import type badges from '@overcord/frontend-shared/badges/locales/pt-BR.json';
 import type bots from '@/features/bots/locales/pt-BR.json';
 import type settings from '@/features/settings/locales/pt-BR.json';
 import type soundboard from '@/features/soundboard/locales/pt-BR.json';
@@ -48,6 +49,7 @@ declare module 'i18next' {
       profile: typeof profile;
       media: typeof media;
       reports: typeof reports;
+      badges: typeof badges;
       bots: typeof bots;
       settings: typeof settings;
       soundboard: typeof soundboard;

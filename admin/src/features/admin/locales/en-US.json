@@ -188,7 +188,9 @@
     "generic": "Could not complete the action. Try again.",
     "backupRunning": "Another backup is downloading. Wait for it to finish.",
     "backupLinkExpired": "The backup link expired before the download started. Try again.",
-    "backupUnavailable": "The server does not have pg_dump installed; it cannot make a backup."
+    "backupUnavailable": "The server does not have pg_dump installed; it cannot make a backup.",
+    "alreadyHeld": "This account already has this badge. The page was refreshed.",
+    "notHeld": "This account no longer has this badge. The page was refreshed."
   },
   "actions": {
     "user.suspend": "Account suspended",
@@ -240,7 +242,9 @@
     "account.data_export_request": "Data copy requested",
     "account.data_export_download": "Data copy downloaded",
     "account.data_export": "Data copy",
-    "system.backup_download": "Backup downloaded"
+    "system.backup_download": "Backup downloaded",
+    "user.grant_badge": "Badge granted",
+    "user.revoke_badge": "Badge removed"
   },
   "detail": {
     "fullHistory": "Full history",
@@ -317,7 +321,21 @@
     "serverUnnamed": "Unnamed server",
     "serverOwner": "Server owner",
     "storageValue": "{{size}} in {{count}} file(s)",
-    "noServersTitle": "Not in any server"
+    "noServersTitle": "Not in any server",
+    "badges": "Badges",
+    "badgesDescription": "Badges appear on the account's profile. Granting or removing one is recorded in the history.",
+    "badgeHeld": "Granted on {{when}} ({{source}})",
+    "badgeNotHeld": "The account does not have this badge.",
+    "badgeSourceAdmin": "by an administrator",
+    "badgeSourceAutomatic": "automatically",
+    "grantBadge": "Grant",
+    "revokeBadge": "Remove",
+    "grantBadgeTitle": "Grant badge",
+    "grantBadgeDialog": "@{{username}} will show the \"{{badge}}\" badge on their profile.",
+    "revokeBadgeTitle": "Remove badge",
+    "revokeBadgeDialog": "@{{username}} will no longer show the \"{{badge}}\" badge on their profile.",
+    "noBadges": "None",
+    "viewBadges": "Manage badges"
   },
   "entity": {
     "fullHistoryServer": "Full history",

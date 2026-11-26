@@ -188,7 +188,9 @@
     "generic": "Não foi possível concluir a ação. Tente de novo.",
     "backupRunning": "Outro backup está sendo baixado. Espere ele terminar.",
     "backupLinkExpired": "O link do backup expirou antes do download começar. Tente de novo.",
-    "backupUnavailable": "O servidor não tem o pg_dump instalado; não é possível gerar o backup."
+    "backupUnavailable": "O servidor não tem o pg_dump instalado; não é possível gerar o backup.",
+    "alreadyHeld": "Essa conta já tem essa insígnia. A página foi atualizada.",
+    "notHeld": "Essa conta não tem mais essa insígnia. A página foi atualizada."
   },
   "actions": {
     "user.suspend": "Conta suspensa",
@@ -240,7 +242,9 @@
     "account.data_export_request": "Cópia dos dados pedida",
     "account.data_export_download": "Cópia dos dados baixada",
     "account.data_export": "Cópia dos dados",
-    "system.backup_download": "Backup baixado"
+    "system.backup_download": "Backup baixado",
+    "user.grant_badge": "Insígnia concedida",
+    "user.revoke_badge": "Insígnia removida"
   },
   "detail": {
     "fullHistory": "Histórico completo",
@@ -317,7 +321,21 @@
     "serverUnnamed": "Servidor sem nome",
     "serverOwner": "Dona do servidor",
     "storageValue": "{{size}} em {{count}} arquivo(s)",
-    "noServersTitle": "Não participa de nenhum servidor"
+    "noServersTitle": "Não participa de nenhum servidor",
+    "badges": "Insígnias",
+    "badgesDescription": "As insígnias aparecem no perfil da conta. Conceder ou remover fica registrado no histórico.",
+    "badgeHeld": "Concedida em {{when}} ({{source}})",
+    "badgeNotHeld": "A conta não tem esta insígnia.",
+    "badgeSourceAdmin": "por um administrador",
+    "badgeSourceAutomatic": "automaticamente",
+    "grantBadge": "Conceder",
+    "revokeBadge": "Remover",
+    "grantBadgeTitle": "Conceder insígnia",
+    "grantBadgeDialog": "@{{username}} vai exibir a insígnia \"{{badge}}\" no perfil.",
+    "revokeBadgeTitle": "Remover insígnia",
+    "revokeBadgeDialog": "@{{username}} deixa de exibir a insígnia \"{{badge}}\" no perfil.",
+    "noBadges": "Nenhuma",
+    "viewBadges": "Gerenciar insígnias"
   },
   "entity": {
     "fullHistoryServer": "Histórico completo",

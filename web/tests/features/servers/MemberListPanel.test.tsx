@@ -201,11 +201,17 @@ describe('MemberListPanel', () => {
     expect(screen.queryByText('Carregando perfil…')).not.toBeInTheDocument();
   });
 
-  it('shows no common ground on your own compact profile', async () => {
+  it('shows your own badges but no common ground on your own compact profile', async () => {
     const user = userEvent.setup();
+    mockedApi.fetchProfileDetails.mockResolvedValue({
+      memberSince: '2024-01-01T00:00:00.000Z', friendsSince: null,
+      mutualFriends: { items: [], total: 0 }, mutualServers: { items: [], total: 0 },
+      badges: [{ id: 'developer', grantedAt: '2026-01-01T00:00:00.000Z' }],
+    });
     renderWithRoom(<MemberListPanel server={server} onOpenProfile={vi.fn()} />, { state: asMe('u-bia') });
     await user.click(await screen.findByRole('button', { name: 'Abrir perfil de Bia' }));
-    expect(mockedApi.fetchProfileDetails).not.toHaveBeenCalled();
+    expect(await screen.findByRole('button', { name: 'Desenvolvedor do Overcord' })).toBeInTheDocument();
+    expect(screen.queryByText(/mútuo/)).not.toBeInTheDocument();
   });
 
   it('fetches nothing while kept mounted behind a closed sheet', () => {

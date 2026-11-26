@@ -8,6 +8,7 @@ import type { PublicUser } from '@/shared/types/protocol';
 import { BANNER_ASPECT_RATIO, bannerStyle } from './profileLinks';
 import type { ProfileTab } from './ProfileSidebar';
 import { formatProfileDate, useProfileDetails } from './useProfileDetails';
+import { ProfileBadges } from './ProfileBadges';
 import { ProfileMutuals } from './ProfileMutuals';
 import { UserCustomStatusBubble, UserStatusDot } from '@/features/status/UserStatus';
 import { UserActivityCard } from '@/features/activity/ActivityLine';
@@ -83,6 +84,7 @@ export function DirectProfilePanel({ user, onOpenProfile }: { user: PublicUser; 
             <AtIcon size={14} aria-hidden className="flex-none" />
             <span className="truncate">{user.username}</span>
           </p>
+          <ProfileBadges badges={details?.badges} user={user} className="mt-2" />
           <ProfileMutuals details={details} onOpen={() => onOpenProfile(user.id, 'common')} ringClassName="ring-bg-card" className="mt-2" />
         </div>
         <section className="mt-4 flex flex-col gap-3">

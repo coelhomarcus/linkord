@@ -13,6 +13,7 @@ import { ProfileActions } from '@/features/friends/ProfileActions';
 import { bannerStyle } from '@/features/profile/profileLinks';
 import { rememberProfilePreview, useUserProfile } from '@/features/profile/profileCache';
 import { ProfileMutuals } from '@/features/profile/ProfileMutuals';
+import { ProfileBadges } from '@/features/profile/ProfileBadges';
 import type { ProfileTab } from '@/features/profile/ProfileSidebar';
 import { useProfileDetails } from '@/features/profile/useProfileDetails';
 import { useRoom, useRoomState } from '@/state/RoomContext';
@@ -79,11 +80,12 @@ export function MemberQuickProfile({ server, member, currentUser, offline, open,
   const profileRead = useUserProfile(open && !currentUser ? member.user.id : null);
   const fetched = profileRead.value;
   const isMe = user.id === state.me.userId;
-  const detailsRead = useProfileDetails(open && !isMe ? user.id : null);
+  // your own card reads them too, for your badges
+  const detailsRead = useProfileDetails(open ? user.id : null);
   // a preview seeded from a list row (no bio, no banner) still waits for the real read;
   // a failed read shows the card without what it could not read
   const profileReady = !!currentUser || (profileRead.status !== 'loading' && !(profileRead.entry?.local && profileRead.entry.fetching));
-  const ready = profileReady && (isMe || detailsRead.status !== 'loading');
+  const ready = profileReady && detailsRead.status !== 'loading';
   const banner = currentUser?.banner || fetched?.banner || '';
   const bio = currentUser?.bio || fetched?.bio || '';
   const avatarPoster = 'avatarPoster' in user && typeof user.avatarPoster === 'string' ? user.avatarPoster : undefined;
@@ -204,6 +206,7 @@ export function MemberQuickProfile({ server, member, currentUser, offline, open,
               <p className="truncate text-label text-text-secondary">@{user.username}</p>
             </div>
           </div>
+          <ProfileBadges badges={detailsRead.details?.badges} user={user} className="mt-2" />
           {!isMe && (
             <ProfileMutuals details={detailsRead.details} onOpen={() => openFullProfile('common')} ringClassName="ring-bg-modal" className="mt-3" />
           )}

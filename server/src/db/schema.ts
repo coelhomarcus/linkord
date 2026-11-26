@@ -1,5 +1,6 @@
 import type { ConnectionProvider, ConnectionSnapshot, WidgetType } from '../modules/connections/types.js';
 import type { GameList } from '../modules/games/types.js';
+import type { BadgeId, BadgeSource } from '../modules/badges/badgeCatalog.js';
 import { pgTable, uuid, text, varchar, timestamp, integer, bigint, jsonb, serial, boolean, uniqueIndex, index, primaryKey, check, customType, foreignKey, type AnyPgColumn } from 'drizzle-orm/pg-core';
 import { sql, type SQL } from 'drizzle-orm';
 import { messageSearchVector } from './textSearch.js';
@@ -1106,3 +1107,19 @@ export const userPreferences = pgTable('user_preferences', {
   data: jsonb('data').$type<Record<string, unknown>>().notNull().default({}),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 });
+
+/** The profile badges an account holds, one row per badge (modules/badges/badgeCatalog.ts lists them).
+ * `source` says who manages the row: an admin grants and removes 'admin' rows by hand, while 'automatic'
+ * rows belong to a rule that awards the badge (none yet) and that rule alone may remove them, so a sync
+ * never takes back a badge an admin gave. `grantedBy` is the admin, kept null once that account is gone. */
+export const userBadges = pgTable('user_badges', {
+  userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  badge: varchar('badge', { length: 32 }).$type<BadgeId>().notNull(),
+  source: varchar('source', { length: 16 }).$type<BadgeSource>().notNull(),
+  grantedBy: text('granted_by').references(() => users.id, { onDelete: 'set null' }),
+  grantedAt: timestamp('granted_at', { withTimezone: true }).notNull().defaultNow(),
+}, (t) => [
+  primaryKey({ columns: [t.userId, t.badge] }),
+  check('user_badges_badge_check', sql`${t.badge} IN ('developer','supporter')`),
+  check('user_badges_source_check', sql`${t.source} IN ('admin','automatic')`),
+]);

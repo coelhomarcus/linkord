@@ -27,6 +27,8 @@ export function describeAdminError(err: unknown): string {
       case ERROR_CODES.confirmation_mismatch: return i18n.t('admin:errors.confirmationMismatch');
       case ERROR_CODES.already_admin: return i18n.t('admin:errors.alreadyAdmin');
       case ERROR_CODES.not_admin: return i18n.t('admin:errors.notAdmin');
+      case ERROR_CODES.already_held: return i18n.t('admin:errors.alreadyHeld');
+      case ERROR_CODES.not_held: return i18n.t('admin:errors.notHeld');
       case ERROR_CODES.target_inactive: return i18n.t('admin:errors.targetInactive');
       case ERROR_CODES.already_suspended: return i18n.t('admin:errors.alreadySuspended');
       case ERROR_CODES.not_suspended: return i18n.t('admin:errors.notSuspended');
