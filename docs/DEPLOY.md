@@ -205,7 +205,7 @@ For Docker, use the same database network settings as the intended Overcord cont
 
 3. Start the app. A newer app applies its newer migrations as on any upgrade; an older app cannot read a newer database.
 
-The restore refuses, before changing anything, a backup whose checksums do not match its manifest (every byte of the dump and of the files is checked), a missing or wrong `--confirm`, a database that already has tables, and an uploads folder that has files. `pg_restore` runs in one transaction, and files are extracted only after it succeeds. It then compares row counts, migrations and files with the manifest: a mismatch exits 3, warnings exit 0 (3 with `--strict`), other failures 1, a missing confirmation 2.
+The restore refuses, before changing anything, a backup whose checksums do not match its manifest (every byte of the dump and of the files is checked), a ZIP that holds a name twice, a missing or wrong `--confirm`, a database that already has tables, and an uploads folder that has files. `pg_restore` runs in one transaction and gets the dump checked again as it reads it, so a file that changed after the check is never committed. Files are extracted only after it succeeds. It then compares row counts, migrations and files with the manifest: a mismatch exits 3, warnings exit 0 (3 with `--strict`), other failures 1, a missing confirmation 2.
 
 A backup folder written by an older version (`database.dump`, `uploads.tar.gz`, `manifest.json`) restores the same way, given the folder's path instead of a ZIP.
 

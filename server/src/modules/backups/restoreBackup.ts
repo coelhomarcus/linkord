@@ -5,7 +5,7 @@ import { Pool } from 'pg';
 import { classifyOrphans } from '../attachments/orphanClassification.js';
 import type { Readable } from 'node:stream';
 import { BackupError, DUMP_FILE, MANIFEST_FILE, parseManifest, UPLOADS_FILE, type BackupManifest } from './backupLayout.js';
-import { extractBackupUploads, readBackupZip, withDumpStream } from './backupZipReader.js';
+import { extractBackupUploads, readBackupZip, verifiedDump, withDumpStream } from './backupZipReader.js';
 import { pgConnection, runTool, sha256OfFile, withConnection, type DatabaseSsl } from './postgresTools.js';
 import { extractUploadsArchive, isEmptyDirectory, listStoredFiles } from './uploadsArchive.js';
 
@@ -73,9 +73,10 @@ export async function readBackup(backupPath: string): Promise<BackupSource> {
   return { kind: 'folder', manifest, dumpFile, uploadsFile };
 }
 
-/** Runs `use` with the dump as a stream, wherever the backup keeps it. */
+/** Runs `use` with the dump as a stream, wherever the backup keeps it, checked again as it is read. */
 function withDump<T>(source: BackupSource, use: (dump: Readable) => Promise<T>): Promise<T> {
-  return source.kind === 'zip' ? withDumpStream(source.zipPath, use) : use(fs.createReadStream(source.dumpFile));
+  const { dump } = source.manifest.sha256;
+  return source.kind === 'zip' ? withDumpStream(source.zipPath, dump, use) : use(verifiedDump(fs.createReadStream(source.dumpFile), dump));
 }
 
 /** Writes the backup's files into `uploadDir`; returns how many. */

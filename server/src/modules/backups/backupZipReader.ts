@@ -19,8 +19,10 @@ const MANIFEST_LIMIT = 16 * 1024 * 1024;
 
 type Visit = (entry: yauzl.Entry, open: () => Promise<Readable>) => Promise<'stop' | void>;
 
-/** Calls `visit` for each entry in order, one at a time; `visit` may stop early. */
+/** Calls `visit` for each entry in order, one at a time; `visit` may stop early. A name that appears twice is
+ * refused: one pass could check the first copy while another restores the second. */
 async function eachEntry(zipPath: string, visit: Visit): Promise<void> {
+  const seen = new Set<string>();
   const zip = await new Promise<yauzl.ZipFile>((resolve, reject) => yauzl.open(zipPath, { lazyEntries: true, autoClose: false }, (err, z) => (
     err ? reject(new BackupError(`${zipPath} is not a readable ZIP: ${err.message}`)) : resolve(z!)
   )));
@@ -30,6 +32,8 @@ async function eachEntry(zipPath: string, visit: Visit): Promise<void> {
       zip.on('error', (err: Error) => reject(new BackupError(`${zipPath} is damaged: ${err.message}`)));
       zip.on('end', resolve);
       zip.on('entry', (entry: yauzl.Entry) => {
+        if (seen.has(entry.fileName)) return reject(new BackupError(`The ZIP holds "${entry.fileName}" twice; it is not a backup this server wrote.`));
+        seen.add(entry.fileName);
         visit(entry, open(entry)).then((next) => (next === 'stop' ? resolve() : zip.readEntry()), reject);
       });
       zip.readEntry();
@@ -88,12 +92,35 @@ export async function readBackupZip(zipPath: string): Promise<BackupManifest> {
   return manifest;
 }
 
-/** Runs `use` with the database dump as a stream, straight out of the ZIP. */
-export async function withDumpStream<T>(zipPath: string, use: (dump: Readable) => Promise<T>): Promise<T> {
+/** `source` as it is, except that its last chunk is held back until the whole stream hashes to `sha256`. On a
+ * mismatch the stream fails before its end, so pg_restore, which needs the end of the dump to finish, fails
+ * and its single transaction rolls back: a dump that changed after it was checked is never committed. */
+export function verifiedDump(source: Readable, sha256: string): Readable {
+  const hash = crypto.createHash('sha256');
+  let held: Buffer | null = null;
+  const verify = new Transform({
+    transform(chunk: Buffer, _encoding, done) {
+      hash.update(chunk);
+      const previous = held;
+      held = chunk;
+      done(null, previous ?? undefined);
+    },
+    flush(done) {
+      if (hash.digest('hex') !== sha256) return done(new BackupError(`${DUMP_FILE} changed after it was checked; nothing was restored.`));
+      done(null, held ?? undefined);
+    },
+  });
+  source.on('error', (err) => verify.destroy(err));
+  return source.pipe(verify);
+}
+
+/** Runs `use` with the database dump as a stream, straight out of the ZIP, checked against `sha256` again
+ * as it is read (see verifiedDump). */
+export async function withDumpStream<T>(zipPath: string, sha256: string, use: (dump: Readable) => Promise<T>): Promise<T> {
   let result: { value: T } | null = null;
   await eachEntry(zipPath, async (entry, open) => {
     if (entry.fileName !== DUMP_FILE) return;
-    result = { value: await use(await open()) };
+    result = { value: await use(verifiedDump(await open(), sha256)) };
     return 'stop';
   });
   if (!result) throw new BackupError(`${zipPath} has no ${DUMP_FILE}.`);

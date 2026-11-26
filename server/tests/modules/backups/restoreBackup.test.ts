@@ -4,7 +4,7 @@ import { createWriteStream } from 'node:fs';
 import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
-import { PassThrough } from 'node:stream';
+import { PassThrough, Readable } from 'node:stream';
 import { finished } from 'node:stream/promises';
 import { afterEach, beforeEach, describe, it } from 'node:test';
 import yazl from 'yazl';
@@ -12,7 +12,7 @@ import {
   BackupError, DUMP_FILE, MANIFEST_FILE, README_FILE, UploadsDigest, type BackupManifest,
 } from '../../../src/modules/backups/backupLayout.js';
 import { writeBackupFile, writeBackupZip } from '../../../src/modules/backups/backupZip.js';
-import { extractBackupUploads } from '../../../src/modules/backups/backupZipReader.js';
+import { extractBackupUploads, verifiedDump } from '../../../src/modules/backups/backupZipReader.js';
 import { ConfirmationRequired, readBackup, restoreBackup } from '../../../src/modules/backups/restoreBackup.js';
 
 // Nothing here reaches a database: every case is refused before the first
@@ -85,6 +85,12 @@ describe('readBackup of a ZIP', () => {
     await assert.rejects(readBackup(path.join(dir, 'missing.zip')), /does not exist/);
   });
 
+  it('refuses a ZIP that holds a name twice, so the checked copy is the restored one', async () => {
+    // the checked dump last, a different one first: a reader that hashed one and restored the other would pass it
+    await assert.rejects(readBackup(await fakeZip({ change: (e) => [[DUMP_FILE, 'PGDMP other'], ...e] })), /twice/);
+    await assert.rejects(readBackup(await fakeZip({ change: (e) => [...e.slice(0, -1), [`uploads/${A}`, 'first file'], e.at(-1)!] })), /twice/);
+  });
+
   it('refuses a stored file whose path would leave the uploads folder', async () => {
     // ZIP writers refuse such a name, so it is patched into the bytes, as a crafted file would have it
     const zip = await fakeZip({ files: [['zz/escape', 'x']] });
@@ -122,6 +128,21 @@ describe('readBackup of a folder written by an older version', () => {
     const folder = await fakeFolder();
     await fs.writeFile(path.join(folder, MANIFEST_FILE), JSON.stringify(manifestFor('PGDMP fake', [], 2)));
     await assert.rejects(readBackup(folder), /which is a ZIP/);
+  });
+});
+
+describe('verifiedDump', () => {
+  const read = async (stream: Readable) => { const chunks: Buffer[] = []; for await (const c of stream) chunks.push(c as Buffer); return Buffer.concat(chunks).toString(); };
+
+  it('passes the dump through unchanged when it still matches', async () => {
+    assert.equal(await read(verifiedDump(Readable.from([Buffer.from('PGDMP '), Buffer.from('all '), Buffer.from('of it')]), sha('PGDMP all of it'))), 'PGDMP all of it');
+  });
+
+  it('fails before the last chunk when the dump changed, so pg_restore never sees a complete dump', async () => {
+    const seen: string[] = [];
+    const stream = verifiedDump(Readable.from([Buffer.from('PGDMP '), Buffer.from('changed '), Buffer.from('tail')]), sha('PGDMP all of it'));
+    await assert.rejects(async () => { for await (const c of stream) seen.push(String(c)); }, /changed after it was checked/);
+    assert.ok(!seen.includes('tail'));
   });
 });
 
