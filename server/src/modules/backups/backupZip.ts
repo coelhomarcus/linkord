@@ -38,6 +38,8 @@ export interface BackupZipOptions {
   databaseUrl: string;
   ssl?: DatabaseSsl;
   uploadDir: string;
+  /** Folders inside uploadDir to leave out (EXPORT_DIR). */
+  excludedDirs?: string[];
   pgDumpBin?: string;
   now?: () => Date;
   /** Abort to stop (a download the person cancelled): pg_dump is killed and the output destroyed. */
@@ -149,12 +151,12 @@ async function addDatabase(zip: yazl.ZipFile, opts: BackupZipOptions, mtime: Dat
   }
 }
 
-async function addUploads(zip: yazl.ZipFile, uploadDir: string, signal: AbortSignal) {
+async function addUploads(zip: yazl.ZipFile, uploadDir: string, excludedDirs: string[], signal: AbortSignal) {
   const digest = new UploadsDigest();
   const stored = new Set<string>();
   let files = 0;
   let bytes = 0;
-  for (const relative of await listUploadFiles(uploadDir)) {
+  for (const relative of await listUploadFiles(uploadDir, excludedDirs)) {
     signal.throwIfAborted();
     // Opened before it is added: a file deleted since the listing is skipped, and once open it can be
     // read whole even if it is deleted meanwhile.
@@ -207,7 +209,7 @@ export async function writeBackupZip(out: Writable, opts: BackupZipOptions): Pro
     const mtime = (opts.now ?? (() => new Date()))();
     zip.addBuffer(Buffer.from(README), README_FILE, { mtime, compress: false });
     const { snapshot, dumpTool, dump } = await addDatabase(zip, opts, mtime, stop.signal, log);
-    const uploads = await addUploads(zip, path.resolve(opts.uploadDir), stop.signal);
+    const uploads = await addUploads(zip, path.resolve(opts.uploadDir), opts.excludedDirs ?? [], stop.signal);
     log(`uploads added (${uploads.files} files, ${uploads.bytes} bytes)`);
     const missingFromArchive = snapshot.fileIds.filter((id) => !uploads.stored.has(id)).length;
     if (missingFromArchive > 0) log(`warning: ${missingFromArchive} file(s) referenced by the database were not on disk when the backup was made`);

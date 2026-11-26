@@ -11,6 +11,8 @@ export interface BackupSettings {
   databaseUrl: string;
   ssl: DatabaseSsl;
   uploadDir: string;
+  /** Left out of a backup when it lies inside uploadDir: data exports (EXPORT_DIR). */
+  excludedDirs: string[];
   /** "host:port/database", with no credentials, for messages */
   target: string;
 }
@@ -22,6 +24,7 @@ export function backupSettings(): BackupSettings {
     databaseUrl: config.DATABASE_URL,
     ssl: { enabled: config.DATABASE_SSL, ca: config.DATABASE_SSL_CA || undefined },
     uploadDir: config.UPLOAD_DIR,
+    excludedDirs: [config.EXPORT_DIR],
     target: `${connection.host}:${connection.port}/${connection.database}`,
   };
 }

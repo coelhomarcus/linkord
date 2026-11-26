@@ -181,7 +181,7 @@ From a checkout, `bun run backup --out <file or folder>` writes it to a file ins
 | --- | --- | --- |
 | `PG_DUMP_BIN`, `PG_RESTORE_BIN` | `pg_dump`, `pg_restore` | The PostgreSQL client tools, at least as new as the server. |
 
-- **Consistent:** the dump and the list of files the database points at come from one snapshot, and the files are added after the dump, so every row in the dump has its file. A file deleted in between is left out and counted in the manifest (its message shows a broken attachment). Uploads still in progress (`tmp/`) and data exports (`exports/`) are left out.
+- **Consistent:** the dump and the list of files the database points at come from one snapshot, and the files are added after the dump, so every row in the dump has its file. A file deleted in between is left out and counted in the manifest (its message shows a broken attachment). Uploads still in progress (`tmp/`) and data exports (`EXPORT_DIR`, and `exports/` by name) are left out.
 - **Size:** about the database plus the uploads. Nothing is recompressed: the dump already is, and media files are.
 - **Interrupted:** a cancelled download or a failure ends the transfer as failed, never as a ZIP that looks complete.
 - For scheduled backups, run the `docker exec` command from the host's scheduler and send the file off the host with a tool such as `rclone` or `rsync`. Keep the retention you want at the destination.

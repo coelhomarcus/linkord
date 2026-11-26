@@ -31,6 +31,16 @@ describe('listUploadFiles', () => {
     assert.deepEqual(await listUploadFiles(uploads), [A, B, 'name with spaces.txt', 'nested/tmp/kept']);
   });
 
+  it('leaves out the configured EXPORT_DIR wherever it is inside the folder, and ignores one outside it', async () => {
+    const uploads = path.join(dir, 'uploads');
+    await fs.mkdir(path.join(uploads, 'private', 'copies'), { recursive: true });
+    await fs.writeFile(path.join(uploads, 'private', 'copies', '6f1c1a52-3b55-4a5e-9a51-7f7f7f7f7f7f.zip'), 'someone\'s data');
+    await fs.writeFile(path.join(uploads, 'private', 'kept'), 'next to it, kept');
+    await fs.writeFile(path.join(uploads, A), 'stored');
+    assert.deepEqual(await listUploadFiles(uploads, [path.join(uploads, 'private', 'copies')]), [A, 'private/kept']);
+    assert.deepEqual(await listUploadFiles(uploads, [path.join(dir, 'elsewhere'), uploads]), [A, 'private/copies/6f1c1a52-3b55-4a5e-9a51-7f7f7f7f7f7f.zip', 'private/kept']);
+  });
+
   it('is empty for a folder that does not exist yet', async () => {
     assert.deepEqual(await listUploadFiles(path.join(dir, 'missing')), []);
   });

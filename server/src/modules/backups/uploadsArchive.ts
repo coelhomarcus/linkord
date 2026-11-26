@@ -7,16 +7,26 @@ import { runTool } from './postgresTools.js';
 
 // The uploads folder on both sides of a backup. `tmp/` holds chunked uploads
 // still in progress (half a file is useless on its own and the client starts
-// that upload again), so it is left out. So is `exports/` (the default
-// EXPORT_DIR): data exports are copies of personal data that expire within days,
+// that upload again), so it is left out. So is EXPORT_DIR when it lies inside
+// the folder: data exports are copies of personal data that expire within days,
 // and a person can ask for a new one; a backup kept for weeks must not hold them.
-// A mounted volume's own `lost+found` is not content either.
+// `exports/` (its default) is skipped by name too, for exports left there before
+// EXPORT_DIR moved. A mounted volume's own `lost+found` is not content either.
 
 const SKIPPED_TOP_LEVEL = new Set(['tmp', 'exports', 'lost+found']);
 
+/** `dir` as a POSIX path relative to `uploadDir`, or null when it is not strictly inside it. */
+function insidePath(uploadDir: string, dir: string): string | null {
+  const relative = path.relative(path.resolve(uploadDir), path.resolve(dir));
+  if (relative === '' || relative.startsWith('..') || path.isAbsolute(relative)) return null;
+  return relative.split(path.sep).join('/');
+}
+
 /** Every regular file a backup takes from `uploadDir`, as POSIX paths relative to it, sorted. Symbolic
- * links are left out: following one could archive something outside the folder. */
-export async function listUploadFiles(uploadDir: string): Promise<string[]> {
+ * links are left out: following one could archive something outside the folder. `excludedDirs` (absolute
+ * or relative to the working directory) are left out with everything in them, wherever they are nested. */
+export async function listUploadFiles(uploadDir: string, excludedDirs: string[] = []): Promise<string[]> {
+  const excluded = new Set(excludedDirs.map((dir) => insidePath(uploadDir, dir)).filter((dir): dir is string => dir !== null));
   const files: string[] = [];
   async function walk(relative: string): Promise<void> {
     let entries: Dirent[];
@@ -30,7 +40,7 @@ export async function listUploadFiles(uploadDir: string): Promise<string[]> {
     for (const entry of entries) {
       if (relative === '' && SKIPPED_TOP_LEVEL.has(entry.name)) continue;
       const child = relative === '' ? entry.name : `${relative}/${entry.name}`;
-      if (entry.isDirectory()) await walk(child);
+      if (entry.isDirectory()) { if (!excluded.has(child)) await walk(child); }
       else if (entry.isFile()) files.push(child);
     }
   }
