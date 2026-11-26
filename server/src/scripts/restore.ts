@@ -1,14 +1,16 @@
+import path from 'node:path';
 import { parseArgs } from 'node:util';
-import { BackupError, resolveBackup } from '../modules/backups/backupLayout.js';
+import { BackupError } from '../modules/backups/backupLayout.js';
 import { ConfirmationRequired, restoreBackup } from '../modules/backups/restoreBackup.js';
 import { backupSettings } from '../modules/backups/settings.js';
 
-// `bun run restore [<backup>|latest] --confirm <database-name> [--strict]`
+// `bun run restore <backup.zip> --confirm <database-name> [--strict]`
 //
-// Restores a backup into the configured DATABASE_URL and UPLOAD_DIR, then
-// checks that what came back is what the backup held (every table's row count,
-// the migrations, the files, and the same attachments-versus-disk comparison
-// the admin "System" page shows).
+// Restores a backup (the ZIP `bun run backup` or the admin site writes, or a
+// folder an older version wrote into BACKUP_DIR) into the configured
+// DATABASE_URL and UPLOAD_DIR, then checks that what came back is what the
+// backup held (every table's row count, the migrations, the files, and the same
+// attachments-versus-disk comparison the admin "System" page shows).
 //
 // It is built to be hard to point at the wrong place:
 //   - the target is only ever DATABASE_URL / UPLOAD_DIR, there is no flag for another;
@@ -25,9 +27,9 @@ async function main(): Promise<number> {
     args: process.argv.slice(2), allowPositionals: true,
     options: { confirm: { type: 'string' }, strict: { type: 'boolean', default: false } },
   });
-  if (positionals.length > 1) { console.error('usage: bun run restore [<backup>|latest] --confirm <database-name> [--strict]'); return 2; }
+  if (positionals.length !== 1) { console.error('usage: bun run restore <backup.zip> --confirm <database-name> [--strict]'); return 2; }
   const settings = backupSettings();
-  const backupPath = await resolveBackup(settings.backupDir, positionals[0] ?? 'latest');
+  const backupPath = path.resolve(positionals[0]!);
 
   console.log(`Restoring ${backupPath}\n  into database ${settings.target}\n  and uploads folder ${settings.uploadDir}`);
   try {

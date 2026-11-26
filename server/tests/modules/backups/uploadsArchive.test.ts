@@ -4,7 +4,8 @@ import os from 'node:os';
 import path from 'node:path';
 import { afterEach, beforeEach, describe, it } from 'node:test';
 import { BackupError } from '../../../src/modules/backups/backupLayout.js';
-import { createUploadsArchive, extractUploadsArchive, isEmptyDirectory, isSafeArchiveEntry, listArchive, listStoredFiles } from '../../../src/modules/backups/uploadsArchive.js';
+import { runTool } from '../../../src/modules/backups/postgresTools.js';
+import { extractUploadsArchive, isEmptyDirectory, listArchive, listStoredFiles, listUploadFiles } from '../../../src/modules/backups/uploadsArchive.js';
 
 let dir: string;
 beforeEach(async () => { dir = await fs.mkdtemp(path.join(os.tmpdir(), 'overcord-archive-test-')); });
@@ -13,46 +14,42 @@ afterEach(async () => { await fs.rm(dir, { recursive: true, force: true }); });
 const A = 'a'.repeat(32);
 const B = 'b'.repeat(32);
 
-describe('createUploadsArchive / extractUploadsArchive', () => {
-  it('archives stored files without tmp/ and exports/, and extracts them unchanged', async () => {
+describe('listUploadFiles', () => {
+  it('lists every stored file, nested ones too, without tmp/, exports/, lost+found and links', async () => {
     const uploads = path.join(dir, 'uploads');
     await fs.mkdir(path.join(uploads, 'tmp', 'session1'), { recursive: true });
     await fs.writeFile(path.join(uploads, 'tmp', 'session1', '000000'), 'half an upload');
     await fs.mkdir(path.join(uploads, 'exports'), { recursive: true });
     await fs.writeFile(path.join(uploads, 'exports', '6f1c1a52-3b55-4a5e-9a51-7f7f7f7f7f7f.zip'), 'someone\'s data');
+    await fs.mkdir(path.join(uploads, 'lost+found'));
+    await fs.mkdir(path.join(uploads, 'nested', 'tmp'), { recursive: true });
+    await fs.writeFile(path.join(uploads, 'nested', 'tmp', 'kept'), 'only the top-level tmp/ is skipped');
+    await fs.writeFile(path.join(uploads, B), 'second file');
     await fs.writeFile(path.join(uploads, A), 'first file');
-    await fs.writeFile(path.join(uploads, B), 'second file, longer');
     await fs.writeFile(path.join(uploads, 'name with spaces.txt'), 'odd name');
+    await fs.symlink('/etc/hosts', path.join(uploads, 'link'));
+    assert.deepEqual(await listUploadFiles(uploads), [A, B, 'name with spaces.txt', 'nested/tmp/kept']);
+  });
 
+  it('is empty for a folder that does not exist yet', async () => {
+    assert.deepEqual(await listUploadFiles(path.join(dir, 'missing')), []);
+  });
+});
+
+describe('extractUploadsArchive (folder backups from older versions)', () => {
+  it('extracts the uploads.tar.gz of a folder backup unchanged', async () => {
+    const source = path.join(dir, 'source');
+    await fs.mkdir(source);
+    await fs.writeFile(path.join(source, A), 'first file');
+    await fs.writeFile(path.join(source, 'name with spaces.txt'), 'odd name');
     const archive = path.join(dir, 'uploads.tar.gz');
-    const result = await createUploadsArchive(uploads, archive);
-    assert.equal(result.files, 3);
-    assert.equal(result.bytes, 'first file'.length + 'second file, longer'.length + 'odd name'.length);
-    assert.deepEqual([...result.storedNames].sort(), [A, B]);
-    assert.match(result.sha256!, /^[0-9a-f]{64}$/);
-    assert.deepEqual((await listArchive(archive)).sort(), [A, B, 'name with spaces.txt']);
+    await runTool({ bin: 'tar', args: ['-czf', archive, '-C', source, A, 'name with spaces.txt'], what: 'tar' });
+    assert.deepEqual((await listArchive(archive)).sort(), [A, 'name with spaces.txt']);
 
     const restored = path.join(dir, 'restored');
-    assert.equal(await extractUploadsArchive(archive, restored), 3);
+    assert.equal(await extractUploadsArchive(archive, restored), 2);
     assert.equal(await fs.readFile(path.join(restored, A), 'utf8'), 'first file');
     assert.equal(await fs.readFile(path.join(restored, 'name with spaces.txt'), 'utf8'), 'odd name');
-    await assert.rejects(fs.stat(path.join(restored, 'tmp')));
-    await assert.rejects(fs.stat(path.join(restored, 'exports')));
-  });
-
-  it('writes no archive for a folder with nothing to keep', async () => {
-    const empty = path.join(dir, 'empty');
-    await fs.mkdir(path.join(empty, 'tmp'), { recursive: true });
-    const archive = path.join(dir, 'out.tar.gz');
-    assert.deepEqual(await createUploadsArchive(empty, archive), { sha256: null, files: 0, bytes: 0, storedNames: new Set() });
-    await assert.rejects(fs.stat(archive));
-    assert.equal((await createUploadsArchive(path.join(dir, 'missing'), archive)).sha256, null);
-  });
-
-  it('flags paths that could leave the folder it is extracted into', async () => {
-    assert.equal(isSafeArchiveEntry(A), true);
-    assert.equal(isSafeArchiveEntry('sub/file'), true);
-    for (const bad of ['/etc/passwd', '../outside', 'a/../../b', 'a\\b', 'C:evil', '']) assert.equal(isSafeArchiveEntry(bad), false, bad);
   });
 
   it('reports a damaged archive instead of extracting half of it', async () => {

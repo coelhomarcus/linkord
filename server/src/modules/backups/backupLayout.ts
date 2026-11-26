@@ -1,35 +1,37 @@
-import type { Dirent } from 'node:fs';
-import fs from 'node:fs/promises';
-import path from 'node:path';
+import crypto from 'node:crypto';
 
-// What a backup looks like on disk, and how old ones are rotated. No database
-// and no child processes here, so all of it is testable with a temp folder.
+// What a backup looks like. No database and no child processes here, so all of
+// it is testable on its own.
+//
+// Format 2 (current) is one ZIP, written as a stream and never kept by the server:
+//   README.txt       what it is and how to restore it
+//   database.dump    pg_dump, custom format
+//   uploads/<path>   every stored file, one entry each (UPLOAD_DIR without tmp/ and exports/)
+//   manifest.json    last, because it describes what came before it
+// Format 1 was a folder (database.dump, uploads.tar.gz, manifest.json) that older
+// versions wrote into BACKUP_DIR. Restore still reads it.
 
 /** A problem the operator can act on; the CLIs print the message and exit. */
 export class BackupError extends Error {}
 
-export const BACKUP_FORMAT = 1;
+export const BACKUP_FORMAT = 2;
+const LEGACY_FOLDER_FORMAT = 1;
+export const README_FILE = 'README.txt';
 export const DUMP_FILE = 'database.dump';
-export const UPLOADS_FILE = 'uploads.tar.gz';
 export const MANIFEST_FILE = 'manifest.json';
-export const PARTIAL_SUFFIX = '.partial';
-const DEFAULT_KEEP = 7;
+/** Where the stored files go inside the ZIP. */
+export const UPLOADS_PREFIX = 'uploads/';
+/** The uploads archive of a format 1 folder. */
+export const UPLOADS_FILE = 'uploads.tar.gz';
 
-// The exact shape rotation is allowed to delete. A backup folder may be shared
-// with other things (a mounted disk, someone's notes), and only names that match
-// this are ever touched.
-const BACKUP_NAME_RE = /^(?:overcord|linkord)-backup-(\d{8}T\d{6}Z)$/;
-const PARTIAL_NAME_RE = /^(?:overcord|linkord)-backup-\d{8}T\d{6}Z\.partial$/;
-// An unfinished folder younger than this may belong to a run that is still going.
-const STALE_PARTIAL_MS = 24 * 60 * 60 * 1000;
-
-/** UTC, so the name sorts by time and does not depend on the host's timezone. */
-export function backupName(date: Date): string {
+/** UTC, so names sort by time and do not depend on the host's timezone. */
+export function backupFileName(date: Date): string {
   const iso = date.toISOString(); // 2026-11-08T01:53:00.123Z
-  return `overcord-backup-${iso.slice(0, 10).replaceAll('-', '')}T${iso.slice(11, 19).replaceAll(':', '')}Z`;
+  return `overcord-backup-${iso.slice(0, 10).replaceAll('-', '')}T${iso.slice(11, 19).replaceAll(':', '')}Z.zip`;
 }
 
 export interface BackupManifest {
+  /** 2 for a ZIP, 1 for a legacy folder. */
   format: number;
   createdAt: string;
   database: { name: string; serverVersion: string; dumpTool: string };
@@ -43,10 +45,11 @@ export interface BackupManifest {
     /** Rows in the snapshot whose file was already gone when the archive was made (deleted in between). */
     missingFromArchive: number;
   };
+  /** `uploads` is the UploadsDigest of the files in a ZIP, or the SHA-256 of uploads.tar.gz in a folder; null with no files. */
   sha256: { dump: string; uploads: string | null };
 }
 
-/** A manifest that fails this is a damaged or foreign folder: restore must not start from it. */
+/** A manifest that fails this is a damaged or foreign backup: restore must not start from it. */
 export function parseManifest(text: string): BackupManifest {
   let raw: unknown;
   try { raw = JSON.parse(text); } catch { throw new BackupError(`${MANIFEST_FILE} is not valid JSON.`); }
@@ -54,7 +57,9 @@ export function parseManifest(text: string): BackupManifest {
   const isCount = (v: unknown): v is number => typeof v === 'number' && Number.isSafeInteger(v) && v >= 0;
   const isHash = (v: unknown): v is string => typeof v === 'string' && /^[0-9a-f]{64}$/.test(v);
   if (!m || typeof m !== 'object') throw new BackupError(`${MANIFEST_FILE} is empty.`);
-  if (m.format !== BACKUP_FORMAT) throw new BackupError(`Unsupported backup format ${String(m.format)}; this version reads format ${BACKUP_FORMAT}.`);
+  if (m.format !== BACKUP_FORMAT && m.format !== LEGACY_FOLDER_FORMAT) {
+    throw new BackupError(`Unsupported backup format ${String(m.format)}; this version reads formats ${LEGACY_FOLDER_FORMAT} and ${BACKUP_FORMAT}.`);
+  }
   const tables = m.tables;
   const valid = typeof m.createdAt === 'string'
     && typeof m.database?.name === 'string' && isCount(m.migrations)
@@ -65,62 +70,30 @@ export function parseManifest(text: string): BackupManifest {
   return m as BackupManifest;
 }
 
-/** Finished backups in `dir`, newest first. A folder without a manifest is not a backup. */
-export async function listBackups(dir: string): Promise<string[]> {
-  let entries: Dirent[];
-  try {
-    entries = await fs.readdir(dir, { withFileTypes: true });
-  } catch (err) {
-    if ((err as NodeJS.ErrnoException).code === 'ENOENT') return [];
-    throw err;
+/** One SHA-256 over every stored file in the order the ZIP holds them, each preceded by its path and size.
+ * The writer computes it while streaming and the restore recomputes it from the entries: ZIP readers do not
+ * check CRC-32, so this is what proves the files are the ones the backup wrote. */
+export class UploadsDigest {
+  private readonly hash = crypto.createHash('sha256');
+  private files = 0;
+
+  begin(relativePath: string, size: number): void {
+    this.files++;
+    this.hash.update(`${relativePath}\0${size}\0`);
   }
-  const backups: { name: string; timestamp: string }[] = [];
-  for (const entry of entries) {
-    const timestamp = BACKUP_NAME_RE.exec(entry.name)?.[1];
-    if (!entry.isDirectory() || !timestamp) continue;
-    const hasManifest = await fs.stat(path.join(dir, entry.name, MANIFEST_FILE)).then((s) => s.isFile(), () => false);
-    if (hasManifest) backups.push({ name: entry.name, timestamp });
+
+  update(chunk: Buffer): void {
+    this.hash.update(chunk);
   }
-  return backups.sort((a, b) => b.timestamp.localeCompare(a.timestamp) || b.name.localeCompare(a.name)).map(({ name }) => name);
+
+  /** null when there were no files, like a folder backup without uploads.tar.gz. */
+  digest(): string | null {
+    return this.files === 0 ? null : this.hash.digest('hex');
+  }
 }
 
-export function parseKeep(raw: string | undefined): number {
-  if (raw === undefined || raw.trim() === '') return DEFAULT_KEEP;
-  const keep = Number(raw);
-  if (!Number.isSafeInteger(keep) || keep < 1) throw new BackupError(`BACKUP_KEEP must be a whole number of backups, at least 1 (got "${raw}").`);
-  return keep;
-}
-
-/** Deletes everything but the newest `keep` finished backups, plus unfinished
- * folders a crashed run left behind. Called only after a new backup is complete,
- * so a failing run never shrinks the history. Returns what it removed. */
-export async function rotateBackups(dir: string, keep: number, now = Date.now()): Promise<string[]> {
-  if (!Number.isSafeInteger(keep) || keep < 1) throw new BackupError('Refusing to rotate with a keep count below 1.');
-  const removed: string[] = [];
-  for (const name of (await listBackups(dir)).slice(keep)) {
-    await fs.rm(path.join(dir, name), { recursive: true, force: true });
-    removed.push(name);
-  }
-  for (const entry of await fs.readdir(dir, { withFileTypes: true })) {
-    if (!entry.isDirectory() || !PARTIAL_NAME_RE.test(entry.name)) continue;
-    const { mtimeMs } = await fs.stat(path.join(dir, entry.name));
-    if (now - mtimeMs < STALE_PARTIAL_MS) continue;
-    await fs.rm(path.join(dir, entry.name), { recursive: true, force: true });
-    removed.push(entry.name);
-  }
-  return removed;
-}
-
-/** `latest`, a backup folder name inside `dir`, or a path to a backup folder. */
-export async function resolveBackup(dir: string, ref: string): Promise<string> {
-  if (ref === 'latest') {
-    const [newest] = await listBackups(dir);
-    if (!newest) throw new BackupError(`No backups found in ${dir}.`);
-    return path.join(dir, newest);
-  }
-  const candidates = [path.resolve(ref), path.join(dir, ref)];
-  for (const candidate of candidates) {
-    if (await fs.stat(path.join(candidate, MANIFEST_FILE)).then((s) => s.isFile(), () => false)) return candidate;
-  }
-  throw new BackupError(`"${ref}" is not a backup folder (no ${MANIFEST_FILE} in it or in ${dir}).`);
+/** False for anything that could land outside the folder it is extracted into. */
+export function isSafeArchiveEntry(entry: string): boolean {
+  if (entry === '' || entry.startsWith('/') || entry.includes('\\') || /^[a-zA-Z]:/.test(entry)) return false;
+  return !entry.split('/').includes('..');
 }

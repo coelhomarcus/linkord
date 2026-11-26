@@ -1,61 +1,34 @@
 import assert from 'node:assert/strict';
-import fs from 'node:fs/promises';
-import os from 'node:os';
-import path from 'node:path';
-import { afterEach, beforeEach, describe, it } from 'node:test';
+import { describe, it } from 'node:test';
 import {
-  BackupError, backupName, BACKUP_FORMAT, listBackups, MANIFEST_FILE, parseKeep, parseManifest, resolveBackup, rotateBackups, type BackupManifest,
+  BackupError, backupFileName, BACKUP_FORMAT, isSafeArchiveEntry, parseManifest, UploadsDigest, type BackupManifest,
 } from '../../../src/modules/backups/backupLayout.js';
 
-const manifest = (): BackupManifest => ({
-  format: BACKUP_FORMAT, createdAt: '2026-11-08T01:53:00.000Z',
+const manifest = (format = BACKUP_FORMAT): BackupManifest => ({
+  format, createdAt: '2026-11-08T01:53:00.000Z',
   database: { name: 'overcord', serverVersion: '17.2', dumpTool: 'pg_dump 17.2' },
   migrations: 52, tables: { users: 2, messages: 10 },
   uploads: { files: 3, bytes: 1000, missingFromArchive: 0 },
   sha256: { dump: 'a'.repeat(64), uploads: null },
 });
 
-let dir: string;
-beforeEach(async () => { dir = await fs.mkdtemp(path.join(os.tmpdir(), 'overcord-backup-test-')); });
-afterEach(async () => { await fs.rm(dir, { recursive: true, force: true }); });
-
-async function makeBackup(name: string): Promise<string> {
-  const folder = path.join(dir, name);
-  await fs.mkdir(folder);
-  await fs.writeFile(path.join(folder, MANIFEST_FILE), JSON.stringify(manifest()));
-  await fs.writeFile(path.join(folder, 'database.dump'), name);
-  return folder;
-}
-const names = async (): Promise<string[]> => (await fs.readdir(dir)).sort();
-
-describe('backupName', () => {
+describe('backupFileName', () => {
   it('is the UTC time, so names sort by time whatever the host timezone', () => {
-    assert.equal(backupName(new Date('2026-11-08T01:53:09.999Z')), 'overcord-backup-20261108T015309Z');
-    assert.ok(backupName(new Date('2026-01-01T00:00:00Z')) < backupName(new Date('2026-12-31T23:59:59Z')));
-  });
-});
-
-describe('parseKeep', () => {
-  it('defaults to 7 and accepts whole numbers from 1', () => {
-    assert.equal(parseKeep(undefined), 7);
-    assert.equal(parseKeep(' '), 7);
-    assert.equal(parseKeep('30'), 30);
-  });
-
-  it('rejects 0, negatives and anything that is not a whole number, so a typo cannot wipe the history', () => {
-    for (const bad of ['0', '-1', '1.5', 'abc', '5 days']) assert.throws(() => parseKeep(bad), BackupError);
+    assert.equal(backupFileName(new Date('2026-11-08T01:53:09.999Z')), 'overcord-backup-20261108T015309Z.zip');
+    assert.ok(backupFileName(new Date('2026-01-01T00:00:00Z')) < backupFileName(new Date('2026-12-31T23:59:59Z')));
   });
 });
 
 describe('parseManifest', () => {
-  it('reads a valid manifest', () => {
+  it('reads a ZIP manifest and the folder manifest older versions wrote', () => {
     assert.deepEqual(parseManifest(JSON.stringify(manifest())), manifest());
+    assert.deepEqual(parseManifest(JSON.stringify(manifest(1))), manifest(1));
   });
 
   it('refuses damaged, foreign and newer-format manifests', () => {
     assert.throws(() => parseManifest('{nope'), /not valid JSON/);
     assert.throws(() => parseManifest('null'), BackupError);
-    assert.throws(() => parseManifest(JSON.stringify({ ...manifest(), format: 2 })), /format 2/);
+    assert.throws(() => parseManifest(JSON.stringify({ ...manifest(), format: 3 })), /format 3/);
     assert.throws(() => parseManifest(JSON.stringify({ ...manifest(), sha256: { dump: 'short', uploads: null } })), /incomplete or damaged/);
     assert.throws(() => parseManifest(JSON.stringify({ ...manifest(), tables: { users: -1 } })), /incomplete or damaged/);
     const { migrations: _omitted, ...withoutMigrations } = manifest();
@@ -63,73 +36,37 @@ describe('parseManifest', () => {
   });
 });
 
-describe('rotateBackups', () => {
-  it('keeps the newest N and deletes only older backups', async () => {
-    for (const day of ['01', '02', '03', '04', '05']) await makeBackup(`overcord-backup-202611${day}T020000Z`);
-    const removed = await rotateBackups(dir, 3);
-    assert.deepEqual(removed.sort(), ['overcord-backup-20261101T020000Z', 'overcord-backup-20261102T020000Z']);
-    assert.deepEqual(await names(), ['overcord-backup-20261103T020000Z', 'overcord-backup-20261104T020000Z', 'overcord-backup-20261105T020000Z']);
+describe('UploadsDigest', () => {
+  const digestOf = (files: [string, string][]) => {
+    const digest = new UploadsDigest();
+    for (const [name, content] of files) {
+      digest.begin(name, Buffer.byteLength(content));
+      // the same bytes in any chunking hash the same
+      for (const char of content) digest.update(Buffer.from(char));
+    }
+    return digest.digest();
+  };
+
+  it('is null with no files', () => {
+    assert.equal(digestOf([]), null);
   });
 
-  it('does nothing while there are N or fewer', async () => {
-    await makeBackup('overcord-backup-20261101T020000Z');
-    assert.deepEqual(await rotateBackups(dir, 7), []);
-    assert.equal((await names()).length, 1);
-  });
-
-  it('sorts old and new backup names together by timestamp', async () => {
-    const older = 'overcord-backup-20261101T020000Z';
-    const newer = 'linkord-backup-20261102T020000Z';
-    await makeBackup(older);
-    const latest = await makeBackup(newer);
-    assert.equal(await resolveBackup(dir, 'latest'), latest);
-    assert.deepEqual(await rotateBackups(dir, 1), [older]);
-  });
-
-  it('never touches names that are not backups, nor a folder without a manifest', async () => {
-    for (const day of ['01', '02', '03']) await makeBackup(`overcord-backup-202611${day}T020000Z`);
-    await fs.writeFile(path.join(dir, 'notes.txt'), 'mine');
-    await fs.mkdir(path.join(dir, 'overcord-backup-old-copy'));
-    await fs.mkdir(path.join(dir, 'overcord-backup-20260101T000000Z'));
-    await fs.writeFile(path.join(dir, 'overcord-backup-20260101T000000Z', 'database.dump'), 'no manifest: not a finished backup');
-    await rotateBackups(dir, 1);
-    assert.deepEqual(await names(), ['notes.txt', 'overcord-backup-20260101T000000Z', 'overcord-backup-20261103T020000Z', 'overcord-backup-old-copy']);
-  });
-
-  it('removes unfinished folders of a crashed run after a day, but not a recent one', async () => {
-    await makeBackup('overcord-backup-20261103T020000Z');
-    const old = path.join(dir, 'overcord-backup-20261101T020000Z.partial');
-    const recent = path.join(dir, 'overcord-backup-20261103T030000Z.partial');
-    await fs.mkdir(old);
-    await fs.mkdir(recent);
-    const now = Date.now();
-    await fs.utimes(old, new Date(now - 25 * 3600_000), new Date(now - 25 * 3600_000));
-    assert.deepEqual(await rotateBackups(dir, 1, now), ['overcord-backup-20261101T020000Z.partial']);
-    assert.ok((await names()).includes('overcord-backup-20261103T030000Z.partial'));
-  });
-
-  it('refuses a keep count that would delete everything', async () => {
-    await makeBackup('overcord-backup-20261103T020000Z');
-    await assert.rejects(rotateBackups(dir, 0), BackupError);
-    assert.equal((await names()).length, 1);
-  });
-
-  it('works on a folder that does not exist yet', async () => {
-    assert.deepEqual(await listBackups(path.join(dir, 'missing')), []);
+  it('changes with any byte, any name and the order of the files', () => {
+    const base = digestOf([['a', 'one'], ['b', 'two']]);
+    assert.match(base!, /^[0-9a-f]{64}$/);
+    assert.equal(digestOf([['a', 'one'], ['b', 'two']]), base);
+    assert.notEqual(digestOf([['a', 'one'], ['b', 'twO']]), base);
+    assert.notEqual(digestOf([['a', 'one'], ['c', 'two']]), base);
+    assert.notEqual(digestOf([['b', 'two'], ['a', 'one']]), base);
+    // moving bytes from one file to the next is not the same backup
+    assert.notEqual(digestOf([['a', 'onet'], ['b', 'wo']]), base);
   });
 });
 
-describe('resolveBackup', () => {
-  it('finds the newest, a name inside the folder, or a path', async () => {
-    const older = await makeBackup('overcord-backup-20261101T020000Z');
-    const newer = await makeBackup('overcord-backup-20261102T020000Z');
-    assert.equal(await resolveBackup(dir, 'latest'), newer);
-    assert.equal(await resolveBackup(dir, 'overcord-backup-20261101T020000Z'), older);
-    assert.equal(await resolveBackup('/elsewhere', older), older);
-  });
-
-  it('says what is wrong when there is nothing to restore', async () => {
-    await assert.rejects(resolveBackup(dir, 'latest'), /No backups found/);
-    await assert.rejects(resolveBackup(dir, 'nope'), /not a backup folder/);
+describe('isSafeArchiveEntry', () => {
+  it('flags paths that could leave the folder they are extracted into', () => {
+    assert.equal(isSafeArchiveEntry('a'.repeat(32)), true);
+    assert.equal(isSafeArchiveEntry('sub/file'), true);
+    for (const bad of ['/etc/passwd', '../outside', 'a/../../b', 'a\\b', 'C:evil', '']) assert.equal(isSafeArchiveEntry(bad), false, bad);
   });
 });

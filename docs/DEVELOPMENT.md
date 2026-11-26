@@ -250,7 +250,7 @@ When you add a user-facing flow, add it to the matching spec (or a new `features
 
 ## Backup scripts locally
 
-`bun run backup` and `bun run restore` (documented in [DEPLOY.md](DEPLOY.md#backups)) need `pg_dump`, `pg_restore` (at least as new as the server) and `tar`. On a Mac without the PostgreSQL client tools, point `PG_DUMP_BIN` and `PG_RESTORE_BIN` at wrappers that run them in the dev database container:
+`bun run backup` and `bun run restore` (documented in [DEPLOY.md](DEPLOY.md#backups)) need `pg_dump` and `pg_restore` (at least as new as the server), and `tar` to restore a folder backup from an older version. On a Mac without the PostgreSQL client tools, point `PG_DUMP_BIN` and `PG_RESTORE_BIN` at wrappers that run them in the dev database container:
 
 ```sh
 #!/bin/sh
@@ -258,7 +258,7 @@ When you add a user-facing flow, add it to the matching spec (or a new `features
 exec docker exec -i -e PGPASSWORD -e PGUSER -e PGDATABASE -e PGHOST -e PGPORT overcord-dev-postgres-1 pg_dump "$@"
 ```
 
-`bun run backup:rehearse` runs the whole path on throwaway `overcord_rehearsal_*` databases of your local Postgres: seeds data and files, takes four backups with `BACKUP_KEEP=2`, restores the last, boots the real server on it and checks a sign-in and byte-for-byte downloads, plus the restore's refusals. Run it after changing the schema or `server/src/modules/backups/`; `--keep` leaves the databases for inspection.
+`bun run backup:rehearse` runs the whole path on throwaway `overcord_rehearsal_*` databases of your local Postgres: seeds data and files, writes a backup ZIP (and cancels another halfway), restores it, boots the real server on it and checks a sign-in and byte-for-byte downloads, plus the restore's refusals. Run it after changing the schema or `server/src/modules/backups/`; `--keep` leaves the databases for inspection.
 
 ## Server limits and background jobs
 

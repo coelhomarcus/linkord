@@ -3,12 +3,14 @@ import fsp from 'node:fs/promises';
 import path from 'node:path';
 import { Pool } from 'pg';
 import { classifyOrphans } from '../attachments/orphanClassification.js';
+import type { Readable } from 'node:stream';
 import { BackupError, DUMP_FILE, MANIFEST_FILE, parseManifest, UPLOADS_FILE, type BackupManifest } from './backupLayout.js';
+import { extractBackupUploads, readBackupZip, withDumpStream } from './backupZipReader.js';
 import { pgConnection, runTool, sha256OfFile, withConnection, type DatabaseSsl } from './postgresTools.js';
 import { extractUploadsArchive, isEmptyDirectory, listStoredFiles } from './uploadsArchive.js';
 
 export interface RestoreOptions {
-  /** A finished backup folder. */
+  /** A backup ZIP, or the folder an older version wrote. */
   backupPath: string;
   databaseUrl: string;
   ssl?: DatabaseSsl;
@@ -46,11 +48,21 @@ export class ConfirmationRequired extends BackupError {
 const quoteIdent = (name: string): string => `"${name.replaceAll('"', '""')}"`;
 const plural = (n: number, word: string): string => `${n} ${word}${n === 1 ? '' : 's'}`;
 
-/** Reads the manifest and proves the files next to it are the ones it describes, before anything is touched. */
-export async function readBackup(backupPath: string): Promise<{ manifest: BackupManifest; dumpFile: string; uploadsFile: string | null }> {
+export type BackupSource =
+  | { kind: 'zip'; zipPath: string; manifest: BackupManifest }
+  | { kind: 'folder'; manifest: BackupManifest; dumpFile: string; uploadsFile: string | null };
+
+/** Reads the manifest and proves the data next to it is what it describes, before anything is touched. */
+export async function readBackup(backupPath: string): Promise<BackupSource> {
+  const stat = await fsp.stat(backupPath).catch(() => null);
+  if (!stat) throw new BackupError(`${backupPath} does not exist.`);
+  if (stat.isFile()) return { kind: 'zip', zipPath: backupPath, manifest: await readBackupZip(backupPath) };
+
+  // format 1: the folder older versions wrote into BACKUP_DIR
   const manifest = parseManifest(await fsp.readFile(path.join(backupPath, MANIFEST_FILE), 'utf8').catch(() => {
     throw new BackupError(`${backupPath} has no ${MANIFEST_FILE}; it is not a finished backup.`);
   }));
+  if (manifest.format !== 1) throw new BackupError(`${MANIFEST_FILE} says format ${manifest.format}, which is a ZIP, not a folder.`);
   const dumpFile = path.join(backupPath, DUMP_FILE);
   if ((await sha256OfFile(dumpFile).catch(() => null)) !== manifest.sha256.dump) throw new BackupError(`${DUMP_FILE} is missing or does not match the checksum in the manifest; the backup is damaged.`);
   let uploadsFile: string | null = null;
@@ -58,7 +70,18 @@ export async function readBackup(backupPath: string): Promise<{ manifest: Backup
     uploadsFile = path.join(backupPath, UPLOADS_FILE);
     if ((await sha256OfFile(uploadsFile).catch(() => null)) !== manifest.sha256.uploads) throw new BackupError(`${UPLOADS_FILE} is missing or does not match the checksum in the manifest; the backup is damaged.`);
   }
-  return { manifest, dumpFile, uploadsFile };
+  return { kind: 'folder', manifest, dumpFile, uploadsFile };
+}
+
+/** Runs `use` with the dump as a stream, wherever the backup keeps it. */
+function withDump<T>(source: BackupSource, use: (dump: Readable) => Promise<T>): Promise<T> {
+  return source.kind === 'zip' ? withDumpStream(source.zipPath, use) : use(fs.createReadStream(source.dumpFile));
+}
+
+/** Writes the backup's files into `uploadDir`; returns how many. */
+async function extractUploads(source: BackupSource, uploadDir: string, tarBin: string | undefined): Promise<number> {
+  if (source.kind === 'zip') return extractBackupUploads(source.zipPath, uploadDir, source.manifest.sha256.uploads);
+  return source.uploadsFile ? extractUploadsArchive(source.uploadsFile, uploadDir, tarBin) : 0;
 }
 
 /** Compares a restored database and uploads folder with what the manifest says the backup held. */
@@ -103,7 +126,8 @@ async function verifyRestore(pool: Pool, uploadDir: string, manifest: BackupMani
 
 export async function restoreBackup(opts: RestoreOptions): Promise<RestoreResult> {
   const log = opts.log ?? (() => {});
-  const { manifest, dumpFile, uploadsFile } = await readBackup(opts.backupPath);
+  const source = await readBackup(opts.backupPath);
+  const { manifest } = source;
   log(`backup ${path.basename(opts.backupPath)} verified (checksums match)`);
 
   const target = pgConnection(opts.databaseUrl, opts.ssl);
@@ -126,17 +150,17 @@ export async function restoreBackup(opts: RestoreOptions): Promise<RestoreResult
     }
 
     // One transaction and stop at the first error: a failed restore leaves the database as empty as it was.
-    await withConnection(opts.databaseUrl, opts.ssl, (connection) => runTool({
-      bin: opts.pgRestoreBin ?? process.env.PG_RESTORE_BIN ?? 'pg_restore', env: connection.env, input: fs.createReadStream(dumpFile),
+    await withConnection(opts.databaseUrl, opts.ssl, (connection) => withDump(source, (dump) => runTool({
+      bin: opts.pgRestoreBin ?? process.env.PG_RESTORE_BIN ?? 'pg_restore', env: connection.env, input: dump,
       args: ['--single-transaction', '--exit-on-error', '--no-owner', '--no-acl', `--dbname=${connection.database}`],
       what: 'pg_restore',
-    }));
+    })));
     log('database restored');
 
     let extracted = 0;
-    if (uploadsFile) {
+    if (manifest.sha256.uploads !== null) {
       try {
-        extracted = await extractUploadsArchive(uploadsFile, opts.uploadDir, opts.tarBin);
+        extracted = await extractUploads(source, opts.uploadDir, opts.tarBin);
       } catch (err) {
         // the folder was empty before, so everything in it is ours to remove
         for (const name of await fsp.readdir(opts.uploadDir).catch(() => [])) await fsp.rm(path.join(opts.uploadDir, name), { recursive: true, force: true });

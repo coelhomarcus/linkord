@@ -1,11 +1,13 @@
 import assert from 'node:assert/strict';
+import crypto from 'node:crypto';
+import { createWriteStream } from 'node:fs';
 import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { Readable } from 'node:stream';
 import { describe, it } from 'node:test';
 import { BackupError } from '../../../src/modules/backups/backupLayout.js';
-import { pgConnection, runTool, sha256OfFile, withConnection, writeHashed } from '../../../src/modules/backups/postgresTools.js';
+import { pgConnection, runTool, sha256OfFile, withConnection } from '../../../src/modules/backups/postgresTools.js';
 
 const node = process.execPath;
 
@@ -72,16 +74,21 @@ describe('runTool', () => {
     const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'overcord-tool-test-'));
     try {
       const file = path.join(dir, 'out.bin');
-      const digest = await writeHashed(
-        (sink) => runTool({ bin: node, args: ['-e', 'process.stdin.pipe(process.stdout)'], input: Readable.from(['hello ', 'world']), output: sink, what: 'cat' }),
-        file,
-      );
+      await runTool({ bin: node, args: ['-e', 'process.stdin.pipe(process.stdout)'], input: Readable.from(['hello ', 'world']), output: createWriteStream(file), what: 'cat' });
       assert.equal(await fs.readFile(file, 'utf8'), 'hello world');
-      assert.equal(digest.bytes, 11);
-      assert.equal(digest.sha256, await sha256OfFile(file));
+      assert.equal(await sha256OfFile(file), crypto.createHash('sha256').update('hello world').digest('hex'));
     } finally {
       await fs.rm(dir, { recursive: true, force: true });
     }
+  });
+
+  it('stops the tool when its signal is aborted, and says it was cancelled', async () => {
+    const stop = new AbortController();
+    const started = Date.now();
+    setTimeout(() => stop.abort(), 50);
+    await assert.rejects(runTool({ bin: node, args: ['-e', 'setTimeout(() => {}, 30000)'], what: 'pg_dump', signal: stop.signal }), /pg_dump was cancelled/);
+    assert.ok(Date.now() - started < 10_000);
+    await assert.rejects(runTool({ bin: node, args: ['-e', ''], what: 'pg_dump', signal: stop.signal }), /cancelled/);
   });
 
   it('does not report a broken pipe when the tool stops reading early', async () => {

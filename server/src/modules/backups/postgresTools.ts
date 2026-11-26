@@ -4,7 +4,7 @@ import fs from 'node:fs';
 import fsp from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
-import { PassThrough, type Readable, type Writable } from 'node:stream';
+import type { Readable, Writable } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
 import { BackupError } from './backupLayout.js';
 
@@ -66,13 +66,26 @@ export interface ToolRun {
   output?: Writable;
   /** Exit codes that count as success (default: 0 only). */
   okCodes?: number[];
+  /** Stops the tool (SIGTERM) when aborted, for a download the person cancelled. */
+  signal?: AbortSignal;
   what: string;
 }
 
 const STDERR_LIMIT = 8_000;
 
 export async function runTool(run: ToolRun): Promise<{ stdout: string; stderr: string; code: number }> {
+  if (run.signal?.aborted) throw new BackupError(`${run.what} was cancelled.`);
   const child = spawn(run.bin, run.args, { env: { ...process.env, ...run.env }, stdio: [run.input ? 'pipe' : 'ignore', 'pipe', 'pipe'] });
+  const stop = () => { child.kill('SIGTERM'); };
+  run.signal?.addEventListener('abort', stop, { once: true });
+  try {
+    return await collect(run, child);
+  } finally {
+    run.signal?.removeEventListener('abort', stop);
+  }
+}
+
+async function collect(run: ToolRun, child: ReturnType<typeof spawn>): Promise<{ stdout: string; stderr: string; code: number }> {
   const { stdout: childOut, stderr: childErr } = child as typeof child & { stdout: Readable; stderr: Readable };
   let stderr = '';
   childErr.on('data', (chunk: Buffer) => { stderr = (stderr + chunk.toString('utf8')).slice(-STDERR_LIMIT); });
@@ -96,32 +109,13 @@ export async function runTool(run: ToolRun): Promise<{ stdout: string; stderr: s
   const settled = await Promise.allSettled([spawned, ...streams]);
   const code = settled[0]!.status === 'fulfilled' ? settled[0].value : undefined;
   if (code === undefined) throw (settled[0] as PromiseRejectedResult).reason;
+  if (run.signal?.aborted) throw new BackupError(`${run.what} was cancelled.`);
   if (!(run.okCodes ?? [0]).includes(code)) {
     throw new BackupError(`${run.what} failed (exit ${code}).${stderr.trim() ? `\n${stderr.trim()}` : ''}`);
   }
   const failedStream = settled.slice(1).find((s): s is PromiseRejectedResult => s.status === 'rejected');
   if (failedStream) throw failedStream.reason;
   return { stdout, stderr, code };
-}
-
-export interface FileDigest { sha256: string; bytes: number }
-
-/** Copies a stream into `file` while hashing it, so a dump is never read twice. */
-export async function writeHashed(source: (sink: Writable) => Promise<unknown>, file: string): Promise<FileDigest> {
-  const hash = crypto.createHash('sha256');
-  const tap = new PassThrough();
-  let bytes = 0;
-  tap.on('data', (chunk: Buffer) => { hash.update(chunk); bytes += chunk.length; });
-  const written = pipeline(tap, fs.createWriteStream(file, { flags: 'wx', mode: 0o600 }));
-  try {
-    await source(tap);
-  } catch (err) {
-    tap.destroy();
-    await written.catch(() => {});
-    throw err;
-  }
-  await written;
-  return { sha256: hash.digest('hex'), bytes };
 }
 
 export async function sha256OfFile(file: string): Promise<string> {
