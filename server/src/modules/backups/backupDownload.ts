@@ -60,7 +60,9 @@ export function setBackupIdleTimeout(ms = DEFAULT_IDLE_TIMEOUT_MS): void {
 
 /** What the script said when it failed: its "Backup failed: …" message (which may span lines, such as
  * pg_dump's own error under it), or its last line. */
-function failureMessage(stderr: string): string {
+function failureMessage(output: string): string {
+  // terminal colours, which Bun adds even on a pipe
+  const stderr = output.replace(/\x1b\[[0-9;]*m/g, '');
   const at = stderr.lastIndexOf('Backup failed: ');
   if (at >= 0) return stderr.slice(at + 'Backup failed: '.length).trim().replace(/\s*\n\s*/g, ' ');
   return stderr.trim().split('\n').at(-1)?.trim() ?? '';
@@ -144,7 +146,7 @@ export async function handleBackupDownload(request: FastifyRequest<{ Params: { t
   }
 
   const body = new PassThrough();
-  const child = spawn(process.execPath, ['--no-env-file', BACKUP_SCRIPT], { env: process.env, stdio: ['ignore', 'pipe', 'pipe'] });
+  const child = spawn(process.execPath, ['--no-env-file', BACKUP_SCRIPT], { env: { ...process.env, NO_COLOR: '1' }, stdio: ['ignore', 'pipe', 'pipe'] });
   let bytes = 0;
   let stderr = '';
   let ended = false;
