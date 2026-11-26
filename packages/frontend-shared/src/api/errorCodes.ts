@@ -48,6 +48,8 @@ export const ERROR_CODES = {
   confirmation_mismatch: 'confirmation_mismatch',
   already_admin: 'already_admin',
   not_admin: 'not_admin',
+  already_held: 'already_held',
+  not_held: 'not_held',
   target_inactive: 'target_inactive',
   already_suspended: 'already_suspended',
   not_suspended: 'not_suspended',

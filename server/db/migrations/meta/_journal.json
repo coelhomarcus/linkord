@@ -603,6 +603,13 @@
       "when": 1795674120880,
       "tag": "0085_overcord_search_configurations",
       "breakpoints": true
+    },
+    {
+      "idx": 86,
+      "version": "7",
+      "when": 1795703327775,
+      "tag": "0086_user_badges",
+      "breakpoints": true
     }
   ]
 }

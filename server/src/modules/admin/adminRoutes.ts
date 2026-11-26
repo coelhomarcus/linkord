@@ -6,8 +6,8 @@ import { requireAdmin } from './adminAuth.js';
 import { normalizeReason } from './adminPolicy.js';
 import { listAudit } from './auditLog.js';
 import {
-  deleteUserAccount, getAdminUser, listAdminUsers, reactivateUser, revokeUserSessions, setAdminRole, suspendUser,
-  type AdminRoleResult, type UserActionResult,
+  deleteUserAccount, getAdminUser, listAdminUsers, reactivateUser, revokeUserSessions, setAdminRole, setUserBadge, suspendUser,
+  type AdminRoleResult, type BadgeActionResult, type UserActionResult,
 } from './adminUsers.js';
 import {
   assignServerOwner, deleteServerAsAdmin, getAdminServer, listAdminServers, reactivateServer, suspendServer,
@@ -20,9 +20,11 @@ import { getSystemInfo } from './adminSystem.js';
 import { SweepInProgressError, sweepOrphans } from '../attachments/orphanSweeper.js';
 import { getBackupInfo, handleBackupDownload, issueDownloadToken, pgDumpAvailable } from '../backups/backupDownload.js';
 import type { ReportAction } from '../reports/reportsPolicy.js';
+import { isBadgeId } from '../badges/badgeCatalog.js';
 
 type Query = Record<string, string | undefined>;
 type IdParams = { id: string };
+type BadgeParams = { id: string; badge: string };
 
 const ERRORS: Record<string, [number, ErrorCode, string]> = {
   not_found: [404, 'not_found', 'Não encontrado.'],
@@ -35,6 +37,8 @@ const ERRORS: Record<string, [number, ErrorCode, string]> = {
   confirmation_mismatch: [400, 'confirmation_mismatch', 'A confirmação não confere.'],
   already_admin: [409, 'already_admin', 'Essa conta já é administradora.'],
   not_admin: [409, 'not_admin', 'Essa conta não é administradora.'],
+  already_held: [409, 'already_held', 'Essa conta já tem essa insígnia.'],
+  not_held: [409, 'not_held', 'Essa conta não tem essa insígnia.'],
   target_inactive: [409, 'target_inactive', 'Só uma conta ativa pode virar administradora.'],
   already_closed: [409, 'already_closed', 'Essa denúncia já foi encerrada.'],
   not_open: [409, 'not_open', 'Essa denúncia já está em análise.'],
@@ -52,7 +56,7 @@ async function runSweep(reply: FastifyReply, opts: Parameters<typeof sweepOrphan
   }
 }
 
-function respond(reply: FastifyReply, result: UserActionResult | ServerActionResult | WebhookActionResult | ReportActionResult | AdminRoleResult): void {
+function respond(reply: FastifyReply, result: UserActionResult | ServerActionResult | WebhookActionResult | ReportActionResult | AdminRoleResult | BadgeActionResult): void {
   if (result.code === 'ok') return sendJson(reply, 200, { ok: true });
   const [status, code, message] = ERRORS[result.code] ?? [500, 'internal_error', 'Erro interno.'];
   sendError(reply, status, code, message);
@@ -111,6 +115,14 @@ export function registerAdminRoutes(fastify: FastifyInstance): void {
     const m = await mutating(request, reply);
     if (m) respond(reply, await setAdminRole({ actor: m.actor, reason: m.reason, requestId: request.id }, request.params.id, 'revoke'));
   });
+  for (const [method, action] of [['post', 'grant'], ['delete', 'revoke']] as const) {
+    fastify[method]('/api/admin/users/:id/badges/:badge', async (request: FastifyRequest<{ Params: BadgeParams }>, reply) => {
+      const { badge } = request.params;
+      if (!isBadgeId(badge)) return sendError(reply, 404, 'not_found', 'Insígnia desconhecida.');
+      const m = await mutating(request, reply);
+      if (m) respond(reply, await setUserBadge({ actor: m.actor, reason: m.reason, requestId: request.id }, request.params.id, badge, action));
+    });
+  }
   fastify.delete('/api/admin/users/:id', async (request: FastifyRequest<{ Params: IdParams }>, reply) => {
     const m = await mutating(request, reply);
     if (m) respond(reply, await deleteUserAccount({ actor: m.actor, reason: m.reason, requestId: request.id }, request.params.id, String(m.body.confirm ?? '')));
