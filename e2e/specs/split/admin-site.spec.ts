@@ -45,6 +45,21 @@ test('administration uses its own origin and session', async ({ users, request }
   await expect(page.getByRole('button', { name: 'Reativar conta', exact: true })).toBeVisible();
   expect((await member.api.get('/api/auth/me')).status()).toBe(401);
 
+  await page.setViewportSize({ width: 1440, height: 850 });
+  await page.goto(`${ADMIN_URL}/admin/users`);
+  const accounts = page.getByRole('table', { name: 'Contas', exact: true });
+  await expect(accounts).toBeVisible();
+  const tableBox = (await accounts.boundingBox())!;
+  expect(tableBox.x + tableBox.width).toBeGreaterThan(1370);
+  await expect(page.locator('link[rel="icon"]')).toHaveAttribute('href', /\/assets\/admin-mark-.+\.svg$/);
+
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expect(accounts).toHaveCount(0);
+  await expect(page.getByRole('textbox', { name: 'Buscar usuários' })).toBeVisible();
+  await expect(page.getByRole('combobox', { name: 'Papel', exact: true })).toBeVisible();
+  await expect(page.getByRole('link').filter({ hasText: `@${member.username}` })).toBeVisible();
+  expect(await page.getByRole('main').evaluate((el) => el.scrollWidth <= el.clientWidth)).toBe(true);
+
   await page.getByRole('button', { name: 'Sair', exact: true }).click();
   await expect(page.getByRole('button', { name: 'Entrar', exact: true })).toBeVisible();
   expect((await page.request.get(`${ADMIN_URL}/api/admin/users`)).status()).toBe(401);

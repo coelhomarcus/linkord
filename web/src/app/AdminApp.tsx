@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Navigate, Route, Routes } from 'react-router';
+import { Link, Navigate, Route, Routes } from 'react-router';
+import { AdminBrand } from '@/features/admin/AdminBrand';
+import { ADMIN_PATH } from '@/features/admin/adminCatalog';
 import { AdminLogin } from '@/features/admin/AdminLogin';
 import { AdminRoutes } from '@/features/admin/AdminRoutes';
 import { subscribeAdminAccessLost, subscribeAdminSessionEnded } from '@/features/admin/adminAccess';
@@ -10,7 +12,7 @@ import { ApiError } from '@/shared/api/api';
 import { ErrorBanner } from '@/shared/ErrorBanner';
 import { applyLanguage } from '@/shared/i18n/applyLanguage';
 import { Button } from '@/shared/ui/primitives/button';
-import { LinkordMark } from '@/shared/ui/LinkordMark';
+import { SignOutIcon } from '@/shared/ui/icons';
 
 type AccessNotice = 'access' | 'session' | null;
 
@@ -48,7 +50,6 @@ export function AdminApp() {
   useEffect(checkSession, [checkSession]);
   useEffect(() => subscribeAdminAccessLost(() => clearSession('access')), [clearSession]);
   useEffect(() => subscribeAdminSessionEnded(() => clearSession('session')), [clearSession]);
-  useEffect(() => { document.title = `${t('layout.title')} · Linkord`; }, [t]);
 
   async function signOut() {
     setSigningOut(true);
@@ -73,12 +74,15 @@ export function AdminApp() {
   if (!user) return <AdminLogin onSignedIn={signIn} notice={notice && t(notice === 'access' ? 'layout.accessLostTitle' : 'layout.sessionEndedTitle')} />;
 
   return (
-    <div className="flex h-full flex-col">
-      <header className="flex flex-none items-center gap-3 border-b border-border-divider px-4 py-2 sm:px-6">
-        <LinkordMark className="h-6 w-auto" />
-        <span className="flex-1 text-heading font-semibold">Linkord</span>
-        <span className="max-w-[45%] truncate text-text-muted">@{user.username}</span>
-        <Button variant="ghost" disabled={signingOut} onClick={() => void signOut()}>{t('site.signOut')}</Button>
+    <div className="flex h-full min-w-0 flex-col">
+      <header className="flex h-16 flex-none items-center justify-between gap-3 border-b border-border-divider bg-surface-rail px-4 sm:px-6">
+        <Link to={ADMIN_PATH} className="shrink-0 rounded-lg focus-ring"><AdminBrand /></Link>
+        <div className="flex min-w-0 items-center gap-2 sm:gap-4">
+          <span className="truncate text-label text-text-muted" title={`@${user.username}`}>@{user.username}</span>
+          <Button variant="ghost" className="shrink-0" disabled={signingOut} onClick={() => void signOut()}>
+            <SignOutIcon size={18} aria-hidden /> {t('site.signOut')}
+          </Button>
+        </div>
       </header>
       {signOutFailed && <ErrorBanner className="m-4">{t('site.signOutFailed')}</ErrorBanner>}
       <Routes>

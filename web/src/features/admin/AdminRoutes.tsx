@@ -31,7 +31,7 @@ export function AdminRoutes({ viewerId, renderUnavailable }: {
 }) {
   return (
     <Routes>
-      <Route element={<AdminLayout renderUnavailable={renderUnavailable} />}>
+      <Route element={<AdminLayout standalone={viewerId !== undefined} renderUnavailable={renderUnavailable} />}>
         <Route index element={<AdminEntry />} />
         <Route path="users" element={<UsersPage />} />
         <Route path="users/:id" element={<UserDetailPage viewerId={viewerId} />} />

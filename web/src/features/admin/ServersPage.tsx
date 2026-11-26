@@ -65,7 +65,7 @@ export function ServersPage() {
   const { t } = useTranslation('admin');
   const { filters, update, clear, active, identity } = useAdminQuery(QUERY);
   const { pathname, search } = useLocation();
-  const tableFits = useAdminTableFits();
+  const tableFits = useAdminTableFits(840);
   const { value: query, setValue: setQuery } = useUrlSearch(filters.q, (q) => update({ q }));
   const filter = filters.filter as StatusFilter;
   const fetchPage = useCallback((cursor: string | null) => fetchAdminServers({

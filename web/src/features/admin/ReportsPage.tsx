@@ -43,7 +43,7 @@ export function ReportsPage() {
   const { t } = useTranslation('admin');
   const { filters, update, clear, active, identity } = useAdminQuery(QUERY);
   const { pathname, search } = useLocation();
-  const tableFits = useAdminTableFits();
+  const tableFits = useAdminTableFits(720);
   const queue = filters.status as Queue;
   const target = filters.targetType as TargetFilter;
   const fetchPage = useCallback((cursor: string | null) => fetchAdminReports({

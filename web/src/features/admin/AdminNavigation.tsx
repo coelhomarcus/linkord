@@ -4,6 +4,7 @@ import { NavLink } from 'react-router';
 import { cn } from '@/shared/lib/utils';
 import { ActiveFill } from '@/shared/ui/active-fill';
 import { ADMIN_GROUPS, adminSectionPath } from './adminCatalog';
+import { useStandaloneAdmin } from './useAdminMode';
 
 function GroupLabel({ children }: { children: string }) {
   return <p className="truncate px-2.5 pb-1.5 text-label font-medium text-text-muted">{children}</p>;
@@ -27,14 +28,14 @@ function AreaCard() {
 
 /** The permanent section sidebar of a wide admin area, drawn like the settings' own. A detail page keeps
  * its section marked: NavLink matches by path prefix. */
-export function AdminSidebar() {
+export function AdminSidebar({ standalone = false }: { standalone?: boolean }) {
   const { t } = useTranslation('admin');
   return (
-    <nav aria-label={t('layout.title')} className="flex w-[218px] flex-none flex-col px-3 py-6">
-      <AreaCard />
+    <nav aria-label={t('layout.title')} className={cn('flex w-[218px] flex-none flex-col px-3 py-6', standalone && 'gap-5 px-4')}>
+      {!standalone && <AreaCard />}
       {ADMIN_GROUPS.map((group, index) => (
         <div key={group.labelKey} className="flex flex-col">
-          {index > 0 && <span aria-hidden className="mx-2.5 my-2 h-px flex-none bg-border-divider" />}
+          {!standalone && index > 0 && <span aria-hidden className="mx-2.5 my-2 h-px flex-none bg-border-divider" />}
           <GroupLabel>{t(group.labelKey as never)}</GroupLabel>
           {group.sections.map((section) => {
             const Icon = section.icon;
@@ -45,6 +46,8 @@ export function AdminSidebar() {
                 className={({ isActive }) => cn(
                   'relative isolate mb-0.5 flex h-8 flex-none items-center gap-2 rounded-lg px-2.5 text-body font-medium focus-ring',
                   isActive ? 'text-text-strong' : 'text-text-secondary hover:bg-nav-hover hover:text-text-primary',
+                  standalone && 'h-10 gap-2.5',
+                  standalone && isActive && 'text-accent-text',
                 )}
               >
                 {({ isActive }) => (
@@ -66,9 +69,10 @@ export function AdminSidebar() {
 /** The compact landing screen: the same groups, icons and labels as the sidebar, one full-width row each. */
 export function AdminIndex() {
   const { t } = useTranslation('admin');
+  const standalone = useStandaloneAdmin();
   return (
     <nav aria-label={t('layout.title')} className="flex flex-col">
-      <AreaCard />
+      {!standalone && <AreaCard />}
       <div className="flex flex-col gap-1">
         {ADMIN_GROUPS.map((group) => (
           <div key={group.labelKey} className="flex flex-col gap-0.5 pt-4 first:pt-0">

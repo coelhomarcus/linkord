@@ -462,7 +462,7 @@
     "deleteServer": "Delete server"
   },
   "pages": {
-    "users": "Accounts on this instance: search, filter, and open one to moderate it, change its role, or delete it.",
+    "users": "Find and manage accounts on this instance.",
     "servers": "Every server on this instance, with its owner, members and status.",
     "webhooks": "Channel webhooks: which server they post to, who created them and whether they are active.",
     "reports": "What people reported. Open a report to claim it, see the evidence and decide.",

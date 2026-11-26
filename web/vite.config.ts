@@ -62,7 +62,14 @@ function adminEntry(): Plugin {
     name: 'admin-entry',
     transformIndexHtml: {
       order: 'pre',
-      handler: (html) => html.replace('/src/main.tsx', '/src/admin.tsx').replace('    <link rel="manifest" href="/manifest.webmanifest" />\n', ''),
+      handler: (html) => html
+        .replace('<html lang="pt-BR">', '<html lang="pt-BR" data-admin-site>')
+        .replace('/src/main.tsx', '/src/admin.tsx')
+        .replace('/favicon.svg', '/src/features/admin/admin-mark.svg?no-inline')
+        .replace(/    <link rel="(?:manifest|apple-touch-icon)"[^\n]+\n/g, '')
+        .replace('<title>Linkord</title>', '<title>Linkord Admin</title>')
+        .replace("        document.title = language === 'en-US' ? 'Linkord' : 'Linkord';\n", '')
+        .replace('Chat, chamadas de voz e vídeo e compartilhamento de tela em tempo real.', 'Painel de administração do Linkord.'),
     },
   };
 }

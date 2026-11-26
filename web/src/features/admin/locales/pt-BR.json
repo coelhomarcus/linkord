@@ -462,7 +462,7 @@
     "deleteServer": "Excluir servidor"
   },
   "pages": {
-    "users": "Contas da instância: busque, filtre e abra uma conta para moderar, mudar o papel ou excluir.",
+    "users": "Busque e gerencie as contas da instância.",
     "servers": "Todos os servidores da instância, com dono, membros e situação.",
     "webhooks": "Os webhooks dos canais: em que servidor postam, quem os criou e se estão ativos.",
     "reports": "O que as pessoas denunciaram. Abra uma denúncia para assumir, ver a evidência e decidir.",

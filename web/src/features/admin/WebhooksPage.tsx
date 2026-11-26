@@ -61,7 +61,7 @@ export function WebhooksPage() {
   const { t } = useTranslation('admin');
   const { filters, update, clear, active, identity } = useAdminQuery(QUERY);
   const { pathname, search } = useLocation();
-  const tableFits = useAdminTableFits();
+  const tableFits = useAdminTableFits(840);
   const { value: query, setValue: setQuery } = useUrlSearch(filters.q, (q) => update({ q }));
   const fetchPage = useCallback((cursor: string | null) => fetchAdminWebhooks({ q: filters.q }, cursor), [filters.q]);
   const list = useAdminList(fetchPage, identity, (w) => w.id);

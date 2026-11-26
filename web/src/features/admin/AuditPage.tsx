@@ -137,7 +137,7 @@ export function AuditPage() {
   const language = useLanguage();
   const { t } = useTranslation('admin');
   const { filters, update, clear, active, identity } = useAdminQuery(QUERY);
-  const tableFits = useAdminTableFits();
+  const tableFits = useAdminTableFits(680);
   const action = filters.action;
   const actor = useUrlSearch(filters.actor, (next) => update({ actor: next }));
   const target = useUrlSearch(filters.targetId, (next) => update({ targetId: next }));

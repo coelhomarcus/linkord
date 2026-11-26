@@ -8,6 +8,7 @@ import { initI18n } from '@/shared/i18n/init';
 import { installGlobalErrorHandlers } from '@/shared/lib/logger';
 import { TooltipProvider } from '@/shared/ui/primitives/tooltip';
 import './styles/index.css';
+import './styles/admin.css';
 
 initI18n();
 installGlobalErrorHandlers();
