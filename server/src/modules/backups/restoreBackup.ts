@@ -52,7 +52,8 @@ export type BackupSource =
   | { kind: 'zip'; zipPath: string; manifest: BackupManifest }
   | { kind: 'folder'; manifest: BackupManifest; dumpFile: string; uploadsFile: string | null };
 
-/** Reads the manifest and proves the data next to it is what it describes, before anything is touched. */
+/** Reads the manifest and checks the data next to it against it (damage, not deliberate change), before
+ * anything is touched. */
 export async function readBackup(backupPath: string): Promise<BackupSource> {
   const stat = await fsp.stat(backupPath).catch(() => null);
   if (!stat) throw new BackupError(`${backupPath} does not exist.`);

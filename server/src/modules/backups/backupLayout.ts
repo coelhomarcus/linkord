@@ -72,7 +72,8 @@ export function parseManifest(text: string): BackupManifest {
 
 /** One SHA-256 over every stored file in the order the ZIP holds them, each preceded by its path and size.
  * The writer computes it while streaming and the restore recomputes it from the entries: ZIP readers do not
- * check CRC-32, so this is what proves the files are the ones the backup wrote. */
+ * check CRC-32, so this is what catches a damaged file. It is not a signature: whoever changes the files can
+ * recompute it. */
 export class UploadsDigest {
   private readonly hash = crypto.createHash('sha256');
   private files = 0;

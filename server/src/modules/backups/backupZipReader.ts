@@ -13,7 +13,10 @@ import {
 // Reading a backup ZIP (backupZip.ts writes it). Every entry is read through once
 // to check it against the manifest before a restore touches anything, then read
 // again to restore it: ZIP readers do not check CRC-32, so the checksums in the
-// manifest are what tells a damaged download from a good one.
+// manifest are what tells a damaged download from a good one. They are not a
+// signature: nothing here tells an altered backup from a genuine one, and
+// pg_restore runs whatever SQL the dump holds as the DATABASE_URL user. Only
+// restore a backup you kept yourself.
 
 const MANIFEST_LIMIT = 16 * 1024 * 1024;
 
@@ -55,7 +58,8 @@ async function drain(stream: Readable, onChunk: (chunk: Buffer) => void): Promis
   for await (const chunk of stream) onChunk(chunk as Buffer);
 }
 
-/** Reads the whole ZIP and proves it is the backup its manifest describes. */
+/** Reads the whole ZIP and checks it against its manifest. That catches a damaged file (a broken download,
+ * a bad disk), not a deliberate change: whoever edits the ZIP can rewrite the manifest too. */
 export async function readBackupZip(zipPath: string): Promise<BackupManifest> {
   let manifestText: string | null = null;
   let dumpSha: string | null = null;
@@ -144,7 +148,7 @@ export async function extractBackupUploads(zipPath: string, uploadDir: string, e
     await pipeline(await open(), through, fs.createWriteStream(target, { flags: 'wx' }));
     files++;
   });
-  if (digest.digest() !== expected) throw new BackupError('The stored files changed while they were being restored; the backup file is damaged or was modified.');
+  if (digest.digest() !== expected) throw new BackupError('The stored files changed while they were being restored; the backup file is damaged.');
   return files;
 }
 

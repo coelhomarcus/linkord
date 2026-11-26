@@ -63,6 +63,8 @@ manifest.json    row counts, file counts and checksums, checked by the restore
 It holds password hashes, sessions and every message. Keep it like the database
 itself, and encrypt it when it leaves the machine. It does not hold the .env
 (database credentials, LiveKit and Web Push keys): keep that in a secrets store.
+The checksums catch a damaged file, not a deliberate change, and restoring runs
+the SQL in database.dump: only restore a backup you kept yourself.
 
 To restore it, with the app stopped, into an empty database and uploads folder:
 

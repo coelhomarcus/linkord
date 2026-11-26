@@ -185,7 +185,7 @@ From a checkout, `bun run backup --out <file or folder>` writes it to a file ins
 - **Size:** about the database plus the uploads. Nothing is recompressed: the dump already is, and media files are.
 - **Interrupted:** a cancelled download or a failure ends the transfer as failed, never as a ZIP that looks complete.
 - For scheduled backups, run the `docker exec` command from the host's scheduler and send the file off the host with a tool such as `rclone` or `rsync`. Keep the retention you want at the destination.
-- **Not in the backup:** the `.env` (database credentials, `LIVEKIT_*` and the Web Push VAPID keys, without which every push subscription breaks) and LiveKit. Keep the `.env` in a secrets store. A backup holds password hashes, sessions and every message: treat it like the database, and encrypt it when it leaves the machine.
+- **Not in the backup:** the `.env` (database credentials, `LIVEKIT_*` and the Web Push VAPID keys, without which every push subscription breaks) and LiveKit. Keep the `.env` in a secrets store. A backup holds password hashes, sessions and every message: treat it like the database, and encrypt it when it leaves the machine. Its checksums catch a damaged file, not a deliberate change, and a restore runs the dump's SQL as the `DATABASE_URL` user: only restore a backup you kept yourself.
 
 ### Restoring
 
