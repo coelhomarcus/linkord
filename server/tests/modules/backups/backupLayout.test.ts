@@ -5,7 +5,7 @@ import path from 'node:path';
 import { afterEach, beforeEach, describe, it } from 'node:test';
 import {
   BackupError, backupName, BACKUP_FORMAT, listBackups, MANIFEST_FILE, parseKeep, parseManifest, resolveBackup, rotateBackups, type BackupManifest,
-} from '../../../src/scripts/backup/backupLayout.js';
+} from '../../../src/modules/backups/backupLayout.js';
 
 const manifest = (): BackupManifest => ({
   format: BACKUP_FORMAT, createdAt: '2026-11-08T01:53:00.000Z',

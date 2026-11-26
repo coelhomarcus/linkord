@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import fsp from 'node:fs/promises';
 import path from 'node:path';
 import { Pool } from 'pg';
-import { classifyOrphans } from '../../modules/attachments/orphanClassification.js';
+import { classifyOrphans } from '../attachments/orphanClassification.js';
 import { BackupError, DUMP_FILE, MANIFEST_FILE, parseManifest, UPLOADS_FILE, type BackupManifest } from './backupLayout.js';
 import { pgConnection, runTool, sha256OfFile, withConnection, type DatabaseSsl } from './postgresTools.js';
 import { extractUploadsArchive, isEmptyDirectory, listStoredFiles } from './uploadsArchive.js';

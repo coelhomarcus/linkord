@@ -1,6 +1,6 @@
-import { BackupError } from './backup/backupLayout.js';
-import { createBackup } from './backup/createBackup.js';
-import { backupSettings } from './backup/settings.js';
+import { BackupError } from '../modules/backups/backupLayout.js';
+import { createBackup } from '../modules/backups/createBackup.js';
+import { backupSettings } from '../modules/backups/settings.js';
 
 // `bun run backup`
 //

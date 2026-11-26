@@ -1,7 +1,7 @@
 import { parseArgs } from 'node:util';
-import { BackupError, resolveBackup } from './backup/backupLayout.js';
-import { ConfirmationRequired, restoreBackup } from './backup/restoreBackup.js';
-import { backupSettings } from './backup/settings.js';
+import { BackupError, resolveBackup } from '../modules/backups/backupLayout.js';
+import { ConfirmationRequired, restoreBackup } from '../modules/backups/restoreBackup.js';
+import { backupSettings } from '../modules/backups/settings.js';
 
 // `bun run restore [<backup>|latest] --confirm <database-name> [--strict]`
 //

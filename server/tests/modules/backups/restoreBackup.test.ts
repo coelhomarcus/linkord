@@ -4,9 +4,9 @@ import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { afterEach, beforeEach, describe, it } from 'node:test';
-import { BackupError, BACKUP_FORMAT, DUMP_FILE, MANIFEST_FILE, type BackupManifest } from '../../../src/scripts/backup/backupLayout.js';
-import { createBackup } from '../../../src/scripts/backup/createBackup.js';
-import { ConfirmationRequired, readBackup, restoreBackup } from '../../../src/scripts/backup/restoreBackup.js';
+import { BackupError, BACKUP_FORMAT, DUMP_FILE, MANIFEST_FILE, type BackupManifest } from '../../../src/modules/backups/backupLayout.js';
+import { createBackup } from '../../../src/modules/backups/createBackup.js';
+import { ConfirmationRequired, readBackup, restoreBackup } from '../../../src/modules/backups/restoreBackup.js';
 
 // Nothing here reaches a database: every case is refused before the first
 // connection, which is the point of the guards.

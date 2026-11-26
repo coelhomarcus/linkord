@@ -3,8 +3,8 @@ import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { afterEach, beforeEach, describe, it } from 'node:test';
-import { BackupError } from '../../../src/scripts/backup/backupLayout.js';
-import { createUploadsArchive, extractUploadsArchive, isEmptyDirectory, isSafeArchiveEntry, listArchive, listStoredFiles } from '../../../src/scripts/backup/uploadsArchive.js';
+import { BackupError } from '../../../src/modules/backups/backupLayout.js';
+import { createUploadsArchive, extractUploadsArchive, isEmptyDirectory, isSafeArchiveEntry, listArchive, listStoredFiles } from '../../../src/modules/backups/uploadsArchive.js';
 
 let dir: string;
 beforeEach(async () => { dir = await fs.mkdtemp(path.join(os.tmpdir(), 'overcord-archive-test-')); });

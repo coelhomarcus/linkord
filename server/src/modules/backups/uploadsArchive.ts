@@ -1,7 +1,7 @@
 import fsp from 'node:fs/promises';
 import path from 'node:path';
 import { Readable } from 'node:stream';
-import { FILE_ID_RE } from '../../modules/attachments/orphanClassification.js';
+import { FILE_ID_RE } from '../attachments/orphanClassification.js';
 import { BackupError } from './backupLayout.js';
 import { runTool, sha256OfFile } from './postgresTools.js';
 

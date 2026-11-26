@@ -18,7 +18,7 @@ export interface BackupSettings {
   target: string;
 }
 
-// server/src/scripts/backup -> repo root; compiled, server/dist/scripts/backup -> /app in the image
+// server/src/modules/backups -> repo root; compiled, server/dist/modules/backups -> /app in the image
 const DEFAULT_BACKUP_DIR = path.join(import.meta.dirname, '..', '..', '..', '..', 'backups');
 
 export function backupSettings(env: NodeJS.ProcessEnv = process.env): BackupSettings {
