@@ -18,6 +18,7 @@ import { claimReport, getAdminReport, listAdminReports, resolveReport, type Repo
 import type { AuditActor } from './auditLog.js';
 import { getSystemInfo } from './adminSystem.js';
 import { SweepInProgressError, sweepOrphans } from '../attachments/orphanSweeper.js';
+import { getBackupInfo, handleBackupDownload, issueDownloadToken, pgDumpAvailable } from '../backups/backupDownload.js';
 import type { ReportAction } from '../reports/reportsPolicy.js';
 
 type Query = Record<string, string | undefined>;
@@ -191,6 +192,19 @@ export function registerAdminRoutes(fastify: FastifyInstance): void {
     if (!m) return;
     await runSweep(reply, { dryRun: false, actor: m.actor, requestId: request.id, reason: m.reason });
   });
+
+  // A full backup: the page's numbers, a one-time link (needs a reason) and the ZIP it streams. See backupDownload.ts.
+  fastify.get('/api/admin/backup', (request, reply) => reading(request, reply, () => getBackupInfo()));
+  fastify.post('/api/admin/backup/download', async (request, reply) => {
+    const m = await mutating(request, reply);
+    if (!m) return;
+    if (!(await pgDumpAvailable())) return sendError(reply, 503, 'backup_unavailable', 'O servidor não tem o pg_dump instalado; não é possível gerar o backup.');
+    const issued = issueDownloadToken(m.actor, m.reason);
+    if (issued.code === 'busy') return sendError(reply, 409, 'backup_running', 'Outro backup está sendo baixado. Espere ele terminar.');
+    sendJson(reply, 200, { url: `/api/admin/backup/download/${issued.token}`, expiresAt: issued.expiresAt.toISOString() });
+  });
+  // the ZIP is not compressible (its entries are stored as they are) and its size is unknown until the end
+  fastify.get<{ Params: { token: string } }>('/api/admin/backup/download/:token', { compress: false }, handleBackupDownload);
 
   fastify.get('/api/admin/audit', (request: FastifyRequest<{ Querystring: Query }>, reply) => reading(request, reply, () => {
     const { actor, targetType, targetId, action, from, to, cursor } = request.query;
