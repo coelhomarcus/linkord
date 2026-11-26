@@ -31,7 +31,7 @@ const log = logger.child({ component: 'backup' });
 // forwarded to the response. Checksumming every byte (yazl's CRC-32 is plain
 // JavaScript) would otherwise run on the event loop that serves chat and calls.
 
-export const BACKUP_AUDIT_ACTION = 'system.backup_download';
+const BACKUP_AUDIT_ACTION = 'system.backup_download';
 const TOKEN_TTL_MS = 60_000;
 const RECENT_DOWNLOADS = 5;
 
