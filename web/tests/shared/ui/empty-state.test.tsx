@@ -26,6 +26,10 @@ describe('EmptyState', () => {
 
   it('draws with the theme tokens, never a fixed colour', () => {
     const { container } = render(<EmptyState illustration="bell" title="All caught up" />);
+    const svg = container.querySelector('svg')!;
+    expect(svg.style.filter).toBe('grayscale(1)');
+    expect(svg.style.getPropertyValue('--es-mascot')).toContain('var(--color-text-primary)');
+    expect(svg.style.getPropertyValue('--es-back')).toContain('var(--surface-base, var(--color-surface-app))');
     const painted = [...container.querySelectorAll('svg *')].flatMap((node) => [node.getAttribute('fill'), node.getAttribute('stroke')]).filter((value): value is string => !!value && value !== 'none');
     expect(painted.length).toBeGreaterThan(0);
     for (const value of painted) expect(value).toMatch(/^var\(--/);

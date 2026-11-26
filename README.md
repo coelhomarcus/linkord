@@ -55,6 +55,7 @@ Overcord is a self-hosted place to chat and call with friends. Talk in direct me
 - Two-step login by email, sign-in alerts, and a list of active sessions you can end.
 - Username and password changes, account deletion, and a download of your data.
 - Themes, density, fonts, languages (Portuguese and English) and notification sounds, synced across your devices.
+- Custom empty-state illustrations use grayscale shading that adapts to the selected theme.
 - Installable as a web app (PWA), with share-to-Overcord on Android.
 - The web app opens at the root of its domain. Existing `/app` links redirect to their new addresses.
 
