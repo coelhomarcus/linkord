@@ -1,6 +1,6 @@
 import i18n from 'i18next';
 import Code from 'kubai-icons-react/icons/code';
-import HandHeart from 'kubai-icons-react/icons/hand-heart';
+import Heart from 'kubai-icons-react/icons/heart';
 import type { KubaiIconComponent, KubaiIconProps } from 'kubai-icons-react';
 
 // The profile badges there are, in the order a profile shows them. Keep in step with the server
@@ -9,7 +9,7 @@ import type { KubaiIconComponent, KubaiIconProps } from 'kubai-icons-react';
 
 export const BADGES = [
   { id: 'developer', icon: Code, color: '#5B8CFF' },
-  { id: 'supporter', icon: HandHeart, color: '#F0509A' },
+  { id: 'supporter', icon: Heart, color: '#F0509A' },
 ] as const satisfies readonly { id: string; icon: KubaiIconComponent; color: string }[];
 
 export type BadgeId = (typeof BADGES)[number]['id'];
