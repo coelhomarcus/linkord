@@ -164,7 +164,7 @@ overcord-backup-20261126T153000Z.zip
   manifest.json    row counts, migrations, file counts and checksums
 ```
 
-From the [administration site](#administration-site), **Backup** downloads it in the browser. It asks for a reason and records the download in the audit log (`system.backup_download`) before the first byte leaves; a download that fails or is cancelled gets a second, failed entry. The page shows the expected size and the latest downloads. One backup runs at a time, and a deploy during a download cancels it.
+From the [administration site](#administration-site), **Backup** downloads it in the browser. It asks for a reason and records the download in the audit log (`system.backup_download`) before the first byte leaves; a download that fails or is cancelled gets a second, failed entry. The page shows the expected size and the latest downloads. The ZIP is written by the same `backup.js` as below, in a separate process, so checksumming it does not slow chat and calls. One backup runs at a time, and a deploy during a download cancels it.
 
 From the command line, the image writes it to stdout, so the host saves it directly:
 

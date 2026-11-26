@@ -16,6 +16,10 @@ import { backupSettings } from '../modules/backups/settings.js';
 // `--out` may name a folder, in which case the file is named by the UTC time.
 // Messages go to stderr.
 //
+// The admin site's download runs this script as a child process and forwards
+// its stdout, so nothing but the ZIP may ever be written there. SIGTERM (the
+// download was cancelled) stops pg_dump and exits 1.
+//
 // It only reads the configured DATABASE_URL and UPLOAD_DIR, never writes to
 // them, and is safe to run while the app is serving people. Needs pg_dump
 // (PostgreSQL client tools, at least the server's major version; PG_DUMP_BIN
@@ -26,13 +30,15 @@ async function main(): Promise<number> {
   const { values } = parseArgs({ args: process.argv.slice(2), options: { out: { type: 'string' } } });
   const settings = backupSettings();
   const log = (message: string) => console.error(`  ${message}`);
+  const stop = new AbortController();
+  for (const signal of ['SIGTERM', 'SIGINT'] as const) process.once(signal, () => stop.abort());
   if (values.out === undefined) {
     if (process.stdout.isTTY) {
       console.error('usage: bun run backup --out <file.zip>   (or redirect stdout to a file: bun run backup > backup.zip)');
       return 2;
     }
     console.error(`Backing up ${settings.target} and ${settings.uploadDir} to stdout`);
-    const { bytes } = await writeBackupZip(process.stdout, { ...settings, log });
+    const { bytes } = await writeBackupZip(process.stdout, { ...settings, log, signal: stop.signal });
     console.error(`Backup written (${bytes} bytes)`);
     return 0;
   }
@@ -42,7 +48,7 @@ async function main(): Promise<number> {
     file = path.join(file, backupFileName(new Date()));
   }
   console.error(`Backing up ${settings.target} and ${settings.uploadDir} into ${file}`);
-  const { bytes } = await writeBackupFile(file, { ...settings, log });
+  const { bytes } = await writeBackupFile(file, { ...settings, log, signal: stop.signal });
   console.error(`Backup written to ${file} (${bytes} bytes)`);
   return 0;
 }

@@ -122,6 +122,23 @@ describe('admin backup download', () => {
     }
   });
 
+  it('records a run that fails midway, ends the download as failed and frees the lock', async () => {
+    const a = await admin();
+    const failing = path.join(scratch, 'pg_dump-failing');
+    fs.writeFileSync(failing, '#!/bin/sh\nif [ "$1" = "--version" ]; then echo "pg_dump (PostgreSQL) 17.0"; exit 0; fi\necho "pg_dump: error: query failed" >&2; exit 1\n', { mode: 0o755 });
+    process.env.PG_DUMP_BIN = failing;
+    const { url } = (await request('POST', '/api/admin/backup/download', a.token, { reason: 'will fail' })).json() as { url: string };
+    // headers are out before the failure, so the response is cut rather than answered with an error
+    const res = await request('GET', url, a.token).catch(() => null);
+    if (res) assert.ok(!res.rawPayload.includes(MANIFEST_FILE), 'never a complete ZIP');
+
+    const failed = async () => (await db.select().from(adminAuditLogs).where(and(eq(adminAuditLogs.actorId, a.id), eq(adminAuditLogs.result, 'failed'))))[0];
+    for (let i = 0; i < 50 && !(await failed()); i++) await new Promise((resolve) => setTimeout(resolve, 100));
+    assert.match(String((await failed())?.detail.error), /pg_dump failed/);
+    process.env.PG_DUMP_BIN = fakePgDump;
+    assert.equal((await request('POST', '/api/admin/backup/download', a.token, { reason: 'again' })).statusCode, 200, 'the lock was released');
+  });
+
   it('says so when the server cannot run pg_dump, before a link is issued', async () => {
     const a = await admin();
     process.env.PG_DUMP_BIN = path.join(scratch, 'missing-pg_dump');
