@@ -22,6 +22,7 @@
   --color-link: var(--color-accent-text);
   --color-nav-active: #242b45;
   --primary-foreground: #161b32;
+  --text-admin-page-title: calc(clamp(1.625rem, 1.35rem + 0.65vw, 2rem) * var(--text-scale));
 }
 
 /* Replace the chat theme's early background while the first admin route loads. */
@@ -35,7 +36,7 @@
 }
 
 .admin-page-title h2 {
-  font-size: clamp(1.625rem, 1.35rem + 0.65vw, 2rem);
+  font-size: var(--text-admin-page-title);
   line-height: 1.18;
   letter-spacing: -0.025em;
 }

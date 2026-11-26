@@ -53,7 +53,7 @@ export function AdminLogin({ onSignedIn, notice }: { onSignedIn: (user: AdminIde
           />
         ) : (
           <>
-            <h1 className="text-[1.75rem] leading-tight font-bold tracking-tight text-text-strong">{t('layout.title')}</h1>
+            <h1 className="text-display leading-tight font-bold tracking-tight text-text-strong">{t('layout.title')}</h1>
             <p className="mt-2 mb-6 text-body text-text-secondary">{t('site.signInSubtitle')}</p>
             <form onSubmit={submit} className="flex flex-col gap-4">
               <AuthField id="admin-username" label={t('auth:fields.username')} autoComplete="username" autoCapitalize="none" spellCheck={false} required autoFocus value={username} onChange={setUsername} />
