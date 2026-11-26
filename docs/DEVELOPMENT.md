@@ -101,6 +101,8 @@ Creates four accounts (`ana`, `bruno`, `carla`, `davi`; the shared password is p
 bun run admin:grant <your-username>
 ```
 
+To develop the separate panel, start the backend with `ADMIN_URL=http://127.0.0.1:5174` and run `bun run --cwd web dev --mode admin` in a second terminal. Open `http://127.0.0.1:5174` and sign in with the administrator account. The public Vite app stays at `http://localhost:5173`.
+
 ## Desktop app
 
 `desktop/` is an Electron window that loads a Linkord server's address, so the page talks to `/api` and `/ws` on its own origin and the server's cookies, origin check and CSP apply as in a browser. It ships for Windows only; a development run also starts on a Mac (with its own title bar buttons and tray menu, without activity detection, start at login or a taskbar count). Building the installer, updates and releases are in [DEPLOY.md](DEPLOY.md#desktop-app); the rules for changing it are in [AGENTS.md](../AGENTS.md) ("Desktop").
@@ -140,7 +142,7 @@ bun run check
 
 Runs the server test typecheck, the web lint, the dependency audit, the server and web tests and the production build. None of these tests needs PostgreSQL (`.env.test` supplies a placeholder `DATABASE_URL`). For desktop changes, also run `npm run typecheck --prefix desktop` and `npm test --prefix desktop`. See [End-to-end tests](#end-to-end-tests) for browser verification.
 
-- **CI** (`.github/workflows/ci.yml`) runs the same on every push to `main` and `develop` and on pull requests, unless only Markdown changed, as four jobs: server, web, desktop, and one for the audit, `bun run check:dead-code` and the e2e typecheck.
+- **CI** (`.github/workflows/ci.yml`) runs the server, web, desktop, and audit and dead code checks in parallel on pushes to `main` and `develop` and on pull requests that change more than documentation. A separate job runs `bun run test:integration` against a disposable PostgreSQL 17 service on the runner.
 - **End-to-end** (`.github/workflows/e2e.yml`) runs the `features`, `restart` and `upgrade` projects in parallel on pull requests into `main`, and on demand from the Actions tab. A failed job uploads the Playwright report and traces.
 - **Desktop installer** (`.github/workflows/desktop.yml`) runs only by hand; see [DEPLOY.md](DEPLOY.md#building-the-installer).
 - **Audit:** `bun audit --prod --audit-level=high` for the root and `web/`, so keep build-only packages (Tailwind, Vite plugins) in `devDependencies` of `web/`; the image ships only the build output.
@@ -192,7 +194,7 @@ bun run test:e2e
 
 - `test:e2e:features`: every feature on the working tree's build.
 - `test:e2e:restart`: what a redeploy of the same build must survive.
-- `bun run --cwd e2e test:split` checks routing, cache headers and a call through a frontend-only deploy.
+- `bun run --cwd e2e test:split` checks routing, cache headers, a call through a frontend-only deploy, and admin site sign-in and session isolation.
 - `test:e2e:upgrade`: tabs opened on the production version (`origin/main`, or `E2E_BASE_REF`) while the server is upgraded to the working tree. It adapts to what the base version supports and says so in the report's annotations.
 
 Each run builds `linkord-e2e:head` from the working tree (uncommitted changes included), starts the stack, runs and removes it. `E2E_KEEP_STACK=1` leaves it up at `http://localhost:8080`, `E2E_HEADED=1` shows the browsers, `E2E_RETRIES=0` turns retries off, and `E2E_HEAD_IMAGE=<tag>` tests an image you built yourself. A failure keeps a trace, video and screenshot: `bun run --cwd e2e report` opens the report, `bun --bun playwright show-trace <trace.zip>` (from `e2e/`) replays it.
@@ -236,7 +238,7 @@ Playwright runs on Bun and uses the installed Google Chrome. Its CLI scripts use
 | `features/presence` | Status and custom status reaching other devices and friends, invisible, status kept across a reload. |
 | `restart/voice` | A voice call survives a redeploy, and someone joining afterwards hears the others. |
 | `restart/dm-call` | An answered DM call and a ringing one survive a redeploy. |
-| `restart/chat` | Messages sent during a redeploy are stored and shown exactly once. |
+| `restart/chat` | Messages sent during a redeploy are stored and shown exactly once. Separate steps report failures in PostgreSQL persistence and in each participant's view. |
 | `restart/voice-message` | A voice message sent while the server is down arrives once. |
 | `restart/upload` | A throttled 40 MB upload survives a 10 s and a 30 s outage, byte for byte. |
 | `restart/activity` | Activity reported after a redeploy does not overlap the previous session. |

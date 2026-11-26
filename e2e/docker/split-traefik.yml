@@ -1,15 +1,25 @@
 http:
   routers:
     linkord-backend:
-      rule: 'PathRegexp(`^/(api|ws|uploads)(/|$)`) || Path(`/healthz`) || Path(`/readyz`)'
+      rule: 'Host(`localhost`) && (PathRegexp(`^/(api|ws|uploads)(/|$)`) || Path(`/healthz`) || Path(`/readyz`))'
       priority: 200
       entryPoints: [web]
       service: app
     linkord-frontend:
-      rule: 'PathPrefix(`/`)'
+      rule: 'Host(`localhost`)'
       priority: 100
       entryPoints: [web]
       service: frontend
+    linkord-admin-api:
+      rule: 'Host(`127.0.0.1`) && (PathPrefix(`/api/admin/`) || Path(`/api/csp-reports`) || PathPrefix(`/uploads/`))'
+      priority: 200
+      entryPoints: [web]
+      service: app
+    linkord-admin-site:
+      rule: 'Host(`127.0.0.1`)'
+      priority: 100
+      entryPoints: [web]
+      service: admin
   services:
     app:
       loadBalancer:
@@ -19,3 +29,7 @@ http:
       loadBalancer:
         servers:
           - url: http://frontend:8080
+    admin:
+      loadBalancer:
+        servers:
+          - url: http://admin:8080

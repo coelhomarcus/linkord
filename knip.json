@@ -18,6 +18,7 @@
       ],
       "entry": [
         "scripts/*.{ts,mjs}",
+        "src/admin.tsx",
         "tests/**/*.test.ts",
         "tests/**/*.test.tsx"
       ],

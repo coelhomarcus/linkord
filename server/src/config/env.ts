@@ -143,6 +143,14 @@ const RESEND_FROM_EMAIL = process.env.RESEND_FROM_EMAIL || '';
 // Only the end-to-end stack changes this, to a local mail sink that records what would be sent.
 const RESEND_API_URL = (process.env.RESEND_API_URL || 'https://api.resend.com').trim().replace(/\/+$/, '');
 const APP_URL = (process.env.APP_URL || '').trim().replace(/\/+$/, '');
+const adminUrl = process.env.ADMIN_URL?.trim();
+const adminOrigin = adminUrl ? URL.parse(adminUrl) : null;
+if (adminUrl && (!adminOrigin || adminOrigin.username || adminOrigin.password || adminOrigin.pathname !== '/' || adminOrigin.search || adminOrigin.hash
+  || (adminOrigin.protocol !== 'https:' && !(adminOrigin.protocol === 'http:' && ['localhost', '127.0.0.1', '[::1]'].includes(adminOrigin.hostname)))
+  || adminOrigin.host === URL.parse(APP_URL)?.host)) {
+  throw new Error('ADMIN_URL must be a separate HTTPS origin (HTTP is allowed on loopback).');
+}
+const ADMIN_ORIGIN = adminOrigin ? { url: adminOrigin.origin, host: adminOrigin.host, secure: adminOrigin.protocol === 'https:' } : null;
 const PUSH_VAPID_PUBLIC_KEY = (process.env.PUSH_VAPID_PUBLIC_KEY || '').trim();
 const PUSH_VAPID_PRIVATE_KEY = (process.env.PUSH_VAPID_PRIVATE_KEY || '').trim();
 const PUSH_VAPID_SUBJECT = (process.env.PUSH_VAPID_SUBJECT || '').trim();
@@ -277,7 +285,7 @@ export const config = {
   SESSION_COOKIE, SESSION_TTL_DAYS, SESSION_IDLE_DAYS, REGISTRATION_CODE,
   COOKIE_SECURE, MAX_BODY_BYTES,
   MIN_USERNAME_LEN, MAX_USERNAME_LEN, MAX_DISPLAY_NAME_LEN, MIN_PASSWORD_LEN, MAX_PASSWORD_LEN,
-  RESEND_API_KEY, RESEND_FROM_EMAIL, RESEND_API_URL, APP_URL, AUTH_CODE_TTL_MS, AUTH_CODE_MAX_ATTEMPTS, LOGIN_CODE_TTL_MS,
+  RESEND_API_KEY, RESEND_FROM_EMAIL, RESEND_API_URL, APP_URL, ADMIN_ORIGIN, AUTH_CODE_TTL_MS, AUTH_CODE_MAX_ATTEMPTS, LOGIN_CODE_TTL_MS,
   PUSH_VAPID_PUBLIC_KEY, PUSH_VAPID_PRIVATE_KEY, PUSH_VAPID_SUBJECT,
   LIVEKIT_URL, LIVEKIT_SERVER_URL, LIVEKIT_API_KEY, LIVEKIT_API_SECRET, LIVEKIT_ROOM_NAME, LIVEKIT_TOKEN_TTL_SECONDS,
   UPLOADS_REMOTE_URL, KLIPY_API_KEY, MAL_CLIENT_ID, IGDB_CLIENT_ID, IGDB_CLIENT_SECRET, STEAM_WEB_API_KEY, STEAMGRIDDB_API_KEY, MEDIA_PROXY_ENABLED, DESKTOP_RELEASES_REPO,

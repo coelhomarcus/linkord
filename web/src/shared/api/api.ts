@@ -18,6 +18,7 @@ export interface ApiUser {
   profileLinks: string[];
   role: 'user' | 'admin';
   locale: Language;
+  adminUrl?: string;
 }
 
 export class ApiError extends Error {

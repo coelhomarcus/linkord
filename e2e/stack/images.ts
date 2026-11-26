@@ -2,7 +2,7 @@ import { execFileSync } from 'node:child_process';
 import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import { BASE_URL, NEXT_WEB_IMAGE, REPO_DIR, SPLIT, SPLIT_LIVEKIT_URL, WEB_IMAGE } from './stack';
+import { ADMIN_IMAGE, ADMIN_URL, BASE_URL, NEXT_WEB_IMAGE, REPO_DIR, SPLIT, SPLIT_LIVEKIT_URL, WEB_IMAGE } from './stack';
 
 /** E2E_HEAD_IMAGE runs the suite against an image built elsewhere (to check
  * that a spec catches a regression, build the broken tree and point here). */
@@ -24,6 +24,7 @@ export function buildHeadImage(): string {
     if (!process.env.E2E_HEAD_IMAGE) run('docker', ['build', '-q', '--target', 'backend', '-t', backend, '.']);
     run('docker', ['build', '-q', '--target', 'frontend', '--build-arg', `APP_URL=${BASE_URL}`,
       '--build-arg', `LIVEKIT_URL=${SPLIT_LIVEKIT_URL}`, '-t', WEB_IMAGE, '.']);
+    run('docker', ['build', '-q', '--target', 'admin', '--build-arg', `APP_URL=${ADMIN_URL}`, '-t', ADMIN_IMAGE, '.']);
     // A visible build change without altering any inline code covered by CSP.
     run('docker', ['build', '-q', '-t', NEXT_WEB_IMAGE, '-'], REPO_DIR, [
       `FROM ${WEB_IMAGE}`,

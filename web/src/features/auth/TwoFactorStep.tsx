@@ -1,8 +1,7 @@
 import { CircleNotchIcon } from '@/shared/ui/icons';
 import { useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useAuth } from '@/state/AuthContext';
-import { ApiError, resendLoginCode } from '@/shared/api/api';
+import { ApiError } from '@/shared/api/api';
 import type { LoginChallenge } from '@/shared/api/api';
 import { ErrorBanner } from '@/shared/ErrorBanner';
 import { describeApiError } from '@/shared/api/errorText';
@@ -15,9 +14,13 @@ import { AuthHeading, AuthLink } from './AuthLayout';
 /** The second step of a login with two-step verification: the code emailed to the account. A code
  * that expired or ran out of tries can be replaced; a challenge that ended sends the person back to
  * the password. */
-export function TwoFactorStep({ challenge, onBack }: { challenge: LoginChallenge; onBack: (expired: boolean) => void }) {
+export function TwoFactorStep({ challenge, onBack, completeLogin, resendLoginCode }: {
+  challenge: LoginChallenge;
+  onBack: (expired: boolean) => void;
+  completeLogin: (challenge: string, code: string) => Promise<void>;
+  resendLoginCode: (challenge: string) => Promise<unknown>;
+}) {
   const { t } = useTranslation('auth');
-  const { completeLogin } = useAuth();
   const [code, setCode] = useState('');
   const [status, setStatus] = useState<OTPStatus>('idle');
   const [message, setMessage] = useState<string | null>(null);

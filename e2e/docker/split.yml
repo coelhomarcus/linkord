@@ -18,10 +18,14 @@ services:
   app:
     environment:
       APP_URL: http://localhost:18080
+      ADMIN_URL: ${ADMIN_URL:?set ADMIN_URL}
       LIVEKIT_URL: ws://lk.localhost:17880
 
   frontend:
     image: ${WEB_IMAGE:?set WEB_IMAGE}
+
+  admin:
+    image: ${ADMIN_IMAGE:?set ADMIN_IMAGE}
 
   proxy:
     ports: !override

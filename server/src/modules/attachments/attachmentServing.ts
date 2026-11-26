@@ -12,6 +12,7 @@ import { resolveSession } from '../auth/session.js';
 import { conversationExistsForUser } from '../conversations/conversationsRepository.js';
 import { filePathFor } from './attachmentStorage.js';
 import { logger } from '../../lib/logger.js';
+import { requireAdminSession } from '../admin/adminAuth.js';
 
 const log = logger.child({ component: 'attachments' });
 
@@ -137,9 +138,10 @@ async function tryCacheFromRemote(id: string, cookieHeader: string): Promise<boo
 }
 
 export async function serveUpload(request: FastifyRequest<{ Params: { id: string } }>, reply: FastifyReply): Promise<FastifyReply> {
+  const adminOrigin = config.ADMIN_ORIGIN && request.headers.host?.toLowerCase() === config.ADMIN_ORIGIN.host;
   const cookies = parseCookies(request.headers.cookie || '');
-  const sess = await resolveSession(cookies[config.SESSION_COOKIE]);
-  if (!sess) return reply.code(401).send('não autenticado');
+  const sess = adminOrigin ? await requireAdminSession(request, reply) : await resolveSession(cookies[config.SESSION_COOKIE]);
+  if (!sess) return adminOrigin ? reply : reply.code(401).send('não autenticado');
 
   const id = request.params.id;
   if (!ID_RE.test(id)) return reply.code(400).send('id inválido');
@@ -149,7 +151,8 @@ export async function serveUpload(request: FastifyRequest<{ Params: { id: string
   // Same 404 as "row doesn't exist" — an unauthorized id must be
   // indistinguishable from a wrong one, or the response itself becomes an
   // oracle for probing which UUIDs are real.
-  if (!(await canViewAttachment(row, sess.userId))) return reply.code(404).send('não encontrado');
+  const visible = adminOrigin ? row.messageId === null : await canViewAttachment(row, sess.userId);
+  if (!visible) return reply.code(404).send('não encontrado');
   const policy = cachePolicyFor(row, request.headers['if-none-match']);
   if (policy.notModified) {
     return reply.code(304).header('ETag', policy.etag!).header('Cache-Control', policy.cacheControl).send();
@@ -160,7 +163,7 @@ export async function serveUpload(request: FastifyRequest<{ Params: { id: string
   try {
     size = (await fs.stat(path)).size;
   } catch {
-    if (!(await tryCacheFromRemote(id, request.headers.cookie || ''))) return reply.code(404).send('não encontrado');
+    if (adminOrigin || !(await tryCacheFromRemote(id, request.headers.cookie || ''))) return reply.code(404).send('não encontrado');
     try {
       size = (await fs.stat(path)).size;
     } catch {
@@ -171,7 +174,7 @@ export async function serveUpload(request: FastifyRequest<{ Params: { id: string
   const inline = INLINE_MIME_TYPES.has(row.mimeType);
   const contentType = inline ? row.mimeType : 'application/octet-stream';
   const disposition = contentDispositionFor(inline ? 'inline' : 'attachment', row.fileName);
-  const { cacheControl, etag } = cachePolicyFor(row, request.headers['if-none-match']);
+  const { cacheControl, etag } = adminOrigin ? { cacheControl: 'private, no-store', etag: null } : policy;
   if (etag) reply.header('ETag', etag);
 
   // Range requests are what let <video>/<audio> seek at all — without

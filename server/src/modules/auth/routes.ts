@@ -6,7 +6,8 @@ import { sendJson, sendError, jsonBody } from '../../http/respond.js';
 import { parseCookies, serializeCookie, clearCookie, isSecureRequest } from '../../http/cookies.js';
 import { hashPassword, verifyPassword, needsRehash, DUMMY_HASH } from './password.js';
 import {
-  createSession, resolveSession, destroySession, destroyOtherSessions, destroySessionById, listSessionsForUser,
+  ADMIN_SESSION_SECONDS, createSession, resolveSession, destroySession, destroyOtherSessions, destroySessionById, listSessionsForUser,
+  type SessionScope,
 } from './session.js';
 import { dropSessionConnections } from './sessionConnections.js';
 import { findByEmailLower, findById, findByUsernameLower, isValidEmail, normalizeEmail, privateUser } from '../users/users.js';
@@ -24,6 +25,8 @@ import { isKnownBrowser, noticeLogin, noticeRegistration } from './loginAlert.js
 import { cancelScheduledDeletion, isPastDeletion, scheduleAccountDeletion } from './accountDeletion.js';
 import { clientIpOf, sessionOriginOf } from '../../http/clientInfo.js';
 import { recordAudit } from '../admin/auditLog.js';
+import { requireAdminSession } from '../admin/adminAuth.js';
+import { adminCookieName, requireAdminOrigin } from '../admin/adminOrigin.js';
 import type { SessionUser } from '../../types.js';
 import * as ratelimit from './ratelimit.js';
 import { usernameTag } from './logPseudonym.js';
@@ -67,7 +70,8 @@ const NO_USER_ID = '00000000-0000-0000-0000-000000000000';
 // Wrong current passwords on the logged-in confirmations (two-step, password change).
 const passwordConfirmKey = (userId: string) => `pw-confirm:${userId}`;
 
-const hashChallenge = (challenge: string) => crypto.createHash('sha256').update(challenge).digest('hex');
+const hashChallenge = (challenge: string, scope: SessionScope) =>
+  crypto.createHash('sha256').update(scope === 'admin' ? `admin:${challenge}` : challenge).digest('hex');
 
 /** `ana@gmail.com` → `a**@gmail.com`: enough to recognize the address on the login screen. */
 function maskEmail(email: string): string {
@@ -98,12 +102,21 @@ function safeCompare(a: unknown, b: unknown): boolean {
   return crypto.timingSafeEqual(bufA, bufB);
 }
 
-function setSessionCookie(request: FastifyRequest, reply: FastifyReply, rawToken: string): void {
-  const cookie = serializeCookie(config.SESSION_COOKIE, rawToken, {
-    maxAgeSec: config.SESSION_TTL_DAYS * 24 * 60 * 60,
-    secure: isSecureRequest(request.raw),
+function setSessionCookie(request: FastifyRequest, reply: FastifyReply, rawToken: string, scope: SessionScope = 'app'): void {
+  const admin = scope === 'admin';
+  const cookie = serializeCookie(admin ? adminCookieName() : config.SESSION_COOKIE, rawToken, {
+    maxAgeSec: admin ? ADMIN_SESSION_SECONDS : config.SESSION_TTL_DAYS * 24 * 60 * 60,
+    secure: admin ? config.ADMIN_ORIGIN?.secure === true : isSecureRequest(request.raw),
   });
   reply.header('Set-Cookie', cookie);
+}
+
+function publicLoginUser(user: User) {
+  return { ...privateUser(user), adminUrl: config.ADMIN_ORIGIN?.url };
+}
+
+function adminIdentity(user: { id: string; username: string; locale: string }) {
+  return { id: user.id, username: user.username, locale: resolveLocale(user.locale) };
 }
 
 async function handleRegister(request: FastifyRequest, reply: FastifyReply): Promise<void> {
@@ -183,10 +196,10 @@ async function handleRegister(request: FastifyRequest, reply: FastifyReply): Pro
   log.info('account registered', { userId: user.id, username: user.username });
   // A new account has no friends or shared conversations, so scoped presence would deliver this
   // event to nobody.
-  sendJson(reply, 201, { user: privateUser(user) });
+  sendJson(reply, 201, { user: publicLoginUser(user) });
 }
 
-async function handleLogin(request: FastifyRequest, reply: FastifyReply): Promise<void> {
+async function handleLogin(request: FastifyRequest, reply: FastifyReply, scope: SessionScope = 'app'): Promise<void> {
   const ipKey = `ip:${ipOfRequest(request)}`;
   const ipBlockedSec = await ratelimit.checkBlocked(ipKey);
   if (ipBlockedSec) {
@@ -236,6 +249,7 @@ async function handleLogin(request: FastifyRequest, reply: FastifyReply): Promis
     return sendError(reply, 403, 'account_unavailable', 'Esta conta está indisponível. Fale com a administração.');
   }
   if (isPastDeletion(user)) return accountDeletedError(reply);
+  if (scope === 'admin' && user.role !== 'admin') return sendError(reply, 403, 'forbidden', 'Apenas administradores.');
 
   if (needsRehash(user.passwordHash)) {
     hashPassword(password)
@@ -243,14 +257,17 @@ async function handleLogin(request: FastifyRequest, reply: FastifyReply): Promis
       .catch(() => {});
   }
 
-  if (user.twoFactorEmail) return startLoginChallenge(reply, user);
+  if (user.twoFactorEmail) return startLoginChallenge(reply, user, scope);
+  return finishLogin(request, reply, user, scope);
+}
 
+async function finishLogin(request: FastifyRequest, reply: FastifyReply, user: User, scope: SessionScope, twoFactor = false): Promise<void> {
   const origin = sessionOriginOf(request);
-  const { rawToken } = await createSession(user.id, origin);
+  const { rawToken } = await createSession(user.id, origin, scope);
   noticeLogin(user, origin);
-  setSessionCookie(request, reply, rawToken);
-  log.info('login', { userId: user.id, username: user.username });
-  sendJson(reply, 200, await signedIn(request, user));
+  setSessionCookie(request, reply, rawToken, scope);
+  log.info('login', { userId: user.id, username: user.username, scope, twoFactor });
+  sendJson(reply, 200, scope === 'admin' ? { user: adminIdentity(user) } : await signedIn(request, user));
 }
 
 /** Who a failed login was for, without the typed name: it may be the person's password. A name that
@@ -263,7 +280,7 @@ function failedLoginName(user: User | null, typed: string): { userId: string } |
  * the answer says so, for the client to tell the person. */
 async function signedIn(request: FastifyRequest, user: User): Promise<{ user: ReturnType<typeof privateUser>; deletionCancelled?: true }> {
   const cancelled = await cancelScheduledDeletion({ id: user.id, username: user.username }, request.id);
-  return cancelled ? { user: privateUser(user), deletionCancelled: true } : { user: privateUser(user) };
+  return { user: publicLoginUser(user), ...(cancelled ? { deletionCancelled: true } : {}) };
 }
 
 function accountDeletedError(reply: FastifyReply): void {
@@ -273,7 +290,7 @@ function accountDeletedError(reply: FastifyReply): void {
 /** The right password with two-step login on: no session yet, a code to the account's email and a
  * challenge the browser holds until it sends the code back. Only reachable with the right password,
  * so the answer reveals nothing about which accounts exist. */
-async function startLoginChallenge(reply: FastifyReply, user: User): Promise<void> {
+async function startLoginChallenge(reply: FastifyReply, user: User, scope: SessionScope): Promise<void> {
   if (!user.email || !isEmailDeliveryConfigured()) {
     log.error('two-step login cannot send its code', { userId: user.id, hasEmail: Boolean(user.email) });
     return sendError(reply, 503, 'email_unavailable', 'Não foi possível enviar o código de verificação agora. Tente novamente mais tarde.');
@@ -283,7 +300,7 @@ async function startLoginChallenge(reply: FastifyReply, user: User): Promise<voi
 
   const challenge = crypto.randomBytes(32).toString('base64url');
   try {
-    await issueAndSendCode(user.id, user.email, user.username, 'login', resolveLocale(user.locale), hashChallenge(challenge));
+    await issueAndSendCode(user.id, user.email, user.username, 'login', resolveLocale(user.locale), hashChallenge(challenge, scope));
   } catch {
     return sendError(reply, 503, 'email_unavailable', 'Não foi possível enviar o código de verificação agora. Tente novamente mais tarde.');
   }
@@ -294,7 +311,7 @@ async function startLoginChallenge(reply: FastifyReply, user: User): Promise<voi
 type ChallengeLookup = { user: User; challengeHash: string } | { refused: true };
 
 /** Resolves the challenge of a login's second step, answering the request itself when it cannot go on. */
-async function loginChallengeFor(request: FastifyRequest, reply: FastifyReply, challenge: string): Promise<ChallengeLookup> {
+async function loginChallengeFor(request: FastifyRequest, reply: FastifyReply, challenge: string, scope: SessionScope): Promise<ChallengeLookup> {
   const ipKey = `ip:${ipOfRequest(request)}`;
   const ipBlockedSec = await ratelimit.checkBlocked(ipKey);
   if (ipBlockedSec) { rateLimitedReply(reply, ipBlockedSec); return { refused: true }; }
@@ -304,7 +321,7 @@ async function loginChallengeFor(request: FastifyRequest, reply: FastifyReply, c
     return { refused: true };
   };
   if (!CHALLENGE_RE.test(challenge)) return expired();
-  const challengeHash = hashChallenge(challenge);
+  const challengeHash = hashChallenge(challenge, scope);
   const found = await findLoginChallenge(challengeHash);
   if (!found || found.startedAt.getTime() + LOGIN_CHALLENGE_MAX_MS < Date.now()) return expired();
   const user = await findById(found.userId);
@@ -317,14 +334,18 @@ async function loginChallengeFor(request: FastifyRequest, reply: FastifyReply, c
     accountDeletedError(reply);
     return { refused: true };
   }
+  if (scope === 'admin' && user.role !== 'admin') {
+    sendError(reply, 403, 'forbidden', 'Apenas administradores.');
+    return { refused: true };
+  }
   return { user, challengeHash };
 }
 
-async function handleLoginVerify(request: FastifyRequest, reply: FastifyReply): Promise<void> {
+async function handleLoginVerify(request: FastifyRequest, reply: FastifyReply, scope: SessionScope = 'app'): Promise<void> {
   const body = jsonBody(request.body);
   const challenge = String(body.challenge == null ? '' : body.challenge);
   const code = String(body.code == null ? '' : body.code).trim();
-  const lookup = await loginChallengeFor(request, reply, challenge);
+  const lookup = await loginChallengeFor(request, reply, challenge, scope);
   if ('refused' in lookup) return;
   const { user, challengeHash } = lookup;
   if (!/^\d{6}$/.test(code)) return sendError(reply, 400, 'invalid_code', 'Informe o código de 6 dígitos.');
@@ -345,17 +366,12 @@ async function handleLoginVerify(request: FastifyRequest, reply: FastifyReply): 
 
   await consumeLoginChallenge(challengeHash);
   await ratelimit.reset(userKey).catch(() => {});
-  const origin = sessionOriginOf(request);
-  const { rawToken } = await createSession(user.id, origin);
-  noticeLogin(user, origin);
-  setSessionCookie(request, reply, rawToken);
-  log.info('login', { userId: user.id, username: user.username, twoFactor: true });
-  sendJson(reply, 200, await signedIn(request, user));
+  await finishLogin(request, reply, user, scope, true);
 }
 
-async function handleLoginResend(request: FastifyRequest, reply: FastifyReply): Promise<void> {
+async function handleLoginResend(request: FastifyRequest, reply: FastifyReply, scope: SessionScope = 'app'): Promise<void> {
   const body = jsonBody(request.body);
-  const lookup = await loginChallengeFor(request, reply, String(body.challenge == null ? '' : body.challenge));
+  const lookup = await loginChallengeFor(request, reply, String(body.challenge == null ? '' : body.challenge), scope);
   if ('refused' in lookup) return;
   const { user, challengeHash } = lookup;
   const send = await ratelimit.consume(`login-code:${user.id}`, CODE_SEND_RULE);
@@ -368,11 +384,13 @@ async function handleLoginResend(request: FastifyRequest, reply: FastifyReply): 
   sendJson(reply, 200, { ok: true });
 }
 
-async function handleLogout(request: FastifyRequest, reply: FastifyReply): Promise<void> {
+async function handleLogout(request: FastifyRequest, reply: FastifyReply, scope: SessionScope = 'app'): Promise<void> {
   const cookies = parseCookies(request.headers.cookie || '');
-  const tokenHash = await destroySession(cookies[config.SESSION_COOKIE]);
-  if (tokenHash) dropSessionConnections([tokenHash]);
-  reply.header('Set-Cookie', clearCookie(config.SESSION_COOKIE, { secure: isSecureRequest(request.raw) }));
+  const admin = scope === 'admin';
+  const name = admin ? adminCookieName() : config.SESSION_COOKIE;
+  const tokenHash = await destroySession(cookies[name], scope);
+  if (tokenHash && !admin) dropSessionConnections([tokenHash]);
+  reply.header('Set-Cookie', clearCookie(name, { secure: admin ? config.ADMIN_ORIGIN?.secure === true : isSecureRequest(request.raw) }));
   reply.code(204).header('Cache-Control', 'no-store').send();
 }
 
@@ -393,10 +411,28 @@ async function handleMe(request: FastifyRequest, reply: FastifyReply): Promise<v
       profileLinks: sess.profileLinks,
       role: sess.role,
       locale: sess.locale,
+      adminUrl: config.ADMIN_ORIGIN?.url,
     },
     // the settings that follow the account (modules/users/preferences.ts); null until a device seeds them
     preferences: await getPreferences(sess.userId),
   });
+}
+
+type ScopedAuthHandler = (request: FastifyRequest, reply: FastifyReply, scope: SessionScope) => Promise<void>;
+
+function adminOnly(handler: ScopedAuthHandler) {
+  return async (request: FastifyRequest, reply: FastifyReply) => {
+    if (requireAdminOrigin(request, reply)) await handler(request, reply, 'admin');
+  };
+}
+
+async function handleAdminMe(request: FastifyRequest, reply: FastifyReply): Promise<void> {
+  if (!config.ADMIN_ORIGIN) {
+    sendError(reply, 404, 'not_found', 'Não encontrado.');
+    return;
+  }
+  const sess = await requireAdminSession(request, reply);
+  if (sess) sendJson(reply, 200, { user: adminIdentity({ id: sess.userId, username: sess.username, locale: sess.locale }) });
 }
 
 function purposeError(reply: FastifyReply, reason: 'invalid_code' | 'code_expired' | 'too_many_attempts'): void {
@@ -941,6 +977,11 @@ async function handleDeletionConfirm(request: FastifyRequest, reply: FastifyRepl
 }
 
 export function registerAuthRoutes(fastify: FastifyInstance): void {
+  fastify.post('/api/admin/auth/login', adminOnly(handleLogin));
+  fastify.post('/api/admin/auth/login/verify', adminOnly(handleLoginVerify));
+  fastify.post('/api/admin/auth/login/resend', adminOnly(handleLoginResend));
+  fastify.post('/api/admin/auth/logout', adminOnly(handleLogout));
+  fastify.get('/api/admin/auth/me', handleAdminMe);
   fastify.post('/api/auth/register', handleRegister);
   fastify.post('/api/auth/login', handleLogin);
   fastify.post('/api/auth/login/verify', handleLoginVerify);

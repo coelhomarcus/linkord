@@ -4,7 +4,7 @@ How to run Linkord in production, what the container expects from the host, and 
 
 ## What gets deployed
 
-The [`Dockerfile`](../Dockerfile) has three targets. The default `monolith` image serves the web app, API, uploads and Socket.IO from Bun on port **3000**. Use this image for standalone installs. For independent deploys, the `backend` target serves the API, uploads and Socket.IO on **3000**, and the `frontend` target serves the static site on **8080**. Both Bun images include the backup scripts and PostgreSQL client tools.
+The [`Dockerfile`](../Dockerfile) provides four deployment targets. The default `monolith` image serves the web app, API, uploads and Socket.IO from Bun on port **3000**. Use this image for standalone installs. For independent deploys, the `backend` target serves the API, uploads and Socket.IO on **3000**, and the `frontend` and `admin` targets serve the public site and administration site on **8080**. Both Bun images include the backup scripts and PostgreSQL client tools.
 
 - **Health checks:** both public, both answer only `{ ok: … }`.
   - `GET /healthz` (liveness): `200` while the process serves HTTP. The image's `HEALTHCHECK`, Dokploy and the end-to-end stack use it.
@@ -135,6 +135,16 @@ Dokploy runs the app as a Swarm service, so the container's name changes with ev
 ```bash
 docker ps --format '{{.Names}}' | grep <app-name>
 ```
+
+### Separate administration site
+
+Set up a third Dokploy Application, `linkord-admin`, in the same environment. Use the same repository and branch as `linkord-web`, the `admin` Docker target, and port `8080`. Give it the same Watch Paths as `linkord-web` and set the build argument `APP_URL` to the new admin site's HTTPS origin. Point its DNS at the same Traefik instance.
+
+Deploy the admin image and install the [admin Traefik template](../docker/web/traefik.admin.dokploy.yml) under the new Application's **Advanced → Traefik**. Substitute its hostname, its internal service name, and the existing backend service name. Leave **Domains** empty when the Traefik file manages routing. Verify the admin root serves its HTML over HTTPS. Its API goes to the existing backend with the original `Host` header. The `/uploads/` route serves only profile and server images to that site.
+
+Set `ADMIN_URL` to the same HTTPS origin in the backend's runtime environment and redeploy the backend. This enables the separate sign-in and closes `/api/admin/*` on the public host. Links under `/admin` in the main app forward to the new site. The admin session lasts up to 12 hours, uses the account's existing two-step setting and is revocable from its session list. Chat and voice moderation still run in the main app.
+
+Verify that the admin domain's `/api/admin/auth/me` returns `401` before login, the public domain's `/api/admin/users` returns `404`, and an active admin can sign in and sign out on the new domain. If rollback is needed, remove `ADMIN_URL` and redeploy the backend before retiring the new Traefik routes. This restores the integrated panel once the public app refreshes its session.
 
 ## Upgrading from a version with playgrounds
 

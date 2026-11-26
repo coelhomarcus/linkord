@@ -7,6 +7,7 @@ import { sendError } from '../../http/respond.js';
 import { parseCookies } from '../../http/cookies.js';
 import { resolveSession } from '../auth/session.js';
 import type { AuditActor } from './auditLog.js';
+import { adminCookieName, requireAdminOrigin } from './adminOrigin.js';
 
 /** The role and status a session (or a live socket) carries are snapshots —
  * up to 60 s stale in the session cache and frozen for the life of a socket.
@@ -19,16 +20,23 @@ export async function isActiveAdmin(userId: string): Promise<boolean> {
 
 /** HTTP guard for /api/admin/*. 401 without a session, 403 for anyone who is
  * not an active admin RIGHT NOW. */
-export async function requireAdmin(request: FastifyRequest, reply: FastifyReply): Promise<AuditActor | null> {
+export async function requireAdminSession(request: FastifyRequest, reply: FastifyReply) {
+  const split = config.ADMIN_ORIGIN !== null;
+  if (split && !requireAdminOrigin(request, reply)) return null;
   const cookies = parseCookies(request.headers.cookie || '');
-  const sess = await resolveSession(cookies[config.SESSION_COOKIE]);
+  const sess = await resolveSession(split ? cookies[adminCookieName()] : cookies[config.SESSION_COOKIE], split ? 'admin' : 'app');
   if (!sess) {
     sendError(reply, 401, 'unauthenticated', 'Não autenticado.');
     return null;
   }
-  if (!(await isActiveAdmin(sess.userId))) {
+  if (!(split ? sess.role === 'admin' : await isActiveAdmin(sess.userId))) {
     sendError(reply, 403, 'forbidden', 'Apenas administradores.');
     return null;
   }
-  return { id: sess.userId, username: sess.username };
+  return sess;
+}
+
+export async function requireAdmin(request: FastifyRequest, reply: FastifyReply): Promise<AuditActor | null> {
+  const sess = await requireAdminSession(request, reply);
+  return sess ? { id: sess.userId, username: sess.username } : null;
 }

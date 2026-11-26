@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import type { FormEvent } from 'react';
 import { useAuth } from '@/state/AuthContext';
 import type { LoginChallenge } from '@/shared/api/api';
+import { resendLoginCode } from '@/shared/api/api';
 import { ErrorBanner } from '@/shared/ErrorBanner';
 import { SettingsNotice } from '@/shared/ui/settings-layout';
 import { describeApiError } from '@/shared/api/errorText';
@@ -21,7 +22,7 @@ interface LoginFieldErrors {
 
 export function LoginScreen({ onRegister, onForgotPassword }: { onRegister: () => void; onForgotPassword: () => void }) {
   const { t, i18n } = useTranslation('auth');
-  const { login, accountNotice } = useAuth();
+  const { login, completeLogin, accountNotice } = useAuth();
   const offer = useDesktopAppOffer();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
@@ -56,6 +57,8 @@ export function LoginScreen({ onRegister, onForgotPassword }: { onRegister: () =
       <AuthCard>
         <TwoFactorStep
           challenge={challenge}
+          completeLogin={completeLogin}
+          resendLoginCode={resendLoginCode}
           onBack={(expired) => {
             setChallenge(null);
             setPassword('');
