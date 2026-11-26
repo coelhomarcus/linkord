@@ -13,7 +13,7 @@ vi.mock('@/features/desktopApp/desktopDownloads', async (importOriginal) => ({
 const downloads = {
   version: '0.3.0',
   page: 'https://github.com/o/r/releases/tag/v0.3.0',
-  files: { windows: 'https://github.com/o/r/releases/download/v0.3.0/Linkord-0.3.0-win-x64.exe' },
+  files: { windows: 'https://github.com/o/r/releases/download/v0.3.0/Overcord-0.3.0-win-x64.exe' },
 };
 
 function useUserAgent(ua: string) {
@@ -26,12 +26,12 @@ beforeEach(() => {
   useUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36');
 });
 
-afterEach(() => { delete window.linkordDesktop; });
+afterEach(() => { delete window.overcordDesktop; });
 
 describe('DesktopAppAnnouncement', () => {
   it('announces the desktop app once, with this computer\'s installer', async () => {
     const { unmount } = renderWithRoom(<DesktopAppAnnouncement />);
-    expect(await screen.findByRole('dialog', { name: 'O Linkord agora tem app para computador' })).toBeInTheDocument();
+    expect(await screen.findByRole('dialog', { name: 'O Overcord agora tem app para computador' })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Baixar para Windows' })).toHaveAttribute('href', downloads.files.windows);
     await userEvent.setup().click(screen.getByRole('button', { name: 'Agora não' }));
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
@@ -50,11 +50,11 @@ describe('DesktopAppAnnouncement', () => {
   });
 
   it('says nothing inside the desktop app, outside Windows, or without a release', async () => {
-    window.linkordDesktop = { platform: 'win32', version: '0.3.0' };
+    window.overcordDesktop = { platform: 'win32', version: '0.3.0' };
     const { unmount } = renderWithRoom(<DesktopAppAnnouncement />);
     expect(fetchDownloads).not.toHaveBeenCalled();
     unmount();
-    delete window.linkordDesktop;
+    delete window.overcordDesktop;
 
     for (const ua of ['Mozilla/5.0 (Linux; Android 15; Pixel 9) Chrome/142.0', 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) Safari/605.1.15']) {
       useUserAgent(ua);

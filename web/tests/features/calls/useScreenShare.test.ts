@@ -380,7 +380,7 @@ describe('useScreenShare — in the desktop app', () => {
       { id: 'screen:1:0', name: 'Entire Screen', kind: 'screen' as const, thumbnail: null, appIcon: null },
       { id: 'window:42:0', name: 'Editor', kind: 'window' as const, thumbnail: null, appIcon: null },
     ]);
-    window.linkordDesktop = { platform: 'win32', version: '0.1.0', screenShare: { picker, systemAudio: true, listSources, select } };
+    window.overcordDesktop = { platform: 'win32', version: '0.1.0', screenShare: { picker, systemAudio: true, listSources, select } };
     return { listSources, select };
   }
 
@@ -389,7 +389,7 @@ describe('useScreenShare — in the desktop app', () => {
     await vi.waitFor(() => expect(result.current).not.toBeNull());
   }
 
-  afterEach(() => { delete window.linkordDesktop; });
+  afterEach(() => { delete window.overcordDesktop; });
 
   it('asks the in-app picker first and hands the pick to the desktop app before capturing', async () => {
     const { select } = stubDesktop('app');

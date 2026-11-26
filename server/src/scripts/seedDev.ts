@@ -33,7 +33,7 @@ const serverIds = {
   webhook: '40000000-0000-4000-8000-000000000007',
 } as const;
 const requestId = '30000000-0000-4000-8000-000000000001';
-const password = 'LinkordDev123!';
+const password = 'OvercordDev123!';
 
 async function seed(): Promise<void> {
   if (process.env.NODE_ENV !== 'development') throw new Error('Development mode is required.');
@@ -46,10 +46,10 @@ async function seed(): Promise<void> {
 
   await db.transaction(async (tx) => {
     await tx.insert(users).values([
-      { id: accountIds.ana, username: 'ana', email: 'ana@linkord.test', displayName: 'Ana Costa', avatarColor: 'fuchsia', bio: 'Testando o Linkord no celular.', passwordHash },
-      { id: accountIds.bruno, username: 'bruno', email: 'bruno@linkord.test', displayName: 'Bruno Lima', avatarColor: 'blue', bio: 'Design e conversas.', passwordHash },
-      { id: accountIds.carla, username: 'carla', email: 'carla@linkord.test', displayName: 'Carla Souza', avatarColor: 'green', bio: 'Projetos em grupo.', passwordHash },
-      { id: accountIds.davi, username: 'davi', email: 'davi@linkord.test', displayName: 'Davi Rocha', avatarColor: 'orange', bio: 'Sempre por aqui.', passwordHash },
+      { id: accountIds.ana, username: 'ana', email: 'ana@overcord.test', displayName: 'Ana Costa', avatarColor: 'fuchsia', bio: 'Testando o Overcord no celular.', passwordHash },
+      { id: accountIds.bruno, username: 'bruno', email: 'bruno@overcord.test', displayName: 'Bruno Lima', avatarColor: 'blue', bio: 'Design e conversas.', passwordHash },
+      { id: accountIds.carla, username: 'carla', email: 'carla@overcord.test', displayName: 'Carla Souza', avatarColor: 'green', bio: 'Projetos em grupo.', passwordHash },
+      { id: accountIds.davi, username: 'davi', email: 'davi@overcord.test', displayName: 'Davi Rocha', avatarColor: 'orange', bio: 'Sempre por aqui.', passwordHash },
     ]).onConflictDoNothing();
 
     const friendship = (id: string, a: string, b: string, requestedBy: string, status: string) => ({
@@ -148,7 +148,7 @@ async function seed(): Promise<void> {
       messageId: mentionId, dedupeKey: 'dev:mention:ana', createdAt: time(7),
     }).onConflictDoNothing();
   });
-  console.log('Seeded ana, bruno, carla and davi. Password: LinkordDev123!');
+  console.log('Seeded ana, bruno, carla and davi. Password: OvercordDev123!');
 }
 
 seed().then(() => pool.end()).catch(async (error) => {

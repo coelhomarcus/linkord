@@ -31,7 +31,7 @@ let mailbox: { to: string[]; subject: string; text: string }[] = [];
 const saved = { key: config.RESEND_API_KEY, from: config.RESEND_FROM_EMAIL, appUrl: config.APP_URL };
 beforeEach(() => {
   mailbox = [];
-  Object.assign(config, { RESEND_API_KEY: 're_test', RESEND_FROM_EMAIL: 'Linkord <noreply@example.test>', APP_URL: 'https://chat.example.test' });
+  Object.assign(config, { RESEND_API_KEY: 're_test', RESEND_FROM_EMAIL: 'Overcord <noreply@example.test>', APP_URL: 'https://chat.example.test' });
   mock.method(globalThis, 'fetch', async (_url: string, init: RequestInit) => {
     mailbox.push(JSON.parse(String(init.body)));
     return new Response('{}', { status: 200 });
@@ -188,7 +188,7 @@ describe('the export', () => {
     const res = await download(me.cookie, exportId);
     assert.equal(res.status, 200);
     assert.equal(res.headers['content-type'], 'application/zip');
-    assert.match(String(res.headers['content-disposition']), new RegExp(`attachment; filename="linkord-${me.username}-\\d{4}-\\d{2}-\\d{2}\\.zip"`));
+    assert.match(String(res.headers['content-disposition']), new RegExp(`attachment; filename="overcord-${me.username}-\\d{4}-\\d{2}-\\d{2}\\.zip"`));
     assert.equal(res.headers['cache-control'], 'no-store');
 
     const entries = await unzip(res.raw);

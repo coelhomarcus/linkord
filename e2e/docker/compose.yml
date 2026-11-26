@@ -2,19 +2,19 @@
 # Dokploy), a LiveKit dev server, its own throwaway Postgres and a mail sink
 # standing in for Resend. Driven by e2e/stack/stack.ts; never shares anything
 # with the dev database.
-name: linkord-e2e
+name: overcord-e2e
 
 services:
   postgres:
     image: postgres:17-alpine
     environment:
-      POSTGRES_USER: linkord
-      POSTGRES_PASSWORD: linkord
-      POSTGRES_DB: linkord
+      POSTGRES_USER: overcord
+      POSTGRES_PASSWORD: overcord
+      POSTGRES_DB: overcord
     tmpfs:
       - /var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U linkord -d linkord"]
+      test: ["CMD-SHELL", "pg_isready -U overcord -d overcord"]
       interval: 1s
       timeout: 3s
       retries: 30
@@ -46,7 +46,7 @@ services:
     image: ${APP_IMAGE:?set APP_IMAGE}
     env_file: ../.e2e.env
     environment:
-      DATABASE_URL: postgres://linkord:linkord@postgres:5432/linkord
+      DATABASE_URL: postgres://overcord:overcord@postgres:5432/overcord
       # Chrome resolves lk.localhost to the published port on the host.
       # The server uses Compose DNS for LiveKit's room management API.
       LIVEKIT_URL: ws://lk.localhost:7880
@@ -65,7 +65,7 @@ services:
       # RESEND_API_URL would call Resend, but no spec sends mail through one)
       RESEND_API_URL: http://mailsink:8025
       RESEND_API_KEY: e2e-not-a-real-key
-      RESEND_FROM_EMAIL: Linkord <noreply@example.test>
+      RESEND_FROM_EMAIL: Overcord <noreply@example.test>
     extra_hosts:
       # Older images under the upgrade test only read LIVEKIT_URL.
       - "lk.localhost:host-gateway"

@@ -22,7 +22,8 @@ export interface ConversationDraft {
 // would clear whatever conversation is open by then.
 
 const EMPTY_DRAFT: ConversationDraft = { text: '', pendingFiles: [], attachError: null, voice: null };
-const STORAGE_PREFIX = 'linkord:draft:v1:';
+const STORAGE_PREFIX = 'overcord:draft:v1:';
+const LEGACY_STORAGE_PREFIX = 'linkord:draft:v1:';
 const PERSIST_DELAY_MS = 300;
 
 const drafts = new Map<string, ConversationDraft>();
@@ -35,7 +36,7 @@ function draftKey(accountId: string, conversationId: string): string {
 
 function readStoredText(key: string): string {
   try {
-    return sessionStorage.getItem(STORAGE_PREFIX + key) ?? '';
+    return sessionStorage.getItem(STORAGE_PREFIX + key) ?? sessionStorage.getItem(LEGACY_STORAGE_PREFIX + key) ?? '';
   } catch {
     return '';
   }
@@ -51,6 +52,7 @@ function persistText(key: string, text: string): void {
     try {
       if (text) sessionStorage.setItem(STORAGE_PREFIX + key, text);
       else sessionStorage.removeItem(STORAGE_PREFIX + key);
+      sessionStorage.removeItem(LEGACY_STORAGE_PREFIX + key);
     } catch {
       // storage full or blocked — the in-memory draft still works
     }
@@ -107,7 +109,7 @@ export function clearAllDrafts(): void {
   try {
     for (let i = sessionStorage.length - 1; i >= 0; i--) {
       const key = sessionStorage.key(i);
-      if (key?.startsWith(STORAGE_PREFIX)) sessionStorage.removeItem(key);
+      if (key?.startsWith(STORAGE_PREFIX) || key?.startsWith(LEGACY_STORAGE_PREFIX)) sessionStorage.removeItem(key);
     }
   } catch {
     // nothing persisted if storage is unavailable

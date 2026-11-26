@@ -46,7 +46,7 @@
     },
     "share": {
       "label": "Compartilhar minha atividade",
-      "description": "Mostra no seu perfil o jogo ou app que você está usando, como \"Jogando Minecraft\". Funciona no app desktop do Linkord, que reconhece jogos e apps de uma lista conhecida e, com o Discord fechado, os detalhes que os jogos mandam pelo Rich Presence do Discord."
+      "description": "Mostra no seu perfil o jogo ou app que você está usando, como \"Jogando Minecraft\". Funciona no app desktop do Overcord, que reconhece jogos e apps de uma lista conhecida e, com o Discord fechado, os detalhes que os jogos mandam pelo Rich Presence do Discord."
     },
     "shown": {
       "label": "Atividade exibida",
@@ -60,7 +60,7 @@
       "active": "Ativos",
       "hidden": "Ocultos"
     },
-    "detectedEmpty": "Nenhum jogo ou app detectado ainda. Abra um com o Linkord aberto e ele aparece aqui.",
+    "detectedEmpty": "Nenhum jogo ou app detectado ainda. Abra um com o Overcord aberto e ele aparece aqui.",
     "activeEmpty": "Todos os jogos e apps detectados estão ocultos. Mostre um de novo na aba Ocultos.",
     "kindLabel": {
       "playing": "Jogo",
@@ -71,7 +71,7 @@
     "show": "Mostrar",
     "hideLabel": "Ocultar {{name}}",
     "showLabel": "Mostrar {{name}}",
-    "desktopOnly": "A detecção acontece no app desktop do Linkord. Pelo navegador, você só escolhe se compartilha."
+    "desktopOnly": "A detecção acontece no app desktop do Overcord. Pelo navegador, você só escolhe se compartilha."
   },
   "errors": {
     "saveFailed": "Não foi possível salvar. Tente de novo.",

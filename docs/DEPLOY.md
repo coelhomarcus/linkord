@@ -1,6 +1,6 @@
 # Deployment
 
-How to run Linkord in production, what the container expects from the host, and what to look at when something breaks. For running it on your own machine, see [DEVELOPMENT.md](DEVELOPMENT.md).
+How to run Overcord in production, what the container expects from the host, and what to look at when something breaks. For running it on your own machine, see [DEVELOPMENT.md](DEVELOPMENT.md).
 
 ## What gets deployed
 
@@ -36,16 +36,16 @@ After the first start, make yourself an administrator by running `bun --no-env-f
 
 ## The image on its own
 
-Provision PostgreSQL and LiveKit, then build the image and run it behind a TLS reverse proxy. Start from `.env.example` and set `DATABASE_URL`, the public HTTPS `APP_URL`, and the `LIVEKIT_*` values. The addresses must be reachable from the container. If PostgreSQL is on a Docker network, attach Linkord to that network with `--network <name>` and use the database service name in `DATABASE_URL`.
+Provision PostgreSQL and LiveKit, then build the image and run it behind a TLS reverse proxy. Start from `.env.example` and set `DATABASE_URL`, the public HTTPS `APP_URL`, and the `LIVEKIT_*` values. The addresses must be reachable from the container. If PostgreSQL is on a Docker network, attach Overcord to that network with `--network <name>` and use the database service name in `DATABASE_URL`.
 
 ```bash
-docker build -t linkord .
+docker build -t overcord .
 mkdir -p uploads backups
 sudo chown -R 1000:1000 uploads backups
-docker run -d --name linkord --restart unless-stopped --env-file .env \
+docker run -d --name overcord --restart unless-stopped --env-file .env \
   -p 127.0.0.1:3000:3000 -v "$PWD/uploads:/app/uploads" -v "$PWD/backups:/app/backups" \
   --security-opt no-new-privileges:true --cap-drop ALL \
-  --log-opt max-size=10m --log-opt max-file=5 linkord
+  --log-opt max-size=10m --log-opt max-file=5 overcord
 ```
 
 Point the entire public HTTPS domain at `127.0.0.1:3000`. The port stays on loopback because the image trusts `X-Forwarded-For`. Send the original host and HTTPS scheme from the proxy and forward WebSocket upgrades.
@@ -71,17 +71,17 @@ The frontend image generates its Content Security Policy at build time. Set its 
 Provision PostgreSQL and LiveKit, then build the two targets. Replace the example URLs with the values in the backend's `.env`.
 
 ```bash
-docker build --target backend -t linkord-backend .
-docker build --target frontend -t linkord-web \
+docker build --target backend -t overcord-backend .
+docker build --target frontend -t overcord-web \
   --build-arg APP_URL=https://chat.example.com \
   --build-arg LIVEKIT_URL=wss://livekit.example.com .
 ```
 
-Start the backend with the [standalone `docker run` command](#the-image-on-its-own), using `linkord-backend` as the image. Start the frontend on loopback too.
+Start the backend with the [standalone `docker run` command](#the-image-on-its-own), using `overcord-backend` as the image. Start the frontend on loopback too.
 
 ```bash
-docker run -d --name linkord-web --restart unless-stopped \
-  -p 127.0.0.1:8080:8080 linkord-web
+docker run -d --name overcord-web --restart unless-stopped \
+  -p 127.0.0.1:8080:8080 overcord-web
 ```
 
 Use the [example Caddyfile](../docker/web/Caddyfile) with your public hostname. It assumes Caddy terminates HTTPS directly and can reach both published loopback ports. If Caddy runs in Docker, put it on a shared network with both services and replace the loopback destinations with their Docker DNS names and ports. Point DNS at Caddy and allow inbound TCP ports `80` and `443` for [automatic HTTPS](https://caddyserver.com/docs/automatic-https).
@@ -92,19 +92,19 @@ Use two **Applications** in the same project and environment, both with the GitH
 
 | Application | Docker Build Stage | Port | Watch Paths |
 | --- | --- | --- | --- |
-| `linkord-backend` | `backend` | `3000` | `server/**`, `package.json`, `bun.lock`, `bunfig.toml`, `Dockerfile`, `.dockerignore` |
-| `linkord-web` | `frontend` | `8080` | `web/**`, `packages/frontend-shared/**`, `docker/web/generate-headers.ts`, `docker/web/nginx.conf`, `docker/web/public-routes.conf`, `server/src/http/pageSecurityPolicy.ts`, `server/src/modules/link-preview/playerHosts.ts`, `Dockerfile`, `.dockerignore` |
+| `overcord-backend` | `backend` | `3000` | `server/**`, `package.json`, `bun.lock`, `bunfig.toml`, `Dockerfile`, `.dockerignore` |
+| `overcord-web` | `frontend` | `8080` | `web/**`, `packages/frontend-shared/**`, `docker/web/generate-headers.ts`, `docker/web/nginx.conf`, `docker/web/public-routes.conf`, `server/src/http/pageSecurityPolicy.ts`, `server/src/modules/link-preview/playerHosts.ts`, `Dockerfile`, `.dockerignore` |
 
-Keep one replica of the backend. Its environment holds the database and integration settings above. Keep the existing bind mounts for `/app/uploads` and `/app/backups`. For a new installation, create the source folders on the host as root for uid 1000:
+Keep one replica of the backend. Its environment holds the database and integration settings above. Keep the existing bind mounts for `/app/uploads` and `/app/backups` during a rename, even if the host folders use the old name. Keep an existing `LIVEKIT_ROOM_NAME` value so active calls can reconnect across deploys. For a new installation, create the source folders on the host as root for uid 1000:
 
 ```bash
-mkdir -p /srv/linkord/uploads /srv/linkord/backups
-chown -R 1000:1000 /srv/linkord/uploads /srv/linkord/backups
+mkdir -p /srv/overcord/uploads /srv/overcord/backups
+chown -R 1000:1000 /srv/overcord/uploads /srv/overcord/backups
 ```
 
-In `linkord-web`, enter the [frontend build arguments](#routing-a-split-deploy) in **Environment → Build-time Arguments**, one assignment per line. Leave the runtime environment and volume settings empty and keep **Create .env File** off.
+In `overcord-web`, enter the [frontend build arguments](#routing-a-split-deploy) in **Environment → Build-time Arguments**, one assignment per line. Leave the runtime environment and volume settings empty and keep **Create .env File** off.
 
-Fill in the [Traefik template](../docker/web/traefik.dokploy.yml) and install it in `linkord-web` under **Advanced → Traefik**.
+Fill in the [Traefik template](../docker/web/traefik.dokploy.yml) and install it in `overcord-web` under **Advanced → Traefik**.
 
 | Placeholder | Replace with |
 | --- | --- |
@@ -118,7 +118,7 @@ For a fresh split deploy, leave **Domains** empty on both applications. The inst
 
 The web image sends `private, no-cache, no-store, max-age=0` for `/sw.js` so browsers can check for updates even behind a CDN. Verify that the CDN preserves those directives on the public domain. HTML still uses `no-cache` and versioned assets use immutable caching.
 
-**Upgrading from a separate profile sync worker.** Confirm that the backend has the [credentials for the providers you use](INTEGRATIONS.md#overview). Disable Auto Deploy on `linkord-connection-sync` before merging a revision that removes its build target. Keep the worker running until the new backend passes `/readyz`, then stop it. Keep the worker configuration for rollback. If you need to roll back to a revision that uses the separate worker, start the worker before rolling back the backend.
+**Upgrading from a separate profile sync worker.** Confirm that the backend has the [credentials for the providers you use](INTEGRATIONS.md#overview). Disable Auto Deploy on `overcord-connection-sync` before merging a revision that removes its build target. Keep the worker running until the new backend passes `/readyz`, then stop it. Keep the worker configuration for rollback. If you need to roll back to a revision that uses the separate worker, start the worker before rolling back the backend.
 
 **Migrating a monolith on Dokploy.** Run `bun run --cwd e2e test:split` with Docker and Chrome. Before merging to `main`, pause Auto Deploy on the existing Application and record its deployed commit, build settings and Traefik configuration. Bring up the frontend and add its routing above the existing monolith route. Check HTTPS, a direct link, a signed-in session, `/readyz`, uploads and the socket. Then redeploy the existing Application with the `backend` target. After it is healthy, retire its old catch-all router, verify both route priorities and enable Auto Deploy with the listed Watch Paths.
 
@@ -138,7 +138,7 @@ docker ps --format '{{.Names}}' | grep <app-name>
 
 ### Separate administration site
 
-Set up a third Dokploy Application, `linkord-admin`, in the same environment. Use the same repository and branch as `linkord-web`, the `admin` Docker target, and port `8080`. Set the build argument `APP_URL` to the admin site's HTTPS origin and point its DNS at the same Traefik instance. Add these Watch Paths to the admin Application:
+Set up a third Dokploy Application, `overcord-admin`, in the same environment. Use the same repository and branch as `overcord-web`, the `admin` Docker target, and port `8080`. Set the build argument `APP_URL` to the admin site's HTTPS origin and point its DNS at the same Traefik instance. Add these Watch Paths to the admin Application:
 
 - `admin/**`
 - `packages/frontend-shared/**`
@@ -157,7 +157,7 @@ After changing the Watch Paths, deploy the admin site, the public web app and th
 
 ## Upgrading from a version with playgrounds
 
-Stop the retired playground service's container and remove `PLAYGROUND_URL`, `PLAYGROUND_INTERNAL_URL` and `PLAYGROUND_SECRET` from the app's environment. Migration `0084` removes the playground mode, chat links, stored skins and account deletion queue from the Linkord database. Former playground channels keep their IDs and work as ordinary voice channels.
+Stop the retired playground service's container and remove `PLAYGROUND_URL`, `PLAYGROUND_INTERNAL_URL` and `PLAYGROUND_SECRET` from the app's environment. Migration `0084` removes the playground mode, chat links, stored skins and account deletion queue from the Overcord database. Former playground channels keep their IDs and work as ordinary voice channels.
 
 ## Folders and permissions
 
@@ -202,7 +202,7 @@ See [Restarting the server during a call](DEVELOPMENT.md#restarting-the-server-d
 Fastify sets the backend headers. In the split deploy the frontend image generates its own headers from the same policy code and its own build files. The reverse proxy should pass these headers through.
 
 - `Content-Security-Policy`, generated from the public origin, LiveKit URL, integration flags and the frontend build. A wrong `LIVEKIT_URL` blocks calls in the browser even when the server reaches LiveKit. How it is built and how to allow a new host: [DEVELOPMENT.md](DEVELOPMENT.md#content-security-policy).
-- `X-Frame-Options: DENY` and `frame-ancestors 'none'`: no other site can frame Linkord.
+- `X-Frame-Options: DENY` and `frame-ancestors 'none'`: no other site can frame Overcord.
 - `Strict-Transport-Security` (one year, without `includeSubDomains`) on HTTPS requests.
 
 Browsers report violations to `POST /api/csp-reports`, and the server logs them as `content security policy violation`. A proxy or CDN that injects scripts shows up there: Cloudflare's Web Analytics beacon (`static.cloudflareinsights.com`) is blocked, so turn that injection off. `CSP_REPORT_ONLY=1` reports without blocking.
@@ -212,7 +212,7 @@ Browsers report violations to `POST /api/csp-reports`, and the server logs them 
 The database and the uploads must be backed up together, and the image does it without stopping the app: `bun --no-env-file server/dist/scripts/backup.js` (`bun run backup` from a checkout) writes one folder to `BACKUP_DIR` (`/app/backups` in the image):
 
 ```
-linkord-backup-20261108T015300Z/
+overcord-backup-20261108T015300Z/
   database.dump     pg_dump, custom format
   uploads.tar.gz    the uploads, without tmp/ and exports/
   manifest.json     row counts, migrations, file counts, SHA-256 of both files
@@ -220,7 +220,7 @@ linkord-backup-20261108T015300Z/
 
 ```bash
 # standalone Docker
-docker exec linkord bun --no-env-file server/dist/scripts/backup.js
+docker exec overcord bun --no-env-file server/dist/scripts/backup.js
 # Dokploy (from the host)
 docker exec $(docker ps -qf name=<app-name>) bun --no-env-file server/dist/scripts/backup.js
 ```
@@ -244,15 +244,15 @@ docker exec $(docker ps -qf name=<app-name>) bun --no-env-file server/dist/scrip
 3. With the app stopped, run the restore. The first run only says what it would do; `--confirm` must name the database in `DATABASE_URL`:
 
 ```bash
-bun run restore latest --confirm linkord
+bun run restore latest --confirm overcord
 
 # standalone Docker, after stopping the app
 docker run --rm --env-file .env \
   -v "$PWD/uploads:/app/uploads" -v "$PWD/backups:/app/backups" \
-  linkord bun --no-env-file server/dist/scripts/restore.js latest --confirm linkord
+  overcord bun --no-env-file server/dist/scripts/restore.js latest --confirm overcord
 ```
 
-For Docker, use the same database network settings as the intended Linkord container.
+For Docker, use the same database network settings as the intended Overcord container.
 
 4. Start the app. A newer app applies its newer migrations as on any upgrade; an older app cannot read a newer database.
 
@@ -276,7 +276,7 @@ Keep logs for at most **30 days**. The standalone `docker run` command rotates t
 
 ## Desktop app
 
-The desktop app (`desktop/`, Electron) is a window around one Linkord server: it loads the server's address and talks to it like a browser tab, so the server needs no change for it. Each installer is built for one server, whose address is baked in.
+The desktop app (`desktop/`, Electron) is a window around one Overcord server: it loads the server's address and talks to it like a browser tab, so the server needs no change for it. Each installer is built for one server, whose address is baked in.
 
 ### Building the installer
 
@@ -284,15 +284,15 @@ The app ships for Windows only; there are no macOS or Linux builds.
 
 ```bash
 npm install --prefix desktop
-LINKORD_URL=https://chat.example.com npm run package --prefix desktop
+OVERCORD_URL=https://chat.example.com npm run package --prefix desktop
 ```
 
-The installer lands in `desktop/release/` as `Linkord-<version>-win-x64.exe` (the version is `desktop/package.json`'s). It installs for the current user, with no administrator prompt, and registers `linkord://` links (`HKCU\Software\Classes\linkord`, from `desktop/resources/installer.nsh`); uninstalling removes them. What the links open is in [DEVELOPMENT.md](DEVELOPMENT.md#desktop-app).
+The installer lands in `desktop/release/` as `Overcord-<version>-win-x64.exe` (the version is `desktop/package.json`'s). It installs for the current user, with no administrator prompt, and registers `overcord://` links (`HKCU\Software\Classes\overcord`, from `desktop/resources/installer.nsh`); uninstalling removes them. What the links open is in [DEVELOPMENT.md](DEVELOPMENT.md#desktop-app).
 
-- `LINKORD_URL` must be `https` (plain `http` only for `localhost`); the build refuses to run without it. A different server needs its own build. Someone who has the app can still point it elsewhere with `LINKORD_URL` or `--url=<address>` at launch; a start from a `linkord://` link ignores `--url`.
+- `OVERCORD_URL` must be `https` (plain `http` only for `localhost`); the build refuses to run without it. A different server needs its own build. Someone who has the app can still point it elsewhere with `OVERCORD_URL` or `--url=<address>` at launch; a start from a `overcord://` link ignores `--url`.
 - The build always targets Windows (`--win`). Anything after `--` goes to electron-builder, for example `npm run package --prefix desktop -- --dir` for an unpacked folder. On macOS or Linux electron-builder may need Wine to build it; the workflow below builds it on a Windows runner.
 
-**From GitHub Actions:** run **Desktop installer** (`.github/workflows/desktop.yml`) from the Actions tab with the server's address in `url`. It builds on a Windows runner and uploads the artifact `linkord-desktop-windows`; no secrets are needed, since nothing is signed. Workflow builds look for updates in the repository's releases; a local build does only with `LINKORD_UPDATE_REPO=<owner>/<repo>` set.
+**From GitHub Actions:** run **Desktop installer** (`.github/workflows/desktop.yml`) from the Actions tab with the server's address in `url`. It builds on a Windows runner and uploads the artifact `overcord-desktop-windows`; no secrets are needed, since nothing is signed. Workflow builds look for updates in the repository's releases; a local build does only with `OVERCORD_UPDATE_REPO=<owner>/<repo>` set.
 
 ### Unsigned installer
 
@@ -300,7 +300,7 @@ The installer has no code signing certificate. It works, but Windows treats it a
 
 ### Electron fuses
 
-The build flips Electron's fuses in `Linkord.exe` (`electronFuses` in `desktop/electron-builder.config.cjs`), so the installed binary cannot be used to run someone else's code under its name:
+The build flips Electron's fuses in `Overcord.exe` (`electronFuses` in `desktop/electron-builder.config.cjs`), so the installed binary cannot be used to run someone else's code under its name:
 
 | Fuse | Value | Effect |
 | --- | --- | --- |
@@ -313,33 +313,33 @@ The build flips Electron's fuses in `Linkord.exe` (`electronFuses` in `desktop/e
 
 - Cookie encryption is one way: a later build with the fuse off could not read the cookies, and everyone would have to sign in again.
 - No fuse covers Chromium's remote debugging, so an installed build exits at once when started with `--remote-debugging-port` or `--remote-debugging-pipe` (`desktop/src/main/debugSwitches.ts`).
-- To check a build: `npx electron-fuses read --app desktop/release/win-unpacked/Linkord.exe` (from `desktop/`, after `npm run package --prefix desktop -- --dir`).
+- To check a build: `npx electron-fuses read --app desktop/release/win-unpacked/Overcord.exe` (from `desktop/`, after `npm run package --prefix desktop -- --dir`).
 
 ### Updates and data
 
-The interface comes from the server, so a server deploy updates it; a new installer is needed only for changes in `desktop/`. An older desktop build keeps working, because the web app checks each feature the desktop app offers before using it.
+Overcord is a separate Windows installation. If you installed Linkord, uninstall it and install Overcord from [GitHub Releases](https://github.com/coelhomarcus/overcord/releases). Sign in with your existing account at `https://overcord.app`. Your account data stays on the server. Overcord starts with a new local profile.
+
+The interface comes from the server, so a server deploy updates it. Changes to the desktop itself need a new installer.
 
 How an installed app updates:
 
 - **At start**, a small window (`desktop/src/main/updaterWindow.ts`) checks for a newer version before the app's window opens. An update found then is downloaded and installed first, with progress shown; the app restarts into the new version. A check that fails, finds nothing or takes more than 8 seconds goes on to connecting (a slow check keeps running and installs in the background). A start with the system that stays in the tray checks in the background.
-- **Afterwards** it checks every 6 hours, and on **Check for updates…** in the tray or the menu. A downloaded update shows as a green arrow in the title bar and **Restart to update** in the tray, and installs on that click or when Linkord quits.
-- **What counts:** the latest published release of the repository it was built for (`LINKORD_UPDATE_REPO`, set by the workflow to its own repository), only with a higher version number.
+- **Afterwards** it checks every 6 hours, and on **Check for updates…** in the tray or the menu. A downloaded update shows as a green arrow in the title bar and **Restart to update** in the tray, and installs on that click or when Overcord quits.
+- **What counts:** the latest published release of the repository it was built for (`OVERCORD_UPDATE_REPO`, set by the workflow to its own repository), with `overcord.yml` and a higher version number.
 
-No key or secret is involved. The update is checked against the SHA-512 in the release's `latest.yml`, served over HTTPS by GitHub; the release is created with the workflow's own `GITHUB_TOKEN`. Anyone who can publish releases on the repository can therefore ship an update to every installed app, so keep that permission as tight as the deploy itself.
-
-Old macOS and Linux installs (0.3.1 and earlier) keep running, and a newer release only shows them a link to the release page, which has no installer for their system.
+GitHub supplies `GITHUB_TOKEN` to the workflow, which uses it to create the draft. No repository secret or variable is required. The Overcord updater checks the installer's SHA-512 against `overcord.yml`. The previous desktop looks for `latest.yml`, which is excluded from Overcord releases. Limit who can publish releases, since that permission also lets people ship desktop updates.
 
 To release a version:
 
 1. Raise `version` in `desktop/package.json` (and its `package-lock.json`, `npm version <x.y.z> --prefix desktop --no-git-tag-version`), and push it.
-2. Run **Desktop installer** with the server's address and **release** ticked. After the build, a job creates a draft release `v<version>` with the installer and `latest.yml`. It fails if that version already has a release.
+2. Run **Desktop installer** with `https://overcord.app` for the official build and **release** ticked. After the build, a job creates a draft release `v<version>` with the installer and `overcord.yml`. It fails if that version already has a release.
 3. Check the draft on the repository's Releases page and publish it. Installed apps see nothing until then.
 
 - **Deploy the server first** when a desktop version relies on the page (the title bar is drawn by the web app, for one).
 - **Use the same `url` for every release:** the address is baked into the installer, so an update built for another address moves everyone to that server. The updater takes the newest published release, whatever it contains, so keep the repository's releases for the desktop app.
 - Set `DESKTOP_RELEASES_REPO=<owner>/<repo>` on the server so the web app offers the installer to people using a browser on Windows ([INTEGRATIONS.md](INTEGRATIONS.md#github-releases)).
 
-The app keeps its session and window state in `%APPDATA%\Linkord`.
+The app keeps its session and window state in `%APPDATA%\Overcord`.
 
 ## Troubleshooting
 

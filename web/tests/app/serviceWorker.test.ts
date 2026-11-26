@@ -14,7 +14,7 @@ function worker(
   const openWindow = vi.fn(async () => {});
   const fetch = vi.fn(async () => new Response(JSON.stringify({ count: 3 }), { status: 200 }));
   const scope = {
-    location: { origin: 'https://linkord.test' },
+    location: { origin: 'https://overcord.test' },
     registration: { showNotification },
     clients: { matchAll: vi.fn(async () => windows), openWindow, claim: vi.fn(async () => {}) },
     navigator: badge,
@@ -31,7 +31,7 @@ describe('push service worker', () => {
     const { handlers, showNotification } = worker();
     let pending: Promise<unknown> = Promise.resolve();
     handlers.get('push')!({
-      data: { json: () => ({ notification: { title: 'Conversa', body: 'Nova mensagem', navigate: 'https://linkord.test/app/conversations/abc', tag: 'chat-abc' } }) },
+      data: { json: () => ({ notification: { title: 'Conversa', body: 'Nova mensagem', navigate: 'https://overcord.test/app/conversations/abc', tag: 'chat-abc' } }) },
       waitUntil: (promise) => { pending = promise; },
     });
     await pending;
@@ -47,7 +47,7 @@ describe('push service worker', () => {
     fetch.mockResolvedValueOnce(new Response(new Uint8Array([1, 2, 3]), { status: 200, headers: { 'content-type': 'image/jpeg' } }));
     let pending: Promise<unknown> = Promise.resolve();
     handlers.get('push')!({
-      data: { json: () => ({ notification: { title: 'Ana', body: 'oi', navigate: 'https://linkord.test/app/channels/@me/abc', tag: 'chat-abc', renotify: true, avatar: 'https://linkord.test/uploads/' + 'a'.repeat(32) } }) },
+      data: { json: () => ({ notification: { title: 'Ana', body: 'oi', navigate: 'https://overcord.test/app/channels/@me/abc', tag: 'chat-abc', renotify: true, avatar: 'https://overcord.test/uploads/' + 'a'.repeat(32) } }) },
       waitUntil: (promise) => { pending = promise; },
     });
     await pending;
@@ -127,7 +127,7 @@ describe('push service worker', () => {
   });
 
   it('focuses an open app and forwards the target to its memory router', async () => {
-    const client = { url: 'https://linkord.test/', focus: vi.fn(async () => {}), postMessage: vi.fn() };
+    const client = { url: 'https://overcord.test/', focus: vi.fn(async () => {}), postMessage: vi.fn() };
     const { handlers, openWindow } = worker([client]);
     let pending: Promise<unknown> = Promise.resolve();
     handlers.get('notificationclick')!({
@@ -136,13 +136,13 @@ describe('push service worker', () => {
     });
     await pending;
     expect(client.focus).toHaveBeenCalledOnce();
-    expect(client.postMessage).toHaveBeenCalledWith({ type: 'linkord-push-navigation', path: '/app/conversations/abc' });
+    expect(client.postMessage).toHaveBeenCalledWith({ type: 'overcord-push-navigation', path: '/app/conversations/abc' });
     expect(openWindow).not.toHaveBeenCalled();
   });
 });
 
 describe('share target', () => {
-  const SHARE_CACHE = 'linkord-share-v1';
+  const SHARE_CACHE = 'overcord-share-v1';
 
   // jsdom's File has no stream(), which Response needs; the worker only reads getAll
   type Shared = { title?: string; text?: string; url?: string; files?: Array<{ name: string; type: string; body: string }> };
@@ -153,7 +153,7 @@ describe('share target', () => {
   });
 
   function sharePost(form: ReturnType<typeof shared>) {
-    return { method: 'POST', mode: 'cors', url: 'https://linkord.test/share-target', formData: async () => form };
+    return { method: 'POST', mode: 'cors', url: 'https://overcord.test/share-target', formData: async () => form };
   }
 
   async function dispatch(handlers: Map<string, (event: WorkerEvent) => void>, request: unknown) {
@@ -174,9 +174,9 @@ describe('share target', () => {
     const id = location.searchParams.get('id')!;
     expect(id).toMatch(/^[0-9a-f-]{36}$/);
     const store = await caches.open(SHARE_CACHE);
-    const meta = await (await store.match(`https://linkord.test/share-target/${id}/meta`))!.json();
+    const meta = await (await store.match(`https://overcord.test/share-target/${id}/meta`))!.json();
     expect(meta).toMatchObject({ title: 'Clip', text: 'olha isso', url: '', files: [{ name: 'a.png', type: 'image/png' }, { name: 'b.mp4', type: 'video/mp4' }] });
-    expect(await (await store.match(`https://linkord.test/share-target/${id}/file/1`))!.text()).toBe('defg');
+    expect(await (await store.match(`https://overcord.test/share-target/${id}/file/1`))!.text()).toBe('defg');
   });
 
   it('keeps a text-only share and refuses an empty one', async () => {
@@ -198,8 +198,8 @@ describe('share target', () => {
 
   it('only takes over the POST to the share path', async () => {
     const { handlers } = worker();
-    expect(await dispatch(handlers, { method: 'GET', mode: 'cors', url: 'https://linkord.test/share-target' })).toBeUndefined();
-    expect(await dispatch(handlers, { method: 'POST', mode: 'cors', url: 'https://linkord.test/api/messages' })).toBeUndefined();
+    expect(await dispatch(handlers, { method: 'GET', mode: 'cors', url: 'https://overcord.test/share-target' })).toBeUndefined();
+    expect(await dispatch(handlers, { method: 'POST', mode: 'cors', url: 'https://overcord.test/api/messages' })).toBeUndefined();
   });
 
   it('drops shares older than the time limit when the next one arrives, and keeps the fresh ones', async () => {
@@ -225,12 +225,12 @@ describe('share target', () => {
 
   it('keeps the share cache when the worker activates', async () => {
     const { handlers, caches } = worker();
-    (await caches.open(SHARE_CACHE)).put('https://linkord.test/share-target/x/meta', new Response('{}'));
-    await caches.open('linkord-offline-v0');
+    (await caches.open(SHARE_CACHE)).put('https://overcord.test/share-target/x/meta', new Response('{}'));
+    await caches.open('overcord-offline-v0');
     let pending: Promise<unknown> = Promise.resolve();
     handlers.get('activate')!({ waitUntil: (promise) => { pending = promise; } });
     await pending;
     expect(await caches.keys()).toContain(SHARE_CACHE);
-    expect(await caches.keys()).not.toContain('linkord-offline-v0');
+    expect(await caches.keys()).not.toContain('overcord-offline-v0');
   });
 });

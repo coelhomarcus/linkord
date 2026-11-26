@@ -1,9 +1,9 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Button } from '@linkord/frontend-shared/ui/primitives/button';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@linkord/frontend-shared/ui/primitives/dialog';
-import { Input } from '@linkord/frontend-shared/ui/primitives/input';
-import { Textarea } from '@linkord/frontend-shared/ui/primitives/textarea';
+import { Button } from '@overcord/frontend-shared/ui/primitives/button';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@overcord/frontend-shared/ui/primitives/dialog';
+import { Input } from '@overcord/frontend-shared/ui/primitives/input';
+import { Textarea } from '@overcord/frontend-shared/ui/primitives/textarea';
 import { REASON_MAX, REASON_MIN, describeAdminError, normalizeReasonText } from './adminErrors';
 
 /** Every restrictive or destructive admin action asks for a written reason

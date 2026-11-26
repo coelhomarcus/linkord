@@ -1,19 +1,19 @@
 <p align="center">
-  <img src="web/public/logo.svg" alt="Linkord" width="96">
+  <img src="web/public/logo.svg" alt="Overcord" width="96">
 </p>
-<h1 align="center">Linkord</h1>
+<h1 align="center">Overcord</h1>
 <p align="center"><b>Self-hosted chat and calls for the people you know</b></p>
 
 <p align="center">
   <a href="#-features"><b>Features</b></a> •
   <a href="docs/DEVELOPMENT.md"><b>Development</b></a> •
   <a href="docs/DEPLOY.md"><b>Deployment</b></a> •
-  <a href="https://github.com/coelhomarcus/Linkord/issues"><b>Issues</b></a>
+  <a href="https://github.com/coelhomarcus/overcord/issues"><b>Issues</b></a>
 </p>
 
 <br />
 
-Linkord is a self-hosted place to chat and call with friends. Talk in direct messages, or create private servers with text and voice channels, roles, and invitations. There is no public server directory: people join through a friend or an invite link.
+Overcord is a self-hosted place to chat and call with friends. Talk in direct messages, or create private servers with text and voice channels, roles, and invitations. There is no public server directory: people join through a friend or an invite link.
 
 ## 🌟 Features
 
@@ -52,20 +52,20 @@ Linkord is a self-hosted place to chat and call with friends. Talk in direct mes
 - Two-step login by email, sign-in alerts, and a list of active sessions you can end.
 - Username and password changes, account deletion, and a download of your data.
 - Themes, density, fonts, languages (Portuguese and English) and notification sounds, synced across your devices.
-- Installable as a web app (PWA), with share-to-Linkord on Android.
+- Installable as a web app (PWA), with share-to-Overcord on Android.
 
 **Administration**
 - An optional [administration site](docs/DEPLOY.md#separate-administration-site) with a dedicated hostname and sign-in for managing users, servers, webhooks, reports, audit history and uploads.
 
 ## ⚡ Quick start
 
-Have a PostgreSQL database and a LiveKit server ready, then build Linkord's default image:
+Have a PostgreSQL database and a LiveKit server ready, then build Overcord's default image:
 
 ```bash
-git clone https://github.com/coelhomarcus/linkord.git
-cd linkord
+git clone https://github.com/coelhomarcus/overcord.git
+cd overcord
 cp .env.example .env
-docker build -t linkord .
+docker build -t overcord .
 ```
 
 Set the database URL, public app URL and LiveKit credentials in `.env`. Set a registration code to let people sign up. Follow the [standalone Docker instructions](docs/DEPLOY.md#the-image-on-its-own) to start the image with persistent uploads and backups, or [deploy on Dokploy](docs/DEPLOY.md#dokploy). For email, push and other settings, copy the entries you need from [`.env.optional.example`](.env.optional.example).
@@ -74,7 +74,7 @@ Set the database URL, public app URL and LiveKit credentials in `.env`. Set a re
 
 For local development, run the frontend and backend on the host. The [local development guide](docs/DEVELOPMENT.md) shows how to start PostgreSQL, LiveKit and a mail sink with `docker run`.
 
-A Windows desktop app lives in `desktop/`: an Electron window that opens your Linkord server, where `linkord://` links open invites and conversations. See [Desktop app](docs/DEVELOPMENT.md#desktop-app) for running it and [building its installer](docs/DEPLOY.md#desktop-app) for your server.
+A Windows desktop app lives in `desktop/`: an Electron window that opens your Overcord server, where `overcord://` links open invites and conversations. See [Desktop app](docs/DEVELOPMENT.md#desktop-app) for running it and [building its installer](docs/DEPLOY.md#desktop-app) for your server.
 
 ## 🐳 Deployment
 
@@ -108,7 +108,7 @@ Unit tests use Node's test runner (backend) and Vitest with React Testing Librar
 
 ## 🤝 Contributing
 
-Found a bug or have an idea? [Open an issue](https://github.com/coelhomarcus/Linkord/issues). Before opening a pull request, run `bun run check`. See [AGENTS.md](AGENTS.md) for repository conventions.
+Found a bug or have an idea? [Open an issue](https://github.com/coelhomarcus/overcord/issues). Before opening a pull request, run `bun run check`. See [AGENTS.md](AGENTS.md) for repository conventions.
 
 ## License
 

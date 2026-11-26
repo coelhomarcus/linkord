@@ -1,7 +1,7 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { App } from './app/App';
-import { ErrorBoundary } from '@linkord/frontend-shared/ui/ErrorBoundary';
+import { ErrorBoundary } from '@overcord/frontend-shared/ui/ErrorBoundary';
 import { DesktopFrame } from './app/layout/DesktopFrame';
 import { installGlobalErrorHandlers } from '@/shared/lib/logger';
 import './styles/index.css';

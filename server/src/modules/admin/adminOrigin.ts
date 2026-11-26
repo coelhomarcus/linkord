@@ -3,7 +3,7 @@ import { config } from '../../config/env.js';
 import { sendError } from '../../http/respond.js';
 
 export function adminCookieName(): string {
-  return config.ADMIN_ORIGIN?.secure ? '__Host-linkord-admin' : 'linkord_admin';
+  return config.ADMIN_ORIGIN?.secure ? '__Host-overcord-admin' : 'overcord_admin';
 }
 
 export function requireAdminOrigin(request: FastifyRequest, reply: FastifyReply): boolean {

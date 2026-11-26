@@ -3,8 +3,8 @@ import { isAppPage } from './appPage.js';
 import { SourceSelections, sourceKind, streamsFor } from './displayMedia.js';
 
 // The same names are spelled out in src/preload/index.cts, which cannot import this file
-const LIST_SOURCES = 'linkord:screen-share:list-sources';
-const SELECT_SOURCE = 'linkord:screen-share:select';
+const LIST_SOURCES = 'overcord:screen-share:list-sources';
+const SELECT_SOURCE = 'overcord:screen-share:select';
 
 const THUMBNAIL = { width: 320, height: 180 };
 

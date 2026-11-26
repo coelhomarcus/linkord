@@ -8,9 +8,10 @@ import { LOCAL_STORAGE_KEYS } from '@/shared/lib/localStorage';
 const KEY = LOCAL_STORAGE_KEYS.colorTheme;
 
 // The inline script in index.html that sets data-theme before React loads.
+const html = readFileSync(join(process.cwd(), 'index.html'), 'utf8');
+const scripts = [...html.matchAll(/<script>([\s\S]*?)<\/script>/g)].map((match) => match[1]);
 const bootScript = (() => {
-  const html = readFileSync(join(process.cwd(), 'index.html'), 'utf8');
-  const script = [...html.matchAll(/<script>([\s\S]*?)<\/script>/g)].map((m) => m[1]).find((body) => body.includes(KEY));
+  const script = scripts.find((body) => body.includes(KEY));
   if (!script) throw new Error('theme boot script not found in index.html');
   return script;
 })();
@@ -23,6 +24,7 @@ describe('theme boot script in index.html', () => {
   afterEach(() => {
     localStorage.clear();
     delete document.documentElement.dataset.theme;
+    delete document.documentElement.dataset.density;
     document.head.querySelectorAll('style').forEach((style) => style.remove());
   });
 
@@ -30,6 +32,17 @@ describe('theme boot script in index.html', () => {
     localStorage.setItem(KEY, 'graphite');
     boot();
     expect(document.documentElement.dataset.theme).toBe('graphite');
+  });
+
+  it('copies old browser preferences before painting the theme', () => {
+    localStorage.setItem('linkord.colorTheme', 'linkord');
+    localStorage.setItem('linkord.density', 'compact');
+    localStorage.setItem(LOCAL_STORAGE_KEYS.density, 'comfortable');
+    for (const script of scripts) new Function(script)();
+    expect(document.documentElement.dataset.theme).toBe('old');
+    expect(document.documentElement.dataset.density).toBe('comfortable');
+    expect(localStorage.getItem(KEY)).toBe('old');
+    expect(localStorage.getItem('linkord.colorTheme')).toBeNull();
   });
 
   it('maps the ids stored before the rename and writes the new one back', () => {

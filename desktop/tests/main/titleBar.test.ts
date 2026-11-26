@@ -39,9 +39,9 @@ describe('titleBarStyle', () => {
     assert.equal(style('linux'), 'windows');
   });
 
-  it('takes LINKORD_TITLE_BAR only in a development run', () => {
-    assert.equal(style('darwin', { LINKORD_TITLE_BAR: 'windows' }, false), 'windows');
-    assert.equal(style('darwin', { LINKORD_TITLE_BAR: 'windows' }, true), 'mac');
-    assert.equal(style('darwin', { LINKORD_TITLE_BAR: 'beos' }, false), 'mac');
+  it('takes OVERCORD_TITLE_BAR only in a development run', () => {
+    assert.equal(style('darwin', { OVERCORD_TITLE_BAR: 'windows' }, false), 'windows');
+    assert.equal(style('darwin', { OVERCORD_TITLE_BAR: 'windows' }, true), 'mac');
+    assert.equal(style('darwin', { OVERCORD_TITLE_BAR: 'beos' }, false), 'mac');
   });
 });

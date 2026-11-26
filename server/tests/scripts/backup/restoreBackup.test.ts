@@ -10,18 +10,18 @@ import { ConfirmationRequired, readBackup, restoreBackup } from '../../../src/sc
 
 // Nothing here reaches a database: every case is refused before the first
 // connection, which is the point of the guards.
-const UNREACHABLE = 'postgres://nobody:secret@127.0.0.1:1/linkord';
+const UNREACHABLE = 'postgres://nobody:secret@127.0.0.1:1/overcord';
 
 let dir: string;
-beforeEach(async () => { dir = await fs.mkdtemp(path.join(os.tmpdir(), 'linkord-restore-test-')); });
+beforeEach(async () => { dir = await fs.mkdtemp(path.join(os.tmpdir(), 'overcord-restore-test-')); });
 afterEach(async () => { await fs.rm(dir, { recursive: true, force: true }); });
 
 async function fakeBackup(dumpBytes = 'PGDMP fake'): Promise<string> {
-  const folder = path.join(dir, 'linkord-backup-20261108T015300Z');
+  const folder = path.join(dir, 'overcord-backup-20261108T015300Z');
   await fs.mkdir(folder);
   await fs.writeFile(path.join(folder, DUMP_FILE), dumpBytes);
   const manifest: BackupManifest = {
-    format: BACKUP_FORMAT, createdAt: '2026-11-08T01:53:00.000Z', database: { name: 'linkord', serverVersion: '17', dumpTool: 'pg_dump' },
+    format: BACKUP_FORMAT, createdAt: '2026-11-08T01:53:00.000Z', database: { name: 'overcord', serverVersion: '17', dumpTool: 'pg_dump' },
     migrations: 1, tables: { users: 1 }, uploads: { files: 0, bytes: 0, missingFromArchive: 0 },
     sha256: { dump: crypto.createHash('sha256').update(dumpBytes).digest('hex'), uploads: null },
   };
@@ -62,7 +62,7 @@ describe('restoreBackup guards', () => {
 
   it('does nothing without the database name typed back, and says which database it would use', async () => {
     const backupPath = await fakeBackup();
-    await assert.rejects(restoreBackup(options(backupPath, undefined)), (err: unknown) => err instanceof ConfirmationRequired && err.database === 'linkord' && err.target === '127.0.0.1:1');
+    await assert.rejects(restoreBackup(options(backupPath, undefined)), (err: unknown) => err instanceof ConfirmationRequired && err.database === 'overcord' && err.target === '127.0.0.1:1');
     await assert.rejects(restoreBackup(options(backupPath, 'other')), ConfirmationRequired);
     await assert.rejects(fs.stat(path.join(dir, 'uploads')));
   });
@@ -72,7 +72,7 @@ describe('restoreBackup guards', () => {
     const uploads = path.join(dir, 'uploads');
     await fs.mkdir(uploads);
     await fs.writeFile(path.join(uploads, 'precious'), 'x');
-    await assert.rejects(restoreBackup(options(backupPath, 'linkord', uploads)), (err: unknown) => err instanceof BackupError && !(err instanceof ConfirmationRequired) && /not empty/.test(err.message));
+    await assert.rejects(restoreBackup(options(backupPath, 'overcord', uploads)), (err: unknown) => err instanceof BackupError && !(err instanceof ConfirmationRequired) && /not empty/.test(err.message));
     assert.equal(await fs.readFile(path.join(uploads, 'precious'), 'utf8'), 'x');
   });
 

@@ -8,7 +8,7 @@ import {
 } from '../../../src/modules/media-proxy/mediaProxyUrls.js';
 
 const parts = (address: string) => {
-  const { pathname, searchParams } = new URL(address, 'http://linkord.test');
+  const { pathname, searchParams } = new URL(address, 'http://overcord.test');
   const [kind, signature] = pathname.slice(MEDIA_PROXY_PATH.length + 1).split('/');
   return { kind: kind!, signature: signature!, target: searchParams.get('u')! };
 };

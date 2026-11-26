@@ -1,4 +1,4 @@
-import { FlagIcon, HardDrivesIcon, ScrollIcon, SquaresFourIcon, UsersIcon, WebhooksLogoIcon, type IconComponent } from '@linkord/frontend-shared/ui/icons';
+import { FlagIcon, HardDrivesIcon, ScrollIcon, SquaresFourIcon, UsersIcon, WebhooksLogoIcon, type IconComponent } from '@overcord/frontend-shared/ui/icons';
 
 
 export interface AdminSection {

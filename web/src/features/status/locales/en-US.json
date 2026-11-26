@@ -10,7 +10,7 @@
     "online": "Everyone can see you are around.",
     "idle": "Shows you as away until you change it.",
     "dnd": "No push notifications and no sounds. They still land in your list.",
-    "invisible": "You appear offline but can keep using Linkord as usual."
+    "invisible": "You appear offline but can keep using Overcord as usual."
   },
   "menu": {
     "trigger": "Status and profile",

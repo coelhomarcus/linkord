@@ -192,7 +192,7 @@ export const FLUENT_ICONS: Record<string, string> = {
   XIcon: 'dismiss',
 };
 
-const IMPORT = /import\s+(?:type\s+)?\{([^}]*)\}\s+from\s+'(?:(?:@\/shared|@linkord\/frontend-shared)\/ui\/icons|\.{1,2}\/(?:ui\/)?icons)'/g;
+const IMPORT = /import\s+(?:type\s+)?\{([^}]*)\}\s+from\s+'(?:(?:@\/shared|@overcord\/frontend-shared)\/ui\/icons|\.{1,2}\/(?:ui\/)?icons)'/g;
 const ICON_NAME = /^[A-Z]\w*Icon$/;
 const SVG = /^<svg [^>]*viewBox="0 0 (\d+) \1"[^>]*>(.*)<\/svg>\s*$/s;
 const PATH = /<path d="([^"]+)"\/>/g;

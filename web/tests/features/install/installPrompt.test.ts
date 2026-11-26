@@ -23,10 +23,10 @@ describe('installMethod', () => {
 });
 
 describe('useInstall in the desktop app', () => {
-  afterEach(() => { delete window.linkordDesktop; });
+  afterEach(() => { delete window.overcordDesktop; });
 
   it('offers no install: the desktop app is the installed app', () => {
-    window.linkordDesktop = { platform: 'win32', version: '0.1.0' };
+    window.overcordDesktop = { platform: 'win32', version: '0.1.0' };
     const { result } = renderHook(() => useInstall());
     expect(result.current.method).toBeNull();
     expect(result.current.installed).toBe(false);

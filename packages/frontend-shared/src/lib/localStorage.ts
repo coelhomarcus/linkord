@@ -10,14 +10,14 @@ export const LOCAL_STORAGE_KEYS = {
   notifyVolume: 'ss-notify-volume',
   device: (kind: MediaDeviceKind) => `ss-device-${kind}` as const,
   /** the settings that follow the account, as last known (shared/preferences/accountPreferences.ts) */
-  preferences: 'linkord.preferences',
+  preferences: 'overcord.preferences',
   /** which account `preferences` was last synced with */
-  preferencesOwner: 'linkord.preferencesOwner',
+  preferencesOwner: 'overcord.preferencesOwner',
   /** colorTheme, density and font are kept beside `preferences` for index.html's boot script */
-  colorTheme: 'linkord.colorTheme',
-  density: 'linkord.density',
-  textSize: 'linkord.textSize',
-  font: 'linkord.font',
+  colorTheme: 'overcord.colorTheme',
+  density: 'overcord.density',
+  textSize: 'overcord.textSize',
+  font: 'overcord.font',
   inputVolume: 'ss-input-volume',
   inputProfile: 'ss-input-profile',
   outputVolume: 'ss-output-volume',

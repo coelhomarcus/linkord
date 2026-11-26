@@ -5,11 +5,11 @@ import { useContentLocation } from '@/shared/lib/contentLocation';
 import { ROUTES, isHomePath } from '@/shared/lib/routes';
 import { DesktopUpdateButton } from '@/features/desktopApp/DesktopUpdateButton';
 import { NotificationBell } from '@/features/notifications/NotificationBell';
-import { ServerIcon } from '@linkord/frontend-shared/ui/ServerIcon';
+import { ServerIcon } from '@overcord/frontend-shared/ui/ServerIcon';
 import type { ServerSummary } from '@/shared/types/protocol';
 import { useTitleBarHost } from '@/app/layout/titleBar';
 import { WindowControls } from '@/app/layout/WindowControls';
-import { LinkordMark } from '@/shared/ui/LinkordMark';
+import { OvercordMark } from '@/shared/ui/OvercordMark';
 
 /**
  * Discord's window title strip: where you are, centred, and the inbox on the
@@ -21,11 +21,11 @@ export function TopBar({ className, title, server }: { className?: string; title
   const host = useTitleBarHost();
   const { pathname } = useContentLocation();
   const onFriends = pathname === ROUTES.home || pathname === ROUTES.friends;
-  const label = server ? server.name : onFriends ? t('topBar.friends') : isHomePath(pathname) ? t('topBar.directMessages') : title ?? 'Linkord';
+  const label = server ? server.name : onFriends ? t('topBar.friends') : isHomePath(pathname) ? t('topBar.directMessages') : title ?? 'Overcord';
   return (
     <header className={cn('relative h-titlebar flex-none items-center justify-center bg-surface-rail px-3', host && 'app-drag', className)}>
       <span className="flex min-w-0 items-center gap-2 text-label font-medium text-text-primary">
-        {server ? <ServerIcon id={server.id} name={server.name} icon={server.icon} size={18} /> : onFriends ? <UsersIcon size={18} weight="fill" /> : <LinkordMark className="size-4 text-logo" />}
+        {server ? <ServerIcon id={server.id} name={server.name} icon={server.icon} size={18} /> : onFriends ? <UsersIcon size={18} weight="fill" /> : <OvercordMark className="size-4 text-logo" />}
         <span className="truncate">{label}</span>
       </span>
       <span className={cn('absolute inset-y-0 right-0 flex items-center', !host && 'pr-2')}>

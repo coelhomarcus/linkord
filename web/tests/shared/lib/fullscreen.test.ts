@@ -13,7 +13,7 @@ function reportWindow(fullScreen: boolean) {
 }
 
 function installDesktop() {
-  window.linkordDesktop = {
+  window.overcordDesktop = {
     platform: 'win32',
     version: '0.9.0',
     setFullScreen,
@@ -53,7 +53,7 @@ describe('fullscreen in the desktop app', () => {
   afterEach(async () => {
     await exitFullscreen();
     document.body.replaceChildren();
-    delete window.linkordDesktop;
+    delete window.overcordDesktop;
   });
 
   it('fills a fullscreen window with the element instead of the Fullscreen API', async () => {
@@ -144,7 +144,7 @@ describe('fullscreen in a browser', () => {
   });
 
   it('uses the Fullscreen API, also in a desktop build without the window\'s fullscreen', async () => {
-    window.linkordDesktop = { platform: 'win32', version: '0.8.0' };
+    window.overcordDesktop = { platform: 'win32', version: '0.8.0' };
     const element = stage();
     element.requestFullscreen = vi.fn(async () => {});
 
@@ -152,7 +152,7 @@ describe('fullscreen in a browser', () => {
 
     expect(element.requestFullscreen).toHaveBeenCalled();
     expect(element.hasAttribute('data-window-fullscreen')).toBe(false);
-    delete window.linkordDesktop;
+    delete window.overcordDesktop;
     element.remove();
   });
 

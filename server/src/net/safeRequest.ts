@@ -74,7 +74,7 @@ export function requestSafe<T>(
       lookup,
       // no pooled sockets: every request goes through `lookup`
       agent: false,
-      headers: { 'User-Agent': 'Mozilla/5.0 (compatible; LinkordBot/1.0; +link preview)', Accept: accept, ...options.headers },
+      headers: { 'User-Agent': 'Mozilla/5.0 (compatible; OvercordBot/1.0; +link preview)', Accept: accept, ...options.headers },
       timeout: timeoutMs,
     }, (res: IncomingMessage) => {
       const status = res.statusCode || 0;

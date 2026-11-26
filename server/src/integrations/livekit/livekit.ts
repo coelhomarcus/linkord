@@ -12,7 +12,7 @@ export function roomNameFor(conversationId: string): string {
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 /** The conversation behind one of this deployment's rooms, or null for any other room on the same
- * LiveKit project. Conversation ids are UUIDs, so `linkord-room-staging-<id>` (another deployment
+ * LiveKit project. Conversation ids are UUIDs, so `overcord-room-staging-<id>` (another deployment
  * whose prefix extends ours) is not mistaken for one of ours. */
 export function conversationIdOfRoom(roomName: string): string | null {
   const prefix = `${config.LIVEKIT_ROOM_NAME}-`;

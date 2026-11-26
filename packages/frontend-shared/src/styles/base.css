@@ -73,7 +73,7 @@
   --color-accent-text: oklch(76.00% 0.1200 240.00);
   --color-accent-hover: oklch(49.00% 0.1500 248.00);
   --color-border-accent: var(--color-accent-primary);
-  /* the Linkord mark (LinkordMark, `text-logo`): the brand blue unless a theme
+  /* the Overcord mark (OvercordMark, `text-logo`): the brand blue unless a theme
      paints it in its own accent */
   --color-logo: #2b99e7;
   /* the row under the pointer in the chat */

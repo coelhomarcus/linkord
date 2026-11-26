@@ -10,7 +10,7 @@ import type { AnyPgColumn } from 'drizzle-orm/pg-core';
 // Each config's positions start right after the previous one's, so a quoted
 // phrase of a message's last word followed by its first word also matches;
 // rare enough to accept.
-export const MESSAGE_SEARCH_CONFIGS = ['linkord_simple', 'linkord_portuguese', 'linkord_english'] as const;
+export const MESSAGE_SEARCH_CONFIGS = ['overcord_simple', 'overcord_portuguese', 'overcord_english'] as const;
 type MessageSearchConfig = typeof MESSAGE_SEARCH_CONFIGS[number];
 
 export const searchConfig = (name: MessageSearchConfig): SQL => sql.raw(`'${name}'`);

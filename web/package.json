@@ -18,7 +18,7 @@
     "@dnd-kit/utilities": "^3.2.2",
     "@fontsource-variable/figtree": "^5.2.10",
     "@lexical/react": "0.52.0",
-    "@linkord/frontend-shared": "link:../packages/frontend-shared",
+    "@overcord/frontend-shared": "link:../packages/frontend-shared",
     "@lexical/utils": "0.52.0",
     "@tanstack/react-virtual": "^3.14.11",
     "@twinkleplop/bash": "^0.1.7",

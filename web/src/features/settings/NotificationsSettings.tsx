@@ -73,19 +73,19 @@ export function NotificationsSettings() {
   useEffect(() => {
     function reevaluate() { setPermission(notificationPermissionState()); }
     window.addEventListener('focus', reevaluate);
-    window.addEventListener('linkord-push-changed', reevaluate);
+    window.addEventListener('overcord-push-changed', reevaluate);
     document.addEventListener('visibilitychange', reevaluate);
     return () => {
       window.removeEventListener('focus', reevaluate);
-      window.removeEventListener('linkord-push-changed', reevaluate);
+      window.removeEventListener('overcord-push-changed', reevaluate);
       document.removeEventListener('visibilitychange', reevaluate);
     };
   }, []);
 
   useEffect(() => {
     const update = () => setActive(isPushSubscriptionActive());
-    window.addEventListener('linkord-push-changed', update);
-    return () => window.removeEventListener('linkord-push-changed', update);
+    window.addEventListener('overcord-push-changed', update);
+    return () => window.removeEventListener('overcord-push-changed', update);
   }, []);
 
   function handleVolumeChange(value: number | readonly number[]) {

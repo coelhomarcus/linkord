@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { ApiError } from '@linkord/frontend-shared/api/transport';
+import { ApiError } from '@overcord/frontend-shared/api/transport';
 import { renderAdmin } from './adminFixture';
 import { ServerDetailPage } from '@/features/admin/ServerDetailPage';
 import * as adminApi from '@/features/admin/adminApi';

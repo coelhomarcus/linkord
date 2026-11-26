@@ -1,5 +1,5 @@
-import { initTranslations, type LocaleBundle, type Resources } from '@linkord/frontend-shared/i18n/init';
-import { sharedResources } from '@linkord/frontend-shared/i18n/resources';
+import { initTranslations, type LocaleBundle, type Resources } from '@overcord/frontend-shared/i18n/init';
+import { sharedResources } from '@overcord/frontend-shared/i18n/resources';
 import type { Language } from '@/shared/i18n/languages';
 
 const modules = import.meta.glob<LocaleBundle>('/src/features/*/locales/*.json', { eager: true, import: 'default' });

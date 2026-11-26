@@ -14,7 +14,7 @@ const TRAFFIC_LIGHTS = { x: 12, y: (TITLE_BAR_HEIGHT - 14) / 2 };
 export type TitleBarStyle = 'mac' | 'windows';
 
 /**
- * Which buttons the page draws. LINKORD_TITLE_BAR=windows shows the Windows
+ * Which buttons the page draws. OVERCORD_TITLE_BAR=windows shows the Windows
  * bar in a development run on a Mac.
  */
 export function titleBarStyle(input: {
@@ -22,7 +22,7 @@ export function titleBarStyle(input: {
   env: Readonly<Record<string, string | undefined>>;
   isPackaged: boolean;
 }): TitleBarStyle {
-  const override = input.env.LINKORD_TITLE_BAR;
+  const override = input.env.OVERCORD_TITLE_BAR;
   if (!input.isPackaged && (override === 'mac' || override === 'windows')) return override;
   return input.platform === 'darwin' ? 'mac' : 'windows';
 }

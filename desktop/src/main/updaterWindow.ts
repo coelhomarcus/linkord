@@ -42,7 +42,7 @@ export function createUpdaterWindow(strings: Strings, onAction: (action: Updater
       maximizable: false,
       fullscreenable: false,
       center: true,
-      title: 'Linkord',
+      title: 'Overcord',
       backgroundColor: BACKGROUND,
       webPreferences: { ...SECURE_WEB_PREFERENCES, preload: PRELOAD, spellcheck: false },
     });
@@ -59,7 +59,7 @@ export function createUpdaterWindow(strings: Strings, onAction: (action: Updater
     return created;
   };
 
-  ipcMain.on('linkord:updater:action', (event, action: unknown) => {
+  ipcMain.on('overcord:updater:action', (event, action: unknown) => {
     if (!window || event.sender !== window.webContents) return;
     if (action === 'restart' || action === 'later' || action === 'retry') onAction(action);
   });
@@ -70,7 +70,7 @@ export function createUpdaterWindow(strings: Strings, onAction: (action: Updater
       const view = updaterView(screen, strings);
       void ready.then(() => {
         if (target.isDestroyed()) return;
-        target.webContents.send('linkord:updater:render', view);
+        target.webContents.send('overcord:updater:render', view);
         if (!target.isVisible()) target.show();
       });
     },

@@ -34,12 +34,12 @@ async function openWebhooks() {
 
 describe('ChannelSettingsModal — webhooks', () => {
   it('creating one shows its URL once', async () => {
-    mocked.createWebhook.mockResolvedValue({ webhook: { ...hook, id: 'w2', name: 'CI', token: 't', url: 'https://linkord.test/api/webhooks/w2/t' } });
+    mocked.createWebhook.mockResolvedValue({ webhook: { ...hook, id: 'w2', name: 'CI', token: 't', url: 'https://overcord.test/api/webhooks/w2/t' } });
     const user = await openWebhooks();
     await user.type(screen.getByPlaceholderText('Capitão Gancho'), 'CI');
     await user.click(screen.getByRole('button', { name: 'Novo webhook' }));
     expect(mocked.createWebhook).toHaveBeenCalledWith('c1', 'CI');
-    expect(await screen.findByText('https://linkord.test/api/webhooks/w2/t')).toBeInTheDocument();
+    expect(await screen.findByText('https://overcord.test/api/webhooks/w2/t')).toBeInTheDocument();
   });
 
   it('renames in place when the field is left', async () => {

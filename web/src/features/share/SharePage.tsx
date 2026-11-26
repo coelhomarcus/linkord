@@ -8,7 +8,7 @@ import { conversationTitle, directUser } from '@/features/conversations/conversa
 import { GroupAvatar } from '@/features/conversations/GroupAvatar';
 import { ListSearch } from '@/features/friends/ListSearch';
 import { hasPermission, PERMISSIONS } from '@/features/servers/permissionBits';
-import { ServerIcon } from '@linkord/frontend-shared/ui/ServerIcon';
+import { ServerIcon } from '@overcord/frontend-shared/ui/ServerIcon';
 import { Avatar } from '@/shared/Avatar';
 import { formatFileSize } from '@/shared/lib/formatBytes';
 import { conversationPath, ROUTES } from '@/shared/lib/routes';

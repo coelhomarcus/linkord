@@ -76,7 +76,7 @@ export function parseHandshake(data: unknown): string | null {
 }
 
 /** What Discord answers a handshake with. Games read the user only to greet them, so it is a
- * stand-in: nothing about the Linkord account ever goes back to the game. */
+ * stand-in: nothing about the Overcord account ever goes back to the game. */
 export function readyMessage() {
   return {
     cmd: 'DISPATCH',
@@ -85,7 +85,7 @@ export function readyMessage() {
     data: {
       v: 1,
       config: { cdn_host: 'cdn.discordapp.com', api_endpoint: '//discord.com/api', environment: 'production' },
-      user: { id: '100000000000000000', username: 'linkord', discriminator: '0', global_name: 'Linkord', avatar: null, bot: false, flags: 0, premium_type: 0 },
+      user: { id: '100000000000000000', username: 'overcord', discriminator: '0', global_name: 'Overcord', avatar: null, bot: false, flags: 0, premium_type: 0 },
     },
   };
 }

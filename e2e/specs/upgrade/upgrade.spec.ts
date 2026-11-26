@@ -49,8 +49,8 @@ test('tabs opened on the production version keep working with tabs on the new on
 
   if (headProtocol().minProtocolVersion > base.protocolVersion) {
     // the new server refuses the old protocol: the only right outcome is the update screen
-    await expect(a.page.getByText('Há uma versão nova do Linkord')).toBeVisible();
-    await expect(b.page.getByText('Há uma versão nova do Linkord')).toBeVisible();
+    await expect(a.page.getByText(/^Há uma versão nova do /)).toBeVisible();
+    await expect(b.page.getByText(/^Há uma versão nova do /)).toBeVisible();
     return;
   }
 

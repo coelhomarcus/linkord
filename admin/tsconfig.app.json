@@ -4,7 +4,7 @@
     "paths": {
       "@/*": ["./src/*"],
       "@tests/*": ["./tests/*"],
-      "@linkord/frontend-shared/*": ["./node_modules/@linkord/frontend-shared/src/*"]
+      "@overcord/frontend-shared/*": ["./node_modules/@overcord/frontend-shared/src/*"]
     },
     "target": "es2023",
     "lib": ["ES2023", "DOM"],

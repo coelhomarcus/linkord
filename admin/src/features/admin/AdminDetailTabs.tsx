@@ -1,6 +1,6 @@
 import { useLocation } from 'react-router';
-import { cn } from '@linkord/frontend-shared/lib/utils';
-import { AppLink } from '@linkord/frontend-shared/ui/app-link';
+import { cn } from '@overcord/frontend-shared/lib/utils';
+import { AppLink } from '@overcord/frontend-shared/ui/app-link';
 
 export interface DetailTab<T extends string> { id: T; label: string }
 

@@ -1,6 +1,6 @@
 {
-  "title": "Linkord now has a desktop app",
-  "description": "All of Linkord in its own window, which stays open in the system tray.",
+  "title": "Overcord now has a desktop app",
+  "description": "All of Overcord in its own window, which stays open in the system tray.",
   "features": {
     "notifications": "Notifications even with the window closed",
     "activity": "Show the game or app you are using",

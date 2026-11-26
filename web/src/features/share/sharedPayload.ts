@@ -1,7 +1,7 @@
 // What the service worker stored for one share (public/sw.js, receiveShare).
 // The names below must match the worker's: it is plain JS and cannot import them.
 
-export const SHARE_CACHE = 'linkord-share-v1';
+export const SHARE_CACHE = 'overcord-share-v1';
 const SHARE_PATH = '/share-target';
 export const SHARE_TTL_MS = 60 * 60 * 1000;
 

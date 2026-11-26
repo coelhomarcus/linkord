@@ -62,9 +62,9 @@ describe('profile Wall', () => {
 
     await user.click(await addWidgetButton());
     const navigation = within(screen.getByRole('navigation', { name: 'Tipos de widget' }));
-    const linkord = within(navigation.getByRole('group', { name: 'Do Linkord' }));
+    const overcord = within(navigation.getByRole('group', { name: 'Do Overcord' }));
     const integrations = within(navigation.getByRole('group', { name: 'Integrações' }));
-    expect(linkord.getByRole('button', { name: 'Jogos' })).toHaveAttribute('aria-current', 'true');
+    expect(overcord.getByRole('button', { name: 'Jogos' })).toHaveAttribute('aria-current', 'true');
     const steam = integrations.getByRole('button', { name: 'Steam' });
     expect(steam.querySelector('svg')).toBeInTheDocument();
     await user.click(steam);
@@ -646,7 +646,7 @@ describe('activity widgets', () => {
 
     await user.selectOptions(screen.getByRole('combobox', { name: 'Período de Mais jogados' }), screen.getByRole('option', { name: 'Últimos 7 dias' }));
     expect(screen.getByText('Nenhuma atividade ainda')).toBeInTheDocument();
-    expect(screen.getByText(/Só o aplicativo do Linkord para computador/)).toBeInTheDocument();
+    expect(screen.getByText(/Só o aplicativo do Overcord para computador/)).toBeInTheDocument();
     await user.click(within(saveBar()!).getByRole('button', { name: 'Salvar' }));
     await waitFor(() => expect(mocked.saveWall).toHaveBeenCalledWith([{ connectionId: null, type: 'activity-top', period: 7 }]));
   });

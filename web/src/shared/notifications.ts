@@ -15,7 +15,7 @@ export function saveNotificationsEnabled(value: boolean): void {
   localStorageStore.set(LOCAL_STORAGE_KEYS.notificationsEnabled, value ? '1' : '0');
 }
 
-/** The browser's own permission and the Linkord preference are different
+/** The browser's own permission and the Overcord preference are different
  * things — this only ever reads the former. `'unsupported'`: no
  * Notification API at all (never happens for the preference, which is
  * still a normal on/off in localStorage either way). */
@@ -35,7 +35,7 @@ export function setNotificationsModuleEnabled(value: boolean): void {
 export function setPushSubscriptionActive(value: boolean): void {
   if (pushSubscriptionActive === value) return;
   pushSubscriptionActive = value;
-  window.dispatchEvent(new Event('linkord-push-changed'));
+  window.dispatchEvent(new Event('overcord-push-changed'));
 }
 
 export function isPushSubscriptionActive(): boolean { return pushSubscriptionActive; }

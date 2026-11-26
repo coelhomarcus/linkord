@@ -144,7 +144,7 @@ async function sizeOnDisk(id: string): Promise<number | null> {
   }
 }
 
-const README = `This is a copy of the data of your Linkord account, made when you asked for it.
+const README = `This is a copy of the data of your Overcord account, made when you asked for it.
 
 account.json      your profile, account details, settings and activity sessions
 connections.json  the accounts and widgets on your profile, and the games you picked

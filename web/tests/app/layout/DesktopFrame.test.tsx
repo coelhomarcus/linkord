@@ -18,7 +18,7 @@ function stubWindowControls(platform: string, initial: Partial<DesktopWindowStat
       return () => { listener = null; };
     }),
   } satisfies DesktopWindowControls;
-  window.linkordDesktop = { platform, version: '0.2.0', windowControls: controls };
+  window.overcordDesktop = { platform, version: '0.2.0', windowControls: controls };
   return { controls, emit: (state: DesktopWindowState) => act(() => listener?.(state)) };
 }
 
@@ -35,7 +35,7 @@ function HostingBar() {
 }
 
 afterEach(() => {
-  delete window.linkordDesktop;
+  delete window.overcordDesktop;
   vi.restoreAllMocks();
 });
 
@@ -47,7 +47,7 @@ describe('DesktopFrame', () => {
   });
 
   it('adds nothing for a desktop build that keeps the system title bar', () => {
-    window.linkordDesktop = { platform: 'win32', version: '0.1.0' };
+    window.overcordDesktop = { platform: 'win32', version: '0.1.0' };
     render(<DesktopFrame><p>page</p></DesktopFrame>);
     expect(screen.queryByTestId('desktop-title-bar')).not.toBeInTheDocument();
   });
@@ -76,7 +76,7 @@ describe('DesktopFrame', () => {
 
   it('draws the Windows buttons for an old Linux install too', () => {
     stubWindowControls('linux');
-    window.linkordDesktop!.windowControls!.style = 'linux';
+    window.overcordDesktop!.windowControls!.style = 'linux';
     render(<DesktopFrame><p>page</p></DesktopFrame>);
     expect(screen.getByRole('group', { name: 'Controles da janela' })).toHaveAttribute('data-title-bar-style', 'windows');
   });

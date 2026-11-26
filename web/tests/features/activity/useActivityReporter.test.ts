@@ -23,7 +23,7 @@ function stubDesktop(initial: DesktopActivity | null) {
     }),
     setHidden: vi.fn(async (_keys: string[]) => {}),
   } satisfies DesktopActivityApi;
-  window.linkordDesktop = { platform: 'win32', version: '0.3.0', activity: api };
+  window.overcordDesktop = { platform: 'win32', version: '0.3.0', activity: api };
   return { api, change: (activity: DesktopActivity | null) => act(() => listener?.(activity)) };
 }
 
@@ -47,7 +47,7 @@ beforeEach(() => {
   lookup.mockResolvedValue({ name: '', icon: null });
 });
 
-afterEach(() => { delete window.linkordDesktop; });
+afterEach(() => { delete window.overcordDesktop; });
 
 describe('useActivityReporter', () => {
   it('sends a detected game with the icon the server picked by the program\'s own', async () => {

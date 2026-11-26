@@ -17,7 +17,7 @@ test('administration uses its own origin and session', async ({ users, request }
   const appCookie = (await signedIn.context.cookies(BASE_URL)).find((cookie) => cookie.httpOnly);
   expect(appCookie).toBeDefined();
   expect((await request.get(`${ADMIN_URL}/api/admin/users`, {
-    headers: { cookie: `linkord_admin=${appCookie!.value}` },
+    headers: { cookie: `overcord_admin=${appCookie!.value}` },
   })).status()).toBe(401);
 
   const memberPage = await member.context.newPage();

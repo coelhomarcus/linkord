@@ -41,7 +41,7 @@
     "backToAdmin": "Voltar à administração"
   },
   "site": {
-    "signInSubtitle": "Entre com sua conta de administrador do Linkord.",
+    "signInSubtitle": "Entre com sua conta de administrador do Overcord.",
     "signOut": "Sair",
     "signOutFailed": "Não foi possível encerrar a sessão. Tente novamente."
   },
@@ -542,7 +542,7 @@
     },
     "servers": {
       "title": "Nenhum servidor ainda",
-      "text": "Os servidores criados no Linkord aparecem aqui."
+      "text": "Os servidores criados no Overcord aparecem aqui."
     },
     "webhooks": {
       "title": "Nenhum webhook ainda",

@@ -8,11 +8,11 @@ import { AdminRoutes } from '@/features/admin/AdminRoutes';
 import { subscribeAdminAccessLost, subscribeAdminSessionEnded } from '@/features/admin/adminAccess';
 import { invalidateAdminLists } from '@/features/admin/adminListCache';
 import { fetchAdminSession, logoutAdmin, type AdminIdentity } from '@/features/admin/adminSessionApi';
-import { ApiError } from '@linkord/frontend-shared/api/transport';
-import { ErrorBanner } from '@linkord/frontend-shared/ErrorBanner';
-import { applyLanguage } from '@linkord/frontend-shared/i18n/applyLanguage';
-import { Button } from '@linkord/frontend-shared/ui/primitives/button';
-import { SignOutIcon } from '@linkord/frontend-shared/ui/icons';
+import { ApiError } from '@overcord/frontend-shared/api/transport';
+import { ErrorBanner } from '@overcord/frontend-shared/ErrorBanner';
+import { applyLanguage } from '@overcord/frontend-shared/i18n/applyLanguage';
+import { Button } from '@overcord/frontend-shared/ui/primitives/button';
+import { SignOutIcon } from '@overcord/frontend-shared/ui/icons';
 
 type AccessNotice = 'access' | 'session' | null;
 

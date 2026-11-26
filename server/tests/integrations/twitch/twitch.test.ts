@@ -8,7 +8,7 @@ import { createTwitchClient, parseTwitchLogin } from '../../../src/integrations/
 const user = { id: '310', login: 'example', display_name: 'Example', profile_image_url: 'https://static-cdn.jtvnw.net/avatar.jpg',
   offline_image_url: 'https://static-cdn.jtvnw.net/offline-1920x1080.png' };
 const video = { id: '510', title: 'Replay', created_at: '2026-11-23T14:00:00Z', duration: '1h2m3s', thumbnail_url: 'https://static-cdn.jtvnw.net/vod-%{width}x%{height}.jpg' };
-const live = { user_login: 'example', type: 'live', title: 'Hello!', game_name: 'Linkord', viewer_count: 42, thumbnail_url: 'https://static-cdn.jtvnw.net/live-{width}x{height}.jpg' };
+const live = { user_login: 'example', type: 'live', title: 'Hello!', game_name: 'Overcord', viewer_count: 42, thumbnail_url: 'https://static-cdn.jtvnw.net/live-{width}x{height}.jpg' };
 
 function fixtures() {
   let now = 0;
@@ -60,7 +60,7 @@ test('live reads share a short cache, can become offline, and reject malformed r
   const { twitch, setStreams, advance, counts } = fixtures();
   const first = twitch.live('example');
   assert.equal(twitch.live('example'), first);
-  assert.deepEqual(await first, { title: 'Hello!', game: 'Linkord', viewers: 42, imageUrl: 'https://static-cdn.jtvnw.net/live-640x360.jpg' });
+  assert.deepEqual(await first, { title: 'Hello!', game: 'Overcord', viewers: 42, imageUrl: 'https://static-cdn.jtvnw.net/live-640x360.jpg' });
   setStreams([]);
   advance(60_001);
   assert.equal(await twitch.live('example'), null);

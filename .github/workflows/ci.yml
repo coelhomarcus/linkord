@@ -45,13 +45,13 @@ jobs:
       postgres:
         image: postgres:17-alpine
         env:
-          POSTGRES_USER: linkord
-          POSTGRES_PASSWORD: linkord
-          POSTGRES_DB: linkord
+          POSTGRES_USER: overcord
+          POSTGRES_PASSWORD: overcord
+          POSTGRES_DB: overcord
         ports:
           - 5432/tcp
         options: >-
-          --health-cmd "pg_isready -h 127.0.0.1 -U linkord -d linkord"
+          --health-cmd "pg_isready -h 127.0.0.1 -U overcord -d overcord"
           --health-interval 2s
           --health-timeout 3s
           --health-retries 15
@@ -64,7 +64,7 @@ jobs:
       - name: Run integration tests
         run: bun run test:integration
         env:
-          DATABASE_URL: postgres://linkord:linkord@127.0.0.1:${{ job.services.postgres.ports['5432'] }}/linkord
+          DATABASE_URL: postgres://overcord:overcord@127.0.0.1:${{ job.services.postgres.ports['5432'] }}/overcord
 
   frontend:
     name: Frontend (${{ matrix.package }})

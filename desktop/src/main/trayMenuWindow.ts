@@ -45,12 +45,12 @@ export function createTrayMenuWindow(onChoose: (id: string, checked: boolean) =>
     return window;
   };
 
-  ipcMain.on('linkord:tray-menu:choose', (event, id: unknown, checked: unknown) => {
+  ipcMain.on('overcord:tray-menu:choose', (event, id: unknown, checked: unknown) => {
     if (!window || event.sender !== window.webContents) return;
     window.hide();
     if (typeof id === 'string') onChoose(id, checked === true);
   });
-  ipcMain.on('linkord:tray-menu:close', (event) => {
+  ipcMain.on('overcord:tray-menu:close', (event) => {
     if (window && event.sender === window.webContents) window.hide();
   });
 
@@ -68,7 +68,7 @@ export function createTrayMenuWindow(onChoose: (id: string, checked: boolean) =>
       const size = trayMenuSize(model.items);
       const { x, y } = trayMenuPosition(pointer, size, screen.getDisplayNearestPoint(pointer).bounds);
       menu.setBounds({ x, y, ...size });
-      menu.webContents.send('linkord:tray-menu:render', model);
+      menu.webContents.send('overcord:tray-menu:render', model);
       menu.show();
       menu.focus();
     },

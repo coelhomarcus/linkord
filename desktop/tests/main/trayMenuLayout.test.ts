@@ -44,8 +44,8 @@ describe('drawsTrayMenu', () => {
   it('draws it on Windows, and elsewhere only when asked in a development run', () => {
     assert.equal(drawsTrayMenu({ platform: 'win32', env: {}, isPackaged: true }), true);
     assert.equal(drawsTrayMenu({ platform: 'darwin', env: {}, isPackaged: true }), false);
-    assert.equal(drawsTrayMenu({ platform: 'darwin', env: { LINKORD_TRAY_MENU: 'drawn' }, isPackaged: false }), true);
-    assert.equal(drawsTrayMenu({ platform: 'darwin', env: { LINKORD_TRAY_MENU: 'drawn' }, isPackaged: true }), false);
+    assert.equal(drawsTrayMenu({ platform: 'darwin', env: { OVERCORD_TRAY_MENU: 'drawn' }, isPackaged: false }), true);
+    assert.equal(drawsTrayMenu({ platform: 'darwin', env: { OVERCORD_TRAY_MENU: 'drawn' }, isPackaged: true }), false);
   });
 });
 

@@ -46,7 +46,7 @@ test('publishes ranked activity and the summary from the desktop history', async
   const catalog = a.page.getByRole('dialog', { name: 'Adicionar widget de perfil' });
   for (const name of ['Mais jogados', 'Resumo de atividade']) {
     await add.click();
-    await catalog.getByRole('group', { name: 'Do Linkord' }).getByRole('button', { name: 'Atividade', exact: true }).click();
+    await catalog.getByRole('group', { name: 'Do Overcord' }).getByRole('button', { name: 'Atividade', exact: true }).click();
     await expect(catalog.getByRole('button', { name: 'Calendário de atividade' })).toHaveCount(0);
     await catalog.getByRole('button', { name }).click();
   }

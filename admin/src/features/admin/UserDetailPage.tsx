@@ -1,10 +1,10 @@
 import { useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useParams } from 'react-router';
-import { Avatar } from '@linkord/frontend-shared/Avatar';
-import { Button } from '@linkord/frontend-shared/ui/primitives/button';
-import { formatFileSize } from '@linkord/frontend-shared/lib/formatBytes';
-import { useCursorList } from '@linkord/frontend-shared/hooks/useCursorList';
+import { Avatar } from '@overcord/frontend-shared/Avatar';
+import { Button } from '@overcord/frontend-shared/ui/primitives/button';
+import { formatFileSize } from '@overcord/frontend-shared/lib/formatBytes';
+import { useCursorList } from '@overcord/frontend-shared/hooks/useCursorList';
 import { deleteUser, fetchAdminUser, fetchAudit, grantAdmin, reactivateUser, revokeAdmin, revokeUserSessions, suspendUser } from './adminApi';
 import { AdminDetailTabs } from './AdminDetailTabs';
 import { AdminEntityHeader } from './AdminEntityHeader';
@@ -16,10 +16,10 @@ import { RESTORE_LIST, useAdminBack } from './useAdminBack';
 import { useAdminDetail } from './useAdminDetail';
 import { useAdminQuery } from './useAdminQuery';
 import type { QuerySchema } from './useAdminQuery';
-import { AppLink } from '@linkord/frontend-shared/ui/app-link';
+import { AppLink } from '@overcord/frontend-shared/ui/app-link';
 import { AuditListSkeleton } from './AdminSkeletons';
-import { EmptyState } from '@linkord/frontend-shared/ui/empty-state';
-import { useLanguage } from '@linkord/frontend-shared/i18n/useLanguage';
+import { EmptyState } from '@overcord/frontend-shared/ui/empty-state';
+import { useLanguage } from '@overcord/frontend-shared/i18n/useLanguage';
 import { reportAdminSessionEnded } from './adminAccess';
 
 type Dialog = 'suspend' | 'reactivate' | 'revoke' | 'delete' | 'grant-admin' | 'revoke-admin' | null;

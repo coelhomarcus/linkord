@@ -6,7 +6,7 @@ import { ADMIN_IMAGE, ADMIN_URL, BASE_URL, NEXT_WEB_IMAGE, REPO_DIR, SPLIT, SPLI
 
 /** E2E_HEAD_IMAGE runs the suite against an image built elsewhere (to check
  * that a spec catches a regression, build the broken tree and point here). */
-export const HEAD_IMAGE = process.env.E2E_HEAD_IMAGE || 'linkord-e2e:head';
+export const HEAD_IMAGE = process.env.E2E_HEAD_IMAGE || 'overcord-e2e:head';
 
 function run(cmd: string, args: string[], cwd = REPO_DIR, input?: string): string {
   return execFileSync(cmd, args, { cwd, input, encoding: 'utf8', stdio: [input ? 'pipe' : 'ignore', 'pipe', 'inherit'], maxBuffer: 64 * 1024 * 1024 });
@@ -20,7 +20,7 @@ function imageExists(tag: string): boolean {
  * run; Docker's layer cache keeps an unchanged tree fast. */
 export function buildHeadImage(): string {
   if (SPLIT) {
-    const backend = process.env.E2E_HEAD_IMAGE || 'linkord-e2e:split-backend';
+    const backend = process.env.E2E_HEAD_IMAGE || 'overcord-e2e:split-backend';
     if (!process.env.E2E_HEAD_IMAGE) run('docker', ['build', '-q', '--target', 'backend', '-t', backend, '.']);
     run('docker', ['build', '-q', '--target', 'frontend', '--build-arg', `APP_URL=${BASE_URL}`,
       '--build-arg', `LIVEKIT_URL=${SPLIT_LIVEKIT_URL}`, '-t', WEB_IMAGE, '.']);
@@ -29,7 +29,7 @@ export function buildHeadImage(): string {
     run('docker', ['build', '-q', '-t', NEXT_WEB_IMAGE, '-'], REPO_DIR, [
       `FROM ${WEB_IMAGE}`,
       'USER root',
-      'RUN echo "<!-- split frontend replacement -->" >> /usr/share/nginx/linkord/index.html',
+      'RUN echo "<!-- split frontend replacement -->" >> /usr/share/nginx/overcord/index.html',
       'USER 101',
     ].join('\n'));
     return backend;
@@ -68,7 +68,7 @@ function readConstant(source: string, name: string): number {
 export function baseVersion(): BaseVersion {
   const ref = process.env.E2E_BASE_REF || 'origin/main';
   const sha = run('git', ['rev-parse', ref]).trim();
-  const image = `linkord-e2e:base-${sha.slice(0, 12)}`;
+  const image = `overcord-e2e:base-${sha.slice(0, 12)}`;
   const protocol = showFile(sha, 'server/src/realtime/protocolVersion.ts');
   const version: BaseVersion = {
     ref,
@@ -80,7 +80,7 @@ export function baseVersion(): BaseVersion {
     shutdownLetsTabsReconnect: !showFile(sha, 'server/src/app/bootstrap.ts').includes('.disconnect(true)'),
   };
   if (!imageExists(image)) {
-    const checkout = mkdtempSync(path.join(tmpdir(), 'linkord-e2e-base-'));
+    const checkout = mkdtempSync(path.join(tmpdir(), 'overcord-e2e-base-'));
     try {
       run('git', ['worktree', 'add', '--detach', checkout, sha]);
       run('docker', ['build', '-q', '-t', image, '.'], checkout);

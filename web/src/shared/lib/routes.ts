@@ -124,7 +124,7 @@ export function messageIdFromSearch(search: string): number | null {
   return raw && MESSAGE_ID.test(raw) ? Number(raw) : null;
 }
 
-/** Whether a path the desktop app hands over for a `linkord://` link
+/** Whether a path the desktop app hands over for a `overcord://` link
  * (desktop/src/main/deepLink.ts builds it) is one it may open: an invite, or
  * a conversation, optionally at a message. Never anything else in the app. */
 export function isDesktopLinkPath(path: string): boolean {

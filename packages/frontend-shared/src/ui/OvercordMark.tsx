@@ -7,7 +7,7 @@ const MARK_EYES = 'M446 615C484.2 615 518 667.8 518 735C518 790.9 487 833 446 83
 // or the theme's own, and on an accent fill it takes the accent's label colour. The eyes are holes.
 const MARK_PATH = `${MARK_BODY} ${MARK_EYES}`;
 
-export function LinkordMark(props: SVGProps<SVGSVGElement>) {
+export function OvercordMark(props: SVGProps<SVGSVGElement>) {
   return (
     <svg viewBox="127.1 242.0 998.8 771.5" fill="currentColor" aria-hidden focusable="false" {...props}>
       <path fillRule="evenodd" clipRule="evenodd" d={MARK_PATH} />

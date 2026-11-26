@@ -18,17 +18,15 @@ const DEFAULT_KEEP = 7;
 // The exact shape rotation is allowed to delete. A backup folder may be shared
 // with other things (a mounted disk, someone's notes), and only names that match
 // this are ever touched.
-const BACKUP_NAME_RE = /^linkord-backup-\d{8}T\d{6}Z$/;
-const PARTIAL_NAME_RE = /^linkord-backup-\d{8}T\d{6}Z\.partial$/;
+const BACKUP_NAME_RE = /^(?:overcord|linkord)-backup-(\d{8}T\d{6}Z)$/;
+const PARTIAL_NAME_RE = /^(?:overcord|linkord)-backup-\d{8}T\d{6}Z\.partial$/;
 // An unfinished folder younger than this may belong to a run that is still going.
 const STALE_PARTIAL_MS = 24 * 60 * 60 * 1000;
-
-const isBackupName = (name: string): boolean => BACKUP_NAME_RE.test(name);
 
 /** UTC, so the name sorts by time and does not depend on the host's timezone. */
 export function backupName(date: Date): string {
   const iso = date.toISOString(); // 2026-11-08T01:53:00.123Z
-  return `linkord-backup-${iso.slice(0, 10).replaceAll('-', '')}T${iso.slice(11, 19).replaceAll(':', '')}Z`;
+  return `overcord-backup-${iso.slice(0, 10).replaceAll('-', '')}T${iso.slice(11, 19).replaceAll(':', '')}Z`;
 }
 
 export interface BackupManifest {
@@ -76,13 +74,14 @@ export async function listBackups(dir: string): Promise<string[]> {
     if ((err as NodeJS.ErrnoException).code === 'ENOENT') return [];
     throw err;
   }
-  const names: string[] = [];
+  const backups: { name: string; timestamp: string }[] = [];
   for (const entry of entries) {
-    if (!entry.isDirectory() || !isBackupName(entry.name)) continue;
+    const timestamp = BACKUP_NAME_RE.exec(entry.name)?.[1];
+    if (!entry.isDirectory() || !timestamp) continue;
     const hasManifest = await fs.stat(path.join(dir, entry.name, MANIFEST_FILE)).then((s) => s.isFile(), () => false);
-    if (hasManifest) names.push(entry.name);
+    if (hasManifest) backups.push({ name: entry.name, timestamp });
   }
-  return names.sort().reverse();
+  return backups.sort((a, b) => b.timestamp.localeCompare(a.timestamp) || b.name.localeCompare(a.name)).map(({ name }) => name);
 }
 
 export function parseKeep(raw: string | undefined): number {

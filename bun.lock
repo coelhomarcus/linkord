@@ -3,7 +3,7 @@
   "configVersion": 0,
   "workspaces": {
     "": {
-      "name": "linkord",
+      "name": "overcord",
       "dependencies": {
         "@fastify/compress": "^9.2.0",
         "@fastify/static": "^10.1.3",

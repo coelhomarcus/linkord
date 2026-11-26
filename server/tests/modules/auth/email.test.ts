@@ -9,7 +9,7 @@ describe('sendAuthCodeEmail', () => {
 
   beforeEach(() => {
     config.RESEND_API_KEY = 're_test';
-    config.RESEND_FROM_EMAIL = 'Linkord <noreply@example.test>';
+    config.RESEND_FROM_EMAIL = 'Overcord <noreply@example.test>';
     config.APP_URL = 'https://chat.example.test';
     sent = null;
     mock.method(globalThis, 'fetch', async (_url: string, init: { body: string }) => {

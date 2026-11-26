@@ -7,7 +7,7 @@ import { useTranslation } from 'react-i18next';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuRadioGroup, DropdownMenuRadioItem, DropdownMenuTrigger } from '@/shared/ui/primitives/dropdown-menu';
 import { cn } from '@/shared/lib/utils';
 import { useOptionalRoomSelector } from '@/state/RoomContext';
-import { ServerIcon } from '@linkord/frontend-shared/ui/ServerIcon';
+import { ServerIcon } from '@overcord/frontend-shared/ui/ServerIcon';
 import { can } from '@/features/servers/serverUtils';
 import { PERMISSIONS } from '@/features/servers/permissionBits';
 import type { ServerSummary } from '@/shared/types/protocol';

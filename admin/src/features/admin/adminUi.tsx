@@ -1,18 +1,18 @@
 import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { type LinkProps } from 'react-router';
-import { Button } from '@linkord/frontend-shared/ui/primitives/button';
-import { cn } from '@linkord/frontend-shared/lib/utils';
-import { SettingsNotice } from '@linkord/frontend-shared/ui/settings-layout';
-import { EmptyState } from '@linkord/frontend-shared/ui/empty-state';
-import type { EmptyIllustrationName } from '@linkord/frontend-shared/ui/empty-state';
+import { Button } from '@overcord/frontend-shared/ui/primitives/button';
+import { cn } from '@overcord/frontend-shared/lib/utils';
+import { SettingsNotice } from '@overcord/frontend-shared/ui/settings-layout';
+import { EmptyState } from '@overcord/frontend-shared/ui/empty-state';
+import type { EmptyIllustrationName } from '@overcord/frontend-shared/ui/empty-state';
 import type { AuditRow } from './adminApi';
 import { actionLabel, formatWhen } from './adminFormat';
 import type { AdminDetailStatus } from './useAdminDetail';
-import { AppLink } from '@linkord/frontend-shared/ui/app-link';
-import { SkeletonGroup } from '@linkord/frontend-shared/ui/primitives/skeleton';
+import { AppLink } from '@overcord/frontend-shared/ui/app-link';
+import { SkeletonGroup } from '@overcord/frontend-shared/ui/primitives/skeleton';
 import { AdminDetailSkeleton, AdminStackedSkeleton } from './AdminSkeletons';
-import { useLanguage } from '@linkord/frontend-shared/i18n/useLanguage';
+import { useLanguage } from '@overcord/frontend-shared/i18n/useLanguage';
 
 const TONES: Record<string, string> = {
   active: 'bg-green/15 text-green', suspended: 'bg-red/15 text-red-text',

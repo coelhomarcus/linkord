@@ -27,11 +27,11 @@ function stubDesktop(status: DesktopUpdateStatus) {
       return () => { listener = null; };
     }),
   } satisfies DesktopSettingsApi;
-  window.linkordDesktop = { platform: 'win32', version: '0.3.0', settings: api };
+  window.overcordDesktop = { platform: 'win32', version: '0.3.0', settings: api };
   return { api, push: (next: DesktopUpdateStatus) => act(() => listener?.(snapshot(next))) };
 }
 
-afterEach(() => { delete window.linkordDesktop; });
+afterEach(() => { delete window.overcordDesktop; });
 
 describe('DesktopUpdateButton', () => {
   it('shows nothing in a browser', () => {

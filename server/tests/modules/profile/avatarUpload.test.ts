@@ -15,7 +15,7 @@ const UPLOADER_ID = 'test-uploader';
 
 beforeEach(async () => {
   previousUploadDir = config.UPLOAD_DIR;
-  uploadDir = await fs.mkdtemp(path.join(os.tmpdir(), 'linkord-avatar-test-'));
+  uploadDir = await fs.mkdtemp(path.join(os.tmpdir(), 'overcord-avatar-test-'));
   config.UPLOAD_DIR = uploadDir;
   mock.method(db, 'insert', () => ({ values: async () => undefined }) as never);
 });

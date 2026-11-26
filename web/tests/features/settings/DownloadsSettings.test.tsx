@@ -15,7 +15,7 @@ vi.mock('@/features/desktopApp/desktopDownloads', async (importOriginal) => ({
 const downloads = {
   version: '0.3.0',
   page: 'https://github.com/o/r/releases/tag/v0.3.0',
-  files: { windows: 'https://github.com/o/r/releases/download/v0.3.0/Linkord-0.3.0-win-x64.exe' },
+  files: { windows: 'https://github.com/o/r/releases/download/v0.3.0/Overcord-0.3.0-win-x64.exe' },
 };
 const WINDOWS = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36';
 const ANDROID = 'Mozilla/5.0 (Linux; Android 15; Pixel 9) Chrome/142.0';
@@ -41,7 +41,7 @@ beforeEach(() => {
 
 afterEach(() => {
   stopCapture();
-  delete window.linkordDesktop;
+  delete window.overcordDesktop;
   useUserAgent(originalUserAgent);
 });
 
@@ -91,7 +91,7 @@ describe('DownloadsSettings', () => {
   });
 
   it('inside the desktop app, says it is the app in use and points the web app to the phone', () => {
-    window.linkordDesktop = { platform: 'win32', version: '0.3.0' };
+    window.overcordDesktop = { platform: 'win32', version: '0.3.0' };
     renderPage();
     expect(within(card('App para Windows')).getByText('Você está usando o app para Windows.')).toBeInTheDocument();
     expect(within(card('Web app')).getByText(/abra o site no navegador do celular/)).toBeInTheDocument();

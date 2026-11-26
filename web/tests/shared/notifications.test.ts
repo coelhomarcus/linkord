@@ -169,11 +169,11 @@ describe('notifyIncomingChatMessage — wording and picture', () => {
 });
 
 describe('notifyIncomingChatMessage — in the desktop app', () => {
-  afterEach(() => { delete window.linkordDesktop; });
+  afterEach(() => { delete window.overcordDesktop; });
 
   it('shows a page notification even with a service worker, and a click brings the window back', async () => {
     const focusWindow = vi.fn(async () => {});
-    window.linkordDesktop = { platform: 'darwin', version: '0.1.0', focusWindow };
+    window.overcordDesktop = { platform: 'darwin', version: '0.1.0', focusWindow };
     const showNotification = vi.fn();
     vi.stubGlobal('navigator', { ...navigator, serviceWorker: { getRegistration: vi.fn(async () => ({ showNotification })) } });
     const onClick = vi.fn();
@@ -228,7 +228,7 @@ describe('notifyLiveNotice', () => {
 
   it('a click goes to the notice path and brings the desktop window back', async () => {
     const focusWindow = vi.fn(async () => {});
-    window.linkordDesktop = { platform: 'win32', version: '0.6.0', focusWindow };
+    window.overcordDesktop = { platform: 'win32', version: '0.6.0', focusWindow };
     const navigate = vi.fn();
     setNoticeNavigationHandler(navigate);
     notifyLiveNotice(friendRequest);
@@ -236,7 +236,7 @@ describe('notifyLiveNotice', () => {
     created[0]!.onclick?.();
     expect(navigate).toHaveBeenCalledWith('/app/friends?tab=pending#received');
     expect(focusWindow).toHaveBeenCalled();
-    delete window.linkordDesktop;
+    delete window.overcordDesktop;
   });
 
   it('a path outside the app falls back to the notifications page', async () => {
@@ -277,14 +277,14 @@ describe('notifications through the desktop app’s own notifier', () => {
   beforeEach(() => {
     clicked = null;
     show = vi.fn<DesktopNotifications['show']>(async () => true);
-    window.linkordDesktop = {
+    window.overcordDesktop = {
       platform: 'win32', version: '0.7.0', focusWindow: vi.fn(async () => {}),
       notifications: { show, onClick: (callback) => { clicked = callback; return () => { clicked = null; }; } },
     };
   });
 
   afterEach(() => {
-    delete window.linkordDesktop;
+    delete window.overcordDesktop;
     setNotificationClickHandler(null);
     setNoticeNavigationHandler(null);
   });

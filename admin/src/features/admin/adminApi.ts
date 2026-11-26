@@ -1,5 +1,5 @@
-import { ApiError, apiFetch } from '@linkord/frontend-shared/api/transport';
-import { ERROR_CODES } from '@linkord/frontend-shared/api/errorCodes';
+import { ApiError, apiFetch } from '@overcord/frontend-shared/api/transport';
+import { ERROR_CODES } from '@overcord/frontend-shared/api/errorCodes';
 import { reportAdminAccessLost, reportAdminSessionEnded } from './adminAccess';
 import { invalidateAdminLists } from './adminListCache';
 

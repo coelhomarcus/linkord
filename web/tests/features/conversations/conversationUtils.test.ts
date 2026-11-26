@@ -39,22 +39,22 @@ describe('conversationMatchesQuery', () => {
 
 describe('conversationDocumentTitle', () => {
   it('is the app name when no conversation is open', () => {
-    expect(conversationDocumentTitle(undefined, 'me', users)).toBe('Linkord');
+    expect(conversationDocumentTitle(undefined, 'me', users)).toBe('Overcord');
   });
 
   it('names a friend by handle', () => {
-    expect(conversationDocumentTitle(conv('dm'), 'me', users)).toBe('Linkord | @bea');
+    expect(conversationDocumentTitle(conv('dm'), 'me', users)).toBe('Overcord | @bea');
   });
 
   it('falls back to the app name for a DM whose other user is not loaded', () => {
-    expect(conversationDocumentTitle(conv('dm', { memberIds: ['me', 'u-ghost'] }), 'me', users)).toBe('Linkord');
+    expect(conversationDocumentTitle(conv('dm', { memberIds: ['me', 'u-ghost'] }), 'me', users)).toBe('Overcord');
   });
 
   it('names a channel with its server', () => {
     const text = conv('g', { type: 'text', title: 'geral', serverId: 's' });
     const voice = conv('v', { type: 'voice', title: 'Geral', serverId: 's' });
-    expect(conversationDocumentTitle(text, 'me', users, 'Os Xerecas')).toBe('Linkord | #geral | Os Xerecas');
-    expect(conversationDocumentTitle(voice, 'me', users)).toBe('Linkord | Geral');
+    expect(conversationDocumentTitle(text, 'me', users, 'Os Xerecas')).toBe('Overcord | #geral | Os Xerecas');
+    expect(conversationDocumentTitle(voice, 'me', users)).toBe('Overcord | Geral');
   });
 });
 

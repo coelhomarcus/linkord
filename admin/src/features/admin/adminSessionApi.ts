@@ -1,6 +1,6 @@
-import { apiFetch } from '@linkord/frontend-shared/api/transport';
-import type { LoginChallenge } from '@linkord/frontend-shared/api/transport';
-import type { Language } from '@linkord/frontend-shared/i18n/languages';
+import { apiFetch } from '@overcord/frontend-shared/api/transport';
+import type { LoginChallenge } from '@overcord/frontend-shared/api/transport';
+import type { Language } from '@overcord/frontend-shared/i18n/languages';
 
 export interface AdminIdentity {
   id: string;

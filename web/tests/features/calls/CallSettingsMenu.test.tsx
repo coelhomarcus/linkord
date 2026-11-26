@@ -11,7 +11,7 @@ describe('CallSettingsMenu', () => {
     await user.click(screen.getByRole('button', { name: 'Ajustes da chamada' }));
     expect(await screen.findByRole('menu')).toBeInTheDocument();
     // a modal menu's backdrop could swallow the click meant to close it and
-    // let the trigger reopen it right after (LINKORD-6)
+    // let the trigger reopen it right after (OVERCORD-6)
     expect(document.querySelector('[data-base-ui-inert][role="presentation"]')).toBeNull();
   });
 

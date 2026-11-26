@@ -34,8 +34,8 @@ if (debugSwitch) {
 }
 
 // A development run keeps its own session and window state, and its own
-// single-instance lock, so it can run next to an installed Linkord
-if (!app.isPackaged) app.setPath('userData', path.join(app.getPath('appData'), 'Linkord Dev'));
+// single-instance lock, so it can run next to an installed Overcord
+if (!app.isPackaged) app.setPath('userData', path.join(app.getPath('appData'), 'Overcord Dev'));
 
 // Read only in an installed build: a development run must not pick up the
 // address (or update source) of the last installer built from the same dist/
@@ -54,12 +54,12 @@ const resolved = resolveAppUrl({ argv: process.argv, env: process.env, isPackage
 if (!resolved.ok) {
   // Only a misconfigured build gets here: `npm run package` refuses to build without an address
   const detail = resolved.reason === 'missing'
-    ? 'This build has no Linkord server address. Set LINKORD_URL or pass --url=<address>.'
+    ? 'This build has no Overcord server address. Set OVERCORD_URL or pass --url=<address>.'
     : resolved.reason === 'insecure'
       ? `${resolved.value} uses http; only https is allowed outside this machine.`
       : `${resolved.value} is not a valid http(s) address.`;
   app.whenReady().then(() => {
-    dialog.showErrorBox('Linkord', detail);
+    dialog.showErrorBox('Overcord', detail);
     app.exit(1);
   });
 } else if (!app.requestSingleInstanceLock()) {
@@ -81,9 +81,9 @@ if (!resolved.ok) {
     mainWindow.focus();
   };
 
-  if (process.platform === 'win32') app.setAppUserModelId('app.linkord.desktop');
+  if (process.platform === 'win32') app.setAppUserModelId('app.overcord.desktop');
 
-  // `linkord://` links (deepLink.ts). One that started the app is the first
+  // `overcord://` links (deepLink.ts). One that started the app is the first
   // page it loads; later ones reach this instance through second-instance
   const registration = protocolRegistration({
     isPackaged: app.isPackaged,
@@ -257,7 +257,7 @@ if (!resolved.ok) {
       if (followProgress && status.kind === 'downloading') updaterWindow.show({ kind: 'downloading', version: status.version, percent: status.percent });
     };
     tray = createTray(showMainWindow, drawnMenu && (() => {
-      void drawnMenu.show({ title: 'Linkord', version: format(strings.version, { version: app.getVersion() }), items: trayMenuItems(menuState()) });
+      void drawnMenu.show({ title: 'Overcord', version: format(strings.version, { version: app.getVersion() }), items: trayMenuItems(menuState()) });
     }));
     refresh();
 
@@ -310,9 +310,9 @@ if (!resolved.ok) {
         strings,
         titleBar: barStyle,
         preloadArguments: [
-          `--linkord-desktop-version=${app.getVersion()}`,
-          `--linkord-system-audio=${capturesSystemAudio(process.platform) ? '1' : '0'}`,
-          `--linkord-title-bar=${barStyle}`,
+          `--overcord-desktop-version=${app.getVersion()}`,
+          `--overcord-system-audio=${capturesSystemAudio(process.platform) ? '1' : '0'}`,
+          `--overcord-title-bar=${barStyle}`,
         ],
       });
       const window = created.window;

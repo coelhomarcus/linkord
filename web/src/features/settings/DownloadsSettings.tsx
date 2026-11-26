@@ -23,7 +23,7 @@ function recommendation(): Recommendation {
   return isWindowsComputer() ? 'windows' : 'web';
 }
 
-/** The two ways to take Linkord out of a browser tab, side by side and explained. */
+/** The two ways to take Overcord out of a browser tab, side by side and explained. */
 export function DownloadsSettings() {
   const { t } = useTranslation('settings');
   const recommended = recommendation();

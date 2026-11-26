@@ -12,7 +12,7 @@
   "empty": "Nenhuma conversa encontrada.",
   "missing": {
     "title": "Nada para enviar",
-    "body": "O que você compartilhou expirou ou não chegou ao Linkord. Compartilhe de novo pelo app de origem.",
+    "body": "O que você compartilhou expirou ou não chegou ao Overcord. Compartilhe de novo pelo app de origem.",
     "action": "Ir para o início"
   },
   "failed": "Não foi possível receber o que você compartilhou. Tente de novo."

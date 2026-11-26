@@ -1,28 +1,28 @@
 # Substitute the admin hostname and the two Dokploy service names before installing this file.
 http:
   routers:
-    linkord-admin-redirect:
+    overcord-admin-redirect:
       rule: 'Host(`__ADMIN_DOMAIN__`)'
       entryPoints: [web]
       middlewares: [redirect-to-https@file]
-      service: linkord-admin-web
-    linkord-admin-api:
+      service: overcord-admin-web
+    overcord-admin-api:
       rule: 'Host(`__ADMIN_DOMAIN__`) && (PathPrefix(`/api/admin/`) || Path(`/api/csp-reports`) || PathPrefix(`/uploads/`))'
       priority: 200
       entryPoints: [websecure]
-      service: linkord-admin-backend
-    linkord-admin-site:
+      service: overcord-admin-backend
+    overcord-admin-site:
       rule: 'Host(`__ADMIN_DOMAIN__`)'
       priority: 100
       entryPoints: [websecure]
-      service: linkord-admin-web
+      service: overcord-admin-web
   services:
-    linkord-admin-backend:
+    overcord-admin-backend:
       loadBalancer:
         passHostHeader: true
         servers:
           - url: http://__BACKEND_APP_NAME__:3000
-    linkord-admin-web:
+    overcord-admin-web:
       loadBalancer:
         passHostHeader: true
         servers:

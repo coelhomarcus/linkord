@@ -32,7 +32,7 @@ interface ComposerVoiceOptions {
 /** The composer's side of recording: when a take may start, what ends it, and
  * where it lands. Recording is blocked while this tab is in a call, and a call
  * starting mid-take stops it before LiveKit asks for the mic (see the decision
- * on LINKORD-36: a second capture would put the recording on the call, and on
+ * on OVERCORD-36: a second capture would put the recording on the call, and on
  * iOS it would end the call's own capture). */
 export function useComposerVoice({ conversationId, inCall, saveTake, sendTake, env }: ComposerVoiceOptions) {
   const { t } = useTranslation('voiceMessages');

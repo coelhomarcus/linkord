@@ -1,6 +1,6 @@
 @import "tailwindcss";
 @import "tw-animate-css";
-@import "@linkord/frontend-shared/src/styles/base.css";
+@import "@overcord/frontend-shared/src/styles/base.css";
 @import "./themes.css";
 /* code colors (every theme is dark) */
 @import "@twinkleplop/theme-github/dark";

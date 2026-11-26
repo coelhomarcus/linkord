@@ -3,7 +3,7 @@
   "configVersion": 0,
   "workspaces": {
     "": {
-      "name": "linkord-e2e",
+      "name": "overcord-e2e",
       "devDependencies": {
         "@playwright/test": "1.65.0",
         "@types/node": "22.10.2",

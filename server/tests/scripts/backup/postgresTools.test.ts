@@ -11,9 +11,9 @@ const node = process.execPath;
 
 describe('pgConnection', () => {
   it('moves the URL into PG* variables, so the password never reaches the command line', () => {
-    const c = pgConnection('postgres://app%40corp:p%2Fss%3Aw%40rd@db.internal:6543/linkord?sslmode=require');
-    assert.deepEqual(c.env, { PGHOST: 'db.internal', PGPORT: '6543', PGDATABASE: 'linkord', PGUSER: 'app@corp', PGPASSWORD: 'p/ss:w@rd' });
-    assert.equal(c.database, 'linkord');
+    const c = pgConnection('postgres://app%40corp:p%2Fss%3Aw%40rd@db.internal:6543/overcord?sslmode=require');
+    assert.deepEqual(c.env, { PGHOST: 'db.internal', PGPORT: '6543', PGDATABASE: 'overcord', PGUSER: 'app@corp', PGPASSWORD: 'p/ss:w@rd' });
+    assert.equal(c.database, 'overcord');
   });
 
   it('defaults the port and unwraps an IPv6 host', () => {
@@ -48,8 +48,8 @@ describe('pgConnection', () => {
 
 describe('runTool', () => {
   it('collects stdout and passes the environment', async () => {
-    const r = await runTool({ bin: node, args: ['-e', 'process.stdout.write(process.env.WHO)'], env: { WHO: 'linkord' }, what: 'echo' });
-    assert.equal(r.stdout, 'linkord');
+    const r = await runTool({ bin: node, args: ['-e', 'process.stdout.write(process.env.WHO)'], env: { WHO: 'overcord' }, what: 'echo' });
+    assert.equal(r.stdout, 'overcord');
   });
 
   it('fails with the tool name, exit code and stderr', async () => {
@@ -69,7 +69,7 @@ describe('runTool', () => {
   });
 
   it('pipes input to stdin and stdout to a sink', async () => {
-    const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'linkord-tool-test-'));
+    const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'overcord-tool-test-'));
     try {
       const file = path.join(dir, 'out.bin');
       const digest = await writeHashed(

@@ -1,11 +1,11 @@
-import { ClockCounterClockwiseIcon } from '@linkord/frontend-shared/ui/icons';
+import { ClockCounterClockwiseIcon } from '@overcord/frontend-shared/ui/icons';
 import { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useLocation } from 'react-router';
 
-import { Avatar } from '@linkord/frontend-shared/Avatar';
-import { buttonVariants } from '@linkord/frontend-shared/ui/primitives/button';
-import { useUrlSearch } from '@linkord/frontend-shared/hooks/useUrlSearch';
+import { Avatar } from '@overcord/frontend-shared/Avatar';
+import { buttonVariants } from '@overcord/frontend-shared/ui/primitives/button';
+import { useUrlSearch } from '@overcord/frontend-shared/hooks/useUrlSearch';
 import { fetchAdminWebhooks } from './adminApi';
 import type { AdminWebhookRow } from './adminApi';
 import { formatDateShort, formatWhen, formatWhenShort } from './adminFormat';
@@ -18,10 +18,10 @@ import { useAdminList } from './useAdminList';
 import { useAdminTableFits } from './useAdminMode';
 import { useAdminQuery } from './useAdminQuery';
 import type { QuerySchema } from './useAdminQuery';
-import { AppLink } from '@linkord/frontend-shared/ui/app-link';
+import { AppLink } from '@overcord/frontend-shared/ui/app-link';
 import { AdminStackedSkeleton, AdminTableSkeleton } from './AdminSkeletons';
 import { AdminPageTitle } from './AdminSection';
-import { useLanguage } from '@linkord/frontend-shared/i18n/useLanguage';
+import { useLanguage } from '@overcord/frontend-shared/i18n/useLanguage';
 
 const QUERY: QuerySchema<'q'> = { q: { default: '' } };
 

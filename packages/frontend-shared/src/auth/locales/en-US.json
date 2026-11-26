@@ -16,7 +16,7 @@
     "displayName": "This is how others see you. You can use special characters and emoji.",
     "username": "Use 3 to 20 characters: letters, numbers, underscores _, periods or hyphens.",
     "password": "Use at least 8 characters.",
-    "inviteCode": "Ask whoever invited you to Linkord for the code."
+    "inviteCode": "Ask whoever invited you to Overcord for the code."
   },
   "errors": {
     "required": "This field is required.",
@@ -45,7 +45,7 @@
   },
   "desktopApp": {
     "title": "Get the Windows app",
-    "description": "Linkord in its own window, with notifications even while it is closed.",
+    "description": "Overcord in its own window, with notifications even while it is closed.",
     "download": "Download for Windows",
     "version": "Version {{version}}"
   },

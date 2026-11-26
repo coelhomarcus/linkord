@@ -1,8 +1,8 @@
-import { CaretRightIcon, iconWeight } from '@linkord/frontend-shared/ui/icons';
+import { CaretRightIcon, iconWeight } from '@overcord/frontend-shared/ui/icons';
 import { useTranslation } from 'react-i18next';
 import { NavLink } from 'react-router';
-import { cn } from '@linkord/frontend-shared/lib/utils';
-import { ActiveFill } from '@linkord/frontend-shared/ui/active-fill';
+import { cn } from '@overcord/frontend-shared/lib/utils';
+import { ActiveFill } from '@overcord/frontend-shared/ui/active-fill';
 import { ADMIN_GROUPS, adminSectionPath } from './adminCatalog';
 
 function GroupLabel({ children }: { children: string }) {
