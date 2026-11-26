@@ -83,36 +83,30 @@ export async function verifyAuthCode(
 
   if (!record) return { ok: false, reason: 'invalid_code' };
   if (record.expiresAt.getTime() <= Date.now()) {
-    await consumeCode(record.id);
+    await db.update(authCodes).set({ consumedAt: new Date() })
+      .where(and(eq(authCodes.id, record.id), isNull(authCodes.consumedAt)));
     return { ok: false, reason: 'code_expired' };
   }
 
-  // The attempt is claimed and capped in one statement: Postgres re-checks the WHERE after waiting on
-  // the row lock, so parallel guesses cannot all read the same `attempts` and slip past the ceiling.
+  const matches = codeMatches(code, record.codeHash);
+  // Postgres rechecks the guard after a concurrent update. Consume a match or the final
+  // attempt in that same update so another request cannot spend an attempt in between.
   const [claimed] = await db.update(authCodes)
-    .set({ attempts: sql`${authCodes.attempts} + 1` })
+    .set({
+      attempts: sql`${authCodes.attempts} + 1`,
+      consumedAt: sql`case when ${matches} or ${authCodes.attempts} + 1 >= ${config.AUTH_CODE_MAX_ATTEMPTS} then now() end`,
+    })
     .where(and(eq(authCodes.id, record.id), isNull(authCodes.consumedAt), lt(authCodes.attempts, config.AUTH_CODE_MAX_ATTEMPTS)))
     .returning({ attempts: authCodes.attempts });
   if (!claimed) {
     // lost to a concurrent request that spent the last attempt or consumed the code
-    await consumeCode(record.id);
     const [current] = await db.select({ attempts: authCodes.attempts }).from(authCodes).where(eq(authCodes.id, record.id));
     const exhausted = !current || current.attempts >= config.AUTH_CODE_MAX_ATTEMPTS;
     return { ok: false, reason: exhausted ? 'too_many_attempts' : 'invalid_code' };
   }
 
-  if (!codeMatches(code, record.codeHash)) {
-    if (claimed.attempts >= config.AUTH_CODE_MAX_ATTEMPTS) {
-      await consumeCode(record.id);
-      return { ok: false, reason: 'too_many_attempts' };
-    }
-    return { ok: false, reason: 'invalid_code' };
-  }
-
-  // Only the request that flips consumed_at wins, so one correct code cannot open two sessions.
-  return (await consumeCode(record.id))
-    ? { ok: true, id: record.id }
-    : { ok: false, reason: 'invalid_code' };
+  if (matches) return { ok: true, id: record.id };
+  return { ok: false, reason: claimed.attempts >= config.AUTH_CODE_MAX_ATTEMPTS ? 'too_many_attempts' : 'invalid_code' };
 }
 
 /** Whether an unused, unexpired code of this purpose was sent to `email`. */
@@ -124,14 +118,6 @@ export async function hasLiveAuthCode(userId: string, purpose: AuthCodePurpose, 
     ))
     .limit(1);
   return Boolean(row);
-}
-
-/** True only for the caller that actually consumed the code. */
-async function consumeCode(id: string): Promise<boolean> {
-  const rows = await db.update(authCodes).set({ consumedAt: new Date() })
-    .where(and(eq(authCodes.id, id), isNull(authCodes.consumedAt)))
-    .returning({ id: authCodes.id });
-  return rows.length > 0;
 }
 
 /** The account a login challenge was issued for and when it began (its first code), or null for a

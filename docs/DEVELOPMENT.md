@@ -302,6 +302,8 @@ A chunked upload reserves its declared size against `MAX_STORAGE_BYTES` (30 GB) 
 
 Failed logins, wrong reset codes, code requests, username checks, wrong invite codes and sign-ups are counted in the `rate_limit_windows` table (`modules/auth/ratelimit.ts`), keyed by a SHA-256, so a restart gives nobody fresh attempts.
 
+Each email code also has its own attempt limit. Verification counts the attempt and consumes the code in one database update when the code matches or the last attempt is spent. If the same correct code arrives concurrently, exactly one request succeeds.
+
 - **Limits:** 10 failures per account and per address in 15 minutes for logins, invite codes and reset codes; 10 code requests per address (recovery) or account (email change) in 15 minutes, and at most 5 code emails per account in 15 minutes; `REGISTRATIONS_PER_IP_PER_HOUR` sign-ups per address; 30 username checks per account per minute and 300 per day.
 - **The owner gets through:** a browser the account signed in from in the last 30 days (`known_logins`) passes a blocked account counter with the right password or code. Anyone else gets the same answer as for a wrong password, so the block reveals nothing, and getting through does not clear it.
 - **Fail closed:** if the database cannot answer, the attempt is refused with `503 rate_limit_unavailable`.

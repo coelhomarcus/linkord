@@ -50,6 +50,7 @@ describe('auth code verification under parallel requests', () => {
     const results = await Promise.all(Array.from({ length: 20 }, () => verifyAuthCode(user.id, 'login', EMAIL, code, { challengeHash: `challenge-${user.id}` })));
 
     assert.equal(results.filter((r) => r.ok).length, 1);
+    assert.equal((await attemptsOf(user.id)).attempts, 1);
   });
 
   it('still accepts the right code on the last allowed attempt', async () => {
