@@ -55,7 +55,7 @@ export function AdminLogin({ onSignedIn, notice }: { onSignedIn: (user: AdminIde
             <form onSubmit={submit} className="flex flex-col gap-4">
               <AuthField id="admin-username" label={t('auth:fields.username')} autoComplete="username" autoCapitalize="none" spellCheck={false} required autoFocus value={username} onChange={setUsername} />
               <AuthField id="admin-password" label={t('auth:fields.password')} autoComplete="current-password" required value={password} onChange={setPassword} type={showPassword ? 'text' : 'password'} rightSlot={<PasswordToggle visible={showPassword} onToggle={() => setShowPassword((value) => !value)} />} />
-              {(error || notice) && <ErrorBanner>{error ?? notice}</ErrorBanner>}
+              {(error || notice) && <div role="alert"><ErrorBanner>{error ?? notice}</ErrorBanner></div>}
               <Button type="submit" size="lg" disabled={pending}>{t(pending ? 'auth:login.pending' : 'auth:login.submit')}</Button>
             </form>
           </>
