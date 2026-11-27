@@ -322,6 +322,43 @@ function allowAction(socket: AppSocket, eventName: string, rule: ActionLimit): b
   return false;
 }
 
+/** The handler and rate limit for a client event, or undefined for an event nobody handles. Only own
+ * keys count: both tables are plain objects, so an event named `constructor` or `__proto__` would
+ * otherwise reach an Object.prototype member, skip the rate limit and log a handler error each time. */
+export function routeSocketEvent(eventName: string): { handler: HandlerTable[string]; rule: ActionLimit | undefined } | undefined {
+  if (!Object.hasOwn(handlers, eventName)) return undefined;
+  return { handler: handlers[eventName], rule: Object.hasOwn(ACTION_LIMITS, eventName) ? ACTION_LIMITS[eventName] : undefined };
+}
+
+/** Routes one client event to its handler, applying the event's rate limit. */
+export function dispatchSocketEvent(socket: AppSocket, eventName: string, payload: unknown): void {
+  if (eventName === 'join') return dispatchJoin(socket, ((payload || {}) as JoinMessage));
+  if (eventName === 'ping') return safeHandle('ping', socket, payload || {}, (s) => send(s, { t: 'pong' }));
+  if (eventName === 'call-join') {
+    if (!allowAction(socket, eventName, CALL_JOIN_LIMIT)) {
+      // the code old clients already read as a refused join, so the pending call clears
+      sendSocketError(socket, 'call-not-allowed', RATE_LIMITED_MESSAGE);
+      return;
+    }
+    return safeHandle(eventName, socket, payload || {}, (s, m) => handleCallJoin(s, (m || {}) as { conversationId?: string; replace?: unknown }));
+  }
+  if (eventName === 'call-leave') {
+    if (!allowAction(socket, eventName, CALL_LEAVE_LIMIT)) return;
+    return safeHandle(eventName, socket, payload || {}, (s) => handleCallLeave(s));
+  }
+
+  const route = routeSocketEvent(eventName);
+  if (!route) return;
+  const { handler, rule } = route;
+  if (rule && !allowAction(socket, eventName, rule)) {
+    if (rule.silent) return;
+    if (chat.rejectCorrelated(eventName, socket, payload, 'rate_limited', RATE_LIMITED_MESSAGE)) return;
+    sendSocketError(socket, 'rate_limited', RATE_LIMITED_MESSAGE);
+    return;
+  }
+  safeHandle(eventName, socket, payload || {}, handler);
+}
+
 export function createWsServer(httpServer: HttpServer): Server {
   const io = new Server(httpServer, {
     path: '/ws',
@@ -354,34 +391,7 @@ export function createWsServer(httpServer: HttpServer): Server {
     socket.participantId = null;
     socket.ip = ipOf(socket);
 
-    socket.onAny((eventName: string, payload: unknown) => {
-      if (eventName === 'join') return dispatchJoin(socket, ((payload || {}) as JoinMessage));
-      if (eventName === 'ping') return safeHandle('ping', socket, payload || {}, (s) => send(s, { t: 'pong' }));
-      if (eventName === 'call-join') {
-        if (!allowAction(socket, eventName, CALL_JOIN_LIMIT)) {
-          // the code old clients already read as a refused join, so the pending call clears
-          sendSocketError(socket, 'call-not-allowed', RATE_LIMITED_MESSAGE);
-          return;
-        }
-        return safeHandle(eventName, socket, payload || {}, (s, m) => handleCallJoin(s, (m || {}) as { conversationId?: string; replace?: unknown }));
-      }
-      if (eventName === 'call-leave') {
-        if (!allowAction(socket, eventName, CALL_LEAVE_LIMIT)) return;
-        return safeHandle(eventName, socket, payload || {}, (s) => handleCallLeave(s));
-      }
-
-      const handler = handlers[eventName];
-      if (!handler) return;
-
-      const rule = ACTION_LIMITS[eventName];
-      if (rule && !allowAction(socket, eventName, rule)) {
-        if (rule.silent) return;
-        if (chat.rejectCorrelated(eventName, socket, payload, 'rate_limited', RATE_LIMITED_MESSAGE)) return;
-        sendSocketError(socket, 'rate_limited', RATE_LIMITED_MESSAGE);
-        return;
-      }
-      safeHandle(eventName, socket, payload || {}, handler);
-    });
+    socket.onAny((eventName: string, payload: unknown) => dispatchSocketEvent(socket, eventName, payload));
 
     socket.on('disconnect', (reason) => {
       cancelDeferredJoin(socket);
