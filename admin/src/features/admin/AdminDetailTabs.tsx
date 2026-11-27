@@ -16,9 +16,8 @@ export function AdminDetailTabs<T extends string>({ label, tabs, active, default
 }) {
   const { pathname, state } = useLocation();
   return (
-    <nav aria-label={label} className="scrollbar-none -mx-1 overflow-x-auto px-1">
-      {/* the rule under the row is an inset shadow, like the profile's tabs, so the active bar sits on it */}
-      <ul className="flex min-w-max gap-5 shadow-[inset_0_-1px_0_var(--color-border)]">
+    <nav aria-label={label} className="admin-panel scrollbar-none overflow-x-auto p-1.5">
+      <ul className="flex min-w-max gap-1">
         {tabs.map((tab) => {
           const current = tab.id === active;
           return (
@@ -29,8 +28,8 @@ export function AdminDetailTabs<T extends string>({ label, tabs, active, default
                 state={state}
                 aria-current={current ? 'page' : undefined}
                 className={cn(
-                  'flex h-11 items-center border-b-2 text-body font-semibold focus-ring transition-colors',
-                  current ? 'border-text-primary text-text-primary' : 'border-transparent text-text-muted hover:text-text-secondary',
+                  'flex h-9 items-center rounded-lg px-3 text-label font-semibold focus-ring focus-visible:ring-inset transition-colors',
+                  current ? 'bg-nav-active text-accent-text' : 'text-text-muted hover:bg-nav-hover hover:text-text-primary',
                 )}
               >
                 {tab.label}

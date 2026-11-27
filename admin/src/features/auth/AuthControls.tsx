@@ -5,9 +5,9 @@ import { cn } from '@/shared/lib/utils';
 
 export function AuthHeading({ title, subtitle }: { title: string; subtitle?: ReactNode }) {
   return (
-    <div className="mb-5 flex flex-col items-center gap-2 text-center">
-      <h1 className="text-display font-semibold text-text-strong">{title}</h1>
-      {subtitle && <p className="text-body text-text-secondary">{subtitle}</p>}
+    <div className="mb-5 flex flex-col gap-2">
+      <h1 className="admin-page-heading">{title}</h1>
+      {subtitle && <p className="text-label text-text-secondary">{subtitle}</p>}
     </div>
   );
 }

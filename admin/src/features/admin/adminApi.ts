@@ -19,6 +19,7 @@ async function adminFetch<T>(path: string, init?: RequestInit): Promise<T> {
     if (init?.method && init.method !== 'GET') invalidateAdminLists();
     return result;
   } catch (err) {
+    if (init?.signal?.aborted) throw err;
     if (err instanceof ApiError && err.status === 403 && err.code === ERROR_CODES.forbidden) reportAdminAccessLost();
     else if (err instanceof ApiError && err.status === 401) reportAdminSessionEnded();
     throw err;
@@ -160,7 +161,7 @@ export interface SystemInfo {
   orphanSweep: { dryRunByDefault: boolean; /** absent on a server that predates it */ graceMs?: number; last: SweepResult | null };
 }
 
-export const fetchSystem = () => adminFetch<SystemInfo>('/api/admin/system');
+export const fetchSystem = (signal?: AbortSignal) => adminFetch<SystemInfo>('/api/admin/system', { signal });
 
 // ---- backup ------------------------------------------------------------------
 

@@ -1,9 +1,10 @@
+import type { ComponentProps } from 'react';
 import { Navigate, Route, Routes } from 'react-router';
 import { AuditPage } from './AuditPage';
 import { BackupPage } from './BackupPage';
-import { ADMIN_USERS_PATH } from './adminCatalog';
+import { ADMIN_PATH } from './adminCatalog';
 import { AdminLayout } from './AdminLayout';
-import { AdminIndex } from './AdminNavigation';
+import { DashboardPage } from './DashboardPage';
 import { ServerDetailPage } from './ServerDetailPage';
 import { ServersPage } from './ServersPage';
 import { WebhooksPage } from './WebhooksPage';
@@ -13,23 +14,11 @@ import { ReportsPage } from './ReportsPage';
 import { SystemPage } from './SystemPage';
 import { UserDetailPage } from './UserDetailPage';
 import { UsersPage } from './UsersPage';
-import { useAdminMeasured, useAdminMode } from './useAdminMode';
-
-/** Bare /admin: the section index when there is no sidebar to pick from,
- * Users otherwise. Only this entry depends on the mode — a detail URL is
- * never redirected because of the window size. */
-function AdminEntry() {
-  const mode = useAdminMode();
-  // before the first measurement `mode` is a guess: deciding on it would redirect a narrow screen
-  if (!useAdminMeasured()) return null;
-  return mode === 'compact' ? <AdminIndex /> : <Navigate to={ADMIN_USERS_PATH} replace />;
-}
-
-export function AdminRoutes({ viewerId }: { viewerId: string }) {
+export function AdminRoutes({ viewerId, ...layout }: { viewerId: string } & ComponentProps<typeof AdminLayout>) {
   return (
     <Routes>
-      <Route element={<AdminLayout />}>
-        <Route index element={<AdminEntry />} />
+      <Route element={<AdminLayout {...layout} />}>
+        <Route index element={<DashboardPage />} />
         <Route path="users" element={<UsersPage />} />
         <Route path="users/:id" element={<UserDetailPage viewerId={viewerId} />} />
         <Route path="servers" element={<ServersPage />} />
@@ -44,7 +33,7 @@ export function AdminRoutes({ viewerId }: { viewerId: string }) {
         <Route path="audit" element={<AuditPage />} />
         <Route path="system" element={<SystemPage />} />
         <Route path="backup" element={<BackupPage />} />
-        <Route path="*" element={<Navigate to={ADMIN_USERS_PATH} replace />} />
+        <Route path="*" element={<Navigate to={ADMIN_PATH} replace />} />
       </Route>
     </Routes>
   );

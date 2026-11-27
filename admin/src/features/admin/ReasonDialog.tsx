@@ -85,10 +85,10 @@ export function ReasonDialog({ open, onOpenChange, title, description, confirmLa
 
   return (
     <Dialog open={open} onOpenChange={(next) => { if (!next) close(); }}>
-      <DialogContent showCloseButton={!busy} className="max-w-[calc(100%-2rem)] gap-0 bg-bg-modal p-0 sm:max-w-md">
-        <DialogHeader className="px-6 pt-6 pr-12">
-          <DialogTitle className="text-title font-semibold text-text-primary">{title}</DialogTitle>
-          <DialogDescription className="text-body text-text-secondary">{description}</DialogDescription>
+      <DialogContent showCloseButton={!busy} className="max-w-[calc(100%-2rem)] gap-0 bg-bg-modal p-0 shadow-popover sm:max-w-md">
+        <DialogHeader className="border-b border-border-divider px-6 py-5 pr-12">
+          <DialogTitle className="text-title font-bold text-text-strong">{title}</DialogTitle>
+          <DialogDescription className="text-label text-text-secondary">{description}</DialogDescription>
         </DialogHeader>
         <form onSubmit={(event) => { event.preventDefault(); void submit(); }}>
           <div className="flex flex-col gap-3 px-6 py-4">
@@ -123,7 +123,7 @@ export function ReasonDialog({ open, onOpenChange, title, description, confirmLa
             )}
             {error && <p role="alert" className="text-label text-red-text">{error}</p>}
           </div>
-          <DialogFooter className="border-border-divider bg-bg-tertiary/60 px-6 py-4">
+          <DialogFooter className="border-t border-border-divider bg-surface-raised px-6 py-4">
             <Button type="button" variant="ghost" disabled={busy} onClick={close}>{t('dialog.cancel')}</Button>
             {email && <Button type="button" variant="secondary" disabled={busy} onClick={resetVerification}>{t('dialog.newCode')}</Button>}
             <Button type="submit" variant={destructive && (!verification || email) ? 'destructive' : 'default'} disabled={!reasonOk || !confirmOk || !credentialsOk || busy}>

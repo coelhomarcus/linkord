@@ -31,12 +31,12 @@ export function AdminTableSkeleton({ columns, identity = false, rows = ROWS }: {
   const cells = Array.from({ length: columns }, (_, index) => index);
   const grid = { gridTemplateColumns: `minmax(13rem, 2fr) repeat(${columns - 1}, minmax(0, 1fr))` };
   return (
-    <div className="overflow-hidden rounded-xl border border-border-divider">
-      <div style={grid} className="grid gap-4 border-b border-border-divider bg-fill-subtle px-4 py-2.5 text-label">
+    <div className="admin-panel overflow-hidden">
+      <div style={grid} className="grid gap-4 border-b border-border-divider bg-surface-raised px-4 py-3 text-caption">
         {cells.map((index) => <span key={index} className={LINE}><Skeleton shape="text" className={index === 0 ? 'w-20' : width(index)} /></span>)}
       </div>
       {Array.from({ length: rows }, (_, row) => (
-        <div key={row} style={grid} className="grid h-14 items-center gap-4 border-b border-border-divider px-4 text-label last:border-b-0">
+        <div key={row} style={grid} className="grid h-15 items-center gap-4 border-b border-border-divider px-4 text-label last:border-b-0">
           {cells.map((index) => index === 0 && identity
             ? <Identity key={index} />
             : <span key={index} className={LINE}><Skeleton shape="text" className={index === 0 ? 'w-36' : width(index + row)} /></span>)}
@@ -49,7 +49,7 @@ export function AdminTableSkeleton({ columns, identity = false, rows = ROWS }: {
 /** The compact layout: AdminStackedList's rows, an identity over a line of badges. */
 export function AdminStackedSkeleton({ rows = ROWS }: { rows?: number }) {
   return (
-    <div className="flex flex-col divide-y divide-border-divider rounded-xl border border-border-divider">
+    <div className="admin-panel flex flex-col divide-y divide-border-divider">
       {Array.from({ length: rows }, (_, row) => (
         <div key={row} className="flex flex-col gap-2 p-3">
           <Identity />
@@ -87,9 +87,9 @@ export function AdminDetailSkeleton({ tabs = true }: { tabs?: boolean }) {
   return (
     <div className="flex flex-col gap-6">
       <span className={cn(LINE, 'text-label')}><Skeleton shape="text" className="w-28" /></span>
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-3 rounded-xl border border-border-divider bg-fill-subtle p-4">
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-3 admin-panel p-4 @[540px]:p-5">
         <Skeleton shape="circle" className="size-16" />
-        <div className="min-w-0 flex-1 basis-60">
+        <div className="min-w-0 flex-1 basis-48">
           <span className={cn(LINE, 'text-heading')}><Skeleton shape="text" className="h-4 w-48" /></span>
           <span className={cn(LINE, 'mt-0.5 text-label')}><Skeleton shape="text" className="w-28" /></span>
           {/* the id and its copy button */}
@@ -121,9 +121,9 @@ export function AdminDetailSkeleton({ tabs = true }: { tabs?: boolean }) {
 /** The system page's sections: a heading, its description and a block of figures. */
 export function AdminSectionsSkeleton({ sections = 3 }: { sections?: number }) {
   return (
-    <div className="flex flex-col gap-10">
+    <div className="grid gap-4 @[780px]:grid-cols-2">
       {Array.from({ length: sections }, (_, index) => (
-        <div key={index} className="flex flex-col gap-3">
+        <div key={index} className="admin-panel flex flex-col gap-3 p-5">
           <span className={cn(LINE, 'text-body')}><Skeleton shape="text" className="h-3.5 w-32" /></span>
           <span className={cn(LINE, 'text-label')}><Skeleton shape="text" className="w-64" /></span>
           <Skeleton className="h-24 w-full rounded-lg" />

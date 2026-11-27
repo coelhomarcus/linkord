@@ -75,7 +75,7 @@ export function BackupPage() {
       {title}
       {refreshFailed && <AdminNotice tone="warning">{t('chrome.actionDoneStale')}</AdminNotice>}
 
-      <div className="flex flex-col">
+      <div className="grid gap-4 @[840px]:grid-cols-2">
         <AdminSection id="download" title={t('backup.downloadTitle')} description={t('backup.downloadDescription')}>
           {!info.available && <AdminNotice tone="danger">{t('backup.unavailable')}</AdminNotice>}
           {info.running && <AdminNotice tone="warning">{t('backup.running', { name: info.running.by, when: formatWhen(info.running.startedAt, language) })}</AdminNotice>}

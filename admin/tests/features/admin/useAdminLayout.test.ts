@@ -20,8 +20,8 @@ describe('sectionForPath', () => {
     expect(sectionForPath('/admin/reports/r1')?.id).toBe('reports');
   });
 
-  it('the bare entry and unknown paths belong to no section', () => {
-    expect(sectionForPath('/admin')).toBeNull();
+  it('the bare entry belongs to the overview and unknown sections are ignored', () => {
+    expect(sectionForPath('/admin')?.id).toBe('overview');
     expect(sectionForPath('/admin/nada')).toBeNull();
   });
 });

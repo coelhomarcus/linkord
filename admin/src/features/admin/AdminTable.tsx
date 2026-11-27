@@ -6,7 +6,7 @@ import { cn } from '@/shared/lib/utils';
  * one presentation mounted at a time so assistive tech doesn't read both. */
 export function AdminTable({ caption, children, className }: { caption: string; children: ReactNode; className?: string }) {
   return (
-    <div className="admin-data-surface overflow-x-auto rounded-xl border border-border-divider">
+    <div className="admin-panel admin-data-surface overflow-x-auto">
       <table className={cn('w-full min-w-[640px] border-collapse text-left', className)}>
         <caption className="sr-only">{caption}</caption>
         {children}
@@ -16,11 +16,11 @@ export function AdminTable({ caption, children, className }: { caption: string; 
 }
 
 export function AdminTh({ className, ...props }: ComponentProps<'th'>) {
-  return <th scope="col" className={cn('overflow-hidden text-ellipsis whitespace-nowrap border-b border-border-divider bg-fill-subtle px-4 py-2.5 text-label font-medium text-text-muted', className)} {...props} />;
+  return <th scope="col" className={cn('overflow-hidden text-ellipsis whitespace-nowrap border-b border-border-divider px-4 py-3 text-caption font-semibold tracking-wide text-text-muted', className)} {...props} />;
 }
 
 export function AdminTd({ className, ...props }: ComponentProps<'td'>) {
-  return <td className={cn('h-14 border-b border-border-divider px-4 align-middle text-label text-text-secondary tabular-nums group-last/row:border-b-0', className)} {...props} />;
+  return <td className={cn('h-15 border-b border-border-divider px-4 align-middle text-label text-text-secondary tabular-nums group-last/row:border-b-0', className)} {...props} />;
 }
 
 export function AdminTr({ className, ...props }: ComponentProps<'tr'>) {
@@ -29,5 +29,5 @@ export function AdminTr({ className, ...props }: ComponentProps<'tr'>) {
 
 /** The compact counterpart of a table: one bordered list, a row per item. */
 export function AdminStackedList({ children }: { children: ReactNode }) {
-  return <ul className="admin-data-surface flex flex-col divide-y divide-border-divider rounded-xl border border-border-divider">{children}</ul>;
+  return <ul className="admin-panel flex flex-col divide-y divide-border-divider">{children}</ul>;
 }

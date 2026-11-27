@@ -1,180 +1,87 @@
 @theme {
-  /* evenly spaced steps that stay apart on a dim screen; the base stays off
-     pure black so near-white text doesn't halo against it */
-  --color-surface-000: oklch(16.00% 0.0040 275.00);
-  --color-surface-100: oklch(19.50% 0.0040 275.00);
-  --color-surface-200: oklch(23.00% 0.0040 275.00);
-  --color-surface-300: oklch(26.50% 0.0040 275.00);
-  --color-surface-400: oklch(31.00% 0.0040 275.00);
-  --color-surface-500: oklch(37.00% 0.0040 275.00);
-
-  /* elevation by role: the shell lowest, the content panel on it, cards and
-     fields on that, menus and popovers above everything */
-  --color-surface-app: var(--color-surface-000);
-  --color-surface-panel: var(--color-surface-100);
-  --color-surface-raised: var(--color-surface-200);
-  --color-surface-overlay: var(--color-surface-300);
-  /* one step below the shell: the global icon rail reads as its own column,
-     not as part of the conversation list beside it */
-  --color-surface-rail: oklch(12.00% 0.0040 275.00);
+  --color-surface-app: #0e131b;
+  --color-surface-rail: #101720;
+  --color-surface-panel: #151d28;
+  --color-surface-raised: #192330;
+  --color-surface-overlay: #1d2938;
+  --color-surface-400: #344257;
+  --color-surface-500: #45566d;
 
   --color-bg-primary: var(--color-surface-app);
-  --color-bg-secondary: var(--color-surface-raised);
-  --color-bg-tertiary: var(--color-surface-overlay);
-  --color-bg-textarea: var(--color-surface-raised);
+  --color-bg-textarea: #101720;
   --color-bg-floating: var(--color-surface-overlay);
-  --color-bg-modal: var(--color-surface-raised);
-  /* the user panel, the composer, cards beside a conversation */
-  --color-bg-card: var(--color-surface-raised);
-  /* a button that is not the action (Cancelar), and its outline */
-  --color-bg-control: var(--color-surface-400);
-  --color-bg-control-hover: var(--color-surface-500);
-  --color-border-control: var(--color-border-default);
-  /* the user panel's edge */
-  --color-border-panel: var(--color-border-default);
-  --color-bg-hover: var(--color-surface-400);
-  --color-bg-selected: var(--color-surface-400);
-  --color-bg-call: #000000;
-
-  /* translucent so one hover/selected state reads the same on every surface */
-  --color-fill-subtle: oklch(100% 0 0 / 0.035);
-  --color-fill-hover: oklch(100% 0 0 / 0.06);
-  --color-fill-active: oklch(100% 0 0 / 0.10);
-  /* the row under the pointer and the current row of a navigation list */
+  --color-bg-modal: var(--color-surface-panel);
+  --color-bg-control: var(--color-surface-raised);
+  --color-bg-control-hover: var(--color-surface-overlay);
+  --color-bg-hover: var(--color-surface-raised);
+  --color-bg-selected: #20344b;
+  --color-fill-subtle: rgb(173 201 235 / 0.045);
+  --color-fill-hover: rgb(173 201 235 / 0.09);
+  --color-fill-active: rgb(173 201 235 / 0.14);
+  --color-fill-inset: rgb(0 0 0 / 0.2);
   --color-nav-hover: var(--color-fill-hover);
-  --color-nav-active: var(--color-fill-active);
-  /* a field or code block sunk into its surface: darker than what it sits on */
-  --color-fill-inset: oklch(0% 0 0 / 0.25);
-  /* code, block and inline: its own token because the inset fill vanishes on
-     a theme whose surfaces are already black */
-  --color-fill-code: var(--color-fill-inset);
+  --color-nav-active: var(--color-bg-selected);
 
-  --color-text-primary: oklch(95.00% 0.0020 279.30);
-  --color-text-secondary: oklch(83.00% 0.0020 279.30);
-  --color-text-muted: oklch(71.00% 0.0020 279.30);
-  /* headings a step above body text, and placeholders a step below muted */
-  --color-text-strong: oklch(98.00% 0.0020 279.30);
-  --color-text-faint: oklch(62.00% 0.0020 279.30);
-  /* the words of a chat message: secondary unless a theme's secondary is too dim to read as sent */
-  --color-text-message: var(--color-text-secondary);
+  --color-text-strong: #f3f7fd;
+  --color-text-primary: #e4ebf5;
+  --color-text-secondary: #b7c5d8;
+  --color-text-muted: #98aac1;
+  --color-text-faint: #8295ad;
 
-  --color-border-subtle: oklch(100% 0 0 / 0.06);
-  --color-border-default: oklch(100% 0 0 / 0.10);
-  --color-border-strong: oklch(100% 0 0 / 0.16);
-  /* lines inside a modal, dialog, picker or settings page. The same as the
-     shell's hairline unless a theme's hairline is darker than every surface
-     and would read as black on the modal's */
+  --color-border-subtle: #273445;
+  --color-border-default: #2f3c4e;
+  --color-border-strong: #495d77;
   --color-border-divider: var(--color-border-subtle);
-  /* sky blue: clear of the destructive red, the online/call green and the
-     mention yellow, so it never reads as a status. White text on it: 4.8:1 */
-  --color-accent-primary: oklch(55.00% 0.1500 248.00);
-  /* the accent itself is too dark to be text on these surfaces; links and
-     mentions use this lighter step of the same hue instead */
-  --color-accent-text: oklch(76.00% 0.1200 240.00);
-  --color-accent-hover: oklch(49.00% 0.1500 248.00);
-  --color-border-accent: var(--color-accent-primary);
-  /* the Overcord mark (`text-logo`): the brand blue unless a theme
-     paints it in its own accent */
-  --color-logo: #2b99e7;
-  /* the row under the pointer in the chat */
-  --color-message-hover: var(--color-fill-subtle);
-  /* links sent in the chat: the accent text unless a theme gives links their own color */
+  --color-border-field: var(--color-border-default);
+  --color-border-control: var(--color-border-default);
+  --color-accent-primary: #8bbdff;
+  --color-accent-text: #a3cbff;
+  --color-accent-hover: #abd0ff;
+  --color-border-accent: #79aff6;
   --color-link: var(--color-accent-text);
-  /* fields sit on --color-bg-textarea and need no outline until a theme
-     makes that surface the same color as everything around it */
-  --color-border-field: transparent;
 
-  --color-green: oklch(73.29% 0.1941 153.87);
-  /* darker than --color-green so white text on a join/return button clears contrast;
-     --color-green stays the status/label tone */
-  --color-green-solid: oklch(62% 0.17 153);
-  --color-green-hover: oklch(56% 0.17 153);
-  --color-red: oklch(59.40% 0.1973 27.69);
-  --color-red-hover: oklch(52.00% 0.1973 27.69);
-  --color-red-text: oklch(74.00% 0.1400 27.69);
-  --color-yellow: oklch(82.03% 0.1392 79.40);
+  --color-green: #68d4ab;
+  --color-red: #b43c50;
+  --color-red-hover: #9f3044;
+  --color-red-text: #ffa5ad;
+  --color-yellow: #f6cb78;
 
-  /* one lightness and chroma, only the hue moves, so no colour shouts over
-     another and white initials clear 4.5:1 on all of them (chroma is capped
-     where a hue runs out of sRGB gamut) */
-  --color-avatar-indigo: oklch(55% 0.150 275);
-  --color-avatar-green: oklch(55% 0.150 150);
-  --color-avatar-red: oklch(55% 0.150 25);
-  --color-avatar-fuchsia: oklch(55% 0.150 345);
-  --color-avatar-orange: oklch(55% 0.144 50);
-  --color-avatar-purple: oklch(55% 0.150 310);
-  --color-avatar-teal: oklch(55% 0.094 190);
-  --color-avatar-blue: oklch(55% 0.138 245);
+  --color-avatar-indigo: #315581;
+  --color-avatar-green: #216347;
+  --color-avatar-red: #9a3d48;
+  --color-avatar-fuchsia: #884361;
+  --color-avatar-orange: #8a5127;
+  --color-avatar-purple: #4a5574;
+  --color-avatar-teal: #17636b;
+  --color-avatar-blue: #285e86;
 
-  /* Every step times --text-scale, the reader's text size (Appearance
-     settings; data-text-size below), so text grows while spacing stays put. */
-  /* badges and keyboard hints only: below this nothing is comfortably readable */
-  --text-micro: calc(0.6875rem * var(--text-scale));
+  --text-micro: 0.6875rem;
   --text-micro--line-height: 1.2;
-  --text-caption: calc(0.75rem * var(--text-scale));
-  --text-caption--line-height: 1.4;
-  --text-label: calc(0.875rem * var(--text-scale));
+  --text-caption: 0.75rem;
+  --text-caption--line-height: 1.45;
+  --text-label: 0.875rem;
   --text-label--line-height: 1.45;
-  --text-body: calc(1rem * var(--text-scale));
+  --text-body: 1rem;
   --text-body--line-height: 1.5;
-  --text-title: calc(1.125rem * var(--text-scale));
+  --text-title: 1.125rem;
   --text-title--line-height: 1.35;
-  /* page, panel and dialog titles; 1.2 keeps the line at 24px, on the 4px grid */
-  --text-heading: calc(1.25rem * var(--text-scale));
-  --text-heading--line-height: 1.2;
-  --text-display: calc(1.5rem * var(--text-scale));
+  --text-heading: 1.25rem;
+  --text-heading--line-height: 1.25;
+  --text-display: 1.5rem;
   --text-display--line-height: 1.25;
-  /* message text: 22px under 16px text, a ratio so lines open up with the text size */
-  --leading-message: 1.375;
 
-  /* the one gap between the shell's surfaces (the content panel's margins, the conversation list's inner edge) so they stay equal */
-  --spacing-shell: 0.5rem;
-  /* every header's height — a page's, an open conversation's, the sidebar's,
-     a modal's — so moving between pages never makes the top bar jump.
-     Discord's 48px. */
-  --spacing-header: 3rem;
-  /* the window's title strip above the rail and the panels */
-  --spacing-titlebar: 2rem;
-  /* the conversation list's column */
-  --spacing-sidebar: 18.75rem;
-  /* Density (Appearance settings; data-density below). These are the
-     default's; compact and comfortable override them. */
-  /* above the first message of a group */
-  --spacing-message-group: 17px;
-  /* above and below each message */
-  --spacing-message-row-y: 0.125rem;
-  /* a DM in the conversation list, a channel, a server member */
-  --spacing-row-dm: 2.75rem;
-  --spacing-row-channel: 2rem;
-  --spacing-row-member: 42px;
+  --font-sans: "Figtree Variable", system-ui, -apple-system, "Segoe UI", sans-serif;
 
-  --font-sans: "Figtree Variable", system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
-
-  /* One radius for every container, the input's 8px: controls, rows, cards,
-     embeds and media, menus, tooltips, the composer, the user dock, dialogs and
-     the content panel. lg and xl stay as names for those bigger shapes but no
-     longer grow past it. sm: chips, badges, inline code. Round things (avatars,
-     pills, dots) use rounded-full. */
   --radius-sm: 4px;
-  --radius-md: 8px;
+  --radius-md: 6px;
   --radius-lg: 8px;
-  --radius-xl: 8px;
-
-  --shadow-panel: 0 1px 2px rgb(0 0 0 / 0.35);
-  /* everything that floats: menus, popovers, dialogs, drawers, toolbars */
-  --shadow-popover: 0 18px 60px rgb(0 0 0 / 0.5);
-
+  --radius-xl: 12px;
+  --shadow-panel: 0 2px 5px rgb(0 0 0 / 0.12);
+  --shadow-popover: 0 18px 64px rgb(0 0 0 / 0.45);
   --default-transition-duration: 150ms;
-  /* EASE_OUT of shared/lib/ease.ts: the one curve for anything appearing or
-     moving into place (ease-out-expo) */
   --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
-
-  --animate-sweep: sweep 1.15s ease-in-out infinite;
-  --animate-float-up: float-up 3s ease-out forwards;
-  --animate-typing-dot: typing-dot 1.4s ease-in-out infinite;
   --animate-skeleton: skeleton-pulse 1.8s ease-in-out infinite;
 }
-
 
 @keyframes skeleton-pulse {
   50% { opacity: 0.5; }
@@ -200,27 +107,16 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  /* Every animate-in/animate-out in the app (popovers, menus, tooltips,
-     dialogs, the save bar) keeps its fade and drops its zoom and slide: the
-     last @keyframes of a name wins, so these replace tw-animate's. */
   @keyframes enter {
     from { opacity: var(--tw-enter-opacity, 1); }
   }
   @keyframes exit {
     to { opacity: var(--tw-exit-opacity, 1); }
   }
-
-  /* the highlight alone says "held"; a moving bar is the part to drop */
-  [data-long-pressing][data-message-id]::after {
-    display: none;
-  }
 }
 
 
-/* The keyboard focus ring of a control that is not the Button primitive (a clickable row, a chip, a
-   tile, a small icon button drawn its own way): the same ring Button draws, in one place. Something
-   that fills a box clipping its overflow (a media cell, a full-width row in a scroller) adds
-   focus-visible:ring-inset. */
+/* Match the Button keyboard focus ring on links and custom controls. */
 @utility focus-ring {
   @apply outline-none focus-visible:ring-3 focus-visible:ring-ring/50;
 }
@@ -305,6 +201,7 @@ html, body {
 }
 
 :root {
+  color-scheme: dark;
   --background: var(--color-bg-primary);
   --foreground: var(--color-text-primary);
   --card: var(--color-bg-floating);
@@ -312,7 +209,7 @@ html, body {
   --popover: var(--color-bg-floating);
   --popover-foreground: var(--color-text-primary);
   --primary: var(--color-accent-primary);
-  --primary-foreground: #ffffff;
+  --primary-foreground: #0d1a2b;
   --secondary: var(--color-bg-selected);
   --secondary-foreground: var(--color-text-primary);
   --muted: var(--color-bg-hover);
@@ -330,11 +227,6 @@ html, body {
   * {
     @apply border-border outline-ring/50;
   }
-  /* The app is a tool, not a document: headers, sidebars, profile chrome and
-     labels are not text to copy, so nothing is selectable by default. What
-     people write or need to copy opts back in with `select-text` (messages,
-     bios, code, invite and webhook values, the admin area). Fields say so
-     explicitly, since WebKit can otherwise inherit "none" into an input. */
   body {
     -webkit-user-select: none;
     user-select: none;

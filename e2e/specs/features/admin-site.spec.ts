@@ -87,6 +87,41 @@ test('administration uses its own origin and session', async ({ users, request }
   expect((await signedIn.api.get('/api/auth/me')).ok()).toBe(true);
 });
 
+test('the administration dashboard works on desktop and mobile', async ({ users }) => {
+  const admin = await users.create('admin');
+  const member = await users.create('member');
+  await enableTwoFactor(admin);
+  grantAdmin(admin.username);
+
+  const page = await admin.context.newPage();
+  await page.setViewportSize({ width: 1440, height: 850 });
+  await page.goto(ADMIN_URL);
+  await signInWithCode(page, admin);
+
+  const overview = page.getByRole('heading', { name: 'Visão geral', exact: true });
+  await expect(overview).toBeVisible();
+  await expect(page).toHaveURL(`${ADMIN_URL}/admin`);
+  const main = page.getByRole('main');
+  await expect(main.getByRole('link', { name: /Total de contas [0-9]/ })).toBeVisible();
+  await expect(main.getByRole('heading', { name: 'Atividade recente', exact: true })).toBeVisible();
+  await expect(main.getByRole('heading', { name: 'Denúncias abertas', exact: true })).toBeVisible();
+
+  const refreshed = page.waitForResponse((response) => response.url() === `${ADMIN_URL}/api/admin/system` && response.ok());
+  await main.getByRole('button', { name: 'Atualizar', exact: true }).click();
+  await refreshed;
+
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expect(overview).toBeVisible();
+  expect(await main.evaluate((el) => el.scrollWidth <= el.clientWidth)).toBe(true);
+  await page.getByRole('button', { name: 'Abrir navegação' }).click();
+  const navigation = page.getByRole('dialog', { name: 'Administração' });
+  await expect(navigation.getByRole('link', { name: 'Visão geral', exact: true })).toHaveAttribute('aria-current', 'page');
+  await navigation.getByRole('link', { name: 'Usuários', exact: true }).click();
+  await expect(navigation).toBeHidden();
+  await expect(page.getByRole('heading', { name: 'Usuários', exact: true })).toBeVisible();
+  await expect(main.getByRole('link').filter({ hasText: `@${member.username}` })).toBeVisible();
+});
+
 test('a login code is bound to the site that requested it', async ({ users }) => {
   const admin = await users.create('admin');
   grantAdmin(admin.username);

@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Button } from '@/shared/ui/primitives/button';
 import { formatFileSize } from '@/shared/lib/formatBytes';
 import { AdminNotice } from './AdminNotice';
-import { fetchSystem, sweepOrphans } from './adminApi';
+import { sweepOrphans } from './adminApi';
 import type { RetentionInfo, SweepResult } from './adminApi';
 import { AdminActionRow, AdminFieldRow, AdminFields, AdminPageTitle, AdminSection } from './AdminSection';
 import { ReasonDialog } from './ReasonDialog';
@@ -11,7 +11,7 @@ import { describeAdminError } from './adminErrors';
 import { formatWhen } from './adminFormat';
 import { AdminTextLink, DetailStatusView } from './adminUi';
 import { AdminSectionsSkeleton } from './AdminSkeletons';
-import { useAdminDetail } from './useAdminDetail';
+import { useAdminSystem } from './adminSystemResource';
 import { useLanguage } from '@/i18n/useLanguage';
 
 const AUDIT_SWEEP_FAILURES = '/admin/audit?action=storage.orphan_delete';
@@ -76,7 +76,7 @@ function RetentionSection({ retention }: { retention: RetentionInfo }) {
   const lastByKey = new Map(last?.targets.map((target) => [target.key, target]));
   const totalDeleted = last?.targets.reduce((sum, target) => sum + target.deleted, 0) ?? 0;
   return (
-    <AdminSection id="retention" title={t('system.retentionTitle')} description={t('system.retentionDescription')}>
+    <AdminSection className="@[850px]:col-span-2" id="retention" title={t('system.retentionTitle')} description={t('system.retentionDescription')}>
       <AdminFields>
         {retention.targets.map(({ key, days }) => {
           const result = lastByKey.get(key);
@@ -102,8 +102,7 @@ export function SystemPage() {
   const language = useLanguage();
   const { t, i18n } = useTranslation('admin');
   const graceText = useGraceText();
-  // the timestamp travels with the read it belongs to: "last observed" is when that read landed
-  const { data: read, status, refresh, refreshing, refreshFailed, reload } = useAdminDetail('system', async () => ({ info: await fetchSystem(), at: Date.now() }));
+  const { data: read, status, refresh, refreshing, refreshFailed } = useAdminSystem();
   const [preview, setPreview] = useState<SweepResult | null>(null);
   const [executed, setExecuted] = useState<SweepResult | null>(null);
   const [previewing, setPreviewing] = useState(false);
@@ -127,7 +126,7 @@ export function SystemPage() {
     return (
       <div className="flex flex-col gap-6">
         {title}
-        <DetailStatusView status={status} missing={t('common.systemUnavailable')} failed={t('common.systemLoadFailed')} backTo="/admin/users" backLabel={t('common.back')} onRetry={reload} skeleton={<AdminSectionsSkeleton />} />
+        <DetailStatusView status={status} missing={t('common.systemUnavailable')} failed={t('common.systemLoadFailed')} backTo="/admin" backLabel={t('common.back')} onRetry={refresh} skeleton={<AdminSectionsSkeleton />} />
       </div>
     );
   }
@@ -152,7 +151,7 @@ export function SystemPage() {
       />
       {refreshFailed && <AdminNotice tone="warning">{t('common.refreshFailed', { time: observed })}</AdminNotice>}
 
-      <div className="flex flex-col">
+      <div className="grid gap-4 @[850px]:grid-cols-2">
         <AdminSection id="state" title={t('common.instanceState')} description={t('common.instanceStateDescription')}>
           <AdminFields>
             <AdminFieldRow label={t('common.liveConnections')}>{t('system.connectionsValue', { live: connections.live, max: connections.max, perAccount: connections.perAccountMax, perIp: connections.perIpMax })}</AdminFieldRow>
@@ -188,6 +187,7 @@ export function SystemPage() {
         <RetentionSection retention={info.retention} />
 
         <AdminSection
+          className="@[850px]:col-span-2"
           id="maintenance"
           title={t('common.maintenance')}
           description={t(info.orphanSweep.dryRunByDefault ? 'system.maintenanceReportOnly' : 'system.maintenanceDeletes', { grace: graceText(info.orphanSweep.graceMs) })}

@@ -62,6 +62,7 @@ Overcord is a self-hosted place to chat and call with friends. Talk in direct me
 
 **Administration**
 - An optional [administration site](docs/DEPLOY.md#administration-site) with a dedicated hostname and mandatory two-step sign-in by email for managing users and their badges, servers, webhooks, reports, audit history and uploads.
+- The administration dashboard shows account, connection and storage metrics, recent audit activity and open reports. The sidebar becomes a navigation menu on smaller screens.
 - [Full backups](docs/DEPLOY.md#backups) downloaded from the administration site as one ZIP of the database and every stored file, never kept on the server.
 
 ## ⚡ Quick start

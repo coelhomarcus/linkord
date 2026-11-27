@@ -12,6 +12,7 @@ import type { AdminDetailStatus } from './useAdminDetail';
 import { AppLink } from '@/shared/ui/app-link';
 import { SkeletonGroup } from '@/shared/ui/primitives/skeleton';
 import { AdminDetailSkeleton, AdminStackedSkeleton } from './AdminSkeletons';
+import { ArrowLeftIcon, ClockCounterClockwiseIcon } from '@/shared/ui/icons';
 import { useLanguage } from '@/i18n/useLanguage';
 
 const TONES: Record<string, string> = {
@@ -38,7 +39,8 @@ export function AdminTextLink({ to, state, children, className }: {
 /** The way back to the list a detail page was opened from, above its header. */
 export function AdminBackLink({ to, state, children }: { to: LinkProps['to']; state?: unknown; children: ReactNode }) {
   return (
-    <AppLink to={to} state={state} className="w-fit rounded-md text-label font-medium text-text-muted focus-ring transition-colors hover:text-text-primary">
+    <AppLink to={to} state={state} className="flex w-fit items-center gap-2 rounded-md text-label font-semibold text-text-muted focus-ring transition-colors hover:text-accent-text">
+      <ArrowLeftIcon size={16} aria-hidden />
       {children}
     </AppLink>
   );
@@ -46,26 +48,31 @@ export function AdminBackLink({ to, state, children }: { to: LinkProps['to']; st
 
 export function Badge({ value }: { value: string }) {
   const { t } = useTranslation('admin');
-  return <span className={cn('inline-flex flex-none items-center rounded-full px-2 py-0.5 text-caption font-medium', TONES[value] ?? 'bg-fill-active text-text-muted')}>{t(`status.${value}`, { defaultValue: value })}</span>;
+  return <span className={cn('inline-flex flex-none items-center gap-1.5 rounded-full px-2.5 py-0.5 text-caption font-semibold', TONES[value] ?? 'bg-fill-active text-text-muted')}><span className="size-1.5 rounded-full bg-current" aria-hidden />{t(`status.${value}`, { defaultValue: value })}</span>;
 }
 
-export function AuditList({ items, empty }: { items: AuditRow[]; empty?: string }) {
+export function AuditList({ items, empty, compact }: { items: AuditRow[]; empty?: string; compact?: boolean }) {
   const language = useLanguage();
   const { t } = useTranslation('admin');
   if (items.length === 0) return <EmptyState size="compact" illustration="document" title={empty ?? t('audit.empty')} />;
   return (
     <ul className="flex flex-col divide-y divide-border-divider">
       {items.map((row) => (
-        <li key={row.id} className="flex flex-col gap-1 py-3.5 text-label first:pt-0 last:pb-0">
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="font-medium text-text-primary">{actionLabel(row.action, language)}</span>
+        <li key={row.id} className="flex gap-3 py-3.5 text-label first:pt-0 last:pb-0">
+          <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-fill-hover text-accent-text">
+            <ClockCounterClockwiseIcon size={17} aria-hidden />
+          </span>
+          <div className="min-w-0 flex-1">
+            <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5">
+              <span className="font-semibold break-words text-text-primary">{actionLabel(row.action, language)}</span>
+              <time dateTime={row.at} className="text-caption text-text-muted">{formatWhen(row.at, language)}</time>
+            </div>
+            <p className="mt-0.5 text-caption break-words text-text-muted">
+              {t('common.by')} {row.actorLabel || t('common.system')}{row.targetLabel ? ` · ${t('common.target')}: ${row.targetLabel}` : ''}
+            </p>
             {row.result === 'failed' && <Badge value="failed" />}
-            <span className="text-caption text-text-muted">{formatWhen(row.at, language)}</span>
+            {!compact && row.reason && <p className="mt-1 text-caption break-words text-text-secondary">“{row.reason}”</p>}
           </div>
-          <p className="text-caption text-text-muted">
-            {t('common.by')} {row.actorLabel || t('common.system')}{row.targetLabel ? ` · ${t('common.target')}: ${row.targetLabel}` : ''}
-          </p>
-          {row.reason && <p className="text-caption text-text-secondary">“{row.reason}”</p>}
         </li>
       ))}
     </ul>
@@ -110,7 +117,7 @@ export function ListChrome({ list, empty, onClearFilters, skeleton, children }: 
   if (list.status === 'loading') return <SkeletonGroup label={t('chrome.loading')}>{skeleton ?? <AdminStackedSkeleton />}</SkeletonGroup>;
   if (list.status === 'error') {
     return (
-      <div className="flex flex-col items-center gap-3 py-8 text-center">
+      <div className="admin-panel flex flex-col items-center gap-3 p-8 text-center">
         <p className="text-body text-text-muted">{t('chrome.loadFailed')}</p>
         <Button type="button" variant="secondary" size="sm" onClick={list.retry}>{t('chrome.retry')}</Button>
       </div>
@@ -124,13 +131,13 @@ export function ListChrome({ list, empty, onClearFilters, skeleton, children }: 
           title={t('chrome.filteredTitle')}
           description={t('chrome.filteredText')}
           action={<Button type="button" variant="secondary" size="sm" onClick={onClearFilters}>{t('ui.clearFilters')}</Button>}
-          className="rounded-xl border border-dashed border-border-divider"
+          className="admin-panel border-dashed"
         />
       );
     }
     return empty.compact
       ? <EmptyState size="compact" illustration={empty.illustration} title={empty.title} description={empty.description} />
-      : <EmptyState illustration={empty.illustration} title={empty.title} description={empty.description} className="rounded-xl border border-dashed border-border-divider" />;
+      : <EmptyState illustration={empty.illustration} title={empty.title} description={empty.description} className="admin-panel border-dashed" />;
   }
   return (
     <>

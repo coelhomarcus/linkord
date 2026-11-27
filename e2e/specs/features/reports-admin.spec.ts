@@ -29,6 +29,10 @@ test.describe('reports and administration', () => {
     const list = await (await admin.api.get(`${ADMIN_URL}/api/admin/reports`)).json() as { items?: { id: string }[]; reports?: { id: string }[] };
     const report = (list.items ?? list.reports ?? [])[0];
     expect(report, 'the admin sees the report').toBeTruthy();
+    const dashboard = await admin.context.newPage();
+    await dashboard.goto(`${ADMIN_URL}/admin`);
+    const queue = dashboard.getByRole('region', { name: 'Denúncias abertas' });
+    await expect(queue.locator(`a[href="/admin/reports/${report!.id}"]`)).toBeVisible();
     const resolved = await admin.api.post(`${ADMIN_URL}/api/admin/reports/${report!.id}/resolve`, { data: { action: 'delete_message', reason: 'spam visto no teste' }, headers: { origin: ADMIN_URL } });
     expect(resolved.ok(), await resolved.text()).toBe(true);
     await expect(a.message('compre agora, promoção imperdível')).toHaveCount(0);
