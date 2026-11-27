@@ -1,17 +1,17 @@
-import { ArrowLeftIcon } from '@overcord/frontend-shared/ui/icons';
+import { ArrowLeftIcon } from '@/shared/ui/icons';
 import { useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { Outlet, useLocation } from 'react-router';
-import { buttonVariants } from '@overcord/frontend-shared/ui/primitives/button';
-import { useElementWidth } from '@overcord/frontend-shared/hooks/useElementWidth';
+import { buttonVariants } from '@/shared/ui/primitives/button';
+import { useElementWidth } from '@/shared/hooks/useElementWidth';
 import { consumeScrollRestore, invalidateAdminLists } from './adminListCache';
 import { ADMIN_PATH, sectionForPath } from './adminCatalog';
 import { AdminSidebar } from './AdminNavigation';
 import { useAdminLayout } from './useAdminLayout';
 import type { AdminOutletContext } from './useAdminMode';
-import { AppLink } from '@overcord/frontend-shared/ui/app-link';
-import { cn } from '@overcord/frontend-shared/lib/utils';
+import { AppLink } from '@/shared/ui/app-link';
+import { cn } from '@/shared/lib/utils';
 
 /** Wide layouts keep navigation beside the scrolling content. Compact layouts have an index. */
 export function AdminLayout() {

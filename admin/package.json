@@ -7,6 +7,7 @@
     "dev": "bun --bun vite",
     "build": "bun --bun tsc -b && bun --bun vite build",
     "lint": "bun --bun oxlint",
+    "icons": "bun scripts/buildIcons.ts",
     "preview": "bun --bun vite preview",
     "test": "bun --bun vitest run",
     "test:coverage": "bun --bun vitest run --coverage"
@@ -14,7 +15,6 @@
   "dependencies": {
     "@base-ui/react": "^1.7.0",
     "@fontsource-variable/figtree": "^5.2.10",
-    "@overcord/frontend-shared": "link:../packages/frontend-shared",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "i18next": "^26.6.0",
@@ -23,12 +23,12 @@
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
     "react-i18next": "^17.1.9",
-    "react-icons": "^5.7.0",
     "react-router": "^7.18.4",
     "tailwind-merge": "^3.6.0"
   },
   "devDependencies": {
     "@babel/core": "^7.29.13",
+    "@fluentui/svg-icons": "1.1.347",
     "@rolldown/plugin-babel": "^0.2.4",
     "@tailwindcss/vite": "^4.3.3",
     "@testing-library/jest-dom": "^7.0.1",

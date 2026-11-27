@@ -1,7 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { useLocation, useNavigationType } from 'react-router';
-import { useCursorList } from '@overcord/frontend-shared/hooks/useCursorList';
-import type { ListSnapshot } from '@overcord/frontend-shared/hooks/useCursorList';
+import { useCursorList } from '@/shared/hooks/useCursorList';
+import type { ListSnapshot } from '@/shared/hooks/useCursorList';
 import { claimScrollRestore, readListWindow, saveListWindow } from './adminListCache';
 import { useAdminScroller } from './useAdminMode';
 import { RESTORE_LIST } from './useAdminBack';

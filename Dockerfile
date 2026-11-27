@@ -3,19 +3,15 @@ FROM oven/bun:${BUN_VERSION}-alpine AS bun-base
 
 FROM bun-base AS web-build
 WORKDIR /app/web
-COPY packages/frontend-shared/package.json /app/packages/frontend-shared/
 COPY web/package.json web/bun.lock web/bunfig.toml ./
 RUN bun install --frozen-lockfile
-COPY packages/frontend-shared/ /app/packages/frontend-shared/
 COPY web/ ./
 RUN bun run build
 
 FROM bun-base AS admin-build
 WORKDIR /app/admin
-COPY packages/frontend-shared/package.json /app/packages/frontend-shared/
 COPY admin/package.json admin/bun.lock admin/bunfig.toml ./
 RUN bun install --frozen-lockfile
-COPY packages/frontend-shared/ /app/packages/frontend-shared/
 COPY admin/ ./
 RUN bun run build
 

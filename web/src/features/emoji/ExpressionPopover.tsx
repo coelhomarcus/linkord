@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { ServerIcon } from '@overcord/frontend-shared/ui/ServerIcon';
+import { ServerIcon } from '@/shared/ui/ServerIcon';
 import type { ServerSummary } from '@/shared/types/protocol';
 
 /** The card a clicked emoji or sticker opens, after Discord's: the picture,

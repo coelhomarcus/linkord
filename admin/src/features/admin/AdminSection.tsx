@@ -1,6 +1,6 @@
 import { useId } from 'react';
 import type { ReactNode } from 'react';
-import { cn } from '@overcord/frontend-shared/lib/utils';
+import { cn } from '@/shared/lib/utils';
 
 /** The top of a list or overview page: its name, what it is for, and what can be done from it — the way
  * the first section of a settings page opens it. */

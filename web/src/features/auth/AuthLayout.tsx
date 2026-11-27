@@ -75,4 +75,4 @@ export function AuthCard({ wide = false, className, children }: { wide?: boolean
   );
 }
 
-export { AuthHeading, AuthLink, PasswordToggle } from '@overcord/frontend-shared/auth/AuthControls';
+export { AuthHeading, AuthLink, PasswordToggle } from './AuthControls';

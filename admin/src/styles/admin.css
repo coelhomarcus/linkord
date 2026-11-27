@@ -1,9 +1,7 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "@fontsource-variable/figtree";
-@import "@overcord/frontend-shared/src/styles/base.css";
-
-@source "../../../packages/frontend-shared/src";
+@import "./base.css";
 
 :root[data-admin-site] {
   color-scheme: dark;
@@ -33,7 +31,7 @@
   --text-admin-page-title: calc(clamp(1.625rem, 1.35rem + 0.65vw, 2rem) * var(--text-scale));
 }
 
-/* Replace the chat theme's early background while the first admin route loads. */
+/* Set the background before the first admin route loads. */
 :root[data-admin-site],
 :root[data-admin-site] body {
   background: var(--color-surface-app);

@@ -1,9 +1,9 @@
 import { useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useParams } from 'react-router';
-import { Avatar } from '@overcord/frontend-shared/Avatar';
-import { Button } from '@overcord/frontend-shared/ui/primitives/button';
-import { useCursorList } from '@overcord/frontend-shared/hooks/useCursorList';
+import { Avatar } from '@/shared/Avatar';
+import { Button } from '@/shared/ui/primitives/button';
+import { useCursorList } from '@/shared/hooks/useCursorList';
 import { fetchAdminWebhook, fetchAudit, revokeWebhook } from './adminApi';
 import { AdminDetailTabs } from './AdminDetailTabs';
 import { AdminEntityHeader } from './AdminEntityHeader';
@@ -16,8 +16,8 @@ import { useAdminDetail } from './useAdminDetail';
 import { useAdminQuery } from './useAdminQuery';
 import type { QuerySchema } from './useAdminQuery';
 import { AuditListSkeleton } from './AdminSkeletons';
-import { AppLink } from '@overcord/frontend-shared/ui/app-link';
-import { useLanguage } from '@overcord/frontend-shared/i18n/useLanguage';
+import { AppLink } from '@/shared/ui/app-link';
+import { useLanguage } from '@/i18n/useLanguage';
 
 const TABS = ['overview', 'moderation', 'history'] as const;
 type Tab = (typeof TABS)[number];

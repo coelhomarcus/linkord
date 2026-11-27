@@ -5,7 +5,7 @@ import tailwindcss from '@tailwindcss/vite';
 
 export default defineConfig({
   plugins: [react(), babel({ presets: [reactCompilerPreset()] }), tailwindcss()],
-  resolve: { tsconfigPaths: true, preserveSymlinks: true },
+  resolve: { tsconfigPaths: true },
   server: {
     host: '127.0.0.1',
     port: 5174,

@@ -1,12 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import { LANGUAGES, DEFAULT_LANGUAGE } from '@/shared/i18n/languages';
 
-import { sharedResources } from '@overcord/frontend-shared/i18n/resources';
-
 type Bundle = Record<string, unknown>;
 
 const files = import.meta.glob<Bundle>(
-  '/src/features/*/locales/*.json',
+  ['/src/features/*/locales/*.json', '/src/shared/i18n/locales/*.json'],
   { eager: true, import: 'default' },
 );
 
@@ -27,12 +25,6 @@ const variables = (text: string) => [...text.matchAll(/{{\s*(\w+)\s*}}/g)].map((
 const baseKey = (key: string) => key.replace(/_(zero|one|two|few|many|other)$/, '');
 
 const byNamespace = new Map<string, Map<string, Bundle>>();
-for (const [language, bundles] of Object.entries(sharedResources)) {
-  for (const [namespace, bundle] of Object.entries(bundles)) {
-    if (!byNamespace.has(namespace)) byNamespace.set(namespace, new Map());
-    byNamespace.get(namespace)!.set(language, bundle);
-  }
-}
 for (const [path, bundle] of Object.entries(files)) {
   const match = /^\/src\/(?:shared\/i18n|features\/([^/]+))\/locales\/([^/]+)\.json$/.exec(path)!;
   const namespace = match[1] ?? 'common';

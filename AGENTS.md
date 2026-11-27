@@ -1,6 +1,6 @@
 # AGENTS.md
 
-Overcord has a React web app in `web/`, a separate React administration site in `admin/`, a Bun API in `server/` and an Electron client in `desktop/`. The frontends share primitives in `packages/frontend-shared/`. See [README.md](README.md) for the product and [DEVELOPMENT.md](docs/DEVELOPMENT.md) for setup and commands.
+Overcord has a React web app in `web/`, a separate React administration site in `admin/`, a Bun API in `server/` and an Electron client in `desktop/`. Each frontend owns its components, styles and translations and builds independently. See [README.md](README.md) for the product and [DEVELOPMENT.md](docs/DEVELOPMENT.md) for setup and commands.
 
 ## Workflow and organization
 
@@ -33,9 +33,9 @@ Overcord has a React web app in `web/`, a separate React administration site in 
 
 ### Internationalization
 
-- Use one namespace per feature in `features/<domain>/locales/` and the `common` namespace for shared strings. Use descriptive nested keys. Brazilian Portuguese is the source for names and types. Register new namespaces in `shared/i18n/i18next.d.ts` and keep locale keys and variables in parity.
+- Use one namespace per feature in `features/<domain>/locales/` and the `common` namespace for shared strings. Use descriptive nested keys. Brazilian Portuguese is the source for names and types. Register new namespaces in the frontend's `i18next.d.ts` and keep locale keys and variables in parity.
 - Translate when the text is produced. Use `useTranslation` in components, and pass the active language to plain helpers called during render. Keep translation keys in catalogs and use the active locale for dates and numbers. Preserve proper names.
-- When adding a language, update [the web language list](web/src/shared/i18n/languages.ts), [the server list](server/src/modules/users/locale.ts) and every namespace.
+- When adding a language, update the [web](web/src/shared/i18n/languages.ts), [admin](admin/src/i18n/languages.ts) and [server](server/src/modules/users/locale.ts) language lists and every namespace.
 
 ## Backend
 

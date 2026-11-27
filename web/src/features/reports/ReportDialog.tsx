@@ -8,8 +8,8 @@ import { Textarea } from '@/shared/ui/primitives/textarea';
 import { ApiError, submitReport } from '@/shared/api/api';
 import { cn } from '@/shared/lib/utils';
 import { i18n } from '@/shared/i18n/init';
-import { MAX_REPORT_DETAILS, REPORT_CATEGORIES } from '@overcord/frontend-shared/reports/reportCategories';
-import type { ReportCategory, ReportTarget } from '@overcord/frontend-shared/reports/reportCategories';
+import { MAX_REPORT_DETAILS, REPORT_CATEGORIES } from './reportCategories';
+import type { ReportCategory, ReportTarget } from './reportCategories';
 
 function describeError(err: unknown): string {
   if (err instanceof ApiError) {

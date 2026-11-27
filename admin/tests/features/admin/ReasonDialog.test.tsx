@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { ReasonDialog } from '@/features/admin/ReasonDialog';
-import { ApiError } from '@overcord/frontend-shared/api/transport';
+import { ApiError } from '@/shared/api/transport';
 
 const setup = (over: Partial<Pick<React.ComponentProps<typeof ReasonDialog>, 'confirmText' | 'confirmLabel' | 'onSubmit'>> = {}) => {
   const onSubmit = vi.fn().mockResolvedValue(undefined);

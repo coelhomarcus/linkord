@@ -1,6 +1,5 @@
-// The profile badges there are, in the order a profile shows them. A leaf module, so the schema can
-// name its types. Keep in step with the web catalog (packages/frontend-shared/src/badges/badgeCatalog.tsx)
-// and with the user_badges check constraint.
+// Badge IDs in profile display order. This leaf module also supplies the schema's types.
+// Keep the IDs in sync with the two frontend badge catalogs and the user_badges check constraint.
 
 const BADGE_IDS = ['developer', 'supporter'] as const;
 export type BadgeId = (typeof BADGE_IDS)[number];

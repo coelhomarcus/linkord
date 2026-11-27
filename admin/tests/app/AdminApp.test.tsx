@@ -6,7 +6,7 @@ import * as adminApi from '@/features/admin/adminApi';
 import { reportAdminAccessLost, reportAdminSessionEnded } from '@/features/admin/adminAccess';
 import { fetchAdminSession } from '@/features/admin/adminSessionApi';
 import { useAdminLayout } from '@/features/admin/useAdminLayout';
-import { ApiError } from '@overcord/frontend-shared/api/transport';
+import { ApiError } from '@/shared/api/transport';
 
 vi.mock('@/features/admin/adminApi');
 vi.mock('@/features/admin/adminSessionApi');

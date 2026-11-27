@@ -1,10 +1,10 @@
 import { useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useParams } from 'react-router';
-import { Avatar } from '@overcord/frontend-shared/Avatar';
-import { Button } from '@overcord/frontend-shared/ui/primitives/button';
-import { formatFileSize } from '@overcord/frontend-shared/lib/formatBytes';
-import { useCursorList } from '@overcord/frontend-shared/hooks/useCursorList';
+import { Avatar } from '@/shared/Avatar';
+import { Button } from '@/shared/ui/primitives/button';
+import { formatFileSize } from '@/shared/lib/formatBytes';
+import { useCursorList } from '@/shared/hooks/useCursorList';
 import { changeAdminRole, deleteUser, fetchAdminUser, fetchAudit, grantBadge, reactivateUser, requestAdminRoleCode, revokeBadge, revokeUserSessions, suspendUser } from './adminApi';
 import { AdminDetailTabs } from './AdminDetailTabs';
 import { AdminEntityHeader } from './AdminEntityHeader';
@@ -16,12 +16,12 @@ import { RESTORE_LIST, useAdminBack } from './useAdminBack';
 import { useAdminDetail } from './useAdminDetail';
 import { useAdminQuery } from './useAdminQuery';
 import type { QuerySchema } from './useAdminQuery';
-import { AppLink } from '@overcord/frontend-shared/ui/app-link';
+import { AppLink } from '@/shared/ui/app-link';
 import { AuditListSkeleton } from './AdminSkeletons';
-import { EmptyState } from '@overcord/frontend-shared/ui/empty-state';
-import { useLanguage } from '@overcord/frontend-shared/i18n/useLanguage';
+import { EmptyState } from '@/shared/ui/empty-state';
+import { useLanguage } from '@/i18n/useLanguage';
 import { reportAdminSessionEnded } from './adminAccess';
-import { BADGES, BadgeIcon, badgeDescription, badgeName, knownBadges, type BadgeId } from '@overcord/frontend-shared/badges/badgeCatalog';
+import { BADGES, BadgeIcon, badgeDescription, badgeName, knownBadges, type BadgeId } from '@/features/badges/badgeCatalog';
 
 type Dialog = 'suspend' | 'reactivate' | 'revoke' | 'delete' | 'grant-admin' | 'revoke-admin' | { badge: BadgeId; action: 'grant' | 'revoke' } | null;
 

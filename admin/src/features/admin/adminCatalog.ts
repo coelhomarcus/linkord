@@ -1,4 +1,4 @@
-import { FileArchiveIcon, FlagIcon, HardDrivesIcon, ScrollIcon, SquaresFourIcon, UsersIcon, WebhooksLogoIcon, type IconComponent } from '@overcord/frontend-shared/ui/icons';
+import { FileArchiveIcon, FlagIcon, HardDrivesIcon, ScrollIcon, SquaresFourIcon, UsersIcon, WebhooksLogoIcon, type IconComponent } from '@/shared/ui/icons';
 
 
 export interface AdminSection {

@@ -1,18 +1,18 @@
 import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { type LinkProps } from 'react-router';
-import { Button } from '@overcord/frontend-shared/ui/primitives/button';
-import { cn } from '@overcord/frontend-shared/lib/utils';
-import { SettingsNotice } from '@overcord/frontend-shared/ui/settings-layout';
-import { EmptyState } from '@overcord/frontend-shared/ui/empty-state';
-import type { EmptyIllustrationName } from '@overcord/frontend-shared/ui/empty-state';
+import { Button } from '@/shared/ui/primitives/button';
+import { cn } from '@/shared/lib/utils';
+import { AdminNotice } from './AdminNotice';
+import { EmptyState } from '@/shared/ui/empty-state';
+import type { EmptyIllustrationName } from '@/shared/ui/empty-state';
 import type { AuditRow } from './adminApi';
 import { actionLabel, formatWhen } from './adminFormat';
 import type { AdminDetailStatus } from './useAdminDetail';
-import { AppLink } from '@overcord/frontend-shared/ui/app-link';
-import { SkeletonGroup } from '@overcord/frontend-shared/ui/primitives/skeleton';
+import { AppLink } from '@/shared/ui/app-link';
+import { SkeletonGroup } from '@/shared/ui/primitives/skeleton';
 import { AdminDetailSkeleton, AdminStackedSkeleton } from './AdminSkeletons';
-import { useLanguage } from '@overcord/frontend-shared/i18n/useLanguage';
+import { useLanguage } from '@/i18n/useLanguage';
 
 const TONES: Record<string, string> = {
   active: 'bg-green/15 text-green', suspended: 'bg-red/15 text-red-text',
@@ -135,9 +135,9 @@ export function ListChrome({ list, empty, onClearFilters, skeleton, children }: 
   return (
     <>
       {list.stale && (
-        <SettingsNotice tone="warning" action={<Button type="button" variant="secondary" size="sm" disabled={list.refreshing} onClick={list.retry}>{list.refreshing ? t('chrome.refreshing') : t('chrome.refresh')}</Button>}>
+        <AdminNotice tone="warning" action={<Button type="button" variant="secondary" size="sm" disabled={list.refreshing} onClick={list.retry}>{list.refreshing ? t('chrome.refreshing') : t('chrome.refresh')}</Button>}>
           {t('chrome.stale')}
-        </SettingsNotice>
+        </AdminNotice>
       )}
       <div className="flex flex-col">{children}</div>
       {list.loadMoreError && <p role="alert" className="text-center text-caption text-red-text">{t('chrome.loadMoreFailed')}</p>}
@@ -185,8 +185,8 @@ export function DetailStatusView({ status, missing, failed, backTo, backLabel, o
 export function RefreshFailedNotice({ refreshing, onRetry }: { refreshing: boolean; onRetry: () => void }) {
   const { t } = useTranslation('admin');
   return (
-    <SettingsNotice tone="warning" action={<Button type="button" variant="secondary" size="sm" disabled={refreshing} onClick={onRetry}>{refreshing ? t('chrome.refreshing') : t('chrome.refresh')}</Button>}>
+    <AdminNotice tone="warning" action={<Button type="button" variant="secondary" size="sm" disabled={refreshing} onClick={onRetry}>{refreshing ? t('chrome.refreshing') : t('chrome.refresh')}</Button>}>
       {t('chrome.actionDoneStale')}
-    </SettingsNotice>
+    </AdminNotice>
   );
 }

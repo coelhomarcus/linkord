@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { ProfileBadges } from '@/features/profile/ProfileBadges';
-import type { HeldBadge } from '@overcord/frontend-shared/badges/badgeCatalog';
+import type { HeldBadge } from '@/features/badges/badgeCatalog';
 
 const bea = { id: 'u-bea', displayName: 'Bea', avatar: '', avatarColor: 'green' };
 

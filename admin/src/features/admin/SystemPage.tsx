@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Button } from '@overcord/frontend-shared/ui/primitives/button';
-import { formatFileSize } from '@overcord/frontend-shared/lib/formatBytes';
-import { SettingsNotice } from '@overcord/frontend-shared/ui/settings-layout';
+import { Button } from '@/shared/ui/primitives/button';
+import { formatFileSize } from '@/shared/lib/formatBytes';
+import { AdminNotice } from './AdminNotice';
 import { fetchSystem, sweepOrphans } from './adminApi';
 import type { RetentionInfo, SweepResult } from './adminApi';
 import { AdminActionRow, AdminFieldRow, AdminFields, AdminPageTitle, AdminSection } from './AdminSection';
@@ -12,7 +12,7 @@ import { formatWhen } from './adminFormat';
 import { AdminTextLink, DetailStatusView } from './adminUi';
 import { AdminSectionsSkeleton } from './AdminSkeletons';
 import { useAdminDetail } from './useAdminDetail';
-import { useLanguage } from '@overcord/frontend-shared/i18n/useLanguage';
+import { useLanguage } from '@/i18n/useLanguage';
 
 const AUDIT_SWEEP_FAILURES = '/admin/audit?action=storage.orphan_delete';
 
@@ -150,7 +150,7 @@ export function SystemPage() {
           </>
         )}
       />
-      {refreshFailed && <SettingsNotice tone="warning">{t('common.refreshFailed', { time: observed })}</SettingsNotice>}
+      {refreshFailed && <AdminNotice tone="warning">{t('common.refreshFailed', { time: observed })}</AdminNotice>}
 
       <div className="flex flex-col">
         <AdminSection id="state" title={t('common.instanceState')} description={t('common.instanceStateDescription')}>
@@ -167,7 +167,7 @@ export function SystemPage() {
         </AdminSection>
 
         <AdminSection id="accounts" title={t('common.accountsCapacity')}>
-          {signupsPaused && <SettingsNotice tone="danger">{t('system.signupsPaused', { cap: accounts.newPerHourCap })}</SettingsNotice>}
+          {signupsPaused && <AdminNotice tone="danger">{t('system.signupsPaused', { cap: accounts.newPerHourCap })}</AdminNotice>}
           <AdminFields>
             <AdminFieldRow label={t('system.accounts')}>{accounts.total}</AdminFieldRow>
             <AdminFieldRow label={t('system.suspended')}>{accounts.suspended}</AdminFieldRow>
@@ -177,7 +177,7 @@ export function SystemPage() {
         </AdminSection>
 
         <AdminSection id="services" title={t('common.services')} description={t('common.servicesDescription')}>
-          {outbox.failed > 0 && <SettingsNotice tone="danger">{t('system.outboxFailed')}</SettingsNotice>}
+          {outbox.failed > 0 && <AdminNotice tone="danger">{t('system.outboxFailed')}</AdminNotice>}
           <AdminFields>
             <AdminFieldRow label={t('system.calls')}>{info.livekit.configured ? t('common.configured') : t('common.notConfigured')}</AdminFieldRow>
             <AdminFieldRow label={t('system.outbox')}>{t('system.outboxValue', { pending: outbox.pending, failed: outbox.failed })}</AdminFieldRow>

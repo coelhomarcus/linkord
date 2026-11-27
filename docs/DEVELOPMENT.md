@@ -112,6 +112,8 @@ bun run admin:grant <your-username>
 
 To develop the separate panel, start the backend with `ADMIN_URL=http://127.0.0.1:5174` and run `bun run dev:admin` in a second terminal. Open `http://127.0.0.1:5174` and sign in with the administrator's password and emailed code. The public Vite app stays at `http://localhost:5173`. Without `ADMIN_URL`, the backend starts with the administration API disabled.
 
+`web/` and `admin/` each own their components, styles, translations and dependencies. Install, build or test either frontend from its own directory. Both use the same backend, and the production image includes both builds.
+
 ## Desktop app
 
 `desktop/` is an Electron window that loads a Overcord server's address, so the page talks to `/api` and `/ws` on its own origin and the server's cookies, origin check and CSP apply as in a browser. It ships for Windows only; a development run also starts on a Mac (with its own title bar buttons and tray menu, without activity detection, start at login or a taskbar count). Building the installer, updates and releases are in [DEPLOY.md](DEPLOY.md#desktop-app); the rules for changing it are in [AGENTS.md](../AGENTS.md) ("Desktop").
@@ -190,7 +192,8 @@ Every script runs from the repository root.
 | `bun run backup:rehearse` | Backup, restore and a boot on throwaway local databases ([below](#backup-scripts-locally)). |
 | `bun run admin:grant -- <username>` / `admin:revoke` | Gives or takes administrator access. |
 | `bun run emoji:data` | Rebuilds `web/public/emoji-data/<lang>/emojis.json` from the pinned `emojibase-data`, leaving out what the pinned `@discordapp/twemoji` cannot draw. Run it after bumping either. |
-| `bun run icons` | Rebuilds `packages/frontend-shared/src/ui/icons/fluent.ts` from `@fluentui/svg-icons` for the icons used by both frontends. A new icon needs a line in `FLUENT_ICONS` (`web/scripts/buildIcons.ts`) first; a test fails while the file is stale. |
+| `bun run icons` | Rebuilds the web app's Fluent icons from `@fluentui/svg-icons`. Add new icons to `FLUENT_ICONS` in `web/scripts/buildIcons.ts`. |
+| `bun run --cwd admin icons` | Rebuilds the administration site's Fluent icons. Add new icons to `FLUENT_ICONS` in `admin/scripts/buildIcons.ts`. Each frontend tests that its generated file is current. |
 
 `build:server`, `build:web` and `build:admin` are the parts of `build`. The root calls scripts in `web/` and `admin/` (`dev`, `build`, `lint`, `preview`, `test`, `test:coverage`), `desktop/` (`start`, `build`, `typecheck`, `test`, `package`) and `e2e/` (`test`, `test:features`, `test:restart`, `test:upgrade`, `report`, `typecheck`). Run frontend and E2E scripts with `bun run --cwd <package> <script>`, and desktop scripts with `npm run <script> --prefix desktop`.
 
@@ -407,11 +410,11 @@ Providers' limits and failures are in [INTEGRATIONS.md](INTEGRATIONS.md#myanimel
 
 ### Profile badges
 
-Badges show under the name in the mini profile and beside the username in the full profile and the DM panel. Clicking one opens every badge the account holds. They come with `GET /api/users/:userId/profile-details` as `badges: [{ id, grantedAt }]`, so they are read on every open and need no realtime event. A client ignores a badge id it does not know.
+Granted badges show under the name in the mini profile and beside the username in the full profile and the DM panel. Clicking one opens every badge the account holds. They come with `GET /api/users/:userId/profile-details` as `badges: [{ id, grantedAt }]`, so they are read on every open and need no realtime event. A client ignores a badge id it does not know. The administration site's user details show the account's role.
 
 An admin grants or removes one in the administration site (user → Badges), through `POST` and `DELETE /api/admin/users/:id/badges/:badge` with a reason, recorded as `user.grant_badge` or `user.revoke_badge`. Each `user_badges` row has a `source`: `admin` for these, `automatic` for a future rule that awards a badge on its own. Such a rule calls `grantBadge` and `revokeBadge` from `server/src/modules/badges/badgesRepository.ts` with `source: 'automatic'`, so it never removes a badge an admin gave.
 
-To add a badge, add its id to `server/src/modules/badges/badgeCatalog.ts`, to the `user_badges_badge_check` constraint (a migration) and to `packages/frontend-shared/src/badges/badgeCatalog.tsx` with its Kubai icon and colour, then add its name and description to every `badges` locale.
+To add a badge, add its ID to `server/src/modules/badges/badgeCatalog.ts` and the `user_badges_badge_check` constraint in a migration. Add its Kubai icon and colour to `src/features/badges/badgeCatalog.tsx` in both frontends and add its name and description to each frontend's badge locales.
 
 ## Sharing into the app (Web Share Target)
 

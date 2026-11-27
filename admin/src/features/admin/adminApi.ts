@@ -1,8 +1,8 @@
-import { ApiError, apiFetch } from '@overcord/frontend-shared/api/transport';
-import { ERROR_CODES } from '@overcord/frontend-shared/api/errorCodes';
+import { ApiError, apiFetch } from '@/shared/api/transport';
+import { ERROR_CODES } from '@/shared/api/errorCodes';
 import { reportAdminAccessLost, reportAdminSessionEnded } from './adminAccess';
 import { invalidateAdminLists } from './adminListCache';
-import type { BadgeId, HeldBadge } from '@overcord/frontend-shared/badges/badgeCatalog';
+import type { BadgeId, HeldBadge } from '@/features/badges/badgeCatalog';
 
 // The server enforces access; hiding admin routes in the UI is not authorization.
 

@@ -1,4 +1,4 @@
-import { cn } from '@overcord/frontend-shared/lib/utils';
+import { cn } from '@/shared/lib/utils';
 import mark from './admin-mark.svg?no-inline';
 
 export function AdminBrand({ className }: { className?: string }) {

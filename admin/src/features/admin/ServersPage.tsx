@@ -1,11 +1,11 @@
-import { ClockCounterClockwiseIcon } from '@overcord/frontend-shared/ui/icons';
+import { ClockCounterClockwiseIcon } from '@/shared/ui/icons';
 import { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useLocation } from 'react-router';
 
-import { ServerIcon } from '@overcord/frontend-shared/ui/ServerIcon';
-import { buttonVariants } from '@overcord/frontend-shared/ui/primitives/button';
-import { useUrlSearch } from '@overcord/frontend-shared/hooks/useUrlSearch';
+import { ServerIcon } from '@/shared/ui/ServerIcon';
+import { buttonVariants } from '@/shared/ui/primitives/button';
+import { useUrlSearch } from '@/shared/hooks/useUrlSearch';
 import { fetchAdminServers } from './adminApi';
 import type { AdminServerRow } from './adminApi';
 import { formatDateShort, formatWhen } from './adminFormat';
@@ -18,10 +18,10 @@ import { useAdminList } from './useAdminList';
 import { useAdminTableFits } from './useAdminMode';
 import { useAdminQuery } from './useAdminQuery';
 import type { QuerySchema } from './useAdminQuery';
-import { AppLink } from '@overcord/frontend-shared/ui/app-link';
+import { AppLink } from '@/shared/ui/app-link';
 import { AdminStackedSkeleton, AdminTableSkeleton } from './AdminSkeletons';
 import { AdminPageTitle } from './AdminSection';
-import { useLanguage } from '@overcord/frontend-shared/i18n/useLanguage';
+import { useLanguage } from '@/i18n/useLanguage';
 
 type StatusFilter = 'all' | 'active' | 'suspended' | 'orphan';
 

@@ -1,6 +1,6 @@
-import { ApiError } from '@overcord/frontend-shared/api/transport';
-import { ERROR_CODES } from '@overcord/frontend-shared/api/errorCodes';
-import { describeApiError } from '@overcord/frontend-shared/api/errorText';
+import { ApiError } from '@/shared/api/transport';
+import { ERROR_CODES } from '@/shared/api/errorCodes';
+import { describeApiError } from '@/shared/api/errorText';
 import i18n from 'i18next';
 
 export const REASON_MIN = 3;

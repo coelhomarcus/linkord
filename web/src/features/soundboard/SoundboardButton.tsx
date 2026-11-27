@@ -7,7 +7,7 @@ import { Slider } from '@/shared/ui/primitives/slider';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/shared/ui/primitives/tooltip';
 import { useRoom, useRoomState } from '@/state/RoomContext';
 import { cn } from '@/shared/lib/utils';
-import { ServerIcon } from '@overcord/frontend-shared/ui/ServerIcon';
+import { ServerIcon } from '@/shared/ui/ServerIcon';
 import { noteExpressionUse, useFrequentExpressions } from '@/features/emoji/frequentExpressions';
 import { useMySounds } from './useMySounds';
 import { SoundEditorDialog } from './SoundEditorDialog';

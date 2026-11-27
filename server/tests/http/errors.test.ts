@@ -5,7 +5,7 @@ import { describe, it } from 'node:test';
 import { ERROR_REGISTRY, errorBody } from '../../src/http/errors.js';
 
 const SRC = path.resolve(import.meta.dirname, '../../src');
-const WEB_CODES = path.resolve(import.meta.dirname, '../../../packages/frontend-shared/src/api/errorCodes.ts');
+const FRONTENDS = ['web', 'admin'];
 
 function sourceFiles(dir: string): string[] {
   return fs.readdirSync(dir, { withFileTypes: true }).flatMap((e) => {
@@ -47,11 +47,14 @@ describe('error code registry', () => {
     }
   });
 
-  it('every code the client knows about exists in the server registry', () => {
-    const client = [...fs.readFileSync(WEB_CODES, 'utf8').matchAll(/^\s+(?:'[^']+'|\w+): '([^']+)',/gm)].map((m) => m[1]!);
-    assert.ok(client.length > 10, 'the client extraction should find the codes');
-    assert.deepEqual(client.filter((code) => !(code in registry)), []);
-  });
+  for (const frontend of FRONTENDS) {
+    it(`every code known by ${frontend} exists in the server registry`, () => {
+      const source = fs.readFileSync(path.resolve(import.meta.dirname, `../../../${frontend}/src/shared/api/errorCodes.ts`), 'utf8');
+      const client = [...source.matchAll(/^\s+(?:'[^']+'|\w+): '([^']+)',/gm)].map((m) => m[1]!);
+      assert.ok(client.length > 10, 'the client extraction should find the codes');
+      assert.deepEqual(client.filter((code) => !(code in registry)), []);
+    });
+  }
 
   it('errorBody carries extra fields without inventing a code', () => {
     assert.deepEqual(errorBody('cooldown', 'wait', { retryAfter: 'x' }), { error: { code: 'cooldown', message: 'wait', retryAfter: 'x' } });

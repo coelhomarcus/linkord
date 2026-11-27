@@ -1,0 +1,162 @@
+import { useCallback, useEffect, useRef, useState } from 'react';
+
+interface Page<T> { items: T[]; nextCursor: string | null }
+
+export type ListStatus = 'loading' | 'error' | 'ready';
+
+/** A window of a list to start from instead of an empty one (see `restore`). */
+export interface ListSnapshot<T> { items: T[]; nextCursor: string | null; pages: number }
+
+interface Options<T> {
+  /** Start from rows loaded earlier (coming back to a list): they show at once and
+   * the same pages are re-read in the background, so they never stay out of date
+   * silently — if that read fails the list is marked `stale`. Read once, at mount. */
+  restore?: ListSnapshot<T> | null;
+  /** Changes whenever the SAME query may have new data (a social event, an action
+   * of this tab). The rows on screen stay while it is re-read. */
+  revision?: string | number;
+  /** Stable id of a row: rows are de-duplicated by it, and `removeItem` needs it. */
+  getKey?: (item: T) => string;
+}
+
+/** Changing identity resets the list; changing revision refreshes its loaded pages in place.
+ * Failed refreshes keep the old rows and mark them stale. Generations discard superseded
+ * responses. Do not invalidate requests in effect cleanup: StrictMode's simulated unmount can
+ * otherwise discard the only in-flight response without triggering a replacement. */
+export function useCursorList<T>(fetchPage: (cursor: string | null) => Promise<Page<T>>, identity: string, options: Options<T> = {}) {
+  const { revision = 0 } = options;
+  const restored = useRef(options.restore ?? null);
+  const [items, setItems] = useState<T[]>(() => restored.current?.items ?? []);
+  const [nextCursor, setNextCursor] = useState<string | null>(() => restored.current?.nextCursor ?? null);
+  const [status, setStatus] = useState<ListStatus>(() => (restored.current ? 'ready' : 'loading'));
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [loadMoreError, setLoadMoreError] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+  const [stale, setStale] = useState(false);
+  const generation = useRef(0);
+  const pagesLoaded = useRef(restored.current?.pages ?? 0);
+  const cursorRef = useRef<string | null>(restored.current?.nextCursor ?? null);
+  const itemsRef = useRef(items);
+  const statusRef = useRef(status);
+  const fetchRef = useRef(fetchPage);
+  const getKeyRef = useRef(options.getKey);
+  const seen = useRef<{ identity: string; revision: string | number } | null>(null);
+  useEffect(() => { fetchRef.current = fetchPage; getKeyRef.current = options.getKey; itemsRef.current = items; statusRef.current = status; });
+
+  const dedupe = useCallback((rows: T[]): T[] => {
+    const key = getKeyRef.current;
+    if (!key) return rows;
+    const ids = new Set<string>();
+    return rows.filter((row) => { const id = key(row); if (ids.has(id)) return false; ids.add(id); return true; });
+  }, []);
+
+  const loadFirst = useCallback(() => {
+    const mine = ++generation.current;
+    setStatus('loading');
+    setRefreshing(false);
+    setStale(false);
+    setLoadMoreError(false);
+    setLoadingMore(false);
+    fetchRef.current(null)
+      .then((page) => {
+        if (mine !== generation.current) return;
+        setItems(dedupe(page.items));
+        setNextCursor(page.nextCursor);
+        cursorRef.current = page.nextCursor;
+        pagesLoaded.current = 1;
+        setStatus('ready');
+      })
+      .catch(() => { if (mine === generation.current) setStatus('error'); });
+  }, [dedupe]);
+
+  const refresh = useCallback(() => {
+    const mine = ++generation.current;
+    const wanted = Math.max(1, pagesLoaded.current);
+    setRefreshing(true);
+    setLoadingMore(false);
+    void (async () => {
+      let cursor: string | null = null;
+      let rows: T[] = [];
+      let pages = 0;
+      try {
+        do {
+          const page = await fetchRef.current(cursor);
+          if (mine !== generation.current) return;
+          rows = rows.concat(page.items);
+          cursor = page.nextCursor;
+          pages++;
+        } while (cursor && pages < wanted);
+        setItems(dedupe(rows));
+        setNextCursor(cursor);
+        cursorRef.current = cursor;
+        pagesLoaded.current = pages;
+        setStale(false);
+        setLoadMoreError(false);
+      } catch {
+        if (mine === generation.current) setStale(true);
+      } finally {
+        if (mine === generation.current) setRefreshing(false);
+      }
+    })();
+  }, [dedupe]);
+
+  useEffect(() => {
+    const previous = seen.current;
+    seen.current = { identity, revision };
+    if (!previous && restored.current) {
+      // rows are already on screen: re-read the window in place instead of blanking it
+      refresh();
+    } else if (!previous || previous.identity !== identity) {
+      // a different query: nothing from the old one may stay on screen
+      setItems([]);
+      setNextCursor(null);
+      cursorRef.current = null;
+      pagesLoaded.current = 0;
+      loadFirst();
+    } else if (previous.revision !== revision) {
+      // a refresh supersedes the first load's answer but never leaves `loading`
+      // itself, so while nothing has loaded yet the first load starts over
+      if (statusRef.current === 'loading') loadFirst();
+      else refresh();
+    }
+  }, [identity, revision, loadFirst, refresh]);
+
+  const loadMore = useCallback(() => {
+    const cursor = cursorRef.current;
+    if (!cursor || loadingMore) return;
+    const mine = generation.current;
+    setLoadingMore(true);
+    setLoadMoreError(false);
+    fetchRef.current(cursor)
+      .then((page) => {
+        if (mine !== generation.current) return;
+        setItems((prev) => dedupe([...prev, ...page.items]));
+        setNextCursor(page.nextCursor);
+        cursorRef.current = page.nextCursor;
+        pagesLoaded.current += 1;
+      })
+      .catch(() => { if (mine === generation.current) setLoadMoreError(true); })
+      .finally(() => { if (mine === generation.current) setLoadingMore(false); });
+  }, [loadingMore, dedupe]);
+
+  /** Retries whatever failed: the first load, or a refresh that left the list stale. */
+  const retry = useCallback(() => {
+    if (status === 'error') loadFirst();
+    else refresh();
+  }, [status, loadFirst, refresh]);
+
+  /** Drops a row the server just confirmed gone. A read that started before the
+   * change is discarded so it can't put the row back. */
+  const removeItem = useCallback((key: string) => {
+    const keyOf = getKeyRef.current;
+    if (!keyOf) return;
+    generation.current++;
+    setRefreshing(false);
+    setItems((prev) => prev.filter((row) => keyOf(row) !== key));
+  }, []);
+
+  /** The rows, cursor and page count as they are now, to restore later. */
+  const snapshot = useCallback((): ListSnapshot<T> => ({ items: itemsRef.current, nextCursor: cursorRef.current, pages: pagesLoaded.current }), []);
+
+  return { items, status, snapshot, loadingMore, loadMoreError, hasMore: nextCursor !== null, loadMore, retry, refreshing, stale, removeItem };
+}

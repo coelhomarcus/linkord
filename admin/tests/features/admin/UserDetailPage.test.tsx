@@ -5,7 +5,7 @@ import { renderAdmin, auditRow } from './adminFixture';
 import { UserDetailPage } from '@/features/admin/UserDetailPage';
 import * as adminApi from '@/features/admin/adminApi';
 import { subscribeAdminSessionEnded } from '@/features/admin/adminAccess';
-import { ApiError } from '@overcord/frontend-shared/api/transport';
+import { ApiError } from '@/shared/api/transport';
 
 vi.mock('@/features/admin/adminApi');
 const mocked = vi.mocked(adminApi);

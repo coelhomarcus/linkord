@@ -6,7 +6,7 @@ import type { ContextMenuRootActions } from '@base-ui/react/context-menu';
 
 import { ReportDialog } from '@/features/reports/ReportDialog';
 import { ConfirmDialog } from '@/shared/ConfirmDialog';
-import type { ReportTarget } from '@overcord/frontend-shared/reports/reportCategories';
+import type { ReportTarget } from '@/features/reports/reportCategories';
 import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuSeparator, ContextMenuTrigger } from '@/shared/ui/primitives/context-menu';
 import { ReactionEmojiPicker } from '@/features/chat/ReactionEmojiPicker';
 import { customEmojisAsText } from '@/features/emoji/customEmojiText';

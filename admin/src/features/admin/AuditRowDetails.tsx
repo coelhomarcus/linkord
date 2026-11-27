@@ -1,11 +1,11 @@
 import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
-import { formatFileSize } from '@overcord/frontend-shared/lib/formatBytes';
+import { formatFileSize } from '@/shared/lib/formatBytes';
 import type { AuditRow } from './adminApi';
 import i18n from 'i18next';
 import { ACTION_LABELS, reportResolutionLabel } from './adminFormat';
 import { AdminFieldRow, AdminFields } from './AdminSection';
-import { useLanguage } from '@overcord/frontend-shared/i18n/useLanguage';
+import { useLanguage } from '@/i18n/useLanguage';
 
 /** Past this, the raw JSON is cut: a metadata blob must not take over the screen. */
 const JSON_LIMIT = 2000;

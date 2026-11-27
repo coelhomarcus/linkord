@@ -1,12 +1,12 @@
 import { useState, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
-import { AuthField } from '@overcord/frontend-shared/auth/AuthField';
-import { PasswordToggle } from '@overcord/frontend-shared/auth/AuthControls';
-import { TwoFactorStep } from '@overcord/frontend-shared/auth/TwoFactorStep';
-import type { LoginChallenge } from '@overcord/frontend-shared/api/transport';
-import { describeApiError } from '@overcord/frontend-shared/api/errorText';
-import { ErrorBanner } from '@overcord/frontend-shared/ErrorBanner';
-import { Button } from '@overcord/frontend-shared/ui/primitives/button';
+import { AuthField } from '@/features/auth/AuthField';
+import { PasswordToggle } from '@/features/auth/AuthControls';
+import { TwoFactorStep } from '@/features/auth/TwoFactorStep';
+import type { LoginChallenge } from '@/shared/api/transport';
+import { describeApiError } from '@/shared/api/errorText';
+import { ErrorBanner } from '@/shared/ErrorBanner';
+import { Button } from '@/shared/ui/primitives/button';
 import { loginAdmin, resendAdminCode, verifyAdminCode, type AdminIdentity } from './adminSessionApi';
 import { AdminBrand } from './AdminBrand';
 
