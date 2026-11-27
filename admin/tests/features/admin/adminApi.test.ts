@@ -1,10 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { ApiError, apiFetch } from '@overcord/frontend-shared/api/transport';
+import { ApiError, apiFetch } from '@/shared/api/transport';
 import { subscribeAdminAccessLost, subscribeAdminSessionEnded } from '@/features/admin/adminAccess';
 import { fetchAdminUsers, suspendUser } from '@/features/admin/adminApi';
 import { invalidateAdminLists, readListWindow, saveListWindow } from '@/features/admin/adminListCache';
 
-vi.mock('@overcord/frontend-shared/api/transport', async (importOriginal) => ({ ...(await importOriginal<typeof import('@overcord/frontend-shared/api/transport')>()), apiFetch: vi.fn() }));
+vi.mock('@/shared/api/transport', async (importOriginal) => ({ ...(await importOriginal<typeof import('@/shared/api/transport')>()), apiFetch: vi.fn() }));
 const mockedFetch = vi.mocked(apiFetch);
 
 const lost = vi.fn();

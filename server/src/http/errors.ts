@@ -65,6 +65,8 @@ export const ERROR_REGISTRY = {
   // auth and accounts
   invalid_credentials: { statuses: [401], channel: 'http' },
   account_unavailable: { statuses: [403], channel: 'http' },
+  admin_two_factor_required: { statuses: [403], channel: 'http' },
+  admin_email_required: { statuses: [409], channel: 'http' },
   // the right password for an account whose deletion grace period is over (auth/accountDeletion.ts)
   account_deleted: { statuses: [403], channel: 'http' },
   // a data export whose download window is over (modules/data-export)

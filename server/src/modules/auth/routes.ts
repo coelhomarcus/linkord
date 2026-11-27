@@ -10,7 +10,7 @@ import {
   verifyCurrentEmailCode,
 } from './accountConfirmation.js';
 import {
-  ADMIN_SESSION_SECONDS, createSession, resolveSession, destroySession, destroyOtherSessions, destroySessionById, listSessionsForUser,
+  ADMIN_SESSION_SECONDS, createSession, resolveSession, destroySession, destroyAdminSessionsForUser, destroyOtherSessions, destroySessionById, listSessionsForUser,
   type SessionScope,
 } from './session.js';
 import { dropSessionConnections } from './sessionConnections.js';
@@ -25,7 +25,7 @@ import { sanitizeDisplayName } from '../profile/sanitize.js';
 import type { User } from '../../db/schema.js';
 import { consumeLoginChallenge, findLoginChallenge, hasLiveAuthCode, verifyAuthCode } from './codes.js';
 import { isEmailDeliveryConfigured, sendEmailChangedEmail, sendPasswordChangedEmail } from './email.js';
-import { isKnownBrowser, noticeLogin, noticeRegistration } from './loginAlert.js';
+import { isKnownBrowser, KNOWN_LOGIN_SECONDS, noticeLogin, noticeRegistration, rememberBrowser } from './loginAlert.js';
 import { cancelScheduledDeletion, isPastDeletion, scheduleAccountDeletion } from './accountDeletion.js';
 import { clientIpOf, rateLimitSubjectOf, sessionOriginOf } from '../../http/clientInfo.js';
 import { recordAudit } from '../admin/auditLog.js';
@@ -85,17 +85,34 @@ function safeCompare(a: unknown, b: unknown): boolean {
   return crypto.timingSafeEqual(bufA, bufB);
 }
 
+function secureAuthCookie(request: FastifyRequest, scope: SessionScope): boolean {
+  return scope === 'admin' ? config.ADMIN_ORIGIN?.secure === true : isSecureRequest(request.raw);
+}
+
+function deviceCookieName(scope: SessionScope, secure: boolean): string {
+  const name = scope === 'admin' ? 'overcord-admin-device' : 'overcord-device';
+  return secure ? `__Host-${name}` : name;
+}
+
+function deviceCookieOf(request: FastifyRequest, scope: SessionScope): string | undefined {
+  return parseCookies(request.headers.cookie || '')[deviceCookieName(scope, secureAuthCookie(request, scope))];
+}
+
 function setSessionCookie(request: FastifyRequest, reply: FastifyReply, rawToken: string, scope: SessionScope = 'app'): void {
   const admin = scope === 'admin';
   const cookie = serializeCookie(admin ? adminCookieName() : config.SESSION_COOKIE, rawToken, {
     maxAgeSec: admin ? ADMIN_SESSION_SECONDS : config.SESSION_TTL_DAYS * 24 * 60 * 60,
-    secure: admin ? config.ADMIN_ORIGIN?.secure === true : isSecureRequest(request.raw),
+    secure: secureAuthCookie(request, scope),
   });
   reply.header('Set-Cookie', cookie);
 }
 
 function adminIdentity(user: { id: string; username: string; locale: string }) {
   return { id: user.id, username: user.username, locale: resolveLocale(user.locale) };
+}
+
+function adminTwoFactorRequired(reply: FastifyReply): void {
+  sendError(reply, 403, 'admin_two_factor_required', 'Ative a verificação em duas etapas em Configurações → Segurança no Overcord.');
 }
 
 async function handleRegister(request: FastifyRequest, reply: FastifyReply): Promise<void> {
@@ -196,7 +213,7 @@ async function handleLogin(request: FastifyRequest, reply: FastifyReply, scope: 
   // Anyone can fill the account's counter from one address, so a blocked account still lets in the right
   // password from a browser it signed in from lately. Looked up before the password and for every name, so
   // neither the answer time nor the answer says whether the password or the account was right.
-  const knownBrowser = userBlockedSec ? await isKnownBrowser(user?.id ?? NO_USER_ID, sessionOriginOf(request)) : false;
+  const knownBrowser = userBlockedSec ? await isKnownBrowser(user?.id ?? NO_USER_ID, scope, deviceCookieOf(request, scope)) : false;
   // a nonexistent user still verifies against a fake hash, to spend the
   // same CPU time — and the response time doesn't reveal which usernames
   // exist. The error message is also IDENTICAL for both cases.
@@ -229,6 +246,7 @@ async function handleLogin(request: FastifyRequest, reply: FastifyReply, scope: 
   }
   if (isPastDeletion(user)) return accountDeletedError(reply);
   if (scope === 'admin' && user.role !== 'admin') return sendError(reply, 403, 'forbidden', 'Apenas administradores.');
+  if (scope === 'admin' && !user.twoFactorEmail) return adminTwoFactorRequired(reply);
 
   if (needsRehash(user.passwordHash)) {
     hashPassword(password)
@@ -243,8 +261,16 @@ async function handleLogin(request: FastifyRequest, reply: FastifyReply, scope: 
 async function finishLogin(request: FastifyRequest, reply: FastifyReply, user: User, scope: SessionScope, twoFactor = false): Promise<void> {
   const origin = sessionOriginOf(request);
   const { rawToken } = await createSession(user.id, origin, scope);
-  noticeLogin(user, origin);
+  const device = await rememberBrowser(user.id, scope, deviceCookieOf(request, scope)).catch((err) => {
+    log.warn('could not remember the browser', { userId: user.id, scope, err });
+    return null;
+  });
   setSessionCookie(request, reply, rawToken, scope);
+  if (device) {
+    const secure = secureAuthCookie(request, scope);
+    reply.header('Set-Cookie', serializeCookie(deviceCookieName(scope, secure), device.token, { maxAgeSec: KNOWN_LOGIN_SECONDS, secure }));
+  }
+  noticeLogin(user, origin, device?.known ?? false);
   log.info('login', { userId: user.id, username: user.username, scope, twoFactor });
   sendJson(reply, 200, scope === 'admin' ? { user: adminIdentity(user) } : await signedIn(request, user));
 }
@@ -304,7 +330,7 @@ async function loginChallengeFor(request: FastifyRequest, reply: FastifyReply, c
   const found = await findLoginChallenge(challengeHash);
   if (!found || found.startedAt.getTime() + LOGIN_CHALLENGE_MAX_MS < Date.now()) return expired();
   const user = await findById(found.userId);
-  if (!user || !user.email) return expired();
+  if (!user || !user.email || !user.twoFactorEmail) return expired();
   if (user.status !== 'active') {
     sendError(reply, 403, 'account_unavailable', 'Esta conta está indisponível. Fale com a administração.');
     return { refused: true };
@@ -369,7 +395,7 @@ async function handleLogout(request: FastifyRequest, reply: FastifyReply, scope:
   const name = admin ? adminCookieName() : config.SESSION_COOKIE;
   const tokenHash = await destroySession(cookies[name], scope);
   if (tokenHash && !admin) dropSessionConnections([tokenHash]);
-  reply.header('Set-Cookie', clearCookie(name, { secure: admin ? config.ADMIN_ORIGIN?.secure === true : isSecureRequest(request.raw) }));
+  reply.header('Set-Cookie', clearCookie(name, { secure: secureAuthCookie(request, scope) }));
   reply.code(204).header('Cache-Control', 'no-store').send();
 }
 
@@ -458,7 +484,7 @@ async function handleRecoveryRequest(request: FastifyRequest, reply: FastifyRepl
   // the codes. A browser the account signed in from lately has a budget of its own, which strangers asking
   // for this account cannot spend. A refusal looks like success: a 429 would only exist for real accounts.
   if (user?.email) {
-    const known = await isKnownBrowser(user.id, sessionOriginOf(request));
+    const known = await isKnownBrowser(user.id, 'app', deviceCookieOf(request, 'app'));
     const send = await ratelimit.consume(`${known ? 'recovery-account-known' : 'recovery-account'}:${user.id}`, CODE_SEND_RULE);
     if (send.allowed) {
       try {
@@ -493,7 +519,7 @@ async function handleRecoveryReset(request: FastifyRequest, reply: FastifyReply)
   // Anyone who knows the username can fill the account's counter, so a browser the account signed in from
   // lately still gets to try its code; its guesses stay bounded by the address counter and the code's own tries.
   const accountBlocked = await ratelimit.checkBlocked(accountKey);
-  const accountBlockedHere = accountBlocked && !(await isKnownBrowser(user?.id ?? NO_USER_ID, sessionOriginOf(request)));
+  const accountBlockedHere = accountBlocked && !(await isKnownBrowser(user?.id ?? NO_USER_ID, 'app', deviceCookieOf(request, 'app')));
   if (accountBlockedHere) return rateLimitedReply(reply, accountBlocked);
 
   const result = user?.email ? await verifyAuthCode(user.id, 'password_reset', user.email, code) : null;
@@ -501,7 +527,7 @@ async function handleRecoveryReset(request: FastifyRequest, reply: FastifyReply)
     const reason = result && !result.ok ? result.reason : 'invalid_code';
     if (reason === 'invalid_code' || reason === 'too_many_attempts') {
       await ratelimit.recordFailure(ipKey);
-      await ratelimit.recordFailure(accountKey);
+      await ratelimit.recordRecoveryFailure(accountKey);
     }
     log.warn('password reset code refused', { userId: user?.id, reason, ip: ipOfRequest(request) });
     return purposeError(reply, reason);
@@ -514,6 +540,13 @@ async function handleRecoveryReset(request: FastifyRequest, reply: FastifyReply)
   await recordAudit({ actor: { id: user.id, username: user.username }, action: 'account.password_reset', targetType: 'user', targetId: user.id, targetLabel: user.username, requestId: request.id });
   await notifyPasswordChanged(request, user, 'reset');
   sendJson(reply, 200, { ok: true });
+}
+
+// A password-only email change started before promotion cannot replace an admin's second factor.
+function emailChangeCodeFor(user: User) {
+  const purpose = user.role === 'admin' ? 'admin_email_change' : 'email_change';
+  const challengeHash = user.role === 'admin' ? crypto.createHash('sha256').update(user.email ?? '').digest('hex') : undefined;
+  return { purpose, challengeHash } as const;
 }
 
 async function handleEmailChangeRequest(request: FastifyRequest, reply: FastifyReply): Promise<void> {
@@ -535,34 +568,40 @@ async function handleEmailChangeRequest(request: FastifyRequest, reply: FastifyR
     return sendError(reply, 429, 'rate_limited', 'Muitas solicitações. Tente novamente mais tarde.');
   }
   await ratelimit.recordFailure(changeKey);
-  // With two-step login on, the current address is asked first: only once its code is confirmed does a code
-  // go to the new one, so a stolen session plus the password cannot move the account's second factor away.
+  // Also require the current address for an admin setting up two-step login, since this address gets their codes.
   // A live code to this new address means that step was already passed, and asking again resends it.
   const user = await findById(sess.userId);
   if (!user) return sendError(reply, 404, 'user_not_found', 'Conta não encontrada.');
-  if (user.twoFactorEmail && !(await hasLiveAuthCode(user.id, 'email_change', email))) {
+  if (user.role === 'admin' && !user.email) {
+    return sendError(reply, 409, 'admin_email_required', 'Peça a um operador para remover seu acesso administrativo antes de adicionar um e-mail.');
+  }
+  const { purpose, challengeHash } = emailChangeCodeFor(user);
+  if ((user.twoFactorEmail || user.role === 'admin') && !(await hasLiveAuthCode(user.id, purpose, email, { challengeHash }))) {
     return sendCurrentEmailCode(reply, user, 'email_change_current');
   }
   try {
-    await issueAndSendCode(sess.userId, email, sess.username, 'email_change', resolveLocale(sess.locale));
+    await issueAndSendCode(user.id, email, user.username, purpose, resolveLocale(user.locale), challengeHash);
   } catch {
     return sendError(reply, 503, 'email_unavailable', 'Não foi possível enviar o código agora. Tente novamente mais tarde.');
   }
   sendJson(reply, 200, { ok: true });
 }
 
-/** With two-step login on: the code sent to the current address, which earns the code to the new one. */
+/** The code sent to the current address earns the code to the new one. */
 async function handleEmailChangeVerifyCurrent(request: FastifyRequest, reply: FastifyReply): Promise<void> {
   const sess = await sessionForRequest(request);
   if (!sess) return sendError(reply, 401, 'unauthenticated', 'Não autenticado.');
   const email = normalizeEmail(String(jsonBody(request.body).email ?? ''));
   if (!isValidEmail(email)) return sendError(reply, 400, 'invalid_email', 'Informe um e-mail válido.');
   if (sess.email && normalizeEmail(sess.email) === email) return sendError(reply, 400, 'same_email', 'Informe um e-mail diferente do atual.');
-  if (!(await verifyCurrentEmailCode(request, reply, sess, 'email_change_current'))) return;
+  const user = await findById(sess.userId);
+  if (!user) return sendError(reply, 404, 'user_not_found', 'Conta não encontrada.');
+  if (!(await verifyCurrentEmailCode(request, reply, { userId: user.id, email: user.email }, 'email_change_current'))) return;
   const existing = await findByEmailLower(email);
   if (existing && existing.id !== sess.userId) return sendError(reply, 409, 'email_taken', 'Esse e-mail já está em uso.');
+  const { purpose, challengeHash } = emailChangeCodeFor(user);
   try {
-    await issueAndSendCode(sess.userId, email, sess.username, 'email_change', resolveLocale(sess.locale));
+    await issueAndSendCode(user.id, email, user.username, purpose, resolveLocale(user.locale), challengeHash);
   } catch {
     return sendError(reply, 503, 'email_unavailable', 'Não foi possível enviar o código agora. Tente novamente mais tarde.');
   }
@@ -577,12 +616,15 @@ async function handleEmailChangeConfirm(request: FastifyRequest, reply: FastifyR
   const code = String(body.code == null ? '' : body.code).trim();
   if (!isValidEmail(email)) return sendError(reply, 400, 'invalid_email', 'Informe um e-mail válido.');
   if (!/^\d{6}$/.test(code)) return sendError(reply, 400, 'invalid_code', 'Informe o código de 6 dígitos.');
-  const result = await verifyAuthCode(sess.userId, 'email_change', email, code);
+  const before = await findById(sess.userId);
+  if (!before) return sendError(reply, 404, 'user_not_found', 'Conta não encontrada.');
+  const { purpose, challengeHash } = emailChangeCodeFor(before);
+  const result = await verifyAuthCode(sess.userId, purpose, email, code, { challengeHash });
   if (!result.ok) return purposeError(reply, result.reason);
   const existing = await findByEmailLower(email);
   if (existing && existing.id !== sess.userId) return sendError(reply, 409, 'email_taken', 'Esse e-mail já está em uso.');
-  const user = await updateEmail(sess.userId, email);
-  if (!user) return sendError(reply, 404, 'user_not_found', 'Conta não encontrada.');
+  const user = await updateEmail(before, email);
+  if (!user) return sendError(reply, 409, 'conflict', 'A conta mudou. Solicite um novo código.');
   // the address is how the account is recovered: whoever else is signed in is signed out, and the old
   // address hears about it, so a change that was not its owner's does not go unnoticed
   const ended = await destroyOtherSessions(sess.userId, sess.tokenHash);
@@ -728,7 +770,10 @@ async function handleTwoFactorDisableConfirm(request: FastifyRequest, reply: Fas
   const sess = await sessionForRequest(request);
   if (!sess) return sendError(reply, 401, 'unauthenticated', 'Não autenticado.');
   if (!(await verifyCurrentEmailCode(request, reply, sess, 'two_factor_disable'))) return;
-  await db.update(users).set({ twoFactorEmail: false, updatedAt: new Date() }).where(eq(users.id, sess.userId));
+  await db.transaction(async (tx) => {
+    await tx.update(users).set({ twoFactorEmail: false, updatedAt: new Date() }).where(eq(users.id, sess.userId));
+    await destroyAdminSessionsForUser(sess.userId, tx);
+  });
   await recordAudit({ actor: auditActor(sess), action: 'account.two_factor_disable', targetType: 'user', targetId: sess.userId, targetLabel: sess.username, requestId: request.id });
   log.info('two-step login turned off', { userId: sess.userId });
   sendJson(reply, 200, { twoFactorEnabled: false });

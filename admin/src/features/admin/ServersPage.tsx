@@ -1,11 +1,11 @@
-import { ClockCounterClockwiseIcon } from '@overcord/frontend-shared/ui/icons';
+import { ClockCounterClockwiseIcon } from '@/shared/ui/icons';
 import { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useLocation } from 'react-router';
 
-import { ServerIcon } from '@overcord/frontend-shared/ui/ServerIcon';
-import { buttonVariants } from '@overcord/frontend-shared/ui/primitives/button';
-import { useUrlSearch } from '@overcord/frontend-shared/hooks/useUrlSearch';
+import { ServerIcon } from '@/shared/ui/ServerIcon';
+import { buttonVariants } from '@/shared/ui/primitives/button';
+import { useUrlSearch } from '@/shared/hooks/useUrlSearch';
 import { fetchAdminServers } from './adminApi';
 import type { AdminServerRow } from './adminApi';
 import { formatDateShort, formatWhen } from './adminFormat';
@@ -18,10 +18,10 @@ import { useAdminList } from './useAdminList';
 import { useAdminTableFits } from './useAdminMode';
 import { useAdminQuery } from './useAdminQuery';
 import type { QuerySchema } from './useAdminQuery';
-import { AppLink } from '@overcord/frontend-shared/ui/app-link';
+import { AppLink } from '@/shared/ui/app-link';
 import { AdminStackedSkeleton, AdminTableSkeleton } from './AdminSkeletons';
 import { AdminPageTitle } from './AdminSection';
-import { useLanguage } from '@overcord/frontend-shared/i18n/useLanguage';
+import { useLanguage } from '@/i18n/useLanguage';
 
 type StatusFilter = 'all' | 'active' | 'suspended' | 'orphan';
 
@@ -75,7 +75,7 @@ export function ServersPage() {
   const origin = fromList(pathname, search);
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-5 @[760px]:gap-6">
       <AdminPageTitle title={t('nav.servers')} description={t('pages.servers')} />
       <AdminListToolbar
         search={{ value: query, onChange: setQuery, placeholder: t('ui.searchNameOrId'), label: t('ui.searchServers') }}
@@ -87,7 +87,7 @@ export function ServersPage() {
         summary={list.status === 'ready' && list.items.length > 0 ? `${list.items.length} ${t('ui.server', { count: list.items.length })}${list.hasMore ? t('ui.moreResults') : ''}` : undefined}
         onClear={active ? clear : undefined}
       />
-      <ListChrome list={list} empty={{ illustration: 'servers', title: t('emptyList.servers.title'), description: t('emptyList.servers.text') }} onClearFilters={active ? clear : undefined} skeleton={tableFits ? <AdminTableSkeleton columns={7} identity /> : <AdminStackedSkeleton />}>
+      <ListChrome list={list} empty={{ title: t('emptyList.servers.title'), description: t('emptyList.servers.text') }} onClearFilters={active ? clear : undefined} skeleton={tableFits ? <AdminTableSkeleton columns={7} identity /> : <AdminStackedSkeleton />}>
         {tableFits ? (
           <AdminTable caption={t('ui.servers')}>
             <thead>
@@ -112,7 +112,7 @@ export function ServersPage() {
         ) : (
           <AdminStackedList>
             {list.items.map((g) => (
-              <li key={g.id} className="flex flex-col gap-2 p-3">
+              <li key={g.id} className="flex flex-col gap-2">
                 <div className="flex items-center gap-2">
                   <div className="min-w-0 flex-1"><ServerIdentity server={g} from={origin} /></div>
                   <RowActions server={g} />

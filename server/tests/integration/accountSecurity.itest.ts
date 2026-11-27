@@ -9,9 +9,9 @@ import { createApp } from '../../src/http/app.js';
 import { hashPassword } from '../../src/modules/auth/password.js';
 import { createSession, resolveSession, sweepExpiredSessions, touchSessions } from '../../src/modules/auth/session.js';
 import { FAILURE_RULE } from '../../src/modules/auth/ratelimit.js';
-import { KNOWN_LOGIN_DAYS, recordLogin, sweepKnownLogins, whenLoginAlertsSettled } from '../../src/modules/auth/loginAlert.js';
+import { KNOWN_LOGIN_DAYS, KNOWN_LOGIN_SECONDS, recordLogin, sweepKnownLogins, whenLoginAlertsSettled } from '../../src/modules/auth/loginAlert.js';
 import { participants } from '../../src/modules/presence/participants.js';
-import { db, joinNew, pool } from './helpers.js';
+import { adminHeaders, db, joinNew, makeAdminSession, pool } from './helpers.js';
 
 // The account's own security controls against the real database: two-step login by email, the session
 // list and its revocations (sockets included), idle expiry and the password change.
@@ -93,6 +93,84 @@ const cookieFor = async (userId: string, origin?: { ip: string; userAgent: strin
 };
 const me = (cookie: string) => call('GET', '/api/auth/me', { cookie });
 
+function deviceSetCookie(reply: Reply): string {
+  const header = reply.headers['set-cookie'];
+  const cookies = Array.isArray(header) ? header : [header];
+  const device = cookies.find((cookie): cookie is string => typeof cookie === 'string' && /^(?:__Host-)?overcord-device=/.test(cookie));
+  assert.ok(device, 'the completed login should set a device cookie');
+  return device;
+}
+
+describe('administrator authentication', () => {
+  it('requires two-step login and retires legacy sessions even for enrolled accounts', async () => {
+    const user = await makeAccount();
+    await db.update(users).set({ role: 'admin' }).where(eq(users.id, user.id));
+    const first = await app.inject({
+      method: 'POST', url: '/api/admin/auth/login', headers: adminHeaders(), payload: { username: user.username, password: PASSWORD },
+    });
+    assert.equal(first.statusCode, 403);
+    assert.equal(first.json().error.code, 'admin_two_factor_required');
+    assert.equal(first.headers['set-cookie'], undefined);
+    assert.equal((await login(user.username)).status, 200);
+
+    const oldToken = crypto.randomBytes(32).toString('base64url');
+    await db.insert(sessions).values({
+      id: uid(), userId: user.id, tokenHash: `admin:${tokenHashOf(oldToken)}`, expiresAt: new Date(Date.now() + 60_000),
+    });
+    await db.update(users).set({ twoFactorEmail: true }).where(eq(users.id, user.id));
+    const adminMe = (token: string) => app.inject({ method: 'GET', url: '/api/admin/auth/me', headers: adminHeaders(token) });
+    assert.equal((await adminMe(oldToken)).statusCode, 401);
+    const adminToken = await makeAdminSession(user.id);
+    assert.equal((await adminMe(adminToken)).statusCode, 200);
+
+    const { cookie } = await cookieFor(user.id);
+    assert.equal((await call('POST', '/api/auth/two-factor/disable', { cookie, payload: { password: PASSWORD } })).status, 200);
+    assert.equal((await call('POST', '/api/auth/two-factor/disable/confirm', { cookie, payload: { code: lastCode() } })).status, 200);
+    assert.equal((await adminMe(adminToken)).statusCode, 401);
+    assert.equal((await me(cookie)).status, 200);
+
+    assert.equal((await call('POST', '/api/auth/two-factor/enable/request', { cookie, payload: { password: PASSWORD } })).status, 200);
+    assert.equal((await call('POST', '/api/auth/two-factor/enable/confirm', { cookie, payload: { code: lastCode() } })).status, 200);
+    assert.equal((await adminMe(adminToken)).statusCode, 401, 'reenrollment does not restore the prior session');
+  });
+
+  it('checks an admin’s current address before issuing an email change code, including before enrollment', async () => {
+    const user = await makeAccount();
+    const { cookie } = await cookieFor(user.id);
+    const email = `new-${user.email}`;
+    const request = () => call('POST', '/api/auth/email/change/request', { cookie, payload: { email, password: PASSWORD } });
+    const confirm = (code: string) => call('POST', '/api/auth/email/change/confirm', { cookie, payload: { email, code } });
+
+    assert.equal((await request()).status, 200);
+    assert.deepEqual(mailbox.at(-1)?.to, [email]);
+    const previousCode = lastCode();
+    await db.update(users).set({ role: 'admin' }).where(eq(users.id, user.id));
+    assert.equal((await confirm(previousCode)).status, 400);
+    assert.equal((await request()).body.codeRequired, true);
+    assert.deepEqual(mailbox.at(-1)?.to, [user.email]);
+    const verify = await call('POST', '/api/auth/email/change/verify-current', { cookie, payload: { email, code: lastCode() } });
+    assert.equal(verify.status, 200);
+    assert.deepEqual(mailbox.at(-1)?.to, [email]);
+    assert.equal((await confirm(lastCode())).status, 200);
+  });
+
+  it('binds a role change code to the administrator session and still prevents self-demotion', async () => {
+    const user = await makeAccount({ twoFactor: true });
+    await db.update(users).set({ role: 'admin' }).where(eq(users.id, user.id));
+    const [token, otherToken] = await Promise.all([makeAdminSession(user.id), makeAdminSession(user.id)]);
+    const path = `/api/admin/users/${user.id}/revoke-admin`;
+    const reason = 'Remove my own access';
+    const post = (url: string, token: string, credentials: Record<string, string>) => app.inject({
+      method: 'POST', url, headers: adminHeaders(token), payload: { reason, ...credentials },
+    });
+    assert.equal((await post(`${path}/request`, token, { password: PASSWORD })).statusCode, 200);
+    const code = lastCode();
+    assert.equal((await post(path, otherToken, { code })).json().error.code, 'invalid_code');
+    assert.equal((await post(path, token, { code })).json().error.code, 'self_action');
+    assert.equal((await post(path, token, { code })).json().error.code, 'invalid_code');
+  });
+});
+
 /** A connected tab of `user` opened with the session behind `tokenHash`, recording what reaches it. */
 function connectedTab(user: { id: string; username: string }, tokenHash: string) {
   const tab = joinNew(user);
@@ -123,6 +201,7 @@ describe('two-step login', () => {
     assert.equal(done.status, 200);
     assert.equal(done.body.user.id, user.id);
     assert.ok(done.cookie);
+    deviceSetCookie(done);
     assert.equal((await me(done.cookie!)).status, 200);
 
     // the challenge is spent: the same code cannot open a second session
@@ -645,6 +724,39 @@ describe('guessing password reset codes', () => {
     assert.equal((await reset({ username }, '123456')).status, 429);
   });
 
+  it('escalates recovery blocks for accounts and missing identifiers while leaving other accounts free', async () => {
+    const user = await makeAccount();
+    const other = await makeAccount();
+    const unknown = `ghost_${uid().slice(0, 10)}`;
+    const keyHash = (key: string) => crypto.createHash('sha256').update(key).digest('hex');
+    const expireBlock = async (key: string) => {
+      const past = new Date(Date.now() - 60_000);
+      await db.update(rateLimitWindows).set({ windowEndsAt: past, blockedUntil: past })
+        .where(eq(rateLimitWindows.key, keyHash(key)));
+    };
+
+    for (const minutes of [15, 30]) {
+      for (let i = 0; i < FAILURE_RULE.max; i++) {
+        const identifier = i % 2 ? { username: user.username } : { email: user.email };
+        assert.equal((await reset(identifier, '000000')).status, 400);
+        assert.equal((await reset({ username: unknown }, '000000')).status, 400);
+      }
+      for (const identifier of [{ email: user.email }, { username: user.username }, { username: unknown }]) {
+        const blocked = await reset(identifier, '000000');
+        assert.equal(blocked.status, 429);
+        const seconds = Number(blocked.headers['retry-after']);
+        assert.ok(seconds <= minutes * 60 && seconds > minutes * 60 - 5);
+      }
+      if (minutes === 15) {
+        await expireBlock(`reset-code:${user.id}`);
+        await expireBlock(`reset-code-unknown:username:${unknown}`);
+      }
+    }
+
+    await call('POST', '/api/auth/recovery/request', { payload: { username: other.username } });
+    assert.equal((await reset({ username: other.username }, lastCode())).status, 200);
+  });
+
   it('a correct reset clears the account counter', async () => {
     const user = await makeAccount();
     await call('POST', '/api/auth/recovery/request', { payload: { username: user.username } });
@@ -675,9 +787,11 @@ describe('an account whose counters someone else filled', () => {
   /** An account its owner signed in to from `home` before someone else started on it. */
   async function ownedAccount() {
     const user = await makeAccount();
-    const home = { ip: freshIp(), userAgent: OWNER_UA };
-    await recordLogin(user.id, home);
-    return { user, home };
+    const home = { ip: freshIp(), ua: OWNER_UA };
+    const signedIn = await call('POST', '/api/auth/login', { payload: { username: user.username, password: PASSWORD }, ...home });
+    assert.equal(signedIn.status, 200);
+    const setDevice = deviceSetCookie(signedIn);
+    return { user, home, setDevice, device: setDevice.split(';')[0]! };
   }
 
   async function lockLogin(username: string) {
@@ -685,29 +799,73 @@ describe('an account whose counters someone else filled', () => {
     for (let i = 0; i < FAILURE_RULE.max; i++) assert.equal((await login(username, 'wrong password', attacker)).status, 401);
   }
 
-  it('lets the right password in from a browser the account signed in from lately', async () => {
-    const { user, home } = await ownedAccount();
+  it('lets the remembered browser sign in after changing address and user agent', async () => {
+    const { user, device, setDevice } = await ownedAccount();
+    assert.match(setDevice, /=[A-Za-z0-9_-]{43}; Path=\/; HttpOnly; SameSite=Lax/);
+    assert.match(setDevice, new RegExp(`Max-Age=${KNOWN_LOGIN_SECONDS}(?:;|$)`));
+    const raw = device.split('=')[1]!;
+    const rows = await db.select().from(knownLogins).where(eq(knownLogins.userId, user.id));
+    assert.ok(rows.some((row) => row.fingerprint === `device:app:${tokenHashOf(raw)}`));
+    assert.equal((await me(device)).status, 401);
+
     await lockLogin(user.username);
 
-    const owner = await call('POST', '/api/auth/login', { payload: { username: user.username, password: PASSWORD }, ip: home.ip, ua: home.userAgent });
+    const owner = await call('POST', '/api/auth/login', { payload: { username: user.username, password: PASSWORD }, cookie: device, ua: 'Firefox' });
     assert.equal(owner.status, 200);
     assert.ok(owner.cookie);
+    assert.equal(deviceSetCookie(owner).split(';')[0], device);
     // the owner getting through does not hand whoever filled it a fresh round
     assert.equal((await login(user.username, PASSWORD)).status, 429);
   });
 
-  it('still refuses the known browser a wrong password, and a stranger the right one', async () => {
-    const { user, home } = await ownedAccount();
+  it('refuses a copied user agent on the same address without the account device cookie', async () => {
+    const { user, home, device } = await ownedAccount();
+    const other = await ownedAccount();
     await lockLogin(user.username);
 
-    const wrong = await call('POST', '/api/auth/login', { payload: { username: user.username, password: 'wrong password' }, ip: home.ip, ua: home.userAgent });
+    const wrong = await call('POST', '/api/auth/login', { payload: { username: user.username, password: 'wrong password' }, ...home, cookie: device });
     assert.equal(wrong.status, 429);
-    // same address, another kind of browser
-    const otherBrowser = await call('POST', '/api/auth/login', { payload: { username: user.username, password: PASSWORD }, ip: home.ip, ua: 'curl/8.0' });
-    assert.equal(otherBrowser.status, 429);
-    const elsewhere = await login(user.username, PASSWORD);
-    assert.equal(elsewhere.status, 429);
-    assert.ok(Number(elsewhere.headers['retry-after']) > 0);
+    const payload = { username: user.username, password: PASSWORD };
+    for (const cookie of [undefined, 'overcord-device=malformed', other.device]) {
+      const copied = await call('POST', '/api/auth/login', { payload, ...home, cookie });
+      assert.equal(copied.status, 429);
+      assert.ok(Number(copied.headers['retry-after']) > 0);
+      assert.equal(copied.headers['set-cookie'], undefined);
+    }
+  });
+
+  it('keeps the address limit in force for a remembered browser', async () => {
+    const { user, home, device } = await ownedAccount();
+    for (let i = 0; i < FAILURE_RULE.max; i++) {
+      assert.equal((await login(user.username, 'wrong password', home.ip)).status, 401);
+    }
+    const res = await call('POST', '/api/auth/login', { payload: { username: user.username, password: PASSWORD }, ...home, cookie: device });
+    assert.equal(res.status, 429);
+  });
+
+  it('keeps the app and admin device credentials separate', async () => {
+    const { user, home, device } = await ownedAccount();
+    await db.update(users).set({ role: 'admin', twoFactorEmail: true }).where(eq(users.id, user.id));
+    const payload = { username: user.username, password: PASSWORD };
+    const adminLogin = (cookie?: string) => app.inject({
+      method: 'POST', url: '/api/admin/auth/login', payload, remoteAddress: home.ip,
+      headers: { ...adminHeaders(), 'x-forwarded-for': home.ip, 'user-agent': home.ua, ...(cookie ? { cookie } : {}) },
+    });
+    const first = await adminLogin();
+    assert.equal(first.statusCode, 200);
+    assert.equal(first.headers['set-cookie'], undefined);
+    const enrolled = await app.inject({
+      method: 'POST', url: '/api/admin/auth/login/verify', headers: adminHeaders(),
+      payload: { challenge: first.json().twoFactor.challenge, code: lastCode() },
+    });
+    assert.equal(enrolled.statusCode, 200);
+    const adminDevice = enrolled.cookies.find((cookie) => cookie.name === '__Host-overcord-admin-device');
+    assert.ok(adminDevice?.secure && adminDevice.httpOnly);
+    await lockLogin(user.username);
+
+    const appToken = device.split('=')[1]!;
+    assert.equal((await adminLogin(`${adminDevice.name}=${appToken}`)).statusCode, 429);
+    assert.equal((await adminLogin(`${adminDevice.name}=${adminDevice.value}`)).statusCode, 200);
   });
 
   it('answers and counts a stranger the same whether the password was right or not', async () => {
@@ -722,10 +880,10 @@ describe('an account whose counters someone else filled', () => {
   });
 
   it('a browser not seen for a month is a stranger again', async () => {
-    const { user, home } = await ownedAccount();
+    const { user, home, device } = await ownedAccount();
     await db.update(knownLogins).set({ lastLoginAt: new Date(Date.now() - (KNOWN_LOGIN_DAYS + 1) * DAY_MS) }).where(eq(knownLogins.userId, user.id));
     await lockLogin(user.username);
-    const res = await call('POST', '/api/auth/login', { payload: { username: user.username, password: PASSWORD }, ip: home.ip, ua: home.userAgent });
+    const res = await call('POST', '/api/auth/login', { payload: { username: user.username, password: PASSWORD }, ...home, cookie: device });
     assert.equal(res.status, 429);
   });
 
@@ -740,33 +898,35 @@ describe('an account whose counters someone else filled', () => {
   });
 
   it('strangers spending the recovery codes leave the owner a budget of their own', async () => {
-    const { user, home } = await ownedAccount();
+    const { user, home, device } = await ownedAccount();
+    await whenLoginAlertsSettled();
+    mailbox = [];
     for (let i = 0; i < 6; i++) await call('POST', '/api/auth/recovery/request', { payload: { username: user.username } });
     assert.equal(mailbox.length, 5);
 
-    await call('POST', '/api/auth/recovery/request', { payload: { email: user.email }, ip: home.ip, ua: home.userAgent });
+    await call('POST', '/api/auth/recovery/request', { payload: { email: user.email }, ...home });
+    assert.equal(mailbox.length, 5);
+    await call('POST', '/api/auth/recovery/request', { payload: { email: user.email }, ...home, cookie: device });
     assert.equal(mailbox.length, 6);
     const res = await call('POST', '/api/auth/recovery/reset', {
-      payload: { username: user.username, code: lastCode(), password: 'another new password' }, ip: home.ip, ua: home.userAgent,
+      payload: { username: user.username, code: lastCode(), password: 'another new password' }, ...home, cookie: device,
     });
     assert.equal(res.status, 200);
   });
 
   it('a filled reset-code counter still takes the owner\'s code from a known browser', async () => {
-    const { user, home } = await ownedAccount();
-    await call('POST', '/api/auth/recovery/request', { payload: { username: user.username }, ip: home.ip, ua: home.userAgent });
+    const { user, home, device } = await ownedAccount();
+    await call('POST', '/api/auth/recovery/request', { payload: { username: user.username }, ...home, cookie: device });
     const right = lastCode();
-    // a stranger burns guesses from many addresses until the account's counter blocks; the dead codes are replaced
+    // Wrong guesses from different addresses fill only the account counter for the owner's browser.
     for (let i = 0; i < FAILURE_RULE.max; i++) {
       await call('POST', '/api/auth/recovery/reset', { payload: { username: user.username, code: wrongCode(right), password: 'whatever whatever' } });
     }
-    const stranger = await call('POST', '/api/auth/recovery/reset', { payload: { username: user.username, code: right, password: 'whatever whatever' } });
+    await call('POST', '/api/auth/recovery/request', { payload: { username: user.username }, ...home, cookie: device });
+    const payload = { username: user.username, code: lastCode(), password: 'another new password' };
+    const stranger = await call('POST', '/api/auth/recovery/reset', { payload, ...home });
     assert.equal(stranger.status, 429);
-
-    await call('POST', '/api/auth/recovery/request', { payload: { username: user.username }, ip: home.ip, ua: home.userAgent });
-    const owner = await call('POST', '/api/auth/recovery/reset', {
-      payload: { username: user.username, code: lastCode(), password: 'another new password' }, ip: home.ip, ua: home.userAgent,
-    });
+    const owner = await call('POST', '/api/auth/recovery/reset', { payload, ...home, cookie: device });
     assert.equal(owner.status, 200);
     // the owner getting through does not reopen the guessing for everyone else
     assert.equal((await call('POST', '/api/auth/recovery/reset', { payload: { username: user.username, code: '123456', password: 'whatever whatever' } })).status, 429);
@@ -931,6 +1091,16 @@ describe('new sign-in alerts', () => {
     const ip = freshIp();
     await signIn(user.username, ip, CHROME_MAC);
     await signIn(user.username, ip, CHROME_MAC.replace('Chrome/130.0.0.0', 'Chrome/131.0.0.0'));
+    assert.equal(alertsTo(user.email).length, 1);
+  });
+
+  it('stays quiet when a remembered device changes address', async () => {
+    const user = await makeAccount();
+    const first = await signIn(user.username, freshIp(), CHROME_MAC);
+    const cookie = deviceSetCookie(first).split(';')[0]!;
+    const res = await call('POST', '/api/auth/login', { payload: { username: user.username, password: PASSWORD }, cookie, ua: CHROME_MAC });
+    assert.equal(res.status, 200);
+    await whenLoginAlertsSettled();
     assert.equal(alertsTo(user.email).length, 1);
   });
 

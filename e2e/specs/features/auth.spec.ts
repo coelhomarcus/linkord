@@ -37,11 +37,44 @@ test.describe('auth', () => {
     await context.close();
   });
 
-  test('logging out ends the session', async ({ users }) => {
-    const alice = await users.create('alice');
+  test('logging out ends the session and keeps the remembered browser', async ({ users }) => {
+    const account = await users.create('alice');
+    const alice = await users.login(account.username, account.password);
+    const device = (await alice.context.cookies(BASE_URL)).find(({ name }) => name === 'overcord-device');
+    expect(device).toMatchObject({ httpOnly: true, sameSite: 'Lax' });
+    expect(device!.expires).toBeGreaterThan(Date.now() / 1000);
     expect((await alice.api.get('/api/auth/me')).status()).toBe(200);
     expect((await alice.api.post('/api/auth/logout', { data: {} })).ok()).toBe(true);
     expect((await alice.api.get('/api/auth/me')).status()).toBe(401);
+    expect(await alice.context.cookies(BASE_URL)).toContainEqual(device);
+  });
+
+  test('recovering a password with an emailed code signs out only that account', async ({ users, browser }) => {
+    const alice = await users.create('alice');
+    const bob = await users.create('bob');
+    const email = `${alice.username}@example.test`;
+    const seen = await emailCount(email);
+    const context = await browser.newContext({ baseURL: BASE_URL, locale: 'pt-BR' });
+    const page = await context.newPage();
+    await page.goto('/');
+
+    await page.getByRole('button', { name: 'Esqueceu sua senha?' }).click();
+    await page.getByRole('textbox', { name: 'E-mail ou nome de usuário' }).fill(email);
+    await page.getByRole('button', { name: 'Enviar código' }).click();
+    await page.getByLabel('Código de recuperação').pressSequentially(await waitForEmailCode(email, seen));
+    const newPassword = `${alice.password}-new`;
+    await page.getByLabel('Nova senha').fill(newPassword);
+    await page.getByRole('button', { name: 'Alterar senha' }).click();
+    await expect(page.getByRole('heading', { name: 'Senha alterada' })).toBeVisible();
+
+    expect((await alice.api.get('/api/auth/me')).status()).toBe(401);
+    expect((await bob.api.get('/api/auth/me')).status()).toBe(200);
+    await page.getByRole('button', { name: 'Entrar', exact: true }).click();
+    await page.getByLabel('Usuário').fill(alice.username);
+    await page.getByLabel('Senha', { exact: true }).fill(newPassword);
+    await page.getByRole('button', { name: 'Entrar', exact: true }).click();
+    await expect(page.getByText(alice.username).first()).toBeVisible();
+    await context.close();
   });
 
   test('two-step login: turned on in Settings with the emailed code, then asked for at the next login', async ({ users, browser }) => {

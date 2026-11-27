@@ -51,7 +51,7 @@ export function purposeError(reply: FastifyReply, reason: 'invalid_code' | 'code
 export async function issueAndSendCode(
   userId: string, email: string, username: string, purpose: AuthCodePurpose, locale: ReturnType<typeof resolveLocale>, challengeHash?: string,
 ): Promise<void> {
-  const code = await issueAuthCode(userId, purpose, email, challengeHash ? { challengeHash, ttlMs: config.LOGIN_CODE_TTL_MS } : {});
+  const code = await issueAuthCode(userId, purpose, email, { challengeHash, ttlMs: purpose === 'login' ? config.LOGIN_CODE_TTL_MS : undefined });
   try {
     await sendAuthCodeEmail({ to: email, code, purpose, username, locale });
   } catch (err) {
@@ -87,18 +87,19 @@ const CURRENT_EMAIL_CODE_SEND_KEYS = {
   login_alert_disable: 'login-alert-code',
   email_change_current: 'email-change-current-code',
   data_export: 'data-export-code',
+  admin_role_change: 'admin-role-code',
 } as const satisfies Partial<Record<AuthCodePurpose, string>>;
 export type CurrentEmailPurpose = keyof typeof CURRENT_EMAIL_CODE_SEND_KEYS;
 
 /** Sends a code of `purpose` to the account's current address and answers `{ codeRequired, email }`. */
-export async function sendCurrentEmailCode(reply: FastifyReply, user: User, purpose: CurrentEmailPurpose): Promise<void> {
+export async function sendCurrentEmailCode(reply: FastifyReply, user: User, purpose: CurrentEmailPurpose, challengeHash?: string): Promise<void> {
   if (!user.email || !isEmailDeliveryConfigured()) {
     return sendError(reply, 503, 'email_unavailable', 'Não foi possível enviar o código de verificação agora. Tente novamente mais tarde.');
   }
   const send = await ratelimit.consume(`${CURRENT_EMAIL_CODE_SEND_KEYS[purpose]}:${user.id}`, CODE_SEND_RULE);
   if (!send.allowed) return rateLimitedReply(reply, send.retryAfterSec, 'Muitos códigos enviados. Tente novamente mais tarde.');
   try {
-    await issueAndSendCode(user.id, user.email, user.username, purpose, resolveLocale(user.locale));
+    await issueAndSendCode(user.id, user.email, user.username, purpose, resolveLocale(user.locale), challengeHash);
   } catch {
     return sendError(reply, 503, 'email_unavailable', 'Não foi possível enviar o código de verificação agora. Tente novamente mais tarde.');
   }
@@ -108,14 +109,14 @@ export async function sendCurrentEmailCode(reply: FastifyReply, user: User, purp
 /** Checks the body's `code` against the last one of `purpose` sent to the current address, under the account's
  * counter of wrong codes. A code is only ever sent after the password was confirmed, so it stands for both.
  * Answers the request itself (and returns false) when it is refused. */
-export async function verifyCurrentEmailCode(request: FastifyRequest, reply: FastifyReply, sess: SessionUser, purpose: CurrentEmailPurpose): Promise<boolean> {
+export async function verifyCurrentEmailCode(request: FastifyRequest, reply: FastifyReply, sess: Pick<SessionUser, 'userId' | 'email'>, purpose: CurrentEmailPurpose, challengeHash?: string): Promise<boolean> {
   if (!sess.email) { sendError(reply, 400, 'invalid_code', 'Código inválido.'); return false; }
   const code = String(jsonBody(request.body).code ?? '').trim();
   if (!/^\d{6}$/.test(code)) { sendError(reply, 400, 'invalid_code', 'Informe o código de 6 dígitos.'); return false; }
   const key = codeFailuresKey(sess.userId);
   const blocked = await ratelimit.checkBlocked(key);
   if (blocked) { rateLimitedReply(reply, blocked); return false; }
-  const result = await verifyAuthCode(sess.userId, purpose, sess.email, code);
+  const result = await verifyAuthCode(sess.userId, purpose, sess.email, code, { challengeHash });
   if (!result.ok) {
     if (result.reason !== 'code_expired') await ratelimit.recordFailure(key);
     purposeError(reply, result.reason);

@@ -5,7 +5,7 @@ import { renderAdmin, auditRow } from './adminFixture';
 import { UserDetailPage } from '@/features/admin/UserDetailPage';
 import * as adminApi from '@/features/admin/adminApi';
 import { subscribeAdminSessionEnded } from '@/features/admin/adminAccess';
-import { ApiError } from '@overcord/frontend-shared/api/transport';
+import { ApiError } from '@/shared/api/transport';
 
 vi.mock('@/features/admin/adminApi');
 const mocked = vi.mocked(adminApi);
@@ -85,17 +85,26 @@ describe('UserDetailPage', () => {
     expect(await screen.findByText(/Conta não encontrada/)).toBeInTheDocument();
   });
 
-  it('granting admin requires a reason and the username to be typed', async () => {
+  it('granting admin requires the reason, username, current password and emailed code', async () => {
     const u = userEvent.setup();
-    mocked.grantAdmin.mockResolvedValue({ ok: true });
+    mocked.requestAdminRoleCode.mockResolvedValue({ codeRequired: true, email: 'a**@example.com' });
+    mocked.changeAdminRole.mockResolvedValue({ ok: true });
     openModeration();
     await u.click(await screen.findByRole('button', { name: 'Conceder admin' }));
     await u.type(screen.getByLabelText(/Motivo/), 'second trusted person');
-    const confirm = screen.getAllByRole('button', { name: 'Conceder admin' }).at(-1)!;
-    expect(confirm).toBeDisabled();
+    const send = screen.getByRole('button', { name: 'Enviar código' });
+    expect(send).toBeDisabled();
     await u.type(screen.getByLabelText(/Para confirmar/), 'ana');
+    expect(send).toBeDisabled();
+    await u.type(screen.getByLabelText('Senha atual'), 'current password');
+    await u.click(send);
+    await waitFor(() => expect(mocked.requestAdminRoleCode).toHaveBeenCalledWith('u1', 'grant', 'second trusted person', 'current password'));
+    expect(mocked.changeAdminRole).not.toHaveBeenCalled();
+    const confirm = await screen.findByRole('button', { name: 'Conceder admin' });
+    expect(confirm).toBeDisabled();
+    await u.type(screen.getByLabelText('Código de verificação'), '246810');
     await u.click(confirm);
-    await waitFor(() => expect(mocked.grantAdmin).toHaveBeenCalledWith('u1', 'second trusted person'));
+    await waitFor(() => expect(mocked.changeAdminRole).toHaveBeenCalledWith('u1', 'grant', 'second trusted person', '246810'));
   });
 
   it('the badges tab grants a badge the account lacks and removes one it holds, each with a reason', async () => {
@@ -104,11 +113,11 @@ describe('UserDetailPage', () => {
     mocked.grantBadge.mockResolvedValue({ ok: true });
     mocked.revokeBadge.mockResolvedValue({ ok: true });
     open(undefined, 'badges');
-    expect(await screen.findByText('Desenvolvedor do Overcord')).toBeInTheDocument();
+    expect(await screen.findByText('Desenvolvedor')).toBeInTheDocument();
     expect(screen.getByText(/por um administrador/)).toBeInTheDocument();
 
     await u.click(screen.getByRole('button', { name: 'Conceder' }));
-    expect(await screen.findByText(/@ana vai exibir a insígnia "Desenvolvedor do Overcord"/)).toBeInTheDocument();
+    expect(await screen.findByText(/@ana vai exibir a insígnia "Desenvolvedor"/)).toBeInTheDocument();
     await u.type(screen.getByLabelText(/Motivo/), 'contributed the call UI');
     await u.click(screen.getAllByRole('button', { name: 'Conceder' }).at(-1)!);
     await waitFor(() => expect(mocked.grantBadge).toHaveBeenCalledWith('u1', 'developer', 'contributed the call UI'));
@@ -139,11 +148,15 @@ describe('UserDetailPage', () => {
   it('the last active admin shows the translated error', async () => {
     const u = userEvent.setup();
     mocked.fetchAdminUser.mockResolvedValue(detail({ role: 'admin' }));
-    mocked.revokeAdmin.mockRejectedValue(new ApiError(409, 'last_admin', 'x'));
+    mocked.requestAdminRoleCode.mockResolvedValue({ codeRequired: true, email: 'a**@example.com' });
+    mocked.changeAdminRole.mockRejectedValue(new ApiError(409, 'last_admin', 'x'));
     openModeration();
     await u.click(await screen.findByRole('button', { name: 'Remover admin' }));
     await u.type(screen.getByLabelText(/Motivo/), 'rotation');
     await u.type(screen.getByLabelText(/Para confirmar/), 'ana');
+    await u.type(screen.getByLabelText('Senha atual'), 'current password');
+    await u.click(screen.getByRole('button', { name: 'Enviar código' }));
+    await u.type(await screen.findByLabelText('Código de verificação'), '246810');
     await u.click(screen.getAllByRole('button', { name: 'Remover admin' }).at(-1)!);
     expect(await screen.findByRole('alert')).toHaveTextContent('último administrador ativo');
   });

@@ -2,7 +2,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { renderAdmin } from './adminFixture';
-import { ApiError } from '@overcord/frontend-shared/api/transport';
+import { ApiError } from '@/shared/api/transport';
+import { clearAdminSystem } from '@/features/admin/adminSystemResource';
 import { SystemPage } from '@/features/admin/SystemPage';
 import * as adminApi from '@/features/admin/adminApi';
 
@@ -24,6 +25,7 @@ const info = (over: Partial<adminApi.SystemInfo> = {}): adminApi.SystemInfo => (
 const open = () => renderAdmin(<SystemPage />, { path: '/admin/system', pattern: '/admin/system' });
 
 beforeEach(() => {
+  clearAdminSystem();
   vi.clearAllMocks();
   mocked.fetchSystem.mockResolvedValue(info());
 });
@@ -80,6 +82,23 @@ describe.skip('SystemPage', () => {
       await u.click(await screen.findByRole('button', { name: 'Verificar órfãos' }));
       expect(await screen.findByRole('alert')).toHaveTextContent('Já existe uma varredura de arquivos em andamento.');
     });
+  });
+});
+
+describe('SystemPage storage capacity', () => {
+  it('reports usage over the limit while keeping the meter within its range', async () => {
+    mocked.fetchSystem.mockResolvedValue(info({ storage: { usedBytes: 1500, maxBytes: 1000, files: 2 } }));
+    open();
+    const meter = await screen.findByRole('meter', { name: 'Armazenamento da instância' });
+    expect(meter).toHaveAttribute('aria-valuenow', '1000');
+    expect(meter).toHaveAttribute('aria-valuetext', '150% do limite em uso');
+  });
+
+  it('shows usage without a meter if storage has no configured limit', async () => {
+    mocked.fetchSystem.mockResolvedValue(info({ storage: { usedBytes: 512, maxBytes: 0, files: 1 } }));
+    open();
+    expect(await screen.findByText('512 B em uso. O limite de armazenamento não foi informado.')).toBeInTheDocument();
+    expect(screen.queryByRole('meter')).not.toBeInTheDocument();
   });
 });
 

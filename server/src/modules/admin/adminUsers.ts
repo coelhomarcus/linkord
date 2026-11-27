@@ -1,7 +1,7 @@
 import { and, asc, desc, eq, sql } from 'drizzle-orm';
 import { db } from '../../db/client.js';
 import { attachments, dataExports, messages, serverMembers, servers, users } from '../../db/schema.js';
-import { destroyAllSessionsForUser, invalidateSessionsForUser } from '../auth/session.js';
+import { destroyAdminSessionsForUser, destroyAllSessionsForUser, invalidateSessionsForUser } from '../auth/session.js';
 import { broadcastToKnownPeers, listOnlineUserIds, participants, sendToUser } from '../presence/participants.js';
 import { deleteAvatarFile } from '../attachments/attachmentCleanup.js';
 import { deleteExportFiles } from '../data-export/exportStorage.js';
@@ -33,14 +33,14 @@ interface PurgeCtx { actor: AuditActor | null; reason: string; requestId: string
  * suspending/deleting each other, or the last two admins racing, serialize
  * and each sees the other's effect. */
 async function lockAdminsAndTarget(tx: Parameters<Parameters<typeof db.transaction>[0]>[0], targetId: string, actorId: string) {
-  const admins = (await tx.execute(sql`select id, status from users where role = 'admin' order by id for update`)).rows as { id: string; status: string }[];
+  const admins = (await tx.execute(sql`select id, status, two_factor_email from users where role = 'admin' order by id for update`)).rows as { id: string; status: string; two_factor_email: boolean }[];
   const [target] = (await tx.execute(sql`
     select id, username, role, status, avatar, avatar_poster, banner, banner_poster, email, locale, deletion_due_at
     from users where id = ${targetId} for update`)).rows as unknown as LockedTarget[];
   // The actor was checked as an admin BEFORE this transaction; a concurrent
   // demotion or suspension may have landed since, so it is re-checked under the
   // lock. The CLI is not an account and is exempt.
-  const actorStillAdmin = actorId === CLI_ACTOR_ID || admins.some((a) => a.id === actorId && a.status === 'active');
+  const actorStillAdmin = actorId === CLI_ACTOR_ID || admins.some((a) => a.id === actorId && a.status === 'active' && a.two_factor_email);
   return { activeAdminCount: admins.filter((a) => a.status === 'active').length, target, actorStillAdmin };
 }
 
@@ -79,6 +79,7 @@ export async function setAdminRole(ctx: Ctx, targetId: string, action: AdminRole
     const decision = decideAdminRoleChange({ action, actorId: ctx.actor.id, targetId, targetRole: target.role, targetStatus: target.status, activeAdminCount });
     if (decision !== 'allow') return { code: decision };
     await tx.update(users).set({ role: action === 'grant' ? 'admin' : 'user', updatedAt: new Date() }).where(eq(users.id, targetId));
+    if (action === 'revoke') await destroyAdminSessionsForUser(targetId, tx);
     await recordAudit({
       actor: ctx.actor, action: action === 'grant' ? 'user.grant_admin' : 'user.revoke_admin', targetType: 'user', targetId,
       targetLabel: target.username, reason: ctx.reason, requestId: ctx.requestId,

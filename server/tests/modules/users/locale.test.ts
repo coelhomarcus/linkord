@@ -5,15 +5,20 @@ import { describe, it } from 'node:test';
 import { DEFAULT_LOCALE, isLocale, LOCALES, resolveLocale } from '../../../src/modules/users/locale.js';
 import { localeText } from '../../../src/modules/users/localeText.js';
 
-const WEB_LANGUAGES = path.resolve(import.meta.dirname, '../../../../packages/frontend-shared/src/i18n/languages.ts');
+const FRONTEND_LANGUAGES = {
+  web: 'web/src/shared/i18n/languages.ts',
+  admin: 'admin/src/i18n/languages.ts',
+};
 
 describe('locale', () => {
-  it('lists the same languages as the frontends', () => {
-    const source = fs.readFileSync(WEB_LANGUAGES, 'utf8');
-    const webCodes = [...source.matchAll(/code: '([^']+)'/g)].map((m) => m[1]);
-    assert.deepEqual([...LOCALES], webCodes);
-    assert.equal(DEFAULT_LOCALE, /DEFAULT_LANGUAGE: Language = '([^']+)'/.exec(source)?.[1]);
-  });
+  for (const [frontend, filename] of Object.entries(FRONTEND_LANGUAGES)) {
+    it(`lists the same languages as ${frontend}`, () => {
+      const source = fs.readFileSync(path.resolve(import.meta.dirname, '../../../../', filename), 'utf8');
+      const codes = [...source.matchAll(/code: '([^']+)'/g)].map((m) => m[1]);
+      assert.deepEqual([...LOCALES], codes);
+      assert.equal(DEFAULT_LOCALE, /DEFAULT_LANGUAGE: Language = '([^']+)'/.exec(source)?.[1]);
+    });
+  }
 
   it('accepts only supported languages', () => {
     assert.equal(isLocale('en-US'), true);

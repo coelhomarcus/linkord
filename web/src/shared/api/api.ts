@@ -1,5 +1,5 @@
 
-import type { HeldBadge } from '@overcord/frontend-shared/badges/badgeCatalog';
+import type { HeldBadge } from '@/features/badges/badgeCatalog';
 import type { InvitationCard, PublicUser } from '@/shared/types/protocol';
 import { i18n } from '@/shared/i18n/init';
 import type { Language } from '@/shared/i18n/languages';

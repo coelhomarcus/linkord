@@ -182,7 +182,7 @@ export const MessageRow = memo(function MessageRow({ message, showHeader, afterD
   const messageServer = conversation?.serverId ? servers.find((server) => server.id === conversation.serverId) : undefined;
   const authorRoleIds = message.id && conversation?.serverId ? serverMemberRoleIds?.get(conversation.serverId)?.get(message.id) ?? [] : [];
   const authorRoleColor = messageServer ? memberColor(messageServer, authorRoleIds) : '';
-  const can = messagePermissions(message, { userId: state.me.userId, role: state.me.role }, conversation);
+  const can = messagePermissions(message, state.me.userId, conversation);
   const canDelete = can.delete;
   const isSaved = savedMessageIds.has(message.msgId);
   const toggleSaved = () => { void saveChatMessage(message.msgId, !isSaved); };

@@ -1,9 +1,10 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Button } from '@overcord/frontend-shared/ui/primitives/button';
-import { formatFileSize } from '@overcord/frontend-shared/lib/formatBytes';
-import { SettingsNotice } from '@overcord/frontend-shared/ui/settings-layout';
-import { fetchSystem, sweepOrphans } from './adminApi';
+import { Button } from '@/shared/ui/primitives/button';
+import { formatFileSize } from '@/shared/lib/formatBytes';
+import { AdminNotice } from './AdminNotice';
+import { AdminCapacityBar } from './AdminCapacityBar';
+import { sweepOrphans } from './adminApi';
 import type { RetentionInfo, SweepResult } from './adminApi';
 import { AdminActionRow, AdminFieldRow, AdminFields, AdminPageTitle, AdminSection } from './AdminSection';
 import { ReasonDialog } from './ReasonDialog';
@@ -11,8 +12,8 @@ import { describeAdminError } from './adminErrors';
 import { formatWhen } from './adminFormat';
 import { AdminTextLink, DetailStatusView } from './adminUi';
 import { AdminSectionsSkeleton } from './AdminSkeletons';
-import { useAdminDetail } from './useAdminDetail';
-import { useLanguage } from '@overcord/frontend-shared/i18n/useLanguage';
+import { useAdminSystem } from './adminSystemResource';
+import { useLanguage } from '@/i18n/useLanguage';
 
 const AUDIT_SWEEP_FAILURES = '/admin/audit?action=storage.orphan_delete';
 
@@ -25,23 +26,15 @@ function useGraceText() {
   };
 }
 
-/** The limit may be absent or zero: no meter, no division — and no pretending it is unlimited. */
 function StorageMeter({ used, max }: { used: number; max: number }) {
   const { t } = useTranslation('admin');
-  if (!(max > 0)) return <p className="text-body text-text-secondary">{t('system.storageNoLimit', { used: formatFileSize(used) })}</p>;
-  const percent = Math.round(Math.min(100, (used / max) * 100));
+  const language = useLanguage();
+  if (!(max > 0)) return <p className="text-body text-text-secondary">{t('system.storageNoLimit', { used: formatFileSize(used, language) })}</p>;
+  const percent = Math.round((used / max) * 100);
   return (
-    <div className="flex flex-col gap-2">
-      <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <p className="text-body font-medium text-text-primary">{t('system.storageUsed', { used: formatFileSize(used), max: formatFileSize(max), percent })}</p>
-      </div>
-      <div
-        className="h-2 w-full overflow-hidden rounded-full bg-fill-active"
-        role="meter" aria-label={t('system.storageMeter')} aria-valuemin={0} aria-valuemax={max} aria-valuenow={Math.min(used, max)}
-        aria-valuetext={t('system.storageMeterValue', { percent })}
-      >
-        <div className={percent >= 90 ? 'h-full rounded-full bg-red' : 'h-full rounded-full bg-primary'} style={{ width: `${percent}%` }} />
-      </div>
+    <div className="flex flex-col gap-3">
+      <p className="text-body font-medium text-text-primary">{t('system.storageUsed', { used: formatFileSize(used, language), max: formatFileSize(max, language), percent })}</p>
+      <AdminCapacityBar value={used} max={max} label={t('system.storageMeter')} valueText={t('system.storageMeterValue', { percent })} />
     </div>
   );
 }
@@ -76,7 +69,7 @@ function RetentionSection({ retention }: { retention: RetentionInfo }) {
   const lastByKey = new Map(last?.targets.map((target) => [target.key, target]));
   const totalDeleted = last?.targets.reduce((sum, target) => sum + target.deleted, 0) ?? 0;
   return (
-    <AdminSection id="retention" title={t('system.retentionTitle')} description={t('system.retentionDescription')}>
+    <AdminSection className="@[850px]:col-span-2" id="retention" title={t('system.retentionTitle')} description={t('system.retentionDescription')}>
       <AdminFields>
         {retention.targets.map(({ key, days }) => {
           const result = lastByKey.get(key);
@@ -96,14 +89,12 @@ function RetentionSection({ retention }: { retention: RetentionInfo }) {
   );
 }
 
-/** Operational view of the instance — the numbers an administrator acts on, read when the page opens or
- * on "Refresh", never polled. The instance-wide storage figure only exists here. */
+/** Operational view of the instance, read when the page opens or the administrator refreshes. */
 export function SystemPage() {
   const language = useLanguage();
   const { t, i18n } = useTranslation('admin');
   const graceText = useGraceText();
-  // the timestamp travels with the read it belongs to: "last observed" is when that read landed
-  const { data: read, status, refresh, refreshing, refreshFailed, reload } = useAdminDetail('system', async () => ({ info: await fetchSystem(), at: Date.now() }));
+  const { data: read, status, refresh, refreshing, refreshFailed } = useAdminSystem();
   const [preview, setPreview] = useState<SweepResult | null>(null);
   const [executed, setExecuted] = useState<SweepResult | null>(null);
   const [previewing, setPreviewing] = useState(false);
@@ -127,7 +118,7 @@ export function SystemPage() {
     return (
       <div className="flex flex-col gap-6">
         {title}
-        <DetailStatusView status={status} missing={t('common.systemUnavailable')} failed={t('common.systemLoadFailed')} backTo="/admin/users" backLabel={t('common.back')} onRetry={reload} skeleton={<AdminSectionsSkeleton />} />
+        <DetailStatusView status={status} missing={t('common.systemUnavailable')} failed={t('common.systemLoadFailed')} backTo="/admin" backLabel={t('common.back')} onRetry={refresh} skeleton={<AdminSectionsSkeleton />} />
       </div>
     );
   }
@@ -150,9 +141,9 @@ export function SystemPage() {
           </>
         )}
       />
-      {refreshFailed && <SettingsNotice tone="warning">{t('common.refreshFailed', { time: observed })}</SettingsNotice>}
+      {refreshFailed && <AdminNotice tone="warning">{t('common.refreshFailed', { time: observed })}</AdminNotice>}
 
-      <div className="flex flex-col">
+      <div className="grid gap-4 @[850px]:grid-cols-2">
         <AdminSection id="state" title={t('common.instanceState')} description={t('common.instanceStateDescription')}>
           <AdminFields>
             <AdminFieldRow label={t('common.liveConnections')}>{t('system.connectionsValue', { live: connections.live, max: connections.max, perAccount: connections.perAccountMax, perIp: connections.perIpMax })}</AdminFieldRow>
@@ -167,7 +158,7 @@ export function SystemPage() {
         </AdminSection>
 
         <AdminSection id="accounts" title={t('common.accountsCapacity')}>
-          {signupsPaused && <SettingsNotice tone="danger">{t('system.signupsPaused', { cap: accounts.newPerHourCap })}</SettingsNotice>}
+          {signupsPaused && <AdminNotice tone="danger">{t('system.signupsPaused', { cap: accounts.newPerHourCap })}</AdminNotice>}
           <AdminFields>
             <AdminFieldRow label={t('system.accounts')}>{accounts.total}</AdminFieldRow>
             <AdminFieldRow label={t('system.suspended')}>{accounts.suspended}</AdminFieldRow>
@@ -177,7 +168,7 @@ export function SystemPage() {
         </AdminSection>
 
         <AdminSection id="services" title={t('common.services')} description={t('common.servicesDescription')}>
-          {outbox.failed > 0 && <SettingsNotice tone="danger">{t('system.outboxFailed')}</SettingsNotice>}
+          {outbox.failed > 0 && <AdminNotice tone="danger">{t('system.outboxFailed')}</AdminNotice>}
           <AdminFields>
             <AdminFieldRow label={t('system.calls')}>{info.livekit.configured ? t('common.configured') : t('common.notConfigured')}</AdminFieldRow>
             <AdminFieldRow label={t('system.outbox')}>{t('system.outboxValue', { pending: outbox.pending, failed: outbox.failed })}</AdminFieldRow>
@@ -188,6 +179,7 @@ export function SystemPage() {
         <RetentionSection retention={info.retention} />
 
         <AdminSection
+          className="@[850px]:col-span-2"
           id="maintenance"
           title={t('common.maintenance')}
           description={t(info.orphanSweep.dryRunByDefault ? 'system.maintenanceReportOnly' : 'system.maintenanceDeletes', { grace: graceText(info.orphanSweep.graceMs) })}

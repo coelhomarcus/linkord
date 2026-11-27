@@ -105,9 +105,8 @@ export const sessions = pgTable('sessions', {
   uniqueIndex('sessions_id_key').on(t.id),
 ]);
 
-/** The browsers an account has signed in from lately, kept apart from `sessions` because logging out
- * deletes the session row and a plain re-login must not read as a new browser. `fingerprint` is the
- * sha256 of the address plus the user agent, so no raw address is kept here. */
+/** Recent sign-ins outlive logout. `fingerprint` is either a scoped device-cookie hash for account
+ * rate limits or an unprefixed address and user-agent hash for login alerts. */
 export const knownLogins = pgTable('known_logins', {
   userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
   fingerprint: text('fingerprint').notNull(),
@@ -124,8 +123,7 @@ export const authCodes = pgTable('auth_codes', {
   userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
   purpose: varchar('purpose', { length: 32 }).notNull(), // see AuthCodePurpose in auth/codes.ts
   email: varchar('email', { length: 320 }).notNull(),
-  // sha256 of the login challenge a 'login' code belongs to (null for every other purpose), so the
-  // code can only finish the login it was sent for
+  // SHA-256 of the login challenge or action the code belongs to, when scoped.
   challengeHash: text('challenge_hash'),
   codeHash: text('code_hash').notNull(),
   attempts: integer('attempts').notNull().default(0),
@@ -1006,13 +1004,14 @@ export const profileGames = pgTable('profile_games', {
 
 /** Attempt counters that guard against brute force (login, recovery codes, sign-up), kept in the
  * database so a restart or a deploy does not hand out fresh attempts. One row per key (a SHA-256 of it, so
- * no email, username or address is stored) and window:
- * the row is reset in place when its window ends, and swept once it is over (modules/auth/ratelimit.ts). */
+ * no email, username or address is stored). The row is reused after each window and can retain the
+ * latest block for progressive limits (modules/auth/ratelimit.ts). */
 export const rateLimitWindows = pgTable('rate_limit_windows', {
   key: varchar('key', { length: 64 }).primaryKey(),
   count: integer('count').notNull(),
   windowEndsAt: timestamp('window_ends_at', { withTimezone: true }).notNull(),
   blockedUntil: timestamp('blocked_until', { withTimezone: true }),
+  blockDurationMs: integer('block_duration_ms').default(0).notNull(),
 }, (t) => [
   index('rate_limit_windows_window_ends_idx').on(t.windowEndsAt),
 ]);

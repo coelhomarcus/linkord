@@ -1,6 +1,5 @@
 import { expect, it } from 'vitest';
-import en from '@/features/admin/locales/en-US.json';
-import pt from '@/features/admin/locales/pt-BR.json';
+import { resources } from '@/i18n/init';
 
 function translationKeys(catalog: Record<string, unknown>, prefix = ''): string[] {
   return Object.entries(catalog).flatMap(([key, value]) => {
@@ -12,6 +11,6 @@ function translationKeys(catalog: Record<string, unknown>, prefix = ''): string[
   });
 }
 
-it('keeps administrative translations and their variables in sync', () => {
-  expect(translationKeys(en).sort()).toEqual(translationKeys(pt).sort());
+it('keeps all administrative translations and their variables in sync', () => {
+  expect(translationKeys(resources['en-US']).sort()).toEqual(translationKeys(resources['pt-BR']).sort());
 });

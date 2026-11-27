@@ -1,76 +1,84 @@
-import { ArrowLeftIcon } from '@overcord/frontend-shared/ui/icons';
 import { useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
-
-import { Outlet, useLocation } from 'react-router';
-import { buttonVariants } from '@overcord/frontend-shared/ui/primitives/button';
-import { useElementWidth } from '@overcord/frontend-shared/hooks/useElementWidth';
-import { consumeScrollRestore, invalidateAdminLists } from './adminListCache';
+import { Link, Outlet, useLocation } from 'react-router';
+import { ErrorBanner } from '@/shared/ErrorBanner';
+import { useElementWidth } from '@/shared/hooks/useElementWidth';
+import { personInitials } from '@/shared/lib/initials';
+import { cn } from '@/shared/lib/utils';
+import { SignOutIcon } from '@/shared/ui/icons';
+import { Button } from '@/shared/ui/primitives/button';
+import { AdminBrand } from './AdminBrand';
+import { AdminMobileNavigation, AdminNavigation } from './AdminNavigation';
 import { ADMIN_PATH, sectionForPath } from './adminCatalog';
-import { AdminSidebar } from './AdminNavigation';
+import { consumeScrollRestore, invalidateAdminLists } from './adminListCache';
 import { useAdminLayout } from './useAdminLayout';
 import type { AdminOutletContext } from './useAdminMode';
-import { AppLink } from '@overcord/frontend-shared/ui/app-link';
-import { cn } from '@overcord/frontend-shared/lib/utils';
 
-/** Wide layouts keep navigation beside the scrolling content. Compact layouts have an index. */
-export function AdminLayout() {
+export function AdminLayout({ username, onSignOut, signingOut, signOutFailed }: {
+  username: string;
+  onSignOut: () => void;
+  signingOut: boolean;
+  signOutFailed: boolean;
+}) {
   const { t } = useTranslation('admin');
-  const areaRef = useRef<HTMLDivElement | null>(null);
-  const scrollerRef = useRef<HTMLElement | null>(null);
-  const contentRef = useRef<HTMLDivElement | null>(null);
+  const areaRef = useRef<HTMLDivElement>(null);
+  const scrollerRef = useRef<HTMLElement>(null);
+  const contentRef = useRef<HTMLDivElement>(null);
   const contentWidth = useElementWidth(contentRef);
   const firstRender = useRef(true);
   const { pathname } = useLocation();
-  const { mode, measured } = useAdminLayout(areaRef);
+  // Only mount the drawer at narrow widths so resizing closes its focus trap.
+  const wide = useAdminLayout(areaRef) === 'wide';
   const section = sectionForPath(pathname);
-  const compactSection = mode === 'compact' && section !== null;
   const detail = /^\/admin\/[^/]+\/[^/]+\/?$/.test(pathname);
+  const label = section ? t(section.labelKey) : t('layout.title');
 
   useEffect(() => invalidateAdminLists, []);
 
-  // opening another page starts at its top instead of inheriting the previous scroll
   useEffect(() => {
     if (firstRender.current) {
       firstRender.current = false;
       return;
     }
-    // a list that just restored its own position keeps it
     if (consumeScrollRestore()) return;
     scrollerRef.current?.scrollTo?.({ top: 0 });
   }, [pathname]);
 
-  const content = (
-    <div className={cn(
-      'mx-auto w-full min-w-0 px-4 pt-6 pb-12 @[640px]:px-7 @[1024px]:px-8 @[1024px]:pt-8',
-      detail ? 'max-w-[1040px]' : 'max-w-[1480px]',
-    )}>
-      <div ref={contentRef} className="@container flex min-w-0 flex-col gap-6">
-        <Outlet context={{ mode, measured, contentWidth, scroller: scrollerRef } satisfies AdminOutletContext} />
-      </div>
+  const account = (
+    <div className="flex min-w-0 items-center gap-2">
+      <span aria-hidden className="hidden size-7 shrink-0 place-items-center rounded-full bg-surface-overlay text-caption font-semibold text-text-secondary min-[440px]:grid">{personInitials(username)}</span>
+      <span className="hidden min-w-0 flex-1 truncate text-label text-text-secondary min-[360px]:block" title={`@${username}`}>@{username}</span>
+      <Button type="button" variant="ghost" size="icon" className="text-text-muted" aria-label={t('site.signOut')} title={t('site.signOut')} disabled={signingOut} onClick={onSignOut}>
+        <SignOutIcon aria-hidden className="size-4" />
+      </Button>
     </div>
   );
-  const label = section ? t(section.labelKey as never) : t('layout.title');
 
-  // one <main> and one content column in both modes, so the width observer keeps watching the same element
   return (
-    <div ref={areaRef} className="flex h-full min-h-0 min-w-0 select-text flex-col">
-      {compactSection && (
-        <div className="flex h-11 flex-none items-center border-b border-border-divider px-4">
-          <AppLink to={ADMIN_PATH} aria-label={t('layout.backToAdmin')} className={buttonVariants({ variant: 'ghost', size: 'sm' })}>
-            <ArrowLeftIcon size={18} aria-hidden /> {t('layout.title')}
-          </AppLink>
-        </div>
-      )}
-      <div className="flex min-h-0 min-w-0 flex-1">
-        {mode === 'wide' && (
-          <div className="scrollbar-none flex flex-none overflow-y-auto border-r border-border-divider bg-surface-rail">
-            <AdminSidebar />
+    <div ref={areaRef} className="flex h-full min-h-0 min-w-0">
+      <aside className="admin-sidebar hidden w-55 shrink-0 flex-col min-[960px]:flex">
+        <Link to={ADMIN_PATH} className="mx-3 my-4 flex min-h-10 shrink-0 items-center rounded-md px-3 focus-ring"><AdminBrand /></Link>
+        <div className="scrollbar-none min-h-0 flex-1 overflow-y-auto px-3 pt-2 pb-5"><AdminNavigation /></div>
+        {wide && <div className="shrink-0 border-t border-border-divider px-4 py-3">{account}</div>}
+      </aside>
+      <div className="flex min-w-0 flex-1 flex-col">
+        <header className="admin-topbar flex min-h-14 shrink-0 items-center justify-between gap-3 px-3 min-[960px]:hidden">
+          <div className="flex shrink-0 items-center gap-1.5">
+            {!wide && <AdminMobileNavigation />}
+            <Link to={ADMIN_PATH} className="rounded-md focus-ring"><AdminBrand /></Link>
           </div>
-        )}
-        {/* a stable gutter: a short page and a scrolling one keep the column in the same place */}
-        <main ref={scrollerRef} aria-label={label} className="@container flex min-h-0 min-w-0 flex-1 overflow-y-auto [scrollbar-gutter:stable]">
-          {content}
+          {!wide && account}
+        </header>
+        {signOutFailed && <ErrorBanner className="m-4">{t('site.signOutFailed')}</ErrorBanner>}
+        <main ref={scrollerRef} aria-label={label} className="@container min-h-0 min-w-0 flex-1 overflow-y-auto select-text [scrollbar-gutter:stable]">
+          <div className={cn(
+            'mx-auto w-full min-w-0 px-4 pt-7 pb-12 @[640px]:px-7 @[1024px]:px-9 @[1024px]:pt-11',
+            detail ? 'max-w-[1080px]' : 'max-w-[1480px]',
+          )}>
+            <div ref={contentRef} className="@container flex min-w-0 flex-col gap-6 @[760px]:gap-8">
+              <Outlet context={{ contentWidth, scroller: scrollerRef } satisfies AdminOutletContext} />
+            </div>
+          </div>
         </main>
       </div>
     </div>

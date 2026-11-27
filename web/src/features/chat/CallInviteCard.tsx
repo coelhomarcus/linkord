@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 
 import { Avatar } from '@/shared/Avatar';
 import { Button } from '@/shared/ui/primitives/button';
-import { ServerIcon } from '@overcord/frontend-shared/ui/ServerIcon';
+import { ServerIcon } from '@/shared/ui/ServerIcon';
 import { cn } from '@/shared/lib/utils';
 import { useRoom, useRoomState } from '@/state/RoomContext';
 import { useCallRoster } from '@/features/calls/callRoster';

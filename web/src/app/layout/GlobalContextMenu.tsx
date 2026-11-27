@@ -6,7 +6,7 @@ import type { ContextMenuRootActions } from '@base-ui/react/context-menu';
 
 import { ReportDialog } from '@/features/reports/ReportDialog';
 import { ConfirmDialog } from '@/shared/ConfirmDialog';
-import type { ReportTarget } from '@overcord/frontend-shared/reports/reportCategories';
+import type { ReportTarget } from '@/features/reports/reportCategories';
 import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuSeparator, ContextMenuTrigger } from '@/shared/ui/primitives/context-menu';
 import { ReactionEmojiPicker } from '@/features/chat/ReactionEmojiPicker';
 import { customEmojisAsText } from '@/features/emoji/customEmojiText';
@@ -99,7 +99,7 @@ export function GlobalContextMenu({ children }: GlobalContextMenuProps) {
     : undefined;
   // one source of truth with the row's toolbar and phone menu
   const can = targetMessage
-    ? messagePermissions(targetMessage, { userId: state.me.userId, role: state.me.role }, conversations.find((c) => c.id === targetMessage.conversationId))
+    ? messagePermissions(targetMessage, state.me.userId, conversations.find((c) => c.id === targetMessage.conversationId))
     : null;
   const hasReactions = !!targetMessage && Object.values(targetMessage.reactions ?? {}).some((ids) => ids && ids.length > 0);
   const targetAttachment = can?.removeAttachment ? targetMessage?.attachments?.find((a) => a.id === attachmentTarget) : undefined;

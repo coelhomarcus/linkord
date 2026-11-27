@@ -81,7 +81,6 @@ export default defineConfig({
   },
   resolve: {
     tsconfigPaths: true,
-    preserveSymlinks: true,
   },
   server: {
     port: 5173,

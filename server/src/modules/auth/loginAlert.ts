@@ -1,5 +1,5 @@
 import crypto from 'node:crypto';
-import { and, eq, gte, inArray, lt } from 'drizzle-orm';
+import { and, eq, gte, lt, sql } from 'drizzle-orm';
 import { db } from '../../db/client.js';
 import { knownLogins, type User } from '../../db/schema.js';
 import { logger } from '../../lib/logger.js';
@@ -7,26 +7,21 @@ import { resolveLocale } from '../users/locale.js';
 import { describeUserAgent } from './describeUserAgent.js';
 import { isEmailDeliveryConfigured, sendLoginAlertEmail } from './email.js';
 import * as ratelimit from './ratelimit.js';
-import type { SessionOrigin } from './session.js';
+import type { SessionOrigin, SessionScope } from './session.js';
 
 const log = logger.child({ component: 'login-alert' });
 
-// "Someone signed in from a browser this account has not used lately." A browser is its address plus what
-// its user agent says it is (browser, system, phone or not): the full string changes with every browser
-// update, which would make each re-login after one read as new. Seeing the same pair within
-// KNOWN_LOGIN_DAYS keeps ordinary re-logins quiet. It lives in `known_logins` rather than in `sessions`
-// because logging out deletes the session, and signing back in from the same browser must not read as new.
-
-const DAY_MS = 24 * 60 * 60 * 1000;
 export const KNOWN_LOGIN_DAYS = 30;
+export const KNOWN_LOGIN_SECONDS = KNOWN_LOGIN_DAYS * 24 * 60 * 60;
+const knownLoginCutoff = (now: Date) => new Date(now.getTime() - KNOWN_LOGIN_SECONDS * 1000);
 // A ceiling on alerts per account: whoever holds the password could otherwise sign in from endless new
 // addresses and turn this into a mail cannon aimed at the owner.
 const ALERT_RULE: ratelimit.Rule = { windowMs: 60 * 60 * 1000, max: 5 };
 
 const sha256 = (text: string) => crypto.createHash('sha256').update(text).digest('hex');
 
-/** Only the hash is stored, never the address. A user agent nothing is recognised in (a script, a tool) is
- * kept whole, so two different ones from the same address stay apart. */
+/** Alert fallback for browsers without a remembered cookie. Use the browser family, system and mobile
+ * flag so upgrades stay quiet. Keep the whole user agent if it does not identify a browser or system. */
 function loginFingerprint(origin: SessionOrigin): string {
   const device = describeUserAgent(origin.userAgent);
   const kind = device.browser || device.os
@@ -44,7 +39,7 @@ function legacyLoginFingerprint(origin: SessionOrigin): string {
 /** Notes this sign-in and returns whether its browser had not been seen in the last KNOWN_LOGIN_DAYS. */
 export async function recordLogin(userId: string, origin: SessionOrigin, now = new Date()): Promise<boolean> {
   const fingerprint = loginFingerprint(origin);
-  const cutoff = new Date(now.getTime() - KNOWN_LOGIN_DAYS * DAY_MS);
+  const cutoff = knownLoginCutoff(now);
   const samePair = and(eq(knownLogins.userId, userId), eq(knownLogins.fingerprint, fingerprint));
   // One statement decides: a row comes back only when this sign-in created the pair or revived a stale one.
   // A concurrent sign-in of the same pair waits on the row and then re-checks `setWhere` against it, so two
@@ -62,27 +57,46 @@ export async function recordLogin(userId: string, origin: SessionOrigin, now = n
   return !legacy;
 }
 
-/** Whether this account signed in from this browser (same address and kind of browser) within
- * KNOWN_LOGIN_DAYS. The per-account attempt counters let such a request through when strangers have filled
- * them, so naming an account is not enough to lock its owner out. Any `userId` is fine, a missing account's
- * included: the query costs the same, so the answer time does not tell which accounts exist. */
-export async function isKnownBrowser(userId: string, origin: SessionOrigin, now = new Date()): Promise<boolean> {
-  const cutoff = new Date(now.getTime() - KNOWN_LOGIN_DAYS * DAY_MS);
+function deviceFingerprint(scope: SessionScope, token?: string): string {
+  const hash = token && /^[A-Za-z0-9_-]{43}$/.test(token) ? sha256(token) : '';
+  // The prefix separates device tokens from the unprefixed hashes used for email alerts.
+  return `device:${scope}:${hash}`;
+}
+
+function recentDevice(userId: string, scope: SessionScope, token: string | undefined, now: Date) {
+  return and(
+    eq(knownLogins.userId, userId),
+    eq(knownLogins.fingerprint, deviceFingerprint(scope, token)),
+    gte(knownLogins.lastLoginAt, knownLoginCutoff(now)),
+  );
+}
+
+/** Per-account limits require a recent device token. Look up a key even for missing or malformed
+ * cookies and accounts so those requests take the same path. The empty hash never matches a row. */
+export async function isKnownBrowser(userId: string, scope: SessionScope, token: string | undefined, now = new Date()): Promise<boolean> {
   const [row] = await db.select({ userId: knownLogins.userId }).from(knownLogins)
-    .where(and(
-      eq(knownLogins.userId, userId),
-      inArray(knownLogins.fingerprint, [loginFingerprint(origin), legacyLoginFingerprint(origin)]),
-      gte(knownLogins.lastLoginAt, cutoff),
-    ))
+    .where(recentDevice(userId, scope, token, now))
     .limit(1);
   return Boolean(row);
 }
 
-/** Called after a password or two-step login created a session (never for registration, which only
- * records the browser). Runs in the background: nothing here may fail or slow the login, so every error
- * is only logged. */
-export function noticeLogin(user: User, origin: SessionOrigin): void {
-  track(alertIfNewBrowser(user, origin).catch((err) => log.warn('login alert failed', { userId: user.id, err })));
+/** Refresh an already trusted device or issue a server-generated token after completed authentication.
+ * A caller-supplied token can only be reused for the same account and site. */
+export async function rememberBrowser(userId: string, scope: SessionScope, token: string | undefined, now = new Date()): Promise<{ token: string; known: boolean }> {
+  if (token) {
+    const [row] = await db.update(knownLogins).set({ lastLoginAt: sql`greatest(${knownLogins.lastLoginAt}, ${now.toISOString()})` })
+      .where(recentDevice(userId, scope, token, now)).returning({ userId: knownLogins.userId });
+    if (row) return { token, known: true };
+  }
+
+  const freshToken = crypto.randomBytes(32).toString('base64url');
+  await db.insert(knownLogins).values({ userId, fingerprint: deviceFingerprint(scope, freshToken), lastLoginAt: now });
+  return { token: freshToken, known: false };
+}
+
+/** Login alerts run in the background after a session was created. */
+export function noticeLogin(user: User, origin: SessionOrigin, knownDevice: boolean): void {
+  track(alertIfNewBrowser(user, origin, knownDevice).catch((err) => log.warn('login alert failed', { userId: user.id, err })));
 }
 
 // Alerts still on their way, so a test can wait for them instead of sleeping.
@@ -97,9 +111,9 @@ export async function whenLoginAlertsSettled(): Promise<void> {
   while (inFlight.size > 0) await Promise.allSettled([...inFlight]);
 }
 
-async function alertIfNewBrowser(user: User, origin: SessionOrigin): Promise<void> {
+async function alertIfNewBrowser(user: User, origin: SessionOrigin, knownDevice: boolean): Promise<void> {
   const isNew = await recordLogin(user.id, origin);
-  if (!isNew || !user.loginAlertEmail || !user.email || !isEmailDeliveryConfigured()) return;
+  if (knownDevice || !isNew || !user.loginAlertEmail || !user.email || !isEmailDeliveryConfigured()) return;
   const verdict = await ratelimit.consume(`login-alert:${user.id}`, ALERT_RULE);
   if (!verdict.allowed) return;
   await sendLoginAlertEmail({
@@ -114,5 +128,5 @@ export function noticeRegistration(userId: string, origin: SessionOrigin): void 
 
 /** Forgets browsers not seen within the window; they would read as new anyway. Called with the session sweep. */
 export async function sweepKnownLogins(): Promise<void> {
-  await db.delete(knownLogins).where(lt(knownLogins.lastLoginAt, new Date(Date.now() - KNOWN_LOGIN_DAYS * DAY_MS)));
+  await db.delete(knownLogins).where(lt(knownLogins.lastLoginAt, knownLoginCutoff(new Date())));
 }

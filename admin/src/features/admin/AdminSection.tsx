@@ -1,14 +1,12 @@
 import { useId } from 'react';
 import type { ReactNode } from 'react';
-import { cn } from '@overcord/frontend-shared/lib/utils';
+import { cn } from '@/shared/lib/utils';
 
-/** The top of a list or overview page: its name, what it is for, and what can be done from it — the way
- * the first section of a settings page opens it. */
 export function AdminPageTitle({ title, description, actions }: { title: string; description?: ReactNode; actions?: ReactNode }) {
   return (
-    <header className="admin-page-title mb-2 flex flex-wrap items-start justify-between gap-x-6 gap-y-3">
+    <header className="flex flex-wrap items-end justify-between gap-x-8 gap-y-4">
       <div className="min-w-0 flex-1 basis-64">
-        <h2 className="text-heading font-semibold text-text-strong">{title}</h2>
+        <h1 className="admin-page-heading">{title}</h1>
         {description && <p className="mt-2 max-w-prose text-label text-text-muted">{description}</p>}
       </div>
       {actions && <div className="flex flex-none flex-wrap items-center gap-2">{actions}</div>}
@@ -16,46 +14,44 @@ export function AdminPageTitle({ title, description, actions }: { title: string;
   );
 }
 
-/** A vertical section of a page, drawn like a settings section: a title, what it is for, its content, and
- * a hairline above every one but the first — a sequence, not a mosaic of cards. `danger` marks the
- * irreversible ones. */
-export function AdminSection({ id, title, description, danger, children, className }: {
+export function AdminSection({ id, title, description, actions, danger, children, className }: {
   /** anchor target (`/admin/system#storage`) */
   id?: string;
   title: string;
   description?: ReactNode;
+  actions?: ReactNode;
   danger?: boolean;
   children: ReactNode;
   className?: string;
 }) {
   const headingId = useId();
   return (
-    // the hairline only goes between two sections; what comes before the first (a title, tabs) is spaced by the page
-    <section id={id} aria-labelledby={headingId} className={cn('flex scroll-mt-10 flex-col border-border-divider pb-10 last:pb-0 [section+&]:border-t [section+&]:pt-10', className)}>
-      <h3 id={headingId} className={cn('text-heading font-semibold', danger ? 'text-red-text' : 'text-text-strong')}>{title}</h3>
-      {description && <p className="mt-2 text-label text-text-muted">{description}</p>}
-      <div className="mt-6 flex flex-col gap-4">{children}</div>
+    <section id={id} aria-labelledby={headingId} className={cn('admin-panel flex min-w-0 scroll-mt-6 flex-col', danger && 'border-red/50', className)}>
+      <header className="admin-card-inset flex flex-wrap items-start justify-between gap-x-4 gap-y-2 border-b border-border-divider">
+        <div className="min-w-0 flex-1">
+          <h2 id={headingId} className={cn('text-body font-semibold wrap-anywhere', danger ? 'text-red-text' : 'text-text-strong')}>{title}</h2>
+          {description && <p className="mt-1 max-w-prose text-label text-text-muted">{description}</p>}
+        </div>
+        {actions}
+      </header>
+      <div className="admin-card-inset flex min-w-0 flex-1 flex-col gap-4">{children}</div>
     </section>
   );
 }
 
-/** "label → value" rows: the metadata of an entity, like the settings' account rows — the name on the
- * left, the value on the right, a hairline between them. */
 export function AdminFields({ children }: { children: ReactNode }) {
   return <dl className="flex flex-col divide-y divide-border-divider">{children}</dl>;
 }
 
 export function AdminFieldRow({ label, children }: { label: string; children: ReactNode }) {
   return (
-    <div className="flex flex-wrap items-baseline justify-between gap-x-8 gap-y-1 py-3.5 first:pt-0 last:pb-0">
-      <dt className="min-w-0 flex-none text-body font-medium text-text-primary">{label}</dt>
-      <dd className="min-w-0 flex-1 basis-48 break-words text-right text-body text-text-secondary">{children}</dd>
+    <div className="grid min-w-0 gap-x-6 gap-y-0.5 py-3 first:pt-0 last:pb-0 @[480px]:grid-cols-[minmax(0,1fr)_minmax(0,1.5fr)]">
+      <dt className="min-w-0 text-label font-medium break-words text-text-primary">{label}</dt>
+      <dd className="min-w-0 text-label break-words text-text-secondary tabular-nums @[480px]:text-right">{children}</dd>
     </div>
   );
 }
 
-/** One action, like a settings row: what it does and what it affects on the left, its button on the right
- * (under the text when the width is short). */
 export function AdminActionRow({ icon, title, description, note, children }: {
   /** drawn before the title, such as a badge's own icon */
   icon?: ReactNode;
@@ -67,16 +63,15 @@ export function AdminActionRow({ icon, title, description, note, children }: {
 }) {
   return (
     <div className="flex flex-wrap items-start justify-between gap-x-8 gap-y-3 py-3.5 first:pt-0 last:pb-0">
-      <div className="flex min-w-0 flex-1 basis-64 items-start gap-3">
+      <div className="flex min-w-0 flex-1 basis-52 items-start gap-3">
         {icon && <div className="flex-none pt-0.5">{icon}</div>}
         <div className="min-w-0 flex-1">
-          <p className="text-body font-medium text-text-primary">{title}</p>
+          <p className="text-label font-semibold text-text-primary">{title}</p>
           <p className="mt-1 text-label text-text-muted">{description}</p>
           {note && <p className="mt-1.5 text-caption text-text-secondary">{note}</p>}
         </div>
       </div>
-      {/* the buttons take the size of the settings' row buttons, whatever size the page asked for */}
-      <div className="flex flex-none flex-wrap items-center gap-2 [&_button]:h-10 [&_button]:px-4 [&_button]:text-body">{children}</div>
+      <div className="flex max-w-full flex-wrap items-center gap-2 [&_button]:h-9 [&_button]:px-3">{children}</div>
     </div>
   );
 }

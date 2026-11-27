@@ -29,7 +29,7 @@ async function handleGetProfile(request: FastifyRequest<{ Params: Params }>, rep
 
   const targetId = String(request.params.userId || '');
   const target = targetId ? await findById(targetId) : null;
-  if (!target || !(await canViewProfile(sess.userId, sess.role, target.id))) {
+  if (!target || !(await canViewProfile(sess.userId, target.id))) {
     return sendError(reply, 404, 'user_not_found', 'Conta não encontrada.');
   }
   sendJson(reply, 200, { user: publicUser(target) });
@@ -52,7 +52,7 @@ async function handleGetProfileDetails(request: FastifyRequest<{ Params: Params 
 
   const targetId = String(request.params.userId || '');
   const target = targetId ? await findById(targetId) : null;
-  if (!target || !(await canViewProfile(sess.userId, sess.role, target.id))) {
+  if (!target || !(await canViewProfile(sess.userId, target.id))) {
     return sendError(reply, 404, 'user_not_found', 'Conta não encontrada.');
   }
   const self = target.id === sess.userId;

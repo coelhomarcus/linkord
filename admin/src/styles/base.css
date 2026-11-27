@@ -1,0 +1,244 @@
+@theme {
+  --color-surface-app: #141414;
+  --color-surface-rail: #101010;
+  --color-surface-panel: #191919;
+  --color-surface-raised: #202020;
+  --color-surface-overlay: #262626;
+  --color-surface-400: #383838;
+  --color-surface-500: #4b4b4b;
+
+  --color-bg-primary: var(--color-surface-app);
+  --color-bg-textarea: #101010;
+  --color-bg-floating: var(--color-surface-overlay);
+  --color-bg-modal: var(--color-surface-panel);
+  --color-bg-control: var(--color-surface-raised);
+  --color-bg-control-hover: var(--color-surface-overlay);
+  --color-bg-hover: var(--color-surface-raised);
+  --color-bg-selected: #292929;
+  --color-fill-subtle: rgb(255 255 255 / 0.045);
+  --color-fill-hover: rgb(255 255 255 / 0.09);
+  --color-fill-active: rgb(255 255 255 / 0.14);
+  --color-fill-inset: rgb(0 0 0 / 0.2);
+  --color-nav-hover: var(--color-fill-hover);
+  --color-nav-active: var(--color-bg-selected);
+
+  --color-text-strong: #f5f5f5;
+  --color-text-primary: #e5e5e5;
+  --color-text-secondary: #c3c3c3;
+  --color-text-muted: #a3a3a3;
+  --color-text-faint: #909090;
+
+  --color-border-subtle: #292929;
+  --color-border-default: #303030;
+  --color-border-strong: #555555;
+  --color-border-divider: var(--color-border-subtle);
+  --color-border-field: var(--color-border-default);
+  --color-border-control: var(--color-border-default);
+  --color-accent-primary: #ededed;
+  --color-accent-text: #e0e0e0;
+  --color-accent-hover: #ffffff;
+  --color-border-accent: #a3a3a3;
+  --color-link: var(--color-accent-text);
+
+  --color-green: #9abbab;
+  --color-red: #a34049;
+  --color-red-hover: #8d353d;
+  --color-red-text: #dfa6ab;
+  --color-yellow: #d6bf90;
+
+  --color-avatar-indigo: #3e3e3e;
+  --color-avatar-green: #4b4b4b;
+  --color-avatar-red: #454545;
+  --color-avatar-fuchsia: #505050;
+  --color-avatar-orange: #404040;
+  --color-avatar-purple: #484848;
+  --color-avatar-teal: #535353;
+  --color-avatar-blue: #434343;
+
+  --text-micro: 0.6875rem;
+  --text-micro--line-height: 1.2;
+  --text-caption: 0.75rem;
+  --text-caption--line-height: 1.45;
+  --text-label: 0.875rem;
+  --text-label--line-height: 1.45;
+  --text-body: 1rem;
+  --text-body--line-height: 1.5;
+  --text-title: 1.125rem;
+  --text-title--line-height: 1.35;
+  --text-heading: 1.25rem;
+  --text-heading--line-height: 1.25;
+  --text-display: 1.5rem;
+  --text-display--line-height: 1.25;
+
+  --font-sans: "Figtree Variable", system-ui, -apple-system, "Segoe UI", sans-serif;
+
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+  --radius-xl: 10px;
+  --shadow-popover: none;
+  --default-transition-duration: 150ms;
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+  --animate-skeleton: skeleton-pulse 1.8s ease-in-out infinite;
+}
+
+@keyframes skeleton-pulse {
+  50% { opacity: 0.5; }
+}
+
+
+/* Popovers, menus, selects and tooltips. With tw-animate's animate-in/out,
+   which reads these two variables. */
+@utility motion-popup {
+  --tw-duration: 150ms;
+  --tw-ease: var(--ease-out-expo);
+  &[data-closed] { --tw-duration: 100ms; }
+}
+
+/* A dialog and its backdrop: the entrance, the exit and the dimming of a
+   dialog while another is open over it (a filter transition). */
+@utility motion-modal {
+  --tw-duration: 200ms;
+  --tw-ease: var(--ease-out-expo);
+  transition-duration: 200ms;
+  transition-timing-function: var(--ease-out-expo);
+  &[data-closed] { --tw-duration: 150ms; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  @keyframes enter {
+    from { opacity: var(--tw-enter-opacity, 1); }
+  }
+  @keyframes exit {
+    to { opacity: var(--tw-exit-opacity, 1); }
+  }
+}
+
+
+/* Match the Button keyboard focus ring on links and custom controls. */
+@utility focus-ring {
+  @apply outline-none focus-visible:ring-3 focus-visible:ring-ring/50;
+}
+
+/* A control drawn smaller than a fingertip still takes a 44px tap on a touch screen: the hit area
+   grows around it, the drawing does not. The element must be positioned (relative or absolute) and have
+   no ::after of its own. Every Button and CloseButton has it; where two sit closer than 44px apart the
+   later one takes the strip they share, so the middle of each still reaches its own. */
+@utility touch-target {
+  @media (pointer: coarse) {
+    &::after {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: max(100%, 44px);
+      height: max(100%, 44px);
+      transform: translate(-50%, -50%);
+    }
+  }
+}
+
+
+html, body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  overflow: hidden;
+  overscroll-behavior: none;
+  background: var(--color-bg-primary);
+  color: var(--color-text-primary);
+  font-family: var(--font-sans);
+  font-size: var(--text-body);
+  line-height: var(--text-body--line-height);
+}
+#root {
+  position: fixed;
+  inset-inline: 0;
+  top: var(--app-viewport-top, 0px);
+  height: var(--app-viewport-height, 100dvh);
+  overflow-y: auto;
+  overscroll-behavior: none;
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-surface-400) transparent;
+}
+*::-webkit-scrollbar { width: 8px; height: 8px; }
+*::-webkit-scrollbar-track { background: transparent; }
+*::-webkit-scrollbar-thumb { background: var(--color-surface-400); border-radius: 8px; }
+*::-webkit-scrollbar-thumb:hover { background: var(--color-surface-500); }
+
+/* Keeps scrolling (wheel, touch, keyboard) but draws no bar. Plain CSS rather than
+   a Tailwind utility on purpose: the unlayered `*` rules above would beat anything
+   in the utilities layer, and once `scrollbar-width` is set browsers ignore the
+   ::-webkit-scrollbar rules. */
+.scrollbar-none { scrollbar-width: none; }
+.scrollbar-none::-webkit-scrollbar { display: none; }
+
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+}
+
+:root {
+  color-scheme: dark;
+  --background: var(--color-bg-primary);
+  --foreground: var(--color-text-primary);
+  --card: var(--color-bg-floating);
+  --card-foreground: var(--color-text-primary);
+  --popover: var(--color-bg-floating);
+  --popover-foreground: var(--color-text-primary);
+  --primary: var(--color-accent-primary);
+  --primary-foreground: #171717;
+  --secondary: var(--color-bg-selected);
+  --secondary-foreground: var(--color-text-primary);
+  --muted: var(--color-bg-hover);
+  --muted-foreground: var(--color-text-muted);
+  --accent: var(--color-bg-selected);
+  --accent-foreground: var(--color-text-primary);
+  --destructive: var(--color-red);
+  --destructive-foreground: #ffffff;
+  --border: var(--color-border-default);
+  --input: var(--color-border-strong);
+  --ring: var(--color-accent-primary);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    -webkit-user-select: none;
+    user-select: none;
+  }
+  /* a placeholder is a hint, never content */
+  ::placeholder {
+    -webkit-user-select: none;
+    user-select: none;
+  }
+  button, [role="button"], [role="tab"], [role="menuitem"], [role="menuitemcheckbox"], [role="menuitemradio"], [role="option"], [role="tooltip"], label, summary {
+    user-select: none;
+  }
+  input, textarea, [contenteditable="true"] {
+    user-select: text;
+  }
+}

@@ -23,7 +23,7 @@ import { useFriends } from '@/features/friends/FriendsContext';
 import { useRoom, useRoomState } from '@/state/RoomContext';
 import { useCallRoster } from '@/features/calls/callRoster';
 import { OvercordMark } from '@/shared/ui/OvercordMark';
-import { ServerIcon } from '@overcord/frontend-shared/ui/ServerIcon';
+import { ServerIcon } from '@/shared/ui/ServerIcon';
 import { CreateServerDialog } from './CreateServerDialog';
 import { liveCallIds, serverHasLiveCall, serverUnread } from './serverUtils';
 import { railDirects } from './railDirects';

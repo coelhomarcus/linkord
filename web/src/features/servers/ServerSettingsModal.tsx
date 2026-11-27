@@ -22,7 +22,7 @@ import { ServerEmojisPanel } from '@/features/emoji/ServerEmojisPanel';
 import { ServerStickersPanel } from '@/features/stickers/ServerStickersPanel';
 import { hasPermission, PERMISSIONS } from './permissionBits';
 import { PERMISSION_SECTIONS, bitOf } from './permissionCatalog';
-import { ServerIcon } from '@overcord/frontend-shared/ui/ServerIcon';
+import { ServerIcon } from '@/shared/ui/ServerIcon';
 import { SectionTitle, SettingsShell, type SettingsTab } from './SettingsShell';
 import {
   banMember, createRole, deleteRole, deleteServer, fetchAllServerMembers, fetchBans, fetchInviteLinks, kickMember,

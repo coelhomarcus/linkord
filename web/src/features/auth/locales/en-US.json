@@ -1,0 +1,110 @@
+{
+  "deletionScheduled": "Your account will be deleted on {{date}}. To cancel, just sign in again before then.",
+  "fields": {
+    "username": "Username",
+    "displayName": "Display name",
+    "email": "Email",
+    "identifier": "Email or username",
+    "password": "Password",
+    "newPassword": "New password",
+    "inviteCode": "Invite code"
+  },
+  "placeholders": {
+    "email": "you@example.com"
+  },
+  "hints": {
+    "displayName": "This is how others see you. You can use special characters and emoji.",
+    "username": "Use 3 to 20 characters: letters, numbers, underscores _, periods or hyphens.",
+    "password": "Use at least 8 characters.",
+    "inviteCode": "Ask whoever invited you to Overcord for the code."
+  },
+  "errors": {
+    "required": "This field is required.",
+    "codeIncomplete": "Enter all 6 digits of the code."
+  },
+  "password": {
+    "show": "Show password",
+    "hide": "Hide password"
+  },
+  "login": {
+    "title": "Welcome back!",
+    "subtitle": "We're so glad to see you again!",
+    "submit": "Sign in",
+    "pending": "Signing in…",
+    "forgot": "Forgot your password?",
+    "failed": "Couldn't sign in.",
+    "needAccount": "Need an account?",
+    "register": "Register"
+  },
+  "register": {
+    "title": "Create an account",
+    "submit": "Create account",
+    "pending": "Creating account…",
+    "failed": "Couldn't create the account.",
+    "haveAccount": "Already have an account? Sign in"
+  },
+  "desktopApp": {
+    "title": "Get the Windows app",
+    "description": "Overcord in its own window, with notifications even while it is closed.",
+    "download": "Download for Windows",
+    "version": "Version {{version}}"
+  },
+  "recovery": {
+    "title": "Forgot your password?",
+    "intro": "Enter your account's email or username. We'll send you a code to set a new password.",
+    "sendCode": "Send code",
+    "sending": "Sending…",
+    "sendFailed": "Couldn't send the code.",
+    "backToLogin": "Back to sign in",
+    "enterCode": "Reset your password",
+    "sentToEmail": "We sent a code to {{email}}. It expires in 30 minutes.",
+    "sentToAccount": "We sent a code to the email registered on that account. It expires in 30 minutes.",
+    "codeLabel": "Recovery code",
+    "codeHint": "Enter the 6 digits sent to your email.",
+    "codeError": "Check the code and try again.",
+    "reset": "Change password",
+    "saving": "Saving…",
+    "resetFailed": "Couldn't reset the password.",
+    "useOther": "Use another email or username",
+    "doneTitle": "Password changed",
+    "doneBody": "All set! Sign in with your new password."
+  },
+  "emailRequired": {
+    "title": "Link your email",
+    "description": "To protect your account and allow password recovery, enter an email. We'll send a code to confirm it's yours.",
+    "submit": "Send code",
+    "logout": "Sign out",
+    "sending": "Sending…",
+    "passwordLabel": "Current password",
+    "invalidEmail": "Enter a valid email.",
+    "codeSent": "Enter the code sent to {{email}}. It expires in 30 minutes.",
+    "codeLabel": "Confirmation code",
+    "codeHint": "Enter the 6 digits sent to your email.",
+    "codeError": "Check the code and try again.",
+    "codeSuccess": "Email linked.",
+    "codeAria": "Email confirmation code",
+    "confirm": "Link email",
+    "confirming": "Confirming…",
+    "resend": "Resend code",
+    "resent": "Code resent",
+    "useOther": "Use a different email",
+    "sendFailed": "Couldn't send the code.",
+    "resendFailed": "Couldn't resend the code.",
+    "confirmFailed": "Couldn't link the email."
+  },
+  "twoFactor": {
+    "title": "Two-step verification",
+    "sentTo": "We sent a code to {{email}}. It expires in 10 minutes.",
+    "codeLabel": "Verification code",
+    "codeHint": "Enter the 6 digits sent to your email.",
+    "codeError": "Check the code and try again.",
+    "success": "Code confirmed.",
+    "submit": "Confirm",
+    "failed": "Could not confirm the code.",
+    "resend": "Resend code",
+    "resent": "Code resent",
+    "resendFailed": "Could not resend the code.",
+    "back": "Back to sign in",
+    "expired": "The sign-in expired. Enter your password again."
+  }
+}

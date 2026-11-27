@@ -6,7 +6,7 @@ import { EmptyState } from '@/shared/ui/empty-state';
 import { ApiError, acceptInvitation, declineInvitation, fetchReceivedInvitations } from '@/shared/api/api';
 import type { ReceivedInvitationEntry } from '@/shared/api/api';
 import { ERROR_CODES } from '@/shared/api/errorCodes';
-import { ServerIcon } from '@overcord/frontend-shared/ui/ServerIcon';
+import { ServerIcon } from '@/shared/ui/ServerIcon';
 import { ActionFeedback } from './ActionFeedback';
 import type { Feedback } from './ActionFeedback';
 import { useFriends } from './FriendsContext';

@@ -1,7 +1,7 @@
 import { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useLocation } from 'react-router';
-import { categoryLabel } from '@overcord/frontend-shared/reports/reportCategories';
+import { categoryLabel } from '@/features/reports/reportCategories';
 import { fetchAdminReports } from './adminApi';
 import type { AdminReportRow } from './adminApi';
 import { reportTargetLabel, formatWhen, formatWhenShort } from './adminFormat';
@@ -13,10 +13,10 @@ import { useAdminList } from './useAdminList';
 import { useAdminTableFits } from './useAdminMode';
 import { useAdminQuery } from './useAdminQuery';
 import type { QuerySchema } from './useAdminQuery';
-import { AppLink } from '@overcord/frontend-shared/ui/app-link';
+import { AppLink } from '@/shared/ui/app-link';
 import { AdminStackedSkeleton, AdminTableSkeleton } from './AdminSkeletons';
 import { AdminPageTitle } from './AdminSection';
-import { useLanguage } from '@overcord/frontend-shared/i18n/useLanguage';
+import { useLanguage } from '@/i18n/useLanguage';
 
 type Queue = 'open' | 'reviewing' | 'closed';
 type TargetFilter = 'all' | 'user' | 'server' | 'message';
@@ -53,7 +53,7 @@ export function ReportsPage() {
   const origin = fromList(pathname, search);
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-5 @[760px]:gap-6">
       <AdminPageTitle title={t('nav.reports')} description={t('pages.reports')} />
       <AdminListToolbar
         filters={(
@@ -68,7 +68,7 @@ export function ReportsPage() {
         summary={list.status === 'ready' && list.items.length > 0 ? `${list.items.length} ${t('ui.report', { count: list.items.length })}${list.hasMore ? t('ui.moreResults') : ''}` : undefined}
         onClear={active ? clear : undefined}
       />
-      <ListChrome list={list} empty={{ illustration: 'flag', title: t('emptyList.reports.title'), description: t('emptyList.reports.text') }} onClearFilters={active ? clear : undefined} skeleton={tableFits ? <AdminTableSkeleton columns={5} /> : <AdminStackedSkeleton />}>
+      <ListChrome list={list} empty={{ title: t('emptyList.reports.title'), description: t('emptyList.reports.text') }} onClearFilters={active ? clear : undefined} skeleton={tableFits ? <AdminTableSkeleton columns={5} /> : <AdminStackedSkeleton />}>
         {tableFits ? (
           <AdminTable caption={t('ui.reports')}>
             <thead>
@@ -91,7 +91,7 @@ export function ReportsPage() {
         ) : (
           <AdminStackedList>
             {list.items.map((r) => (
-              <li key={r.id} className="flex flex-col gap-2 p-3">
+              <li key={r.id} className="flex flex-col gap-2">
                 <ReportLink report={r} from={origin} />
                 <div className="flex flex-wrap items-center gap-2 text-caption text-text-muted">
                   <Badge value={r.status} />

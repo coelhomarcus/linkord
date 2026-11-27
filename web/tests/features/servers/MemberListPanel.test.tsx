@@ -210,7 +210,7 @@ describe('MemberListPanel', () => {
     });
     renderWithRoom(<MemberListPanel server={server} onOpenProfile={vi.fn()} />, { state: asMe('u-bia') });
     await user.click(await screen.findByRole('button', { name: 'Abrir perfil de Bia' }));
-    expect(await screen.findByRole('button', { name: 'Desenvolvedor do Overcord' })).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: 'Desenvolvedor' })).toBeInTheDocument();
     expect(screen.queryByText(/mútuo/)).not.toBeInTheDocument();
   });
 

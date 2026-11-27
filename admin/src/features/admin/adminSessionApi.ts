@@ -1,6 +1,6 @@
-import { apiFetch } from '@overcord/frontend-shared/api/transport';
-import type { LoginChallenge } from '@overcord/frontend-shared/api/transport';
-import type { Language } from '@overcord/frontend-shared/i18n/languages';
+import { apiFetch } from '@/shared/api/transport';
+import type { LoginChallenge } from '@/shared/api/transport';
+import type { Language } from '@/i18n/languages';
 
 export interface AdminIdentity {
   id: string;
@@ -13,7 +13,7 @@ const AUTH = '/api/admin/auth';
 
 export const fetchAdminSession = () => apiFetch<SignedIn>(`${AUTH}/me`);
 export const loginAdmin = (username: string, password: string) =>
-  apiFetch<SignedIn | { twoFactor: LoginChallenge }>(`${AUTH}/login`, { method: 'POST', body: JSON.stringify({ username, password }) });
+  apiFetch<{ twoFactor: LoginChallenge }>(`${AUTH}/login`, { method: 'POST', body: JSON.stringify({ username, password }) });
 export const verifyAdminCode = (challenge: string, code: string) =>
   apiFetch<SignedIn>(`${AUTH}/login/verify`, { method: 'POST', body: JSON.stringify({ challenge, code }) });
 export const resendAdminCode = (challenge: string) =>

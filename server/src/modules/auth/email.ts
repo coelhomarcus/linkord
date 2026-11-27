@@ -17,6 +17,7 @@ export function isEmailDeliveryConfigured(): boolean {
 const COPY = {
   password_reset: { subject: 'email.recoverySubject', title: 'email.recoveryTitle', intro: 'email.recoveryIntro', expires: 'email.expires' },
   email_change: { subject: 'email.changeSubject', title: 'email.changeTitle', intro: 'email.changeIntro', expires: 'email.expires' },
+  admin_email_change: { subject: 'email.changeSubject', title: 'email.changeTitle', intro: 'email.changeIntro', expires: 'email.expires' },
   two_factor_setup: { subject: 'email.twoFactorSetupSubject', title: 'email.twoFactorSetupTitle', intro: 'email.twoFactorSetupIntro', expires: 'email.expires' },
   login: { subject: 'email.loginSubject', title: 'email.loginTitle', intro: 'email.loginIntro', expires: 'email.loginExpires' },
   account_deletion: { subject: 'email.deletionCodeSubject', title: 'email.deletionCodeTitle', intro: 'email.deletionCodeIntro', expires: 'email.expires' },
@@ -24,6 +25,7 @@ const COPY = {
   two_factor_disable: { subject: 'email.twoFactorDisableSubject', title: 'email.twoFactorDisableTitle', intro: 'email.twoFactorDisableIntro', expires: 'email.expires' },
   login_alert_disable: { subject: 'email.loginAlertDisableSubject', title: 'email.loginAlertDisableTitle', intro: 'email.loginAlertDisableIntro', expires: 'email.expires' },
   data_export: { subject: 'email.exportCodeSubject', title: 'email.exportCodeTitle', intro: 'email.exportCodeIntro', expires: 'email.expires' },
+  admin_role_change: { subject: 'email.adminRoleSubject', title: 'email.adminRoleTitle', intro: 'email.adminRoleIntro', expires: 'email.expires' },
 } as const satisfies Record<AuthCodePurpose, Record<string, Parameters<typeof localeText>[1]>>;
 
 // Every text that goes into an email's HTML is escaped: a username or an address is never markup.

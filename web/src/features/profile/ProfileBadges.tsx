@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { BadgeIcon, badgeDescription, badgeName, knownBadges, type BadgeId, type HeldBadge } from '@overcord/frontend-shared/badges/badgeCatalog';
+import { BadgeIcon, badgeDescription, badgeName, knownBadges, type BadgeId, type HeldBadge } from '@/features/badges/badgeCatalog';
 import { Avatar } from '@/shared/Avatar';
 import { useLanguage } from '@/shared/i18n/useLanguage';
 import { cn } from '@/shared/lib/utils';

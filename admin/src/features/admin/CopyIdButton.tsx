@@ -1,6 +1,6 @@
-import { CopyStatusIcon } from '@overcord/frontend-shared/CopyFeedback';
-import { useCopyToClipboard } from '@overcord/frontend-shared/hooks/useCopyToClipboard';
-import { Button } from '@overcord/frontend-shared/ui/primitives/button';
+import { CopyStatusIcon } from '@/shared/CopyFeedback';
+import { useCopyToClipboard } from '@/shared/hooks/useCopyToClipboard';
+import { Button } from '@/shared/ui/primitives/button';
 
 /** Copies an entity id. Its own button (never inside a link): the row link opens
  * the detail, this only touches the clipboard. */

@@ -1,11 +1,11 @@
-import { ClockCounterClockwiseIcon } from '@overcord/frontend-shared/ui/icons';
+import { ClockCounterClockwiseIcon } from '@/shared/ui/icons';
 import { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useLocation } from 'react-router';
 
-import { Avatar } from '@overcord/frontend-shared/Avatar';
-import { buttonVariants } from '@overcord/frontend-shared/ui/primitives/button';
-import { useUrlSearch } from '@overcord/frontend-shared/hooks/useUrlSearch';
+import { Avatar } from '@/shared/Avatar';
+import { buttonVariants } from '@/shared/ui/primitives/button';
+import { useUrlSearch } from '@/shared/hooks/useUrlSearch';
 import { fetchAdminWebhooks } from './adminApi';
 import type { AdminWebhookRow } from './adminApi';
 import { formatDateShort, formatWhen, formatWhenShort } from './adminFormat';
@@ -18,10 +18,10 @@ import { useAdminList } from './useAdminList';
 import { useAdminTableFits } from './useAdminMode';
 import { useAdminQuery } from './useAdminQuery';
 import type { QuerySchema } from './useAdminQuery';
-import { AppLink } from '@overcord/frontend-shared/ui/app-link';
+import { AppLink } from '@/shared/ui/app-link';
 import { AdminStackedSkeleton, AdminTableSkeleton } from './AdminSkeletons';
 import { AdminPageTitle } from './AdminSection';
-import { useLanguage } from '@overcord/frontend-shared/i18n/useLanguage';
+import { useLanguage } from '@/i18n/useLanguage';
 
 const QUERY: QuerySchema<'q'> = { q: { default: '' } };
 
@@ -69,7 +69,7 @@ export function WebhooksPage() {
   const lastUsed = (w: AdminWebhookRow) => (w.lastUsedAt ? formatWhenShort(w.lastUsedAt, language) : t('ui.never'));
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-5 @[760px]:gap-6">
       <AdminPageTitle title={t('nav.webhooks')} description={t('pages.webhooks')} />
       <AdminListToolbar
         search={{ value: query, onChange: setQuery, placeholder: t('ui.searchNameOrServer'), label: t('ui.searchWebhooks') }}
@@ -77,7 +77,7 @@ export function WebhooksPage() {
         summary={list.status === 'ready' && list.items.length > 0 ? `${list.items.length} ${t('ui.webhook', { count: list.items.length })}${list.hasMore ? t('ui.moreResults') : ''}` : undefined}
         onClear={active ? clear : undefined}
       />
-      <ListChrome list={list} empty={{ illustration: 'link', title: t('emptyList.webhooks.title'), description: t('emptyList.webhooks.text') }} onClearFilters={active ? clear : undefined} skeleton={tableFits ? <AdminTableSkeleton columns={6} identity /> : <AdminStackedSkeleton />}>
+      <ListChrome list={list} empty={{ title: t('emptyList.webhooks.title'), description: t('emptyList.webhooks.text') }} onClearFilters={active ? clear : undefined} skeleton={tableFits ? <AdminTableSkeleton columns={6} identity /> : <AdminStackedSkeleton />}>
         {tableFits ? (
           <AdminTable caption={t('ui.webhooks')}>
             <thead>
@@ -101,7 +101,7 @@ export function WebhooksPage() {
         ) : (
           <AdminStackedList>
             {list.items.map((w) => (
-              <li key={w.id} className="flex flex-col gap-2 p-3">
+              <li key={w.id} className="flex flex-col gap-2">
                 <div className="flex items-center gap-2">
                   <div className="min-w-0 flex-1"><WebhookIdentity webhook={w} from={origin} /></div>
                   <RowActions webhook={w} />

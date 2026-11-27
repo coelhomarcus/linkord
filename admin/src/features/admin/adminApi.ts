@@ -1,8 +1,8 @@
-import { ApiError, apiFetch } from '@overcord/frontend-shared/api/transport';
-import { ERROR_CODES } from '@overcord/frontend-shared/api/errorCodes';
+import { ApiError, apiFetch } from '@/shared/api/transport';
+import { ERROR_CODES } from '@/shared/api/errorCodes';
 import { reportAdminAccessLost, reportAdminSessionEnded } from './adminAccess';
 import { invalidateAdminLists } from './adminListCache';
-import type { BadgeId, HeldBadge } from '@overcord/frontend-shared/badges/badgeCatalog';
+import type { BadgeId, HeldBadge } from '@/features/badges/badgeCatalog';
 
 // The server enforces access; hiding admin routes in the UI is not authorization.
 
@@ -19,6 +19,7 @@ async function adminFetch<T>(path: string, init?: RequestInit): Promise<T> {
     if (init?.method && init.method !== 'GET') invalidateAdminLists();
     return result;
   } catch (err) {
+    if (init?.signal?.aborted) throw err;
     if (err instanceof ApiError && err.status === 403 && err.code === ERROR_CODES.forbidden) reportAdminAccessLost();
     else if (err instanceof ApiError && err.status === 401) reportAdminSessionEnded();
     throw err;
@@ -62,8 +63,11 @@ export const fetchAdminUsers = (filters: { q?: string; status?: string; role?: s
 export const fetchAdminUser = (id: string) => adminFetch<AdminUserDetail>(`/api/admin/users/${encodeURIComponent(id)}`);
 export const suspendUser = (id: string, reason: string) => post(`/api/admin/users/${encodeURIComponent(id)}/suspend`, { reason });
 export const reactivateUser = (id: string, reason: string) => post(`/api/admin/users/${encodeURIComponent(id)}/reactivate`, { reason });
-export const grantAdmin = (id: string, reason: string) => post(`/api/admin/users/${encodeURIComponent(id)}/grant-admin`, { reason });
-export const revokeAdmin = (id: string, reason: string) => post(`/api/admin/users/${encodeURIComponent(id)}/revoke-admin`, { reason });
+const adminRolePath = (id: string, action: 'grant' | 'revoke') => `/api/admin/users/${encodeURIComponent(id)}/${action}-admin`;
+export const requestAdminRoleCode = (id: string, action: 'grant' | 'revoke', reason: string, password: string) =>
+  post<{ codeRequired: true; email: string }>(`${adminRolePath(id, action)}/request`, { reason, password });
+export const changeAdminRole = (id: string, action: 'grant' | 'revoke', reason: string, code: string) =>
+  post(adminRolePath(id, action), { reason, code });
 export const revokeUserSessions = (id: string, reason: string) => post(`/api/admin/users/${encodeURIComponent(id)}/revoke-sessions`, { reason });
 export const grantBadge = (id: string, badge: BadgeId, reason: string) => post(`/api/admin/users/${encodeURIComponent(id)}/badges/${badge}`, { reason });
 export const revokeBadge = (id: string, badge: BadgeId, reason: string) =>
@@ -157,7 +161,7 @@ export interface SystemInfo {
   orphanSweep: { dryRunByDefault: boolean; /** absent on a server that predates it */ graceMs?: number; last: SweepResult | null };
 }
 
-export const fetchSystem = () => adminFetch<SystemInfo>('/api/admin/system');
+export const fetchSystem = (signal?: AbortSignal) => adminFetch<SystemInfo>('/api/admin/system', { signal });
 
 // ---- backup ------------------------------------------------------------------
 

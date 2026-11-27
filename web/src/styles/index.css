@@ -1,13 +1,11 @@
 @import "tailwindcss";
 @import "tw-animate-css";
-@import "@overcord/frontend-shared/src/styles/base.css";
+@import "./base.css";
 @import "./themes.css";
 /* code colors (every theme is dark) */
 @import "@twinkleplop/theme-github/dark";
 /* bundled rather than fetched: a self-hosted install shouldn't reach out to a font CDN */
 @import "@fontsource-variable/figtree";
-
-@source "../../../packages/frontend-shared/src";
 
 /* A device whose main input is a finger (phones, tablets without a trackpad):
    where long press replaces right-click and message text is not selectable. */

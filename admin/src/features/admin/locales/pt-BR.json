@@ -1,5 +1,6 @@
 {
   "nav": {
+    "overview": "Visão geral",
     "management": "Gestão",
     "users": "Usuários",
     "moderation": "Moderação",
@@ -36,13 +37,32 @@
     "filteredText": "Ajuste ou limpe os filtros para ver tudo."
   },
   "layout": {
+    "navigation": "Navegação do Admin",
+    "openNavigation": "Abrir navegação",
     "title": "Administração",
     "accessLostTitle": "Você não tem mais acesso à administração",
-    "sessionEndedTitle": "Sua sessão terminou",
-    "backToAdmin": "Voltar à administração"
+    "sessionEndedTitle": "Sua sessão terminou"
+  },
+  "overview": {
+    "totalAccounts": "Total de contas",
+    "newAccounts_one": "{{formatted}} nova na última hora",
+    "newAccounts_other": "{{formatted}} novas na última hora",
+    "ofAccounts": "de {{total}} contas",
+    "connectionLimit": "Limite de {{max}} conexões",
+    "usedStorage": "Armazenamento usado",
+    "storageLimit": "{{percent}} de {{max}}",
+    "recentActivity": "Atividade recente",
+    "viewAudit": "Ver auditoria",
+    "openReports": "Denúncias abertas",
+    "viewQueue": "Ver fila",
+    "noOpenReports": "Nenhuma denúncia aberta.",
+    "viewSystem": "Ver sistema",
+    "metricsUnavailable": "Não foi possível carregar as métricas da instância.",
+    "activityUnavailable": "Não foi possível carregar toda a atividade recente.",
+    "stale": "Não foi possível atualizar todos os dados. Alguns valores podem estar desatualizados."
   },
   "site": {
-    "signInSubtitle": "Entre com sua conta de administrador do Overcord.",
+    "signInSubtitle": "Entre com sua conta de administrador do Overcord. Você vai precisar de um código enviado por e-mail.",
     "signOut": "Sair",
     "signOutFailed": "Não foi possível encerrar a sessão. Tente novamente."
   },
@@ -158,6 +178,11 @@
   "dialog": {
     "reasonLabel": "Motivo (fica registrado na auditoria)",
     "confirmPrompt": "Para confirmar, digite",
+    "currentPassword": "Senha atual",
+    "verificationCode": "Código de verificação",
+    "codeSent": "Enviamos um código para {{email}}.",
+    "sendCode": "Enviar código",
+    "newCode": "Solicitar novo código",
     "cancel": "Cancelar",
     "wait": "Aguarde…"
   },
@@ -254,7 +279,7 @@
     "backToList": "Voltar à lista",
     "notFound": "Conta não encontrada.",
     "loadFailed": "Não foi possível carregar a conta.",
-    "backUsers": "← Usuários",
+    "backUsers": "Usuários",
     "accountSections": "Seções da conta",
     "overview": "Resumo",
     "moderation": "Moderação",
@@ -344,7 +369,7 @@
     "serverDeleted": "Servidor excluído.",
     "serverNotFound": "Servidor não encontrado.",
     "serverLoadFailed": "Não foi possível carregar o servidor.",
-    "backServers": "← Servidores",
+    "backServers": "Servidores",
     "serverSections": "Seções do servidor",
     "server": "Servidor",
     "noServerOwner": "nenhum (servidor sem dono)",
@@ -373,7 +398,7 @@
     "noWebhookHistory": "Nenhuma ação registrada sobre este webhook",
     "webhookNotFound": "Webhook não encontrado.",
     "webhookLoadFailed": "Não foi possível carregar o webhook.",
-    "backWebhooks": "← Webhooks",
+    "backWebhooks": "Webhooks",
     "webhookSections": "Seções do webhook",
     "webhook": "Webhook",
     "postsTo": "Publica em",
@@ -397,7 +422,7 @@
     "closedSuffix": "A denúncia é encerrada.",
     "notFound": "Denúncia não encontrada.",
     "loadFailed": "Não foi possível carregar a denúncia.",
-    "back": "← Denúncias",
+    "back": "Denúncias",
     "evidence": "Evidência",
     "evidenceDescription": "O texto como estava quando a denúncia foi enviada. Não é a conversa atual.",
     "truncated": "O texto foi truncado ao ser guardado; o original completo não está disponível aqui.",

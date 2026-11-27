@@ -3,9 +3,7 @@
     "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.app.tsbuildinfo",
     "paths": {
       "@/*": ["./src/*"],
-      "@tests/*": ["./tests/*"],
-      "@/shared/*": ["./src/shared/*", "./node_modules/@overcord/frontend-shared/src/*"],
-      "@overcord/frontend-shared/*": ["./node_modules/@overcord/frontend-shared/src/*"]
+      "@tests/*": ["./tests/*"]
     },
     "target": "es2023",
     "lib": ["ES2023", "DOM"],
@@ -16,7 +14,6 @@
 
     /* Bundler mode */
     "moduleResolution": "bundler",
-    "preserveSymlinks": true,
     "allowImportingTsExtensions": true,
     "verbatimModuleSyntax": true,
     "moduleDetection": "force",

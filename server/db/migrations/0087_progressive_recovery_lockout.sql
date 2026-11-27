@@ -1,0 +1,1 @@
+ALTER TABLE "rate_limit_windows" ADD COLUMN "block_duration_ms" integer DEFAULT 0 NOT NULL;

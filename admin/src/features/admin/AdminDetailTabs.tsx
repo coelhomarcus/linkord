@@ -1,6 +1,6 @@
 import { useLocation } from 'react-router';
-import { cn } from '@overcord/frontend-shared/lib/utils';
-import { AppLink } from '@overcord/frontend-shared/ui/app-link';
+import { cn } from '@/shared/lib/utils';
+import { AppLink } from '@/shared/ui/app-link';
 
 export interface DetailTab<T extends string> { id: T; label: string }
 
@@ -16,9 +16,8 @@ export function AdminDetailTabs<T extends string>({ label, tabs, active, default
 }) {
   const { pathname, state } = useLocation();
   return (
-    <nav aria-label={label} className="scrollbar-none -mx-1 overflow-x-auto px-1">
-      {/* the rule under the row is an inset shadow, like the profile's tabs, so the active bar sits on it */}
-      <ul className="flex min-w-max gap-5 shadow-[inset_0_-1px_0_var(--color-border)]">
+    <nav aria-label={label} className="scrollbar-none overflow-x-auto border-b border-border-divider">
+      <ul className="flex min-w-max gap-2">
         {tabs.map((tab) => {
           const current = tab.id === active;
           return (
@@ -29,8 +28,8 @@ export function AdminDetailTabs<T extends string>({ label, tabs, active, default
                 state={state}
                 aria-current={current ? 'page' : undefined}
                 className={cn(
-                  'flex h-11 items-center border-b-2 text-body font-semibold focus-ring transition-colors',
-                  current ? 'border-text-primary text-text-primary' : 'border-transparent text-text-muted hover:text-text-secondary',
+                  'flex h-10 items-center rounded-t-md border-b-2 border-transparent px-3 pt-0.5 text-label font-medium focus-ring focus-visible:ring-inset transition-colors',
+                  current ? 'border-b-text-primary text-text-strong' : 'text-text-muted hover:border-b-border-strong hover:text-text-primary',
                 )}
               >
                 {tab.label}

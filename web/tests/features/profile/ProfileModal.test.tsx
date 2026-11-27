@@ -55,6 +55,21 @@ const user: PublicUser = {
 };
 
 describe('ProfileModal', () => {
+  it('shows earned badges on an administrator profile without showing the role', async () => {
+    const admin = { ...user, id: 'admin-profile', role: 'admin' } as const;
+    mocked.fetchProfileDetails.mockResolvedValue({
+      ...NOTHING,
+      badges: [{ id: 'supporter', grantedAt: '2026-02-01T12:00:00.000Z' }],
+    });
+    renderWithRoom(<MemoryRouter><ProfileModal userId={admin.id} onClose={vi.fn()} onOpenProfile={vi.fn()} /></MemoryRouter>, {
+      allUsers: new Map([[admin.id, admin]]),
+    });
+
+    const profile = within(screen.getByRole('dialog', { name: 'Perfil de Marcus' }));
+    expect(await profile.findByRole('button', { name: /^Apoiador$/ })).toBeVisible();
+    expect(profile.queryByText('Admin', { exact: true })).not.toBeInTheDocument();
+  });
+
   it('does not offer image previews from the avatar or banner', () => {
     renderWithRoom(<MemoryRouter><ProfileModal userId="u1" onClose={vi.fn()} onOpenProfile={vi.fn()} /></MemoryRouter>, {
       allUsers: new Map([[user.id, user]]),

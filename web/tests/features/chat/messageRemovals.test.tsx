@@ -120,14 +120,11 @@ describe('removing an attachment', () => {
     expect(screen.queryByRole('menuitem', { name: 'Remover anexo' })).not.toBeInTheDocument();
   });
 
-  it("an admin removes an attachment from someone else's message", async () => {
+  it("an administrator's app session cannot remove someone else's attachment", async () => {
     const admin = { ...me, me: { ...me.me, role: 'admin' as const } };
-    const { removeChatAttachment } = renderInMenu({ id: 'other', name: 'Outro', text: 'a foto', attachments: [photo('f1')] }, admin);
-    const user = userEvent.setup();
+    renderInMenu({ id: 'other', name: 'Outro', text: 'a foto', attachments: [photo('f1')] }, admin);
     await openMenuOn(/^Abrir f1\.png/);
-    await user.click(screen.getByRole('menuitem', { name: 'Remover anexo' }));
-    await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Remover' }));
-    expect(removeChatAttachment).toHaveBeenCalledWith(7, 'f1');
+    expect(screen.queryByRole('menuitem', { name: 'Remover anexo' })).not.toBeInTheDocument();
   });
 
   it('on a phone, holding the attachment opens the menu that removes it', async () => {

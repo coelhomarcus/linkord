@@ -1,59 +1,116 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "@fontsource-variable/figtree";
-@import "@overcord/frontend-shared/src/styles/base.css";
+@import "./base.css";
 
-@source "../../../packages/frontend-shared/src";
+@layer components {
+  .admin-sidebar {
+    border-right: 1px solid var(--color-border-divider);
+    background: var(--color-surface-rail);
+  }
 
-:root[data-admin-site] {
-  color-scheme: dark;
-  --text-scale: 1;
-  --color-surface-app: #10131b;
-  --color-surface-panel: #151923;
-  --color-surface-raised: #191e2a;
-  --color-surface-overlay: #202634;
-  --color-surface-rail: #121620;
-  --color-bg-textarea: #121620;
-  --color-bg-selected: #242b3d;
-  --color-text-strong: #f4f5fb;
-  --color-text-primary: #e8ebf5;
-  --color-text-secondary: #bac2d6;
-  --color-text-muted: #9ba5bd;
-  --color-border-subtle: #242b3a;
-  --color-border-default: #2b3447;
-  --color-border-strong: #45516a;
-  --color-border-divider: var(--color-border-subtle);
-  --color-accent-primary: #aab3ff;
-  --color-accent-text: #bbc3ff;
-  --color-accent-hover: #c5ccff;
-  --color-border-accent: #8c98ee;
-  --color-link: var(--color-accent-text);
-  --color-nav-active: #242b45;
-  --primary-foreground: #161b32;
-  --text-admin-page-title: calc(clamp(1.625rem, 1.35rem + 0.65vw, 2rem) * var(--text-scale));
+  .admin-topbar {
+    border-bottom: 1px solid var(--color-border-divider);
+    background: var(--color-surface-rail);
+  }
+
+  .admin-nav-link {
+    display: flex;
+    min-height: 2.375rem;
+    align-items: center;
+    gap: 0.625rem;
+    border-radius: var(--radius-md);
+    padding-inline: 0.75rem;
+    color: var(--color-text-secondary);
+    font-size: var(--text-label);
+    font-weight: 500;
+    transition: background-color 150ms, color 150ms;
+  }
+
+  .admin-nav-link:hover {
+    color: var(--color-text-strong);
+    background: var(--color-nav-hover);
+  }
+
+  .admin-nav-link[aria-current="page"] {
+    color: var(--color-text-strong);
+    font-weight: 600;
+    background: var(--color-nav-active);
+  }
+
+  .admin-page-heading {
+    color: var(--color-text-strong);
+    font-size: clamp(1.625rem, 1.42rem + 0.85vw, 2.125rem);
+    font-weight: 700;
+    letter-spacing: -0.035em;
+    line-height: 1.12;
+    overflow-wrap: anywhere;
+  }
+
+  .admin-panel {
+    min-width: 0;
+    border: 1px solid var(--color-border-default);
+    border-radius: var(--radius-xl);
+    background: var(--color-surface-panel);
+  }
+
+  .admin-card-inset {
+    padding: 1rem;
+  }
+
+  @container (width >= 38rem) {
+    .admin-card-inset {
+      padding-inline: 1.25rem;
+    }
+  }
+
+  .admin-metric {
+    min-width: 0;
+    display: grid;
+    grid-template-rows: auto 1fr;
+    gap: 0.625rem;
+  }
+
+  .admin-metric-label {
+    min-block-size: 2.9em;
+  }
+
+  @container (width >= 27rem) {
+    .admin-metric-label {
+      min-block-size: 0;
+    }
+  }
 }
 
-/* Replace the chat theme's early background while the first admin route loads. */
-:root[data-admin-site],
-:root[data-admin-site] body {
-  background: var(--color-surface-app);
+.admin-nav-drawer {
+  inset: 0 auto 0 0;
+  width: min(17rem, calc(100% - 2.5rem));
+  max-width: none;
+  max-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  translate: none;
+  border-width: 0 1px 0 0;
+  border-radius: 0;
+  padding: max(1.25rem, env(safe-area-inset-top)) 0.875rem max(1.25rem, env(safe-area-inset-bottom));
+  background: var(--color-surface-rail);
+  scale: 1;
 }
 
-.admin-login {
-  background-image: radial-gradient(ellipse at 50% 0%, #202743 0%, transparent 65%);
+.admin-nav-drawer[data-open],
+.admin-nav-drawer[data-closed] {
+  animation-name: none;
 }
 
-.admin-page-title h2 {
-  font-size: var(--text-admin-page-title);
-  line-height: 1.18;
-  letter-spacing: -0.025em;
-}
+@media (prefers-reduced-motion: no-preference) {
+  .admin-nav-drawer {
+    transition: translate 180ms var(--ease-out-expo), opacity 150ms;
+  }
 
-.admin-data-surface {
-  background: var(--color-surface-panel);
-  border-color: var(--color-border-default);
-}
-
-.admin-data-surface th {
-  background: var(--color-surface-raised);
+  .admin-nav-drawer[data-starting-style],
+  .admin-nav-drawer[data-ending-style] {
+    translate: -100% 0;
+    opacity: 0;
+  }
 }

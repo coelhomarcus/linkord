@@ -1,11 +1,11 @@
 import { useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useParams } from 'react-router';
-import { Avatar } from '@overcord/frontend-shared/Avatar';
-import { Button } from '@overcord/frontend-shared/ui/primitives/button';
-import { useCursorList } from '@overcord/frontend-shared/hooks/useCursorList';
-import { HashIcon, SpeakerHighIcon } from '@overcord/frontend-shared/ui/icons';
-import { ServerIcon } from '@overcord/frontend-shared/ui/ServerIcon';
+import { Avatar } from '@/shared/Avatar';
+import { Button } from '@/shared/ui/primitives/button';
+import { useCursorList } from '@/shared/hooks/useCursorList';
+import { HashIcon, SpeakerHighIcon } from '@/shared/ui/icons';
+import { ServerIcon } from '@/shared/ui/ServerIcon';
 import { assignServerOwner, deleteServer, fetchAdminServer, fetchAudit, reactivateServer, suspendServer } from './adminApi';
 import type { AdminServerDetail, AdminServerMember } from './adminApi';
 import { AdminDetailTabs } from './AdminDetailTabs';
@@ -19,8 +19,8 @@ import { useAdminDetail } from './useAdminDetail';
 import { useAdminQuery } from './useAdminQuery';
 import type { QuerySchema } from './useAdminQuery';
 import { AuditListSkeleton } from './AdminSkeletons';
-import { AppLink } from '@overcord/frontend-shared/ui/app-link';
-import { useLanguage } from '@overcord/frontend-shared/i18n/useLanguage';
+import { AppLink } from '@/shared/ui/app-link';
+import { useLanguage } from '@/i18n/useLanguage';
 
 type Dialog = 'suspend' | 'reactivate' | 'delete' | { owner: AdminServerMember } | null;
 
@@ -46,7 +46,7 @@ function ServerHistory({ id, revision }: { id: string; revision: string }) {
   const list = useCursorList(fetchPage, id, { getKey: (row) => row.id, revision });
   return (
     <AdminSection title={t('entity.fullHistoryServer')} description={t('entity.historyServerDescription')}>
-      <ListChrome list={list} empty={{ illustration: 'document', title: t('entity.noServerHistory'), compact: true }} skeleton={<AuditListSkeleton />}><AuditList items={list.items} /></ListChrome>
+      <ListChrome list={list} empty={{ title: t('entity.noServerHistory'), compact: true }} skeleton={<AuditListSkeleton />}><AuditList items={list.items} /></ListChrome>
     </AdminSection>
   );
 }

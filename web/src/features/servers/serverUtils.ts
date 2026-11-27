@@ -35,12 +35,12 @@ export const canInChannel = (channel: { permissions?: number } | null | undefine
 /** Whether to offer moving (or disconnecting) someone out of this voice
  * channel. Mirrors the server's canMoveInCall without the hierarchy part,
  * which only the server can judge: a refusal comes back as an error. */
-export const canMoveOutOf = (channel: { permissions?: number }, meIsAdmin: boolean) =>
-  meIsAdmin || canInChannel(channel, PERMISSIONS.MOVE_MEMBERS);
+export const canMoveOutOf = (channel: { permissions?: number }) =>
+  canInChannel(channel, PERMISSIONS.MOVE_MEMBERS);
 
 /** Whether this voice channel can take someone moved into it. */
-export const canMoveInto = (channel: { permissions?: number }, meIsAdmin: boolean) =>
-  meIsAdmin || canInChannel(channel, PERMISSIONS.CONNECT);
+export const canMoveInto = (channel: { permissions?: number }) =>
+  canInChannel(channel, PERMISSIONS.CONNECT);
 
 export type ServerSettingsTab = 'overview' | 'emojis' | 'stickers' | 'soundboard' | 'members' | 'roles' | 'invites' | 'auditLog' | 'bans' | 'delete';
 

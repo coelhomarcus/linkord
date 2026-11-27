@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { render, fireEvent, screen, waitFor } from '@testing-library/react';
+import { render, fireEvent, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router';
 import { renderAdmin } from './adminFixture';
@@ -30,7 +30,9 @@ beforeEach(() => {
 });
 afterEach(() => { delete (Element.prototype as { scrollTo?: unknown }).scrollTo; });
 
-const renderArea = (path = '/admin/users') => renderAdmin(<AdminRoutes viewerId="admin-1" />, { path, pattern: '/admin/*' });
+const routes = <AdminRoutes viewerId="admin-1" username="ana" signingOut={false} signOutFailed={false} onSignOut={() => {}} />;
+
+const renderArea = (path = '/admin/users') => renderAdmin(routes, { path, pattern: '/admin/*' });
 
 describe('coming back to a list', () => {
   it('the back link restores the rows already loaded, at once, and re-reads them in the background', async () => {
@@ -45,7 +47,7 @@ describe('coming back to a list', () => {
     // the re-read is held back: what shows now can only come from the restored window
     mocked.fetchAdminUsers.mockClear();
     mocked.fetchAdminUsers.mockImplementation(() => new Promise(() => {}));
-    await u.click(screen.getByRole('link', { name: '← Usuários' }));
+    await u.click(within(screen.getByRole('main')).getByRole('link', { name: 'Usuários' }));
     expect(screen.getByText('CAI')).toBeInTheDocument();
     expect(screen.getByText('ANA')).toBeInTheDocument();
     expect(screen.queryByText('Carregando…')).not.toBeInTheDocument();
@@ -57,7 +59,7 @@ describe('coming back to a list', () => {
     render(
       <MemoryRouter initialEntries={['/admin/users']}>
         <Routes>
-          <Route path="/admin/*" element={<AdminRoutes viewerId="admin-1" />} />
+          <Route path="/admin/*" element={routes} />
         </Routes>
       </MemoryRouter>,
     );
@@ -66,7 +68,7 @@ describe('coming back to a list', () => {
     await u.click(screen.getByRole('link', { name: /BIA.*@bia/ }));
     await screen.findByText('bia@example.com');
 
-    await u.click(screen.getByRole('link', { name: 'Usuários' }));
+    await u.click(within(screen.getByRole('navigation', { name: 'Navegação do Admin' })).getByRole('link', { name: 'Usuários' }));
     expect(await screen.findByText('ANA')).toBeInTheDocument();
     expect(screen.queryByText('CAI')).not.toBeInTheDocument();
   });
@@ -84,7 +86,7 @@ describe('coming back to a list', () => {
     expect(scrollTo).toHaveBeenLastCalledWith({ top: 0 });
 
     scrollTo.mockClear();
-    await u.click(screen.getByRole('link', { name: '← Usuários' }));
+    await u.click(within(screen.getByRole('main')).getByRole('link', { name: 'Usuários' }));
     await screen.findByText('ANA');
     expect(scrollTo).toHaveBeenCalledWith({ top: 420 });
     expect(scrollTo).not.toHaveBeenCalledWith({ top: 0 });
@@ -99,7 +101,7 @@ describe('coming back to a list', () => {
     await screen.findByText('bia@example.com');
 
     invalidateAdminLists();
-    await u.click(screen.getByRole('link', { name: '← Usuários' }));
+    await u.click(within(screen.getByRole('main')).getByRole('link', { name: 'Usuários' }));
     expect(await screen.findByText('ANA')).toBeInTheDocument();
     expect(screen.queryByText('CAI')).not.toBeInTheDocument();
   });

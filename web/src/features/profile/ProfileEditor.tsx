@@ -271,7 +271,6 @@ export function ProfileEditor({ status, customStatus, details, onClose, register
               username: state.me.name,
               avatar, avatarColor: draft.avatarColor, banner, bio: draft.bio,
               profileLinks: state.me.profileLinks,
-              role: state.me.role,
             }}
             status={status}
             customStatus={customStatus}

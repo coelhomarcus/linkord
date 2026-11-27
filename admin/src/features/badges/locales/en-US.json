@@ -1,0 +1,10 @@
+{
+  "developer": {
+    "name": "Developer",
+    "description": "Part of Overcord's official development team or a contributor to the project."
+  },
+  "supporter": {
+    "name": "Supporter",
+    "description": "Helped keep Overcord running with a financial contribution."
+  }
+}

@@ -171,13 +171,11 @@ function VoiceMemberMenu({ target, server, channel, onClose, onOpenProfile }: {
 }) {
   const { t } = useTranslation('servers');
   const { activeCallConversationId, friendUserIds, openDirect, requestChatView, kickFromCall, moveToCall } = useRoom('activeCallConversationId', 'friendUserIds', 'openDirect', 'requestChatView', 'kickFromCall', 'moveToCall');
-  const state = useRoomState('me');
   const { person } = target;
   const sharesMyCall = !person.isMe && activeCallConversationId === channel.id;
   const { hasAudio, volume, muted, setVolume, toggleMute } = useMuteForMe(sharesMyCall ? person.id : null, 'camera', false);
-  const meIsAdmin = state.me.role === 'admin';
-  const canModerate = !person.isMe && canMoveOutOf(channel, meIsAdmin);
-  const destinations = canModerate ? server.channels.filter((c) => c.type === 'voice' && c.id !== channel.id && canMoveInto(c, meIsAdmin)) : [];
+  const canModerate = !person.isMe && canMoveOutOf(channel);
+  const destinations = canModerate ? server.channels.filter((c) => c.type === 'voice' && c.id !== channel.id && canMoveInto(c)) : [];
 
   return (
     <DropdownMenu open onOpenChange={(open) => { if (!open) onClose(); }}>
@@ -244,7 +242,7 @@ export function VoiceMembers({ server, channel, onOpenProfile, onNavigate, drag,
 }) {
   const { t } = useTranslation('servers');
   const { activeCallConversationId, openCall } = useRoom('activeCallConversationId', 'openCall');
-  const state = useRoomState('participants', 'me');
+  const state = useRoomState('participants');
   const me = useMyVoicePerson();
   const [menu, setMenu] = useState<MenuTarget | null>(null);
   const inThisCall = activeCallConversationId === channel.id;
@@ -259,7 +257,7 @@ export function VoiceMembers({ server, channel, onOpenProfile, onNavigate, drag,
   // press that opens the menu (and cancel the press); "Move to" in the menu
   // does the same job there.
   const touchFirst = useMediaQuery(TOUCH_FIRST_QUERY);
-  const canDrag = !touchFirst && canMoveOutOf(channel, state.me.role === 'admin');
+  const canDrag = !touchFirst && canMoveOutOf(channel);
   // the server only hands a still to whoever could join and watch the share
   const canPreview = canInChannel(channel, PERMISSIONS.CONNECT);
   if (!people.length) return null;

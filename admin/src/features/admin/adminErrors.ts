@@ -1,5 +1,6 @@
-import { ApiError } from '@overcord/frontend-shared/api/transport';
-import { ERROR_CODES } from '@overcord/frontend-shared/api/errorCodes';
+import { ApiError } from '@/shared/api/transport';
+import { ERROR_CODES } from '@/shared/api/errorCodes';
+import { describeApiError } from '@/shared/api/errorText';
 import i18n from 'i18next';
 
 export const REASON_MIN = 3;
@@ -42,7 +43,7 @@ export function describeAdminError(err: unknown): string {
       case ERROR_CODES.not_member: return i18n.t('admin:errors.notMember');
       case ERROR_CODES.forbidden: return i18n.t('admin:errors.forbidden');
       case ERROR_CODES.rate_limited: return i18n.t('admin:errors.rateLimited');
-      default: if (err.message) return err.message;
+      default: return describeApiError(err, 'admin:errors.generic');
     }
   }
   return i18n.t('admin:errors.generic');

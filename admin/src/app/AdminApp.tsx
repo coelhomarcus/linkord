@@ -1,18 +1,17 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Link, Navigate, Route, Routes } from 'react-router';
-import { AdminBrand } from '@/features/admin/AdminBrand';
+import { Navigate, Route, Routes } from 'react-router';
 import { ADMIN_PATH } from '@/features/admin/adminCatalog';
 import { AdminLogin } from '@/features/admin/AdminLogin';
 import { AdminRoutes } from '@/features/admin/AdminRoutes';
 import { subscribeAdminAccessLost, subscribeAdminSessionEnded } from '@/features/admin/adminAccess';
 import { invalidateAdminLists } from '@/features/admin/adminListCache';
+import { clearAdminSystem } from '@/features/admin/adminSystemResource';
 import { fetchAdminSession, logoutAdmin, type AdminIdentity } from '@/features/admin/adminSessionApi';
-import { ApiError } from '@overcord/frontend-shared/api/transport';
-import { ErrorBanner } from '@overcord/frontend-shared/ErrorBanner';
-import { applyLanguage } from '@overcord/frontend-shared/i18n/applyLanguage';
-import { Button } from '@overcord/frontend-shared/ui/primitives/button';
-import { SignOutIcon } from '@overcord/frontend-shared/ui/icons';
+import { ApiError } from '@/shared/api/transport';
+import { ErrorBanner } from '@/shared/ErrorBanner';
+import { applyLanguage } from '@/i18n/applyLanguage';
+import { Button } from '@/shared/ui/primitives/button';
 
 type AccessNotice = 'access' | 'session' | null;
 
@@ -27,6 +26,7 @@ export function AdminApp() {
 
   const signIn = useCallback((account: AdminIdentity) => {
     invalidateAdminLists();
+    clearAdminSystem();
     setUser(account);
     setNotice(null);
     setSignOutFailed(false);
@@ -35,6 +35,7 @@ export function AdminApp() {
 
   const clearSession = useCallback((nextNotice: AccessNotice) => {
     invalidateAdminLists();
+    clearAdminSystem();
     setUser(null);
     setNotice(nextNotice);
   }, []);
@@ -74,21 +75,11 @@ export function AdminApp() {
   if (!user) return <AdminLogin onSignedIn={signIn} notice={notice && t(notice === 'access' ? 'layout.accessLostTitle' : 'layout.sessionEndedTitle')} />;
 
   return (
-    <div className="flex h-full min-w-0 flex-col">
-      <header className="flex h-16 flex-none items-center justify-between gap-3 border-b border-border-divider bg-surface-rail px-4 sm:px-6">
-        <Link to={ADMIN_PATH} className="shrink-0 rounded-lg focus-ring"><AdminBrand /></Link>
-        <div className="flex min-w-0 items-center gap-2 sm:gap-4">
-          <span className="truncate text-label text-text-muted" title={`@${user.username}`}>@{user.username}</span>
-          <Button variant="ghost" className="shrink-0" disabled={signingOut} onClick={() => void signOut()}>
-            <SignOutIcon size={18} aria-hidden /> {t('site.signOut')}
-          </Button>
-        </div>
-      </header>
-      {signOutFailed && <ErrorBanner className="m-4">{t('site.signOutFailed')}</ErrorBanner>}
-      <Routes>
-        <Route path="/admin/*" element={<AdminRoutes viewerId={user.id} />} />
-        <Route path="*" element={<Navigate to="/admin" replace />} />
-      </Routes>
-    </div>
+    <Routes>
+      <Route path="/admin/*" element={
+        <AdminRoutes viewerId={user.id} username={user.username} signingOut={signingOut} signOutFailed={signOutFailed} onSignOut={() => void signOut()} />
+      } />
+      <Route path="*" element={<Navigate to={ADMIN_PATH} replace />} />
+    </Routes>
   );
 }

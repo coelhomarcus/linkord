@@ -14,11 +14,7 @@
     },
     "web": {
       "ignoreDependencies": [
-        "@svgr/plugin-jsx",
-        "class-variance-authority",
-        "clsx",
-        "kubai-icons-react",
-        "tailwind-merge"
+        "@svgr/plugin-jsx"
       ],
       "entry": [
         "scripts/*.{ts,mjs}",
@@ -31,14 +27,6 @@
       ]
     },
     "admin": {
-      "ignoreDependencies": [
-        "@base-ui/react",
-        "class-variance-authority",
-        "clsx",
-        "kubai-icons-react",
-        "react-icons",
-        "tailwind-merge"
-      ],
       "entry": [
         "tests/**/*.test.{ts,tsx}"
       ],

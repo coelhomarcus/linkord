@@ -104,11 +104,15 @@ It is a development setting. The server refuses to start when it is set with `NO
 
 ## Create an administrator
 
+Configure an [email provider](INTEGRATIONS.md#resend) or the local mail sink and turn on two-step verification in the account's **Settings → Security** before provisioning. See [administrator provisioning](DEPLOY.md#administration-site).
+
 ```bash
 bun run admin:grant <your-username>
 ```
 
-To develop the separate panel, start the backend with `ADMIN_URL=http://127.0.0.1:5174` and run `bun run dev:admin` in a second terminal. Open `http://127.0.0.1:5174` and sign in with the administrator account. The public Vite app stays at `http://localhost:5173`. Without `ADMIN_URL`, the backend starts with the administration API disabled.
+To develop the separate panel, start the backend with `ADMIN_URL=http://127.0.0.1:5174` and run `bun run dev:admin` in a second terminal. Open `http://127.0.0.1:5174` and sign in with the administrator's password and emailed code. The public Vite app stays at `http://localhost:5173`. Without `ADMIN_URL`, the backend starts with the administration API disabled.
+
+`web/` and `admin/` each own their components, styles, translations and dependencies. Install, build or test either frontend from its own directory. Both use the same backend, and the production image includes both builds.
 
 ## Desktop app
 
@@ -188,7 +192,8 @@ Every script runs from the repository root.
 | `bun run backup:rehearse` | Backup, restore and a boot on throwaway local databases ([below](#backup-scripts-locally)). |
 | `bun run admin:grant -- <username>` / `admin:revoke` | Gives or takes administrator access. |
 | `bun run emoji:data` | Rebuilds `web/public/emoji-data/<lang>/emojis.json` from the pinned `emojibase-data`, leaving out what the pinned `@discordapp/twemoji` cannot draw. Run it after bumping either. |
-| `bun run icons` | Rebuilds `packages/frontend-shared/src/ui/icons/fluent.ts` from `@fluentui/svg-icons` for the icons used by both frontends. A new icon needs a line in `FLUENT_ICONS` (`web/scripts/buildIcons.ts`) first; a test fails while the file is stale. |
+| `bun run icons` | Rebuilds the web app's Fluent icons from `@fluentui/svg-icons`. Add new icons to `FLUENT_ICONS` in `web/scripts/buildIcons.ts`. |
+| `bun run --cwd admin icons` | Rebuilds the administration site's Fluent icons. Add new icons to `FLUENT_ICONS` in `admin/scripts/buildIcons.ts`. Each frontend tests that its generated file is current. |
 
 `build:server`, `build:web` and `build:admin` are the parts of `build`. The root calls scripts in `web/` and `admin/` (`dev`, `build`, `lint`, `preview`, `test`, `test:coverage`), `desktop/` (`start`, `build`, `typecheck`, `test`, `package`) and `e2e/` (`test`, `test:features`, `test:restart`, `test:upgrade`, `report`, `typecheck`). Run frontend and E2E scripts with `bun run --cwd <package> <script>`, and desktop scripts with `npm run <script> --prefix desktop`.
 
@@ -223,7 +228,7 @@ Playwright runs on Bun and uses the installed Google Chrome. Its CLI scripts use
 
 | Spec | What it checks |
 | --- | --- |
-| `features/auth` | Sign-up with and without the code, login, logout, two-step login on and off, ending another session. |
+| `features/auth` | Sign-up with and without the code, login, logout with a remembered browser, password recovery by email, two-step login on and off, ending another session. |
 | `features/account-data` | A data export asked for with the password, built, emailed and downloaded; deleting the account and cancelling it by signing in. |
 | `features/friends` | Friend requests, including acceptance from the row menu. Messaging from the friends menu, blocking, and unblocking. |
 | `features/legacy-app-paths` | Permanent redirects for old `/app` links, including the friends view selected by a query and the settings section selected by a fragment. |
@@ -243,7 +248,7 @@ Playwright runs on Bun and uses the installed Google Chrome. Its CLI scripts use
 | `features/stickers` | Uploading, sending across servers, replying to one, a deleted sticker. |
 | `features/profile` | Profile edits reaching a friend, animated photo and banner, the games widgets and Wall editing, the phone layout. |
 | `features/activity` | Ranked activity and the summary published on the Wall from the desktop history. |
-| `features/admin-site` | The admin site on its own host and session: sign-in, suspending an account, the retired public routes returning `404`, the phone layout, login codes bound to the site that asked. |
+| `features/admin-site` | The admin site on its own host and session: mandatory email verification, fresh codes for granting and removing administrator access, account suspension, the retired public routes returning `404`, the dashboard and its phone navigation. |
 | `features/reports-admin` | A reported message reaching the admin, who deletes it for everyone. |
 | `features/settings` | Language and theme following the account to another browser; text size staying on the device. |
 | `features/security` | No framing, a foreign script refused and reported, YouTube as a sandboxed iframe. |
@@ -312,7 +317,8 @@ Failed logins, wrong reset codes, code requests, username checks, wrong invite c
 Each email code also has its own attempt limit. Verification counts the attempt and consumes the code in one database update when the code matches or the last attempt is spent. If the same correct code arrives concurrently, exactly one request succeeds.
 
 - **Limits:** 10 failures per account and per address in 15 minutes for logins, invite codes and reset codes; 10 code requests per address (recovery) or account (email change) in 15 minutes, and at most 5 code emails per account in 15 minutes; `REGISTRATIONS_PER_IP_PER_HOUR` sign-ups per address; 30 username checks per account per minute and 300 per day.
-- **The owner gets through:** a browser the account signed in from in the last 30 days (`known_logins`) passes a blocked account counter with the right password or code. Anyone else gets the same answer as for a wrong password, so the block reveals nothing, and getting through does not clear it.
+- **Password recovery:** 10 wrong codes in 15 minutes block verification for the account for 15 minutes. If another window reaches the limit within 24 hours of the previous block ending, the duration doubles, up to 24 hours. A successful reset outside a block clears the history. Username and email share the account counter, and unknown identifiers follow the same escalation. The per-address limit uses a fixed window.
+- **Remembered browsers** can pass a blocked account counter with the right password or code and have their own budget for recovery emails. The address limits still apply. Completing a login issues or renews a 30-day, HttpOnly device cookie that survives logout. `known_logins` stores its hash per account and site (app or admin). Existing browsers get the cookie the next time they complete a login. Signing in to a different account replaces that site's cookie. The IP and user-agent fingerprint is used only for [sign-in alerts](INTEGRATIONS.md#resend).
 - **Fail closed:** if the database cannot answer, the attempt is refused with `503 rate_limit_unavailable`.
 - **In memory on purpose:** socket flood control, link previews and game searches only cap short bursts, so losing their counts on a restart costs nothing.
 - **Per address** means IPv4 as is and IPv6 by its /64 prefix, since one IPv6 client holds the whole /64 and could take a fresh address for each request. An IPv4-mapped address (`::ffff:a.b.c.d`) counts as its IPv4. Every per-address key, here and in flood control, goes through `rateLimitSubject` (`http/clientInfo.ts`); logs and the session list keep the full address.
@@ -404,11 +410,11 @@ Providers' limits and failures are in [INTEGRATIONS.md](INTEGRATIONS.md#myanimel
 
 ### Profile badges
 
-Badges show under the name in the mini profile and beside the username in the full profile and the DM panel. Clicking one opens every badge the account holds. They come with `GET /api/users/:userId/profile-details` as `badges: [{ id, grantedAt }]`, so they are read on every open and need no realtime event. A client ignores a badge id it does not know.
+Granted badges show under the name in the mini profile and beside the username in the full profile and the DM panel. Clicking one opens every badge the account holds. They come with `GET /api/users/:userId/profile-details` as `badges: [{ id, grantedAt }]`, so they are read on every open and need no realtime event. A client ignores a badge id it does not know. The administration site's user details show the account's role.
 
 An admin grants or removes one in the administration site (user → Badges), through `POST` and `DELETE /api/admin/users/:id/badges/:badge` with a reason, recorded as `user.grant_badge` or `user.revoke_badge`. Each `user_badges` row has a `source`: `admin` for these, `automatic` for a future rule that awards a badge on its own. Such a rule calls `grantBadge` and `revokeBadge` from `server/src/modules/badges/badgesRepository.ts` with `source: 'automatic'`, so it never removes a badge an admin gave.
 
-To add a badge, add its id to `server/src/modules/badges/badgeCatalog.ts`, to the `user_badges_badge_check` constraint (a migration) and to `packages/frontend-shared/src/badges/badgeCatalog.tsx` with its Kubai icon and colour, then add its name and description to every `badges` locale.
+To add a badge, add its ID to `server/src/modules/badges/badgeCatalog.ts` and the `user_badges_badge_check` constraint in a migration. Add its Kubai icon and colour to `src/features/badges/badgeCatalog.tsx` in both frontends and add its name and description to each frontend's badge locales.
 
 ## Sharing into the app (Web Share Target)
 

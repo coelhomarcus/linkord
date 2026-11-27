@@ -17,8 +17,7 @@
     "openProfile": "Open profile",
     "displayName": "Display name",
     "openLink": "Open {{name}}",
-    "openAccountLink": "Open {{name}} on {{service}}",
-    "admin": "Admin"
+    "openAccountLink": "Open {{name}} on {{service}}"
   },
   "modal": {
     "loadingTitle": "Loading profile",

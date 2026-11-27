@@ -1,11 +1,11 @@
-import { ClockCounterClockwiseIcon } from '@overcord/frontend-shared/ui/icons';
+import { ClockCounterClockwiseIcon } from '@/shared/ui/icons';
 import { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useLocation } from 'react-router';
 
-import { Avatar } from '@overcord/frontend-shared/Avatar';
-import { buttonVariants } from '@overcord/frontend-shared/ui/primitives/button';
-import { useUrlSearch } from '@overcord/frontend-shared/hooks/useUrlSearch';
+import { Avatar } from '@/shared/Avatar';
+import { buttonVariants } from '@/shared/ui/primitives/button';
+import { useUrlSearch } from '@/shared/hooks/useUrlSearch';
 import { fetchAdminUsers } from './adminApi';
 import type { AdminUserRow } from './adminApi';
 import { dayStartIso, formatDateShort, formatWhen, formatWhenShort, nextDayStartIso } from './adminFormat';
@@ -18,10 +18,10 @@ import { useAdminList } from './useAdminList';
 import { useAdminTableFits } from './useAdminMode';
 import { useAdminQuery } from './useAdminQuery';
 import type { QuerySchema } from './useAdminQuery';
-import { AppLink } from '@overcord/frontend-shared/ui/app-link';
+import { AppLink } from '@/shared/ui/app-link';
 import { AdminStackedSkeleton, AdminTableSkeleton } from './AdminSkeletons';
 import { AdminPageTitle } from './AdminSection';
-import { useLanguage } from '@overcord/frontend-shared/i18n/useLanguage';
+import { useLanguage } from '@/i18n/useLanguage';
 
 type StatusFilter = 'all' | 'active' | 'suspended';
 type RoleFilter = 'all' | 'admin' | 'user';
@@ -82,7 +82,7 @@ export function UsersPage() {
   const origin = fromList(pathname, search);
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-5 @[760px]:gap-6">
       <AdminPageTitle title={t('nav.users')} description={t('pages.users')} />
       <AdminListToolbar
         search={{ value: query, onChange: setQuery, placeholder: t('ui.searchUsers'), label: t('ui.searchUsers') }}
@@ -102,7 +102,7 @@ export function UsersPage() {
         summary={list.status === 'ready' && list.items.length > 0 ? `${list.items.length} ${t('ui.account', { count: list.items.length })}${list.hasMore ? t('ui.moreResults') : ''}` : undefined}
         onClear={active ? clear : undefined}
       />
-      <ListChrome list={list} empty={{ illustration: 'people', title: t('emptyList.users.title'), description: t('emptyList.users.text') }} onClearFilters={active ? clear : undefined} skeleton={tableFits ? <AdminTableSkeleton columns={6} identity /> : <AdminStackedSkeleton />}>
+      <ListChrome list={list} empty={{ title: t('emptyList.users.title'), description: t('emptyList.users.text') }} onClearFilters={active ? clear : undefined} skeleton={tableFits ? <AdminTableSkeleton columns={6} identity /> : <AdminStackedSkeleton />}>
         {tableFits ? (
           <AdminTable caption={t('ui.accounts')}>
             <thead>
@@ -126,7 +126,7 @@ export function UsersPage() {
         ) : (
           <AdminStackedList>
             {list.items.map((u) => (
-              <li key={u.id} className="flex flex-col gap-2 p-3">
+              <li key={u.id} className="flex flex-col gap-2">
                 <div className="flex items-center gap-2">
                   <div className="min-w-0 flex-1"><UserIdentity user={u} from={origin} /></div>
                   <RowActions user={u} />

@@ -4,7 +4,7 @@ import { CloseButton } from '@/shared/ui/primitives/close-button';
 import { Button } from '@/shared/ui/primitives/button';
 import { EmptyState } from '@/shared/ui/empty-state';
 import { Avatar } from '@/shared/Avatar';
-import { ServerIcon } from '@overcord/frontend-shared/ui/ServerIcon';
+import { ServerIcon } from '@/shared/ui/ServerIcon';
 import { LoadMoreFooter } from '@/features/friends/LoadMoreFooter';
 import { useCursorList } from '@/shared/hooks/useCursorList';
 import { useFriends } from '@/features/friends/FriendsContext';

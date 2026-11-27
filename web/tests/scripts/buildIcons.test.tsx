@@ -10,7 +10,7 @@ function drawnPaths(markup: string): string[] {
 }
 
 describe('buildIcons', () => {
-  it('has generated every imported icon and nothing else (run `npm run icons`)', () => {
+  it('has generated every imported icon and nothing else (run `bun run icons`)', () => {
     expect(fs.readFileSync(ICON_MODULE, 'utf8')).toBe(renderIconModule(importedIconNames()));
   });
 

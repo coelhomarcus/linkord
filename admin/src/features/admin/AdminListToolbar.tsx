@@ -1,17 +1,17 @@
-import { CaretDownIcon, MagnifyingGlassIcon } from '@overcord/frontend-shared/ui/icons';
+import { CaretDownIcon, MagnifyingGlassIcon } from '@/shared/ui/icons';
 import { useId, useState } from 'react';
 import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { Button } from '@overcord/frontend-shared/ui/primitives/button';
-import { DateRangePicker, type DateRange } from '@overcord/frontend-shared/ui/primitives/date-picker';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@overcord/frontend-shared/ui/primitives/select';
-import { Skeleton } from '@overcord/frontend-shared/ui/primitives/skeleton';
-import { todayKey } from '@overcord/frontend-shared/lib/calendarDay';
-import { cn } from '@overcord/frontend-shared/lib/utils';
+import { Button } from '@/shared/ui/primitives/button';
+import { DateRangePicker, type DateRange } from '@/shared/ui/primitives/date-picker';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/primitives/select';
+import { Skeleton } from '@/shared/ui/primitives/skeleton';
+import { todayKey } from '@/shared/lib/calendarDay';
+import { cn } from '@/shared/lib/utils';
 
-const FIELD = 'h-10 rounded-lg border border-border bg-fill-subtle px-3 text-label text-text-primary focus-ring';
-const FIELD_LABEL = 'flex min-w-0 flex-col gap-1.5 text-caption font-medium text-text-muted';
+const FIELD = 'h-10 rounded-lg border border-border-field bg-bg-textarea px-3 text-label text-text-primary focus-ring';
+const FIELD_LABEL = 'flex min-w-0 flex-col gap-1.5 text-caption font-semibold text-text-muted';
 
 export function AdminSelectField<T extends string>({ label, value, onChange, options }: {
   label: string;
@@ -80,9 +80,9 @@ export function AdminListToolbar({ search, filters, advanced, advancedActive, su
 
   return (
     <div className="flex flex-col gap-3">
-      <div className="flex flex-wrap items-end gap-3">
+      <div className="flex min-w-0 flex-wrap items-end gap-x-3 gap-y-3">
         {search && (
-          <div className="flex h-10 min-w-0 basis-full items-center gap-2 rounded-lg border border-border bg-fill-subtle px-3 focus-within:border-border-accent @[720px]:flex-[1_1_14rem]">
+          <div className="flex h-10 min-w-0 basis-full items-center gap-2 rounded-lg border border-border-field bg-bg-textarea px-3 focus-within:border-border-accent @[720px]:flex-[1_1_14rem]">
             <MagnifyingGlassIcon size={20} aria-hidden className="flex-none text-text-muted" />
             <input
               value={search.value}
@@ -95,15 +95,15 @@ export function AdminListToolbar({ search, filters, advanced, advancedActive, su
         )}
         {filters}
         {advanced && (
-          <Button type="button" variant="secondary" className="h-10" aria-expanded={open} aria-controls={panelId} onClick={() => setAdvancedOpen((v) => !v)}>
+          <Button type="button" variant="secondary" className="h-10" aria-expanded={open} aria-controls={open ? panelId : undefined} onClick={() => setAdvancedOpen((v) => !v)}>
             {t('ui.moreFilters')}
             <CaretDownIcon size={16} aria-hidden className={cn('transition-transform', open && 'rotate-180')} />
           </Button>
         )}
       </div>
-      {advanced && open && <div id={panelId} className="flex flex-wrap items-end gap-3">{advanced}</div>}
+      {advanced && open && <div id={panelId} className="flex min-w-0 flex-wrap items-end gap-x-3 gap-y-3">{advanced}</div>}
       {(summary || onClear || loading) && (
-        <div className="flex flex-wrap items-center gap-3 text-caption text-text-muted">
+        <div className="flex min-h-6 flex-wrap items-center justify-between gap-2 text-caption text-text-muted">
           {summary
             ? <p aria-live="polite">{summary}</p>
             : loading && <span className="flex h-[1lh] items-center"><Skeleton shape="text" className="h-2.5 w-20" /></span>}

@@ -7,7 +7,7 @@
     "no-restricted-imports": ["error", {
       "patterns": [{
         "group": ["@fluentui/*", "@fluentui/*/**"],
-        "message": "Import icons from '@/shared/ui/icons' and run `npm run icons`: the package is SVG files the build reads, not code to bundle."
+        "message": "Import icons from '@/shared/ui/icons' and run `bun run icons` from the repo root. The package contains SVG files for the generator."
       }]
     }]
   }

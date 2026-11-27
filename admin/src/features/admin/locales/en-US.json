@@ -1,5 +1,6 @@
 {
   "nav": {
+    "overview": "Overview",
     "management": "Management",
     "users": "Users",
     "moderation": "Moderation",
@@ -36,13 +37,32 @@
     "filteredText": "Adjust or clear the filters to see everything."
   },
   "layout": {
+    "navigation": "Admin navigation",
+    "openNavigation": "Open navigation",
     "title": "Administration",
     "accessLostTitle": "You no longer have access to administration",
-    "sessionEndedTitle": "Your session ended",
-    "backToAdmin": "Back to administration"
+    "sessionEndedTitle": "Your session ended"
+  },
+  "overview": {
+    "totalAccounts": "Total accounts",
+    "newAccounts_one": "{{formatted}} new in the last hour",
+    "newAccounts_other": "{{formatted}} new in the last hour",
+    "ofAccounts": "of {{total}} accounts",
+    "connectionLimit": "Limit of {{max}} connections",
+    "usedStorage": "Storage used",
+    "storageLimit": "{{percent}} of {{max}}",
+    "recentActivity": "Recent activity",
+    "viewAudit": "View audit log",
+    "openReports": "Open reports",
+    "viewQueue": "View queue",
+    "noOpenReports": "No open reports.",
+    "viewSystem": "View system",
+    "metricsUnavailable": "Could not load instance metrics.",
+    "activityUnavailable": "Could not load all recent activity.",
+    "stale": "Some data could not be refreshed and may be out of date."
   },
   "site": {
-    "signInSubtitle": "Sign in with your Overcord administrator account.",
+    "signInSubtitle": "Sign in with your Overcord administrator account. You’ll need a code sent by email.",
     "signOut": "Sign out",
     "signOutFailed": "Could not end the session. Try again."
   },
@@ -158,6 +178,11 @@
   "dialog": {
     "reasonLabel": "Reason (recorded in the audit)",
     "confirmPrompt": "To confirm, type",
+    "currentPassword": "Current password",
+    "verificationCode": "Verification code",
+    "codeSent": "We sent a code to {{email}}.",
+    "sendCode": "Send code",
+    "newCode": "Request a new code",
     "cancel": "Cancel",
     "wait": "Please wait…"
   },
@@ -254,7 +279,7 @@
     "backToList": "Back to list",
     "notFound": "Account not found.",
     "loadFailed": "Could not load the account.",
-    "backUsers": "← Users",
+    "backUsers": "Users",
     "accountSections": "Account sections",
     "overview": "Overview",
     "moderation": "Moderation",
@@ -344,7 +369,7 @@
     "serverDeleted": "Server deleted.",
     "serverNotFound": "Server not found.",
     "serverLoadFailed": "Could not load the server.",
-    "backServers": "← Servers",
+    "backServers": "Servers",
     "serverSections": "Server sections",
     "server": "Server",
     "noServerOwner": "none (server without an owner)",
@@ -373,7 +398,7 @@
     "noWebhookHistory": "No actions recorded for this webhook",
     "webhookNotFound": "Webhook not found.",
     "webhookLoadFailed": "Could not load the webhook.",
-    "backWebhooks": "← Webhooks",
+    "backWebhooks": "Webhooks",
     "webhookSections": "Webhook sections",
     "webhook": "Webhook",
     "postsTo": "Posts to",
@@ -397,7 +422,7 @@
     "closedSuffix": "The report is closed.",
     "notFound": "Report not found.",
     "loadFailed": "Could not load the report.",
-    "back": "← Reports",
+    "back": "Reports",
     "evidence": "Evidence",
     "evidenceDescription": "The text as it was when the report was sent. It is not the current conversation.",
     "truncated": "The text was truncated when saved; the complete original is not available here.",

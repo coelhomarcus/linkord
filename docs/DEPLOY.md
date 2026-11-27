@@ -33,7 +33,7 @@ Start with [`.env.example`](../.env.example) and set the values for your product
 
 For optional settings, copy the entries you need from [`.env.optional.example`](../.env.optional.example) and uncomment them. Configure [Resend](INTEGRATIONS.md#resend) for password recovery and two-step login, and [Web Push](INTEGRATIONS.md#web-push) for browser push notifications.
 
-After the first start, make yourself an administrator by running `bun --no-env-file server/dist/scripts/adminRole.js grant <username>` inside the container or `bun run admin:grant <username>` from a checkout.
+After the first start, follow [administrator provisioning](#administration-site) to set up the first account.
 
 ## The image on its own
 
@@ -57,7 +57,11 @@ When migrating an older bundled installation, keep its PostgreSQL data and the u
 
 With `ADMIN_URL` set, the same process answers that host with the administration site's build (`admin/dist`) and its own Content-Security-Policy. On that host it reaches only `/api/admin/*`, `/api/csp-reports`, `/uploads/` (profile and server images) and the health checks. Everything else answers `404`, including the public API, `/ws` and `/sw.js`. The public host answers `404` for `/admin`, its subpaths and `/api/admin/*`.
 
-`ADMIN_URL` must be a different origin from `APP_URL` and use HTTPS (plain HTTP only on loopback). The admin session lasts up to 12 hours, uses the account's existing two-step setting and is revocable from its session list. Chat and voice moderation still run in the main app.
+`ADMIN_URL` must be a different origin from `APP_URL` and use HTTPS (plain HTTP only on loopback). Administrator sign-in requires a password and an emailed code every time. The panel session lasts up to 12 hours and can be ended from the account's session list. Instance-wide administration happens on the panel. Chat and voice moderation in the main app uses the permissions and role hierarchy of the affected server.
+
+To provision the first administrator, configure [transactional email](INTEGRATIONS.md#resend), register the account in the main app, and turn on two-step verification under **Settings → Security**. Run `bun --no-env-file server/dist/scripts/adminRole.js grant <username>` inside the container or `bun run admin:grant <username>` from a checkout. Granting or removing administrator access in the panel requires an audit reason, the acting administrator's current password and a fresh emailed code for that change.
+
+Existing administrators can enroll from the same Settings page. The release ends access through panel sessions issued by earlier versions, so sign in again. Turning off two-step verification ends open panel sessions and blocks panel sign-in until it is enabled again. Changing an administrator's email requires a code at the current address. For a legacy account without an address, provision another administrator first, then revoke the legacy account's role so it can add its email and enroll before you grant access again.
 
 To check, the admin domain's `/api/admin/auth/me` answers `401` before login, the public domain answers `404` for `/admin` and `/api/admin/users`, and an active admin can sign in and out.
 

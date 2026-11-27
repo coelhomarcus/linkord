@@ -1,8 +1,8 @@
-import { CaretDownIcon, CaretRightIcon } from '@overcord/frontend-shared/ui/icons';
+import { CaretDownIcon, CaretRightIcon } from '@/shared/ui/icons';
 import { useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { useUrlSearch } from '@overcord/frontend-shared/hooks/useUrlSearch';
+import { useUrlSearch } from '@/shared/hooks/useUrlSearch';
 import { fetchAudit } from './adminApi';
 import type { AuditRow } from './adminApi';
 import { ACTION_LABELS, actionLabel, dayStartIso, formatWhenShort, nextDayStartIso, reportTargetLabel } from './adminFormat';
@@ -14,10 +14,10 @@ import { useAdminList } from './useAdminList';
 import { useAdminTableFits } from './useAdminMode';
 import { useAdminQuery } from './useAdminQuery';
 import type { QuerySchema } from './useAdminQuery';
-import { AppLink } from '@overcord/frontend-shared/ui/app-link';
+import { AppLink } from '@/shared/ui/app-link';
 import { AdminStackedSkeleton, AdminTableSkeleton } from './AdminSkeletons';
 import { AdminPageTitle } from './AdminSection';
-import { useLanguage } from '@overcord/frontend-shared/i18n/useLanguage';
+import { useLanguage } from '@/i18n/useLanguage';
 
 // group and bot stay filterable: records from before servers still carry them
 const TARGET_TYPES = ['all', 'user', 'server', 'webhook', 'group', 'bot', 'message', 'report', 'system'] as const;
@@ -116,7 +116,7 @@ function CompactRow({ row }: { row: AuditRow }) {
   const [open, setOpen] = useState(false);
   const detailsId = `audit-${row.id}`;
   return (
-    <li className="flex flex-col gap-2 p-3 text-label text-text-secondary">
+    <li className="flex flex-col gap-2 text-label text-text-secondary">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <span className="font-medium text-text-primary">{actionLabel(row.action, language)}</span>
         <Result row={row} />
@@ -155,7 +155,7 @@ export function AuditPage() {
   const actionOptions = [{ value: '', label: t('ui.allActions') }, ...(action && !ACTION_LABELS[action] ? [{ value: action, label: `${action} (${t('audit.unknownCode')})` }] : []), ...Object.keys(ACTION_LABELS).sort((a, b) => actionLabel(a, language).localeCompare(actionLabel(b, language), undefined, { sensitivity: 'base' })).map((value) => ({ value, label: actionLabel(value, language) }))];
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-5 @[760px]:gap-6">
       <AdminPageTitle title={t('nav.audit')} description={t('pages.audit')} />
       <AdminListToolbar
         filters={(
@@ -178,7 +178,7 @@ export function AuditPage() {
         summary={list.status === 'ready' && list.items.length > 0 ? `${list.items.length} ${t('ui.record', { count: list.items.length })}${list.hasMore ? t('ui.moreResults') : ''}` : undefined}
         onClear={active ? clear : undefined}
       />
-      <ListChrome list={list} empty={{ illustration: 'document', title: t('emptyList.audit.title'), description: t('emptyList.audit.text') }} onClearFilters={active ? clear : undefined} skeleton={tableFits ? <AdminTableSkeleton columns={5} /> : <AdminStackedSkeleton />}>
+      <ListChrome list={list} empty={{ title: t('emptyList.audit.title'), description: t('emptyList.audit.text') }} onClearFilters={active ? clear : undefined} skeleton={tableFits ? <AdminTableSkeleton columns={5} /> : <AdminStackedSkeleton />}>
         {tableFits ? (
           <AdminTable caption={t('ui.auditRecords')} className="min-w-[560px] table-fixed">
             <thead>

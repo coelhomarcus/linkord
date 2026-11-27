@@ -94,7 +94,7 @@ describe('admin backup download', () => {
 
   it('needs a reason, an admin and the admin origin to issue a link', async () => {
     const a = await admin();
-    const user = await makeUser('bkuser');
+    const user = await makeUser('bkuser', 'user', true);
     assert.equal((await request('POST', '/api/admin/backup/download', a.token, {})).statusCode, 400);
     assert.equal((await request('POST', '/api/admin/backup/download', await makeAdminSession(user.id), { reason: 'curious' })).statusCode, 403);
     const foreign = await app.inject({

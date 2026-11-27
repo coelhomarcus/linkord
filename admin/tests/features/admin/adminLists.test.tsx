@@ -76,7 +76,7 @@ describe('back from a detail', () => {
     app('/admin/users?status=suspended&q=ana');
     await u.click(await screen.findByRole('link', { name: /Ana.*@ana/ }));
     expect(await screen.findByText('ana@example.com')).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: '← Usuários' })).toHaveAttribute('data-to', '/admin/users?status=suspended&q=ana');
+    expect(screen.getByRole('link', { name: 'Usuários' })).toHaveAttribute('data-to', '/admin/users?status=suspended&q=ana');
   });
 
   it('a direct access falls back to the plain list', async () => {
@@ -85,7 +85,7 @@ describe('back from a detail', () => {
         <Routes><Route path="/admin/users/:id" element={<UserDetailPage viewerId="admin-1" />} /></Routes>
       </MemoryRouter>,
     );
-    expect(await screen.findByRole('link', { name: '← Usuários' })).toHaveAttribute('data-to', '/admin/users');
+    expect(await screen.findByRole('link', { name: 'Usuários' })).toHaveAttribute('data-to', '/admin/users');
   });
 });
 

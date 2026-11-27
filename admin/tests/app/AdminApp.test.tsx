@@ -1,4 +1,5 @@
-import { act, render, screen, waitFor } from '@testing-library/react';
+import { act, render, screen, waitFor, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { AdminApp } from '@/app/AdminApp';
@@ -6,7 +7,7 @@ import * as adminApi from '@/features/admin/adminApi';
 import { reportAdminAccessLost, reportAdminSessionEnded } from '@/features/admin/adminAccess';
 import { fetchAdminSession } from '@/features/admin/adminSessionApi';
 import { useAdminLayout } from '@/features/admin/useAdminLayout';
-import { ApiError } from '@overcord/frontend-shared/api/transport';
+import { ApiError } from '@/shared/api/transport';
 
 vi.mock('@/features/admin/adminApi');
 vi.mock('@/features/admin/adminSessionApi');
@@ -23,7 +24,20 @@ function open(path: string) {
 beforeEach(() => {
   vi.resetAllMocks();
   session.mockResolvedValue({ user: { id: 'admin-1', username: 'ana', locale: 'pt-BR' } });
-  layout.mockReturnValue({ mode: 'wide', measured: true });
+  layout.mockReturnValue('wide');
+  api.fetchSystem.mockResolvedValue({
+    startedAt: '2026-01-01T00:00:00.000Z',
+    storage: { usedBytes: 512, maxBytes: 1024, files: 1 },
+    connections: { onlineAccounts: 2, live: 3, max: 100, perAccountMax: 4, perIpMax: 20 },
+    accounts: { total: 23, suspended: 1, activeAdmins: 2, newLastHour: 1, newPerHourCap: 0 },
+    livekit: { configured: true },
+    outbox: { pending: 1, failed: 0 },
+    notifications: { unread: 0 },
+    retention: { targets: [], last: null },
+    orphanSweep: { dryRunByDefault: true, last: null },
+  });
+  api.fetchAudit.mockResolvedValue({ items: [], nextCursor: null });
+  api.fetchAdminReports.mockResolvedValue({ items: [], nextCursor: null });
   api.fetchAdminUsers.mockResolvedValue({ items: [], nextCursor: null });
   api.fetchAdminUser.mockReturnValue(new Promise(() => {}));
 });
@@ -36,15 +50,31 @@ describe('admin app', () => {
     expect(api.fetchAdminUsers).not.toHaveBeenCalled();
   });
 
-  it('shows the section index at the compact entry', async () => {
-    layout.mockReturnValue({ mode: 'compact', measured: true });
+  it('keeps the overview on compact screens and opens its navigation on demand', async () => {
+    layout.mockReturnValue('compact');
     open('/admin');
-    expect(await screen.findByRole('heading', { name: 'Administração' })).toBeInTheDocument();
-    expect(api.fetchAdminUsers).not.toHaveBeenCalled();
+    expect(await screen.findByRole('heading', { name: 'Visão geral' })).toBeInTheDocument();
+    expect(await screen.findByRole('link', { name: /Total de contas 23/ })).toHaveAttribute('href', '/admin/users');
+    const user = userEvent.setup();
+    await user.click(screen.getByRole('button', { name: 'Abrir navegação' }));
+    const dialog = screen.getByRole('dialog', { name: 'Administração' });
+    await user.click(within(dialog).getByRole('link', { name: 'Usuários' }));
+    expect(await screen.findByRole('heading', { name: 'Usuários' })).toBeInTheDocument();
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  });
+
+  it('keeps separate overview panels usable when instance metrics fail, and retries them', async () => {
+    api.fetchSystem.mockRejectedValueOnce(new Error('Unavailable'));
+    open('/admin');
+    expect(await screen.findByText('Não foi possível carregar as métricas da instância.')).toBeInTheDocument();
+    expect(await screen.findByText('Nenhuma denúncia aberta.')).toBeInTheDocument();
+    await userEvent.setup().click(screen.getByRole('button', { name: 'Atualizar' }));
+    expect(await screen.findByRole('link', { name: /Total de contas 23/ })).toBeInTheDocument();
+    expect(api.fetchSystem).toHaveBeenCalledTimes(2);
   });
 
   it('keeps a direct link to a user detail in compact mode', async () => {
-    layout.mockReturnValue({ mode: 'compact', measured: true });
+    layout.mockReturnValue('compact');
     open('/admin/users/u1');
     await screen.findByRole('button', { name: 'Sair' });
     await waitFor(() => expect(api.fetchAdminUser).toHaveBeenCalledWith('u1'));

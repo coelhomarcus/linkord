@@ -1,9 +1,9 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Button } from '@overcord/frontend-shared/ui/primitives/button';
-import { formatFileSize } from '@overcord/frontend-shared/lib/formatBytes';
-import { useLanguage } from '@overcord/frontend-shared/i18n/useLanguage';
-import { SettingsNotice } from '@overcord/frontend-shared/ui/settings-layout';
+import { Button } from '@/shared/ui/primitives/button';
+import { formatFileSize } from '@/shared/lib/formatBytes';
+import { useLanguage } from '@/i18n/useLanguage';
+import { AdminNotice } from './AdminNotice';
 import { fetchBackupInfo, requestBackupDownload, type AuditRow } from './adminApi';
 import { AdminActionRow, AdminFieldRow, AdminFields, AdminPageTitle, AdminSection } from './AdminSection';
 import { AdminSectionsSkeleton } from './AdminSkeletons';
@@ -73,13 +73,13 @@ export function BackupPage() {
   return (
     <div className="flex flex-col gap-6">
       {title}
-      {refreshFailed && <SettingsNotice tone="warning">{t('chrome.actionDoneStale')}</SettingsNotice>}
+      {refreshFailed && <AdminNotice tone="warning">{t('chrome.actionDoneStale')}</AdminNotice>}
 
-      <div className="flex flex-col">
+      <div className="grid gap-4 @[840px]:grid-cols-2">
         <AdminSection id="download" title={t('backup.downloadTitle')} description={t('backup.downloadDescription')}>
-          {!info.available && <SettingsNotice tone="danger">{t('backup.unavailable')}</SettingsNotice>}
-          {info.running && <SettingsNotice tone="warning">{t('backup.running', { name: info.running.by, when: formatWhen(info.running.startedAt, language) })}</SettingsNotice>}
-          {started && <SettingsNotice>{t('backup.started')}</SettingsNotice>}
+          {!info.available && <AdminNotice tone="danger">{t('backup.unavailable')}</AdminNotice>}
+          {info.running && <AdminNotice tone="warning">{t('backup.running', { name: info.running.by, when: formatWhen(info.running.startedAt, language) })}</AdminNotice>}
+          {started && <AdminNotice>{t('backup.started')}</AdminNotice>}
           <AdminFields>
             <AdminFieldRow label={t('backup.estimateDatabase')}>{t('backup.estimateDatabaseValue', { size: formatFileSize(estimate.databaseBytes) })}</AdminFieldRow>
             <AdminFieldRow label={t('backup.estimateFiles')}>{t('backup.estimateFilesValue', { count: estimate.files, size: formatFileSize(estimate.uploadsBytes) })}</AdminFieldRow>
@@ -97,7 +97,7 @@ export function BackupPage() {
             <li><code className="font-mono text-label text-text-primary">manifest.json</code>: {t('backup.contentsManifest')}</li>
           </ul>
           <p className="text-label text-text-muted">{t('backup.contentsMissing')}</p>
-          <SettingsNotice tone="warning">{t('backup.sensitive')}</SettingsNotice>
+          <AdminNotice tone="warning">{t('backup.sensitive')}</AdminNotice>
         </AdminSection>
 
         <AdminSection id="restore" title={t('backup.restoreTitle')} description={t('backup.restoreDescription')}>

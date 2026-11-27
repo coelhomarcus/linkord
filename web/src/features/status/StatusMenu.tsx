@@ -103,7 +103,6 @@ export function StatusMenu({ trigger, onOpenProfile, side = 'top', onError }: {
               // the quick card leaves the bio to the full profile, one click away
               bio: '',
               profileLinks: me.profileLinks,
-              role: me.role,
             }}
             status={shown}
             customStatus={custom}

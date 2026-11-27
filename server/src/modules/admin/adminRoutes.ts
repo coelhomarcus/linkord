@@ -1,8 +1,11 @@
+import crypto from 'node:crypto';
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import { sendJson, sendError, jsonBody } from '../../http/respond.js';
 import type { ErrorCode } from '../../http/errors.js';
 import * as floodControl from '../../realtime/floodControl.js';
-import { requireAdmin } from './adminAuth.js';
+import { requireAdmin, requireAdminSession } from './adminAuth.js';
+import { confirmPassword, sendCurrentEmailCode, verifyCurrentEmailCode } from '../auth/accountConfirmation.js';
+import { findById } from '../users/users.js';
 import { normalizeReason } from './adminPolicy.js';
 import { listAudit } from './auditLog.js';
 import {
@@ -15,7 +18,6 @@ import {
 } from './adminServers.js';
 import { getAdminWebhook, listAdminWebhooks, revokeWebhook, type WebhookActionResult } from './adminWebhooks.js';
 import { claimReport, getAdminReport, listAdminReports, resolveReport, type ReportActionResult } from './adminReports.js';
-import type { AuditActor } from './auditLog.js';
 import { getSystemInfo } from './adminSystem.js';
 import { SweepInProgressError, sweepOrphans } from '../attachments/orphanSweeper.js';
 import { getBackupInfo, handleBackupDownload, issueDownloadToken, pgDumpAvailable } from '../backups/backupDownload.js';
@@ -64,9 +66,10 @@ function respond(reply: FastifyReply, result: UserActionResult | ServerActionRes
 
 /** Auth + the shared preamble of every mutating action: an active admin RIGHT
  * NOW, inside the destructive-action rate limit, with a written reason. */
-async function mutating(request: FastifyRequest, reply: FastifyReply): Promise<{ actor: AuditActor; reason: string; body: Record<string, unknown> } | null> {
-  const actor = await requireAdmin(request, reply);
-  if (!actor) return null;
+async function mutating(request: FastifyRequest, reply: FastifyReply) {
+  const session = await requireAdminSession(request, reply);
+  if (!session) return null;
+  const actor = { id: session.userId, username: session.username };
   if (!floodControl.allow(`admin-action:${actor.id}`, { windowMs: 60_000, max: 30 })) {
     sendError(reply, 429, 'rate_limited', 'Muitas ações seguidas. Espere um pouco.');
     return null;
@@ -77,7 +80,7 @@ async function mutating(request: FastifyRequest, reply: FastifyReply): Promise<{
     sendError(reply, 400, 'reason_required', 'Informe o motivo (3 a 500 caracteres).');
     return null;
   }
-  return { actor, reason, body };
+  return { actor, reason, body, session };
 }
 
 async function reading<T>(request: FastifyRequest, reply: FastifyReply, run: () => Promise<T | 'invalid_cursor' | null>): Promise<void> {
@@ -107,14 +110,26 @@ export function registerAdminRoutes(fastify: FastifyInstance): void {
     const m = await mutating(request, reply);
     if (m) respond(reply, await revokeUserSessions({ actor: m.actor, reason: m.reason, requestId: request.id }, request.params.id));
   });
-  fastify.post('/api/admin/users/:id/grant-admin', async (request: FastifyRequest<{ Params: IdParams }>, reply) => {
-    const m = await mutating(request, reply);
-    if (m) respond(reply, await setAdminRole({ actor: m.actor, reason: m.reason, requestId: request.id }, request.params.id, 'grant'));
-  });
-  fastify.post('/api/admin/users/:id/revoke-admin', async (request: FastifyRequest<{ Params: IdParams }>, reply) => {
-    const m = await mutating(request, reply);
-    if (m) respond(reply, await setAdminRole({ actor: m.actor, reason: m.reason, requestId: request.id }, request.params.id, 'revoke'));
-  });
+  for (const action of ['grant', 'revoke'] as const) {
+    const path = `/api/admin/users/:id/${action}-admin`;
+    const codeScope = (tokenHash: string, id: string, reason: string) =>
+      crypto.createHash('sha256').update(JSON.stringify([tokenHash, action, id, reason])).digest('hex');
+
+    fastify.post(`${path}/request`, async (request: FastifyRequest<{ Params: IdParams }>, reply) => {
+      const m = await mutating(request, reply);
+      if (!m || !await confirmPassword(reply, m.session, String(m.body.password ?? ''))) return;
+      const user = await findById(m.actor.id);
+      if (user?.role !== 'admin' || user.status !== 'active' || !user.twoFactorEmail) {
+        return sendError(reply, 403, 'forbidden', 'Você não tem mais permissão de administrador.');
+      }
+      return sendCurrentEmailCode(reply, user, 'admin_role_change', codeScope(m.session.tokenHash, request.params.id, m.reason));
+    });
+    fastify.post(path, async (request: FastifyRequest<{ Params: IdParams }>, reply) => {
+      const m = await mutating(request, reply);
+      if (!m || !await verifyCurrentEmailCode(request, reply, m.session, 'admin_role_change', codeScope(m.session.tokenHash, request.params.id, m.reason))) return;
+      respond(reply, await setAdminRole({ actor: m.actor, reason: m.reason, requestId: request.id }, request.params.id, action));
+    });
+  }
   for (const [method, action] of [['post', 'grant'], ['delete', 'revoke']] as const) {
     fastify[method]('/api/admin/users/:id/badges/:badge', async (request: FastifyRequest<{ Params: BadgeParams }>, reply) => {
       const { badge } = request.params;

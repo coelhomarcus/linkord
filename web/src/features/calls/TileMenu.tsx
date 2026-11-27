@@ -156,7 +156,6 @@ export function TileMenu({ onOpenProfile }: TileMenuProps) {
   const canKick = canKickFromTile({
     isMe,
     conversation: conversations.find((c) => c.id === activeCallConversationId),
-    meIsAdmin: state.me.role === 'admin',
     targetUserId: participantId ? roster.get(participantId)?.userId : undefined,
   });
   const pipSupported = typeof document !== 'undefined' && document.pictureInPictureEnabled
