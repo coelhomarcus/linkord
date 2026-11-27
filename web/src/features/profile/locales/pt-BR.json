@@ -17,8 +17,7 @@
     "openProfile": "Abrir perfil",
     "displayName": "Nome de exibição",
     "openLink": "Abrir {{name}}",
-    "openAccountLink": "Abrir {{name}} em {{service}}",
-    "admin": "Admin"
+    "openAccountLink": "Abrir {{name}} em {{service}}"
   },
   "modal": {
     "loadingTitle": "Carregando perfil",

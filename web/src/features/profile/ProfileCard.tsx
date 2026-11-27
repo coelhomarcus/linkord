@@ -1,4 +1,4 @@
-import { ArrowSquareOutIcon, AtIcon, CameraIcon, CircleNotchIcon, PencilSimpleIcon, SealCheckIcon, TrashIcon, UploadSimpleIcon } from '@/shared/ui/icons';
+import { ArrowSquareOutIcon, AtIcon, CameraIcon, CircleNotchIcon, PencilSimpleIcon, TrashIcon, UploadSimpleIcon } from '@/shared/ui/icons';
 import { useLayoutEffect, useRef } from 'react';
 import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -27,7 +27,6 @@ interface ProfileCardData {
   banner: string;
   bio: string;
   profileLinks: string[];
-  role: 'user' | 'admin';
 }
 
 interface ProfileCardProps {
@@ -247,11 +246,6 @@ export function ProfileCard({
               <AtIcon size={14} className="flex-none" />
               <span className="truncate">{user.username}</span>
             </p>
-            {user.role === 'admin' && (
-              <span className="flex flex-none items-center gap-1 rounded-sm bg-primary/15 px-1.5 py-0.5 text-caption font-medium text-accent-text">
-                <SealCheckIcon size={13} /> {t('card.admin')}
-              </span>
-            )}
             {badges}
           </div>
         </div>

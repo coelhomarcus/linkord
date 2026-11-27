@@ -193,16 +193,15 @@ test('an admin downloads a full backup of the instance as one ZIP', async ({ use
   expect(link.status()).toBe(403);
 });
 
-test('a badge an admin grants shows on the profile and opens with every badge', async ({ users }) => {
+test('an administrator profile shows granted badges without the role', async ({ users }) => {
   const admin = await users.create('admin');
-  const member = await users.create('member');
   const friend = await users.create('friend');
-  await befriend(member, friend);
+  await befriend(admin, friend);
   await enableTwoFactor(admin);
   grantAdmin(admin.username);
 
   const page = await admin.context.newPage();
-  await page.goto(`${ADMIN_URL}/admin/users/${member.id}?tab=badges`);
+  await page.goto(`${ADMIN_URL}/admin/users/${admin.id}?tab=badges`);
   await signInWithCode(page, admin);
   await page.getByRole('button', { name: 'Conceder', exact: true }).last().click();
   const dialog = page.getByRole('dialog', { name: 'Conceder insígnia' });
@@ -213,12 +212,13 @@ test('a badge an admin grants shows on the profile and opens with every badge', 
 
   const app = await friend.app();
   await app.page.goto('/friends');
-  await app.page.getByRole('button', { name: `Ver perfil de ${member.username}`, exact: true }).click();
-  const profile = app.page.getByRole('dialog', { name: `Perfil de ${member.username}` });
+  await app.page.getByRole('button', { name: `Ver perfil de ${admin.username}`, exact: true }).click();
+  const profile = app.page.getByRole('dialog', { name: `Perfil de ${admin.username}` });
   const badges = profile.getByRole('list', { name: 'Insígnias', exact: true });
   await expect(badges.getByRole('button')).toHaveCount(1);
-  await badges.getByRole('button', { name: 'Apoiador do Overcord', exact: true }).click();
-  const all = app.page.getByRole('dialog', { name: `Insígnias de ${member.username}` });
-  await expect(all.getByRole('heading', { name: 'Apoiador do Overcord' })).toBeVisible();
+  await expect(profile.getByText('Admin', { exact: true })).toHaveCount(0);
+  await badges.getByRole('button', { name: 'Apoiador', exact: true }).click();
+  const all = app.page.getByRole('dialog', { name: `Insígnias de ${admin.username}` });
+  await expect(all.getByRole('heading', { name: 'Apoiador' })).toBeVisible();
   await expect(all.getByText('Ajudou financeiramente a manter o Overcord no ar.')).toBeVisible();
 });

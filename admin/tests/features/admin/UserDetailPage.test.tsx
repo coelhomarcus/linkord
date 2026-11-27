@@ -113,11 +113,11 @@ describe('UserDetailPage', () => {
     mocked.grantBadge.mockResolvedValue({ ok: true });
     mocked.revokeBadge.mockResolvedValue({ ok: true });
     open(undefined, 'badges');
-    expect(await screen.findByText('Desenvolvedor do Overcord')).toBeInTheDocument();
+    expect(await screen.findByText('Desenvolvedor')).toBeInTheDocument();
     expect(screen.getByText(/por um administrador/)).toBeInTheDocument();
 
     await u.click(screen.getByRole('button', { name: 'Conceder' }));
-    expect(await screen.findByText(/@ana vai exibir a insígnia "Desenvolvedor do Overcord"/)).toBeInTheDocument();
+    expect(await screen.findByText(/@ana vai exibir a insígnia "Desenvolvedor"/)).toBeInTheDocument();
     await u.type(screen.getByLabelText(/Motivo/), 'contributed the call UI');
     await u.click(screen.getAllByRole('button', { name: 'Conceder' }).at(-1)!);
     await waitFor(() => expect(mocked.grantBadge).toHaveBeenCalledWith('u1', 'developer', 'contributed the call UI'));

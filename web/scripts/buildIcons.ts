@@ -158,7 +158,6 @@ export const FLUENT_ICONS: Record<string, string> = {
   PushPinSlashIcon: 'pin_off',
   ScreencastIcon: 'share_screen_start',
   ScrollIcon: 'document_bullet_list_clock',
-  SealCheckIcon: 'checkmark_starburst',
   ShieldCheckIcon: 'shield_checkmark',
   ShieldIcon: 'shield',
   SidebarSimpleIcon: 'panel_left',
