@@ -79,7 +79,6 @@ export const FLUENT_ICONS: Record<string, string> = {
   DeviceMobileIcon: 'phone',
   DotsSixVerticalIcon: 're_order_dots_vertical',
   DotsThreeIcon: 'more_horizontal',
-  DotsThreeVerticalIcon: 'more_vertical',
   DownloadSimpleIcon: 'arrow_download',
   EnvelopeIcon: 'mail',
   EnvelopeSimpleIcon: 'mail',
