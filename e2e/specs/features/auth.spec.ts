@@ -37,11 +37,16 @@ test.describe('auth', () => {
     await context.close();
   });
 
-  test('logging out ends the session', async ({ users }) => {
-    const alice = await users.create('alice');
+  test('logging out ends the session and keeps the remembered browser', async ({ users }) => {
+    const account = await users.create('alice');
+    const alice = await users.login(account.username, account.password);
+    const device = (await alice.context.cookies(BASE_URL)).find(({ name }) => name === 'overcord-device');
+    expect(device).toMatchObject({ httpOnly: true, sameSite: 'Lax' });
+    expect(device!.expires).toBeGreaterThan(Date.now() / 1000);
     expect((await alice.api.get('/api/auth/me')).status()).toBe(200);
     expect((await alice.api.post('/api/auth/logout', { data: {} })).ok()).toBe(true);
     expect((await alice.api.get('/api/auth/me')).status()).toBe(401);
+    expect(await alice.context.cookies(BASE_URL)).toContainEqual(device);
   });
 
   test('recovering a password with an emailed code signs out only that account', async ({ users, browser }) => {

@@ -17,7 +17,7 @@ test('administration uses its own origin and session', async ({ users, request }
   grantAdmin(admin.username);
   const signedIn = await users.login(admin.username, admin.password);
   expect((await signedIn.api.get('/api/admin/users')).status()).toBe(404);
-  const appCookie = (await signedIn.context.cookies(BASE_URL)).find((cookie) => cookie.httpOnly);
+  const appCookie = (await signedIn.context.cookies(BASE_URL)).find((cookie) => cookie.name === 'ss_session');
   expect(appCookie).toBeDefined();
   expect((await request.get(`${ADMIN_URL}/api/admin/users`, {
     headers: { cookie: `overcord_admin=${appCookie!.value}` },

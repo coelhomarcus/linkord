@@ -223,7 +223,7 @@ Playwright runs on Bun and uses the installed Google Chrome. Its CLI scripts use
 
 | Spec | What it checks |
 | --- | --- |
-| `features/auth` | Sign-up with and without the code, login, logout, password recovery by email, two-step login on and off, ending another session. |
+| `features/auth` | Sign-up with and without the code, login, logout with a remembered browser, password recovery by email, two-step login on and off, ending another session. |
 | `features/account-data` | A data export asked for with the password, built, emailed and downloaded; deleting the account and cancelling it by signing in. |
 | `features/friends` | Friend requests, including acceptance from the row menu. Messaging from the friends menu, blocking, and unblocking. |
 | `features/legacy-app-paths` | Permanent redirects for old `/app` links, including the friends view selected by a query and the settings section selected by a fragment. |
@@ -313,7 +313,7 @@ Each email code also has its own attempt limit. Verification counts the attempt 
 
 - **Limits:** 10 failures per account and per address in 15 minutes for logins, invite codes and reset codes; 10 code requests per address (recovery) or account (email change) in 15 minutes, and at most 5 code emails per account in 15 minutes; `REGISTRATIONS_PER_IP_PER_HOUR` sign-ups per address; 30 username checks per account per minute and 300 per day.
 - **Password recovery:** 10 wrong codes in 15 minutes block verification for the account for 15 minutes. If another window reaches the limit within 24 hours of the previous block ending, the duration doubles, up to 24 hours. A successful reset outside a block clears the history. Username and email share the account counter, and unknown identifiers follow the same escalation. The per-address limit uses a fixed window.
-- **The owner gets through:** a browser the account signed in from in the last 30 days (`known_logins`) can pass a blocked account counter with the right password or code. The active block still applies to other browsers.
+- **Remembered browsers** can pass a blocked account counter with the right password or code and have their own budget for recovery emails. The address limits still apply. Completing a login issues or renews a 30-day, HttpOnly device cookie that survives logout. `known_logins` stores its hash per account and site (app or admin). Existing browsers get the cookie the next time they complete a login. Signing in to a different account replaces that site's cookie. The IP and user-agent fingerprint is used only for [sign-in alerts](INTEGRATIONS.md#resend).
 - **Fail closed:** if the database cannot answer, the attempt is refused with `503 rate_limit_unavailable`.
 - **In memory on purpose:** socket flood control, link previews and game searches only cap short bursts, so losing their counts on a restart costs nothing.
 - **Per address** means IPv4 as is and IPv6 by its /64 prefix, since one IPv6 client holds the whole /64 and could take a fresh address for each request. An IPv4-mapped address (`::ffff:a.b.c.d`) counts as its IPv4. Every per-address key, here and in flood control, goes through `rateLimitSubject` (`http/clientInfo.ts`); logs and the session list keep the full address.

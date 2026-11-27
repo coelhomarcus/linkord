@@ -25,7 +25,7 @@ import { sanitizeDisplayName } from '../profile/sanitize.js';
 import type { User } from '../../db/schema.js';
 import { consumeLoginChallenge, findLoginChallenge, hasLiveAuthCode, verifyAuthCode } from './codes.js';
 import { isEmailDeliveryConfigured, sendEmailChangedEmail, sendPasswordChangedEmail } from './email.js';
-import { isKnownBrowser, noticeLogin, noticeRegistration } from './loginAlert.js';
+import { isKnownBrowser, KNOWN_LOGIN_SECONDS, noticeLogin, noticeRegistration, rememberBrowser } from './loginAlert.js';
 import { cancelScheduledDeletion, isPastDeletion, scheduleAccountDeletion } from './accountDeletion.js';
 import { clientIpOf, rateLimitSubjectOf, sessionOriginOf } from '../../http/clientInfo.js';
 import { recordAudit } from '../admin/auditLog.js';
@@ -85,11 +85,24 @@ function safeCompare(a: unknown, b: unknown): boolean {
   return crypto.timingSafeEqual(bufA, bufB);
 }
 
+function secureAuthCookie(request: FastifyRequest, scope: SessionScope): boolean {
+  return scope === 'admin' ? config.ADMIN_ORIGIN?.secure === true : isSecureRequest(request.raw);
+}
+
+function deviceCookieName(scope: SessionScope, secure: boolean): string {
+  const name = scope === 'admin' ? 'overcord-admin-device' : 'overcord-device';
+  return secure ? `__Host-${name}` : name;
+}
+
+function deviceCookieOf(request: FastifyRequest, scope: SessionScope): string | undefined {
+  return parseCookies(request.headers.cookie || '')[deviceCookieName(scope, secureAuthCookie(request, scope))];
+}
+
 function setSessionCookie(request: FastifyRequest, reply: FastifyReply, rawToken: string, scope: SessionScope = 'app'): void {
   const admin = scope === 'admin';
   const cookie = serializeCookie(admin ? adminCookieName() : config.SESSION_COOKIE, rawToken, {
     maxAgeSec: admin ? ADMIN_SESSION_SECONDS : config.SESSION_TTL_DAYS * 24 * 60 * 60,
-    secure: admin ? config.ADMIN_ORIGIN?.secure === true : isSecureRequest(request.raw),
+    secure: secureAuthCookie(request, scope),
   });
   reply.header('Set-Cookie', cookie);
 }
@@ -196,7 +209,7 @@ async function handleLogin(request: FastifyRequest, reply: FastifyReply, scope: 
   // Anyone can fill the account's counter from one address, so a blocked account still lets in the right
   // password from a browser it signed in from lately. Looked up before the password and for every name, so
   // neither the answer time nor the answer says whether the password or the account was right.
-  const knownBrowser = userBlockedSec ? await isKnownBrowser(user?.id ?? NO_USER_ID, sessionOriginOf(request)) : false;
+  const knownBrowser = userBlockedSec ? await isKnownBrowser(user?.id ?? NO_USER_ID, scope, deviceCookieOf(request, scope)) : false;
   // a nonexistent user still verifies against a fake hash, to spend the
   // same CPU time — and the response time doesn't reveal which usernames
   // exist. The error message is also IDENTICAL for both cases.
@@ -243,8 +256,16 @@ async function handleLogin(request: FastifyRequest, reply: FastifyReply, scope: 
 async function finishLogin(request: FastifyRequest, reply: FastifyReply, user: User, scope: SessionScope, twoFactor = false): Promise<void> {
   const origin = sessionOriginOf(request);
   const { rawToken } = await createSession(user.id, origin, scope);
-  noticeLogin(user, origin);
+  const device = await rememberBrowser(user.id, scope, deviceCookieOf(request, scope)).catch((err) => {
+    log.warn('could not remember the browser', { userId: user.id, scope, err });
+    return null;
+  });
   setSessionCookie(request, reply, rawToken, scope);
+  if (device) {
+    const secure = secureAuthCookie(request, scope);
+    reply.header('Set-Cookie', serializeCookie(deviceCookieName(scope, secure), device.token, { maxAgeSec: KNOWN_LOGIN_SECONDS, secure }));
+  }
+  noticeLogin(user, origin, device?.known ?? false);
   log.info('login', { userId: user.id, username: user.username, scope, twoFactor });
   sendJson(reply, 200, scope === 'admin' ? { user: adminIdentity(user) } : await signedIn(request, user));
 }
@@ -369,7 +390,7 @@ async function handleLogout(request: FastifyRequest, reply: FastifyReply, scope:
   const name = admin ? adminCookieName() : config.SESSION_COOKIE;
   const tokenHash = await destroySession(cookies[name], scope);
   if (tokenHash && !admin) dropSessionConnections([tokenHash]);
-  reply.header('Set-Cookie', clearCookie(name, { secure: admin ? config.ADMIN_ORIGIN?.secure === true : isSecureRequest(request.raw) }));
+  reply.header('Set-Cookie', clearCookie(name, { secure: secureAuthCookie(request, scope) }));
   reply.code(204).header('Cache-Control', 'no-store').send();
 }
 
@@ -458,7 +479,7 @@ async function handleRecoveryRequest(request: FastifyRequest, reply: FastifyRepl
   // the codes. A browser the account signed in from lately has a budget of its own, which strangers asking
   // for this account cannot spend. A refusal looks like success: a 429 would only exist for real accounts.
   if (user?.email) {
-    const known = await isKnownBrowser(user.id, sessionOriginOf(request));
+    const known = await isKnownBrowser(user.id, 'app', deviceCookieOf(request, 'app'));
     const send = await ratelimit.consume(`${known ? 'recovery-account-known' : 'recovery-account'}:${user.id}`, CODE_SEND_RULE);
     if (send.allowed) {
       try {
@@ -493,7 +514,7 @@ async function handleRecoveryReset(request: FastifyRequest, reply: FastifyReply)
   // Anyone who knows the username can fill the account's counter, so a browser the account signed in from
   // lately still gets to try its code; its guesses stay bounded by the address counter and the code's own tries.
   const accountBlocked = await ratelimit.checkBlocked(accountKey);
-  const accountBlockedHere = accountBlocked && !(await isKnownBrowser(user?.id ?? NO_USER_ID, sessionOriginOf(request)));
+  const accountBlockedHere = accountBlocked && !(await isKnownBrowser(user?.id ?? NO_USER_ID, 'app', deviceCookieOf(request, 'app')));
   if (accountBlockedHere) return rateLimitedReply(reply, accountBlocked);
 
   const result = user?.email ? await verifyAuthCode(user.id, 'password_reset', user.email, code) : null;

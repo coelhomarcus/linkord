@@ -53,6 +53,7 @@ Overcord is a self-hosted place to chat and call with friends. Talk in direct me
 
 **Account**
 - Two-step login by email, sign-in alerts, and a list of active sessions you can end.
+- A browser remembered at sign-in can still sign in or recover the account when other people have filled its account-wide attempt limit. [Brute-force limits](docs/DEVELOPMENT.md#brute-force-limits)
 - Username and password changes (the account's email hears about every password change or reset), account deletion, and a download of your data behind the password.
 - Themes, density, fonts, languages (Portuguese and English) and notification sounds, synced across your devices.
 - Custom empty-state illustrations use shades of the selected theme’s accent color.

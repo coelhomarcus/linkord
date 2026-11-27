@@ -105,9 +105,8 @@ export const sessions = pgTable('sessions', {
   uniqueIndex('sessions_id_key').on(t.id),
 ]);
 
-/** The browsers an account has signed in from lately, kept apart from `sessions` because logging out
- * deletes the session row and a plain re-login must not read as a new browser. `fingerprint` is the
- * sha256 of the address plus the user agent, so no raw address is kept here. */
+/** Recent sign-ins outlive logout. `fingerprint` is either a scoped device-cookie hash for account
+ * rate limits or an unprefixed address and user-agent hash for login alerts. */
 export const knownLogins = pgTable('known_logins', {
   userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
   fingerprint: text('fingerprint').notNull(),

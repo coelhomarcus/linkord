@@ -46,7 +46,7 @@ Transactional email: one `POST https://api.resend.com/emails` per message (`serv
 | Email | When |
 | --- | --- |
 | 6-digit code | Password recovery and email changes (also linking a first address to an older account): 30 minutes. Turning two-step login on: 30 minutes. A login's second step: 10 minutes. With two-step login on, a code to the *current* address also confirms deleting the account, turning two-step login or sign-in alerts off, changing the email and asking for a data export. Each code allows 5 tries and confirms only its own purpose. |
-| New sign-in alert | A password login (or second step) from a browser the account has not used in the last 30 days, naming the browser and system, the IP address and the time. On by default, switchable in Settings → Security; at most 5 per hour. |
+| New sign-in alert | A completed login from a browser the account has not used in the last 30 days, naming the browser and system, the IP address and the time. Familiar browsers are recognized by their device cookie or, for this alert, by the same IP address and browser family, system and device type. On by default, switchable in Settings → Security; at most 5 per hour. |
 | Email changed | To the old address, with the new one masked. The change also signs out every other session. |
 | Password changed | After a change in Settings → Security or a reset by recovery code, naming which of the two, the browser and system, the IP address and the time, and pointing to recovery if it was not the owner. |
 | Account deletion | When it is scheduled (with the date; signing in before then cancels it) and once it is done. |
