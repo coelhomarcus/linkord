@@ -23,7 +23,7 @@ import { consumeLoginChallenge, findLoginChallenge, hasLiveAuthCode, issueAuthCo
 import { isEmailDeliveryConfigured, sendAuthCodeEmail, sendEmailChangedEmail } from './email.js';
 import { isKnownBrowser, noticeLogin, noticeRegistration } from './loginAlert.js';
 import { cancelScheduledDeletion, isPastDeletion, scheduleAccountDeletion } from './accountDeletion.js';
-import { clientIpOf, sessionOriginOf } from '../../http/clientInfo.js';
+import { clientIpOf, rateLimitSubjectOf, sessionOriginOf } from '../../http/clientInfo.js';
 import { recordAudit } from '../admin/auditLog.js';
 import { requireAdminSession } from '../admin/adminAuth.js';
 import { adminCookieName, requireAdminOrigin } from '../admin/adminOrigin.js';
@@ -121,7 +121,7 @@ async function handleRegister(request: FastifyRequest, reply: FastifyReply): Pro
   // speed. Same IP-lockout scheme as login (see ratelimit.ts, stored in Postgres), but its own
   // key namespace so failed logins/registrations from one IP don't block
   // the other.
-  const ipKey = `reg-ip:${ipOfRequest(request)}`;
+  const ipKey = `reg-ip:${rateLimitSubjectOf(request)}`;
   const ipBlockedSec = await ratelimit.checkBlocked(ipKey);
   if (ipBlockedSec) {
     reply.header('Retry-After', String(ipBlockedSec));
@@ -142,7 +142,7 @@ async function handleRegister(request: FastifyRequest, reply: FastifyReply): Pro
   if (!config.REGISTRATION_CODE) return sendError(reply, 403, 'registration_closed', 'Registro fechado.');
   if (!safeCompare(code, config.REGISTRATION_CODE)) {
     await ratelimit.recordFailure(ipKey);
-    log.warn('registration with a wrong invite code', { ip: ipKey });
+    log.warn('registration with a wrong invite code', { ip: ipOfRequest(request) });
     return sendError(reply, 403, 'invalid_code', 'Código de convite inválido.');
   }
   await ratelimit.reset(ipKey);
@@ -159,7 +159,7 @@ async function handleRegister(request: FastifyRequest, reply: FastifyReply): Pro
     return sendError(reply, 400, 'password_mismatch', 'As senhas não coincidem.');
   }
 
-  const gate = await checkRegistrationAllowed(ipOfRequest(request));
+  const gate = await checkRegistrationAllowed(rateLimitSubjectOf(request));
   if (gate !== 'ok') log.warn('registration refused', { gate, ip: ipOfRequest(request) });
   if (gate === 'paused') {
     reply.header('Retry-After', '900');
@@ -196,7 +196,7 @@ async function handleRegister(request: FastifyRequest, reply: FastifyReply): Pro
 }
 
 async function handleLogin(request: FastifyRequest, reply: FastifyReply, scope: SessionScope = 'app'): Promise<void> {
-  const ipKey = `ip:${ipOfRequest(request)}`;
+  const ipKey = `ip:${rateLimitSubjectOf(request)}`;
   const ipBlockedSec = await ratelimit.checkBlocked(ipKey);
   if (ipBlockedSec) {
     reply.header('Retry-After', String(ipBlockedSec));
@@ -308,7 +308,7 @@ type ChallengeLookup = { user: User; challengeHash: string } | { refused: true }
 
 /** Resolves the challenge of a login's second step, answering the request itself when it cannot go on. */
 async function loginChallengeFor(request: FastifyRequest, reply: FastifyReply, challenge: string, scope: SessionScope): Promise<ChallengeLookup> {
-  const ipKey = `ip:${ipOfRequest(request)}`;
+  const ipKey = `ip:${rateLimitSubjectOf(request)}`;
   const ipBlockedSec = await ratelimit.checkBlocked(ipKey);
   if (ipBlockedSec) { rateLimitedReply(reply, ipBlockedSec); return { refused: true }; }
 
@@ -353,7 +353,7 @@ async function handleLoginVerify(request: FastifyRequest, reply: FastifyReply, s
   const result = await verifyAuthCode(user.id, 'login', user.email!, code, { challengeHash });
   if (!result.ok) {
     if (result.reason === 'invalid_code' || result.reason === 'too_many_attempts') {
-      await ratelimit.recordFailure(`ip:${ipOfRequest(request)}`);
+      await ratelimit.recordFailure(`ip:${rateLimitSubjectOf(request)}`);
       await ratelimit.recordFailure(userKey);
     }
     log.warn('login code refused', { userId: user.id, reason: result.reason, ip: ipOfRequest(request) });
@@ -483,7 +483,7 @@ async function handleRecoveryRequest(request: FastifyRequest, reply: FastifyRepl
 
   // Only the address is limited per request. Nothing keyed on the name someone typed may refuse a request:
   // anyone could fill it and keep the owner from ever getting a code.
-  const ipKey = `recovery-ip:${ipOfRequest(request)}`;
+  const ipKey = `recovery-ip:${rateLimitSubjectOf(request)}`;
   const blocked = await ratelimit.checkBlocked(ipKey);
   if (blocked) {
     reply.header('Retry-After', String(blocked));
@@ -523,7 +523,7 @@ async function handleRecoveryReset(request: FastifyRequest, reply: FastifyReply)
 
   // A resend starts a new code with a fresh per-code budget, so the guesses are also counted per account
   // (however it was named: username or email) and per address, which is what bounds them across codes.
-  const ipKey = `reset-ip:${ipOfRequest(request)}`;
+  const ipKey = `reset-ip:${rateLimitSubjectOf(request)}`;
   const user = await findUserByIdentifier(identifier);
   const accountKey = resetFailuresKey(user?.id ?? null, identifier);
   const ipBlocked = await ratelimit.checkBlocked(ipKey);

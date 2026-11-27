@@ -1,7 +1,7 @@
 import crypto from 'node:crypto';
 import type { ErrorCode } from '../../http/errors.js';
 import { config } from '../../config/env.js';
-import { resolveClientIp } from '../../http/clientInfo.js';
+import { rateLimitSubject, resolveClientIp } from '../../http/clientInfo.js';
 import { updateProfile } from '../profile/profileRepository.js';
 import { isUploadedImage, sanitizeAvatar, sanitizeBanner, sanitizeAvatarColor, sanitizeDisplayName, sanitizeBio, sanitizeProfileLinks } from '../profile/sanitize.js';
 import { deleteAvatarFile, isOwnedProfileImage } from '../attachments/attachmentCleanup.js';
@@ -413,14 +413,16 @@ export function setAccountConnectionsChangedHook(fn: ((userId: string) => void) 
 }
 
 /** Live connections only: a ghost waiting out its reconnect grace holds no socket, and counting it
- * would let a few accounts that keep dropping tabs hold the whole instance for up to a call's grace. */
+ * would let a few accounts that keep dropping tabs hold the whole instance for up to a call's grace.
+ * The address count groups IPv6 by /64 (`rateLimitSubject`), since one client holds the whole /64. */
 function countLiveConnections(userId: string, ip: string): { total: number; ofUser: number; fromIp: number } {
   const counts = { total: 0, ofUser: 0, fromIp: 0 };
+  const subject = rateLimitSubject(ip);
   for (const p of participants.values()) {
     if (!p.socket) continue;
     counts.total++;
     if (p.userId === userId) counts.ofUser++;
-    if (p.socket.ip === ip) counts.fromIp++;
+    if (rateLimitSubject(p.socket.ip) === subject) counts.fromIp++;
   }
   return counts;
 }

@@ -303,7 +303,7 @@ A chunked upload reserves its declared size against `MAX_STORAGE_BYTES` (30 GB) 
 
 ### Socket connection caps
 
-`join` refuses a new live connection past `MAX_PARTICIPANTS` (500, the whole instance, answered with `full`), `MAX_CONNECTIONS_PER_USER` (4) or `MAX_CONNECTIONS_PER_IP` (20), both answered with `too_many_connections`. A resume (`join {id, token}`) is never refused, and a connection waiting out its reconnect grace holds no slot. The per-address cap needs `TRUST_PROXY=1` behind a proxy, or every client shares the proxy's address.
+`join` refuses a new live connection past `MAX_PARTICIPANTS` (500, the whole instance, answered with `full`), `MAX_CONNECTIONS_PER_USER` (4) or `MAX_CONNECTIONS_PER_IP` (20), both answered with `too_many_connections`. A resume (`join {id, token}`) is never refused, and a connection waiting out its reconnect grace holds no slot. The per-address cap needs `TRUST_PROXY=1` behind a proxy, or every client shares the proxy's address. It counts addresses as the [brute-force limits](#brute-force-limits) do.
 
 ### Brute-force limits
 
@@ -315,6 +315,7 @@ Each email code also has its own attempt limit. Verification counts the attempt 
 - **The owner gets through:** a browser the account signed in from in the last 30 days (`known_logins`) passes a blocked account counter with the right password or code. Anyone else gets the same answer as for a wrong password, so the block reveals nothing, and getting through does not clear it.
 - **Fail closed:** if the database cannot answer, the attempt is refused with `503 rate_limit_unavailable`.
 - **In memory on purpose:** socket flood control, link previews and game searches only cap short bursts, so losing their counts on a restart costs nothing.
+- **Per address** means IPv4 as is and IPv6 by its /64 prefix, since one IPv6 client holds the whole /64 and could take a fresh address for each request. An IPv4-mapped address (`::ffff:a.b.c.d`) counts as its IPv4. Every per-address key, here and in flood control, goes through `rateLimitSubject` (`http/clientInfo.ts`); logs and the session list keep the full address.
 - **A new limit** uses `checkBlocked` / `recordFailure` / `reset` for mistakes, or `consume` for requests counted either way, with a key namespace of its own (tests in `server/tests/integration/rateLimits.itest.ts`).
 
 ## Restarting the server during a call

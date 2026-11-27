@@ -233,6 +233,18 @@ describe('connection caps', () => {
     });
   });
 
+  test('one IPv6 /64 is a single address for MAX_CONNECTIONS_PER_IP, however its low bits rotate', () => {
+    withCaps({ perIp: 2, perUser: 2 }, () => {
+      const prefix = `2001:db8:${Math.floor(Math.random() * 0xffff).toString(16)}:1`;
+      createdIds.push(joinP(fakeSocket(`u-${Math.random()}`, {}, `${prefix}::a`), {})!.id);
+      createdIds.push(joinP(fakeSocket(`u-${Math.random()}`, {}, `${prefix}:dead:beef:0:1`), {})!.id);
+      const socket = fakeSocket(`u-${Math.random()}`, {}, `${prefix}:ffff:ffff:ffff:ffff`);
+      const code = errorCodeOf(socket);
+      assert.equal(joinP(socket, {}), null);
+      assert.equal(code(), 'too_many_connections');
+    });
+  });
+
   test('a resume is never refused by the caps: it already held its slot', () => {
     withCaps({ max: liveNow() + 1 }, () => {
       const userId = `u-${Math.random()}`;
