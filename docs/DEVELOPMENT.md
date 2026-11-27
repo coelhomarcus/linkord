@@ -155,6 +155,7 @@ Runs the server test typecheck, lint for both frontends, the dependency audit, t
 - **End-to-end** (`.github/workflows/e2e.yml`) runs the `features`, `restart` and `upgrade` projects in parallel on pull requests into `main`, and on demand from the Actions tab. A failed job uploads the Playwright report and traces.
 - **Desktop installer** (`.github/workflows/desktop.yml`) runs only by hand; see [DEPLOY.md](DEPLOY.md#building-the-installer).
 - **Audit:** `bun audit --prod --audit-level=high` for the root, `web/` and `admin/`. Keep build-only packages such as Tailwind and Vite plugins in `devDependencies`. The image ships only the frontends' build output.
+- **Pinned dependencies:** `web/` pins the `@twinkleplop/*` highlighter packages to exact versions because chat code blocks and text previews insert their output as HTML. Bump them deliberately and run `web/tests/shared/lib/highlightCode.test.ts`, which checks escaping in every grammar and alias.
 
 ## Scripts
 
