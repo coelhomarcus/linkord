@@ -113,19 +113,31 @@ export function cachePolicyFor(row: Pick<Attachment, 'id' | 'messageId'>, ifNone
 
 /** Dev convenience only (see config.UPLOADS_REMOTE_URL) — pulls a file this
  * instance doesn't have on disk from the instance that does, and caches it
- * locally so it's a plain local read next time. Forwards the caller's own
+ * locally so it's a plain local read next time. Forwards only the caller's
  * session cookie: since both instances read the SAME `attachments`/`sessions`
  * rows (shared DATABASE_URL), a session valid here is valid there too — no
- * separate credential needed. Written to a temp file + renamed so a
- * concurrent request never reads a half-downloaded file. Returns false (and
- * leaves nothing on disk) on any failure — the caller just 404s as before. */
-async function tryCacheFromRemote(id: string, cookieHeader: string): Promise<boolean> {
-  if (!config.UPLOADS_REMOTE_URL) return false;
+ * separate credential needed, and no other cookie of ours leaves this host.
+ * Redirects are not followed, so the cookie never reaches a host other than
+ * the configured one. Written to a temp file + renamed so a concurrent request
+ * never reads a half-downloaded file. Returns false (and leaves nothing on
+ * disk) on any failure — the caller just 404s as before. */
+export function remoteUploadRequest(baseUrl: string, id: string, sessionToken: string | undefined): { url: string; init: RequestInit } | null {
+  if (!baseUrl) return null;
+  return {
+    url: `${baseUrl}/uploads/${id}`,
+    init: {
+      redirect: 'manual',
+      headers: sessionToken ? { cookie: `${config.SESSION_COOKIE}=${encodeURIComponent(sessionToken)}` } : {},
+    },
+  };
+}
+
+async function tryCacheFromRemote(id: string, sessionToken: string | undefined): Promise<boolean> {
+  const remote = remoteUploadRequest(config.UPLOADS_REMOTE_URL, id, sessionToken);
+  if (!remote) return false;
   const tmpPath = `${filePathFor(id)}.fetching-${crypto.randomUUID()}`;
   try {
-    const res = await fetch(`${config.UPLOADS_REMOTE_URL}/uploads/${id}`, {
-      headers: cookieHeader ? { cookie: cookieHeader } : {},
-    });
+    const res = await fetch(remote.url, remote.init);
     if (!res.ok || !res.body) return false;
     await fs.writeFile(tmpPath, Buffer.from(await res.arrayBuffer()));
     await fs.rename(tmpPath, filePathFor(id));
@@ -163,7 +175,7 @@ export async function serveUpload(request: FastifyRequest<{ Params: { id: string
   try {
     size = (await fs.stat(path)).size;
   } catch {
-    if (adminOrigin || !(await tryCacheFromRemote(id, request.headers.cookie || ''))) return reply.code(404).send('não encontrado');
+    if (adminOrigin || !(await tryCacheFromRemote(id, cookies[config.SESSION_COOKIE]))) return reply.code(404).send('não encontrado');
     try {
       size = (await fs.stat(path)).size;
     } catch {

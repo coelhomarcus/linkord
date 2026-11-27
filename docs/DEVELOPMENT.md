@@ -96,6 +96,12 @@ bun run db:seed
 
 Creates four accounts (`ana`, `bruno`, `carla`, `davi`; the shared password is printed at the end and set at the top of `server/src/scripts/seedDev.ts`), friendships and a pending request, two DMs, and a server ("Equipe do projeto") with `#geral`, a read-only `#avisos` fed by a webhook, a voice channel and a hoisted moderators role. It only runs against a database on `localhost`, and running it again leaves existing rows alone. Restart `bun run dev` afterwards: the server caches memberships in memory.
 
+## Files from another instance
+
+When `DATABASE_URL` points at a database a deployed instance also uses, attachment rows exist locally but their files live on that instance's disk. Set `UPLOADS_REMOTE_URL` to that instance's base URL and the local server fetches a missing file from it on first request, forwarding only your session cookie, and caches it in `UPLOAD_DIR`.
+
+It is a development setting. The server refuses to start when it is set with `NODE_ENV=production` (the Docker image sets it), and it must be HTTPS except on loopback. Never set it on the instance it points at.
+
 ## Create an administrator
 
 ```bash
