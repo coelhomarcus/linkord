@@ -293,7 +293,12 @@
       "expired": "The link to your last copy has expired.",
       "nextRequest": "You can ask for another copy from {{date}}.",
       "requestFailed": "Could not ask for a copy. Try again.",
-      "loadFailed": "Could not load the state of your copy."
+      "loadFailed": "Could not load the state of your copy.",
+      "passwordHint": "The copy holds all your messages. Confirm your password to ask for it.",
+      "password": "Current password",
+      "submit": "Confirm request",
+      "codeSent": "We sent a code to {{email}}. Type it to ask for the copy.",
+      "codeLabel": "Verification code"
     }
   },
   "av": {

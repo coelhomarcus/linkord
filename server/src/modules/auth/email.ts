@@ -23,6 +23,7 @@ const COPY = {
   email_change_current: { subject: 'email.changeCurrentSubject', title: 'email.changeCurrentTitle', intro: 'email.changeCurrentIntro', expires: 'email.expires' },
   two_factor_disable: { subject: 'email.twoFactorDisableSubject', title: 'email.twoFactorDisableTitle', intro: 'email.twoFactorDisableIntro', expires: 'email.expires' },
   login_alert_disable: { subject: 'email.loginAlertDisableSubject', title: 'email.loginAlertDisableTitle', intro: 'email.loginAlertDisableIntro', expires: 'email.expires' },
+  data_export: { subject: 'email.exportCodeSubject', title: 'email.exportCodeTitle', intro: 'email.exportCodeIntro', expires: 'email.expires' },
 } as const satisfies Record<AuthCodePurpose, Record<string, Parameters<typeof localeText>[1]>>;
 
 // Every text that goes into an email's HTML is escaped: a username or an address is never markup.

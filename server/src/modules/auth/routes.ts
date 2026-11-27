@@ -6,6 +6,10 @@ import { sendJson, sendError, jsonBody } from '../../http/respond.js';
 import { parseCookies, serializeCookie, clearCookie, isSecureRequest } from '../../http/cookies.js';
 import { hashPassword, verifyPassword, needsRehash, DUMMY_HASH } from './password.js';
 import {
+  CODE_SEND_RULE, codeFailuresKey, confirmPassword, issueAndSendCode, maskEmail, purposeError, rateLimitedReply, sendCurrentEmailCode,
+  verifyCurrentEmailCode,
+} from './accountConfirmation.js';
+import {
   ADMIN_SESSION_SECONDS, createSession, resolveSession, destroySession, destroyOtherSessions, destroySessionById, listSessionsForUser,
   type SessionScope,
 } from './session.js';
@@ -19,8 +23,8 @@ import { renameParticipants } from '../presence/participants.js';
 import { checkRegistrationAllowed } from './registrationLimits.js';
 import { sanitizeDisplayName } from '../profile/sanitize.js';
 import type { User } from '../../db/schema.js';
-import { consumeLoginChallenge, findLoginChallenge, hasLiveAuthCode, issueAuthCode, verifyAuthCode, type AuthCodePurpose } from './codes.js';
-import { isEmailDeliveryConfigured, sendAuthCodeEmail, sendEmailChangedEmail, sendPasswordChangedEmail } from './email.js';
+import { consumeLoginChallenge, findLoginChallenge, hasLiveAuthCode, verifyAuthCode } from './codes.js';
+import { isEmailDeliveryConfigured, sendEmailChangedEmail, sendPasswordChangedEmail } from './email.js';
 import { isKnownBrowser, noticeLogin, noticeRegistration } from './loginAlert.js';
 import { cancelScheduledDeletion, isPastDeletion, scheduleAccountDeletion } from './accountDeletion.js';
 import { clientIpOf, rateLimitSubjectOf, sessionOriginOf } from '../../http/clientInfo.js';
@@ -42,9 +46,6 @@ const log = logger.child({ component: 'auth' });
 
 const ipOfRequest = clientIpOf;
 
-// Code emails a person can ask for (a login code, a two-step setup code): a request limit, not a mistake
-// limit, so a resend button cannot become a mail cannon.
-const CODE_SEND_RULE: ratelimit.Rule = { windowMs: 15 * 60 * 1000, max: 5 };
 // Asking whether a username is free, as a person types (debounced): enough for someone trying names, while a
 // script listing accounts gets a few hundred names a day per account. Registration is behind an invite code, so
 // accounts are not free to multiply.
@@ -56,10 +57,6 @@ const SESSION_ACTION_RULE: ratelimit.Rule = { windowMs: 60 * 1000, max: 30 };
 const LOGIN_CHALLENGE_MAX_MS = 30 * 60 * 1000;
 const CHALLENGE_RE = /^[A-Za-z0-9_-]{43}$/;
 
-// One counter of wrong codes per account, shared by the login's second step and the two-step setup:
-// each code also allows only AUTH_CODE_MAX_ATTEMPTS, but a resend starts a new code, so this is what
-// bounds guessing across codes (and it survives a restart, see ratelimit.ts).
-const codeFailuresKey = (userId: string) => `code:${userId}`;
 // Wrong password-reset codes. A person who only knows a username or an email can reach this, so it has its own
 // counters: sharing `code:` would let anyone lock a victim out of the second step of their login. An unknown
 // identifier gets a key too, so a block never tells an existing account from a missing one.
@@ -67,23 +64,9 @@ const resetFailuresKey = (userId: string | null, identifier: RecoveryIdentifier)
   userId ? `reset-code:${userId}` : `reset-code-unknown:${identifier.type}:${identifier.value.toLowerCase()}`;
 // Stands in for a missing account wherever a lookup must cost the same as for a real one.
 const NO_USER_ID = '00000000-0000-0000-0000-000000000000';
-// Wrong current passwords on the logged-in confirmations (two-step, password change).
-const passwordConfirmKey = (userId: string) => `pw-confirm:${userId}`;
 
 const hashChallenge = (challenge: string, scope: SessionScope) =>
   crypto.createHash('sha256').update(scope === 'admin' ? `admin:${challenge}` : challenge).digest('hex');
-
-/** `ana@gmail.com` → `a**@gmail.com`: enough to recognize the address on the login screen. */
-function maskEmail(email: string): string {
-  const at = email.lastIndexOf('@');
-  if (at <= 0) return '***';
-  return `${email[0]}${'*'.repeat(Math.max(2, at - 1))}${email.slice(at)}`;
-}
-
-function rateLimitedReply(reply: FastifyReply, retryAfterSec: number, message = 'Muitas tentativas. Tente novamente mais tarde.'): void {
-  reply.header('Retry-After', String(retryAfterSec));
-  sendError(reply, 429, 'rate_limited', message);
-}
 
 function auditActor(sess: SessionUser) {
   return { id: sess.userId, username: sess.username };
@@ -426,30 +409,9 @@ async function handleAdminMe(request: FastifyRequest, reply: FastifyReply): Prom
   if (sess) sendJson(reply, 200, { user: adminIdentity({ id: sess.userId, username: sess.username, locale: sess.locale }) });
 }
 
-function purposeError(reply: FastifyReply, reason: 'invalid_code' | 'code_expired' | 'too_many_attempts'): void {
-  const messages = {
-    invalid_code: 'Código inválido.',
-    code_expired: 'Código expirado. Solicite um novo código.',
-    too_many_attempts: 'Limite de tentativas atingido. Solicite um novo código.',
-  } as const;
-  sendError(reply, 400, reason, messages[reason]);
-}
-
 function sessionForRequest(request: FastifyRequest) {
   const cookies = parseCookies(request.headers.cookie || '');
   return resolveSession(cookies[config.SESSION_COOKIE]);
-}
-
-async function issueAndSendCode(
-  userId: string, email: string, username: string, purpose: AuthCodePurpose, locale: ReturnType<typeof resolveLocale>, challengeHash?: string,
-): Promise<void> {
-  const code = await issueAuthCode(userId, purpose, email, challengeHash ? { challengeHash, ttlMs: config.LOGIN_CODE_TTL_MS } : {});
-  try {
-    await sendAuthCodeEmail({ to: email, code, purpose, username, locale });
-  } catch (err) {
-    log.error('failed to send code', err);
-    throw err;
-  }
 }
 
 // Recovery accepts either identifier — whichever the user still remembers.
@@ -696,69 +658,6 @@ async function handleUsernameChange(request: FastifyRequest, reply: FastifyReply
 }
 
 // ---- account security: the logged-in person's own sessions, password and two-step login ----
-
-/** Checks the current password asked for before a sensitive change, under its own attempt counter.
- * Answers the request itself (and returns false) when it is wrong or blocked. */
-async function confirmPassword(reply: FastifyReply, sess: SessionUser, password: string): Promise<boolean> {
-  const key = passwordConfirmKey(sess.userId);
-  const blocked = await ratelimit.checkBlocked(key);
-  if (blocked) { rateLimitedReply(reply, blocked); return false; }
-  const user = await findById(sess.userId);
-  if (!user || !(await verifyPassword(password, user.passwordHash))) {
-    await ratelimit.recordFailure(key);
-    log.warn('wrong current password on a security change', { userId: sess.userId });
-    sendError(reply, 403, 'invalid_password', 'Senha incorreta.');
-    return false;
-  }
-  await ratelimit.reset(key).catch(() => {});
-  return true;
-}
-
-// With two-step login on, the account's current email is its second factor, so everything that could take that
-// factor away asks it again after the password: deleting the account, turning two-step login or sign-in alerts
-// off, and moving the address. A stolen session plus a leaked password is exactly what two-step login is for.
-const CURRENT_EMAIL_CODE_SEND_KEYS = {
-  account_deletion: 'deletion-code',
-  two_factor_disable: '2fa-disable-code',
-  login_alert_disable: 'login-alert-code',
-  email_change_current: 'email-change-current-code',
-} as const satisfies Partial<Record<AuthCodePurpose, string>>;
-type CurrentEmailPurpose = keyof typeof CURRENT_EMAIL_CODE_SEND_KEYS;
-
-/** Sends a code of `purpose` to the account's current address and answers `{ codeRequired, email }`. */
-async function sendCurrentEmailCode(reply: FastifyReply, user: User, purpose: CurrentEmailPurpose): Promise<void> {
-  if (!user.email || !isEmailDeliveryConfigured()) {
-    return sendError(reply, 503, 'email_unavailable', 'Não foi possível enviar o código de verificação agora. Tente novamente mais tarde.');
-  }
-  const send = await ratelimit.consume(`${CURRENT_EMAIL_CODE_SEND_KEYS[purpose]}:${user.id}`, CODE_SEND_RULE);
-  if (!send.allowed) return rateLimitedReply(reply, send.retryAfterSec, 'Muitos códigos enviados. Tente novamente mais tarde.');
-  try {
-    await issueAndSendCode(user.id, user.email, user.username, purpose, resolveLocale(user.locale));
-  } catch {
-    return sendError(reply, 503, 'email_unavailable', 'Não foi possível enviar o código de verificação agora. Tente novamente mais tarde.');
-  }
-  sendJson(reply, 200, { codeRequired: true, email: maskEmail(user.email) });
-}
-
-/** Checks the body's `code` against the last one of `purpose` sent to the current address, under the account's
- * counter of wrong codes. A code is only ever sent after the password was confirmed, so it stands for both.
- * Answers the request itself (and returns false) when it is refused. */
-async function verifyCurrentEmailCode(request: FastifyRequest, reply: FastifyReply, sess: SessionUser, purpose: CurrentEmailPurpose): Promise<boolean> {
-  if (!sess.email) { sendError(reply, 400, 'invalid_code', 'Código inválido.'); return false; }
-  const code = String(jsonBody(request.body).code ?? '').trim();
-  if (!/^\d{6}$/.test(code)) { sendError(reply, 400, 'invalid_code', 'Informe o código de 6 dígitos.'); return false; }
-  const key = codeFailuresKey(sess.userId);
-  const blocked = await ratelimit.checkBlocked(key);
-  if (blocked) { rateLimitedReply(reply, blocked); return false; }
-  const result = await verifyAuthCode(sess.userId, purpose, sess.email, code);
-  if (!result.ok) {
-    if (result.reason !== 'code_expired') await ratelimit.recordFailure(key);
-    purposeError(reply, result.reason);
-    return false;
-  }
-  await ratelimit.reset(key).catch(() => {});
-  return true;
-}
 
 async function handleSecurityStatus(request: FastifyRequest, reply: FastifyReply): Promise<void> {
   const sess = await sessionForRequest(request);

@@ -13,6 +13,8 @@ test.describe('your data', () => {
     await page.goto('/settings/privacy#data-export');
 
     await page.getByRole('button', { name: 'Pedir cópia' }).click();
+    await page.getByLabel('Senha atual').fill(alice.password);
+    await page.getByRole('button', { name: 'Confirmar pedido' }).click();
     // the page looks again every few seconds while the copy is built
     const link = page.getByRole('link', { name: 'Baixar', exact: true });
     await expect(link).toBeVisible({ timeout: 30_000 });

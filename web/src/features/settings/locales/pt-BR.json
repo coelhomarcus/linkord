@@ -293,7 +293,12 @@
       "expired": "O link da última cópia expirou.",
       "nextRequest": "Você pode pedir outra cópia a partir de {{date}}.",
       "requestFailed": "Não foi possível pedir a cópia. Tente de novo.",
-      "loadFailed": "Não foi possível carregar o estado da sua cópia."
+      "loadFailed": "Não foi possível carregar o estado da sua cópia.",
+      "passwordHint": "A cópia reúne todas as suas mensagens. Confirme sua senha para pedi-la.",
+      "password": "Senha atual",
+      "submit": "Confirmar pedido",
+      "codeSent": "Enviamos um código para {{email}}. Digite-o para pedir a cópia.",
+      "codeLabel": "Código de verificação"
     }
   },
   "av": {

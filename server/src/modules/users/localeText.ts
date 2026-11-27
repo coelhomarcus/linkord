@@ -24,6 +24,7 @@ type TextKey =
   | 'email.changedSubject' | 'email.changedTitle' | 'email.changedIntro' | 'email.changedWarning'
   | 'email.passwordChangedSubject' | 'email.passwordChangedTitle' | 'email.passwordChangedIntro' | 'email.passwordResetIntro'
   | 'email.passwordChangedAction'
+  | 'email.exportCodeSubject' | 'email.exportCodeTitle' | 'email.exportCodeIntro'
   | 'server.textCategory' | 'server.textChannel' | 'server.voiceCategory' | 'server.voiceChannel';
 
 const TEXT: Record<Locale, Record<TextKey, string>> = {
@@ -84,6 +85,8 @@ const TEXT: Record<Locale, Record<TextKey, string>> = {
     'email.passwordChangedIntro': 'A senha da conta "{{username}}" foi trocada em Configurações → Segurança. Os outros dispositivos foram desconectados.',
     'email.passwordResetIntro': 'A senha da conta "{{username}}" foi redefinida com um código enviado para este e-mail. Todos os dispositivos foram desconectados.',
     'email.passwordChangedAction': 'Se não foi você, recupere a conta agora: na tela de entrada, use "Esqueceu sua senha?" para receber um código neste e-mail e criar uma nova senha.',
+    'email.exportCodeSubject': 'Confirme o pedido de cópia dos seus dados', 'email.exportCodeTitle': 'Cópia dos seus dados',
+    'email.exportCodeIntro': 'Use este código para pedir uma cópia dos dados da conta "{{username}}". Se não foi você, troque sua senha agora:',
     'server.textCategory': 'Canais de texto', 'server.textChannel': 'geral',
     'server.voiceCategory': 'Canais de voz', 'server.voiceChannel': 'Geral',
   },
@@ -144,6 +147,8 @@ const TEXT: Record<Locale, Record<TextKey, string>> = {
     'email.passwordChangedIntro': 'The password of the account "{{username}}" was changed in Settings → Security. Your other devices were signed out.',
     'email.passwordResetIntro': 'The password of the account "{{username}}" was reset with a code sent to this email. Every device was signed out.',
     'email.passwordChangedAction': 'If this was not you, recover the account now: on the sign-in screen, use "Forgot your password?" to get a code at this email and set a new password.',
+    'email.exportCodeSubject': 'Confirm your data copy request', 'email.exportCodeTitle': 'A copy of your data',
+    'email.exportCodeIntro': 'Use this code to ask for a copy of the data of the account "{{username}}". If it was not you, change your password now:',
     'server.textCategory': 'Text Channels', 'server.textChannel': 'general',
     'server.voiceCategory': 'Voice Channels', 'server.voiceChannel': 'General',
   },

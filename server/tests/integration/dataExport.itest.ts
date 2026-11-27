@@ -13,14 +13,15 @@ import {
 } from '../../src/db/schema.js';
 import { databaseActivitySessionStore } from '../../src/modules/activity/activitySessions.js';
 import { createApp } from '../../src/http/app.js';
+import { hashPassword } from '../../src/modules/auth/password.js';
 import { createSession } from '../../src/modules/auth/session.js';
 import { deleteUserAccount } from '../../src/modules/admin/adminUsers.js';
 import { sweepDataExports, whenExportsIdle } from '../../src/modules/data-export/dataExport.js';
 import { exportFilePath } from '../../src/modules/data-export/exportStorage.js';
 import { befriend, db, makeServerWithMembers, makeUser, pool } from './helpers.js';
 
-// "Download my data" against the real database and a throwaway uploads folder: the request and its daily
-// limit, the job that builds the ZIP, what the ZIP holds (and what it must not), the emailed link, the
+// "Download my data" against the real database and a throwaway uploads folder: the request (the password,
+// and the emailed code with two-step login on) and its daily limit, the job that builds the ZIP, what the ZIP holds (and what it must not), the emailed link, the
 // download and the expiry.
 
 let app: FastifyInstance;
@@ -56,9 +57,14 @@ async function storeFile(opts: { messageId?: number; uploaderId?: string; fileNa
   return id;
 }
 
-async function makeAccount() {
+const PASSWORD = 'correct horse battery';
+
+async function makeAccount(opts: { twoFactor?: boolean } = {}) {
   const user = await makeUser('exp');
-  await db.update(users).set({ email: `${user.username}@example.test`, displayName: 'Ana Export', bio: 'minha bio' }).where(eq(users.id, user.id));
+  await db.update(users).set({
+    email: `${user.username}@example.test`, displayName: 'Ana Export', bio: 'minha bio', passwordHash: await hashPassword(PASSWORD),
+    twoFactorEmail: opts.twoFactor ?? false,
+  }).where(eq(users.id, user.id));
   const { rawToken } = await createSession(user.id);
   return { ...user, email: `${user.username}@example.test`, cookie: `${config.SESSION_COOKIE}=${rawToken}` };
 }
@@ -72,13 +78,24 @@ async function makeDm(a: string, b: string): Promise<string> {
 
 interface Reply { status: number; headers: Record<string, unknown>; body: any; raw: Buffer }
 
-async function call(method: 'GET' | 'POST', url: string, cookie?: string): Promise<Reply> {
-  const res = await app.inject({ method, url, headers: cookie ? { cookie } : {} });
+async function call(method: 'GET' | 'POST', url: string, cookie?: string, payload?: Record<string, unknown>): Promise<Reply> {
+  const res = await app.inject({ method, url, payload, headers: cookie ? { cookie } : {} });
   const isJson = String(res.headers['content-type'] ?? '').includes('json');
   return { status: res.statusCode, headers: res.headers, body: isJson && res.body ? JSON.parse(res.body) : null, raw: res.rawPayload };
 }
 
-const requestExport = (cookie: string) => call('POST', '/api/account/data-export', cookie);
+const requestExport = (cookie: string, password = PASSWORD) => call('POST', '/api/account/data-export', cookie, { password });
+const confirmExport = (cookie: string, code: string) => call('POST', '/api/account/data-export/confirm', cookie, { code });
+
+function lastCode(): string {
+  const match = mailbox.at(-1)?.text.match(/\b(\d{6})\b/);
+  assert.ok(match, 'the email should carry a 6-digit code');
+  return match[1]!;
+}
+
+async function exportCount(userId: string): Promise<number> {
+  return (await db.select({ id: dataExports.id }).from(dataExports).where(eq(dataExports.userId, userId))).length;
+}
 const exportStatus = (cookie: string) => call('GET', '/api/account/data-export', cookie);
 const download = (cookie: string | undefined, id: string) => call('GET', `/api/account/data-export/${id}/download`, cookie);
 
@@ -107,8 +124,65 @@ const jsonOf = (entries: Map<string, Buffer>, name: string) => JSON.parse(entrie
 
 describe('asking for a copy of your data', () => {
   it('needs a session', async () => {
-    assert.equal((await call('POST', '/api/account/data-export')).status, 401);
+    assert.equal((await call('POST', '/api/account/data-export', undefined, { password: PASSWORD })).status, 401);
+    assert.equal((await call('POST', '/api/account/data-export/confirm', undefined, { code: '123456' })).status, 401);
     assert.equal((await call('GET', '/api/account/data-export')).status, 401);
+  });
+
+  it('a session alone is not enough: it takes the current password', async () => {
+    const me = await makeAccount();
+    // what a tab from before the password step sends: refused like any malformed body
+    const bodyless = await call('POST', '/api/account/data-export', me.cookie);
+    assert.equal(bodyless.status, 400);
+    assert.equal(bodyless.body.error.code, 'invalid_json');
+    const missing = await call('POST', '/api/account/data-export', me.cookie, {});
+    assert.equal(missing.status, 403);
+    assert.equal(missing.body.error.code, 'invalid_password');
+    const wrong = await requestExport(me.cookie, 'not the password');
+    assert.equal(wrong.status, 403);
+    assert.equal(wrong.body.error.code, 'invalid_password');
+    assert.equal(await exportCount(me.id), 0);
+    assert.equal(mailbox.length, 0);
+  });
+
+  it('with two-step login on, the password earns a code to the account email, and the code queues the export', async () => {
+    const me = await makeAccount({ twoFactor: true });
+    const asked = await requestExport(me.cookie);
+    assert.equal(asked.status, 200);
+    assert.equal(asked.body.codeRequired, true);
+    assert.match(asked.body.email, /^e\*+@example\.test$/);
+    assert.deepEqual(mailbox.at(-1)?.to, [me.email]);
+    assert.equal(await exportCount(me.id), 0, 'nothing is queued before the code');
+
+    const code = lastCode();
+    const wrong = await confirmExport(me.cookie, code === '000000' ? '111111' : '000000');
+    assert.equal(wrong.status, 400);
+    assert.equal(wrong.body.error.code, 'invalid_code');
+    assert.equal(await exportCount(me.id), 0);
+
+    const confirmed = await confirmExport(me.cookie, code);
+    assert.equal(confirmed.status, 202);
+    assert.ok(['pending', 'running', 'ready'].includes(confirmed.body.export.status));
+    assert.equal(await exportCount(me.id), 1);
+    assert.equal((await confirmExport(me.cookie, code)).status, 400, 'a code queues one export');
+  });
+
+  it('a code sent for another action cannot queue an export', async () => {
+    const me = await makeAccount({ twoFactor: true });
+    assert.equal((await call('POST', '/api/auth/two-factor/disable', me.cookie, { password: PASSWORD })).status, 200);
+    assert.equal((await confirmExport(me.cookie, lastCode())).status, 400);
+    assert.equal(await exportCount(me.id), 0);
+  });
+
+  it('with two-step login on, sends no code for a request the daily limit refuses', async () => {
+    const me = await makeAccount({ twoFactor: true });
+    await requestExport(me.cookie);
+    assert.equal((await confirmExport(me.cookie, lastCode())).status, 202);
+    mailbox = [];
+    const again = await requestExport(me.cookie);
+    assert.equal(again.status, 429);
+    assert.equal(again.body.error.code, 'rate_limited');
+    assert.equal(mailbox.filter((m) => /\b\d{6}\b/.test(m.text)).length, 0);
   });
 
   it('queues one export a day, audited, and a failed one does not count', async () => {

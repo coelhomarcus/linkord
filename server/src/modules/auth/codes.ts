@@ -9,10 +9,10 @@ import { normalizeEmail } from '../users/users.js';
  * is the second step of a login (tied to its challenge, see `challengeHash`). With two-step login on, the
  * account's current email is the second factor of everything that could take it away: `account_deletion`,
  * `two_factor_disable`, `login_alert_disable` and `email_change_current` (sent to the old address before
- * `email_change` goes to the new one). */
+ * `email_change` goes to the new one). `data_export` guards the copy of every DM the account can ask for. */
 export type AuthCodePurpose =
   | 'password_reset' | 'email_change' | 'email_change_current' | 'two_factor_setup' | 'two_factor_disable'
-  | 'login' | 'login_alert_disable' | 'account_deletion';
+  | 'login' | 'login_alert_disable' | 'account_deletion' | 'data_export';
 
 interface CodeScope {
   /** a login code belongs to one login challenge: another login neither cancels nor accepts it */

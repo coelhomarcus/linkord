@@ -224,7 +224,7 @@ Playwright runs on Bun and uses the installed Google Chrome. Its CLI scripts use
 | Spec | What it checks |
 | --- | --- |
 | `features/auth` | Sign-up with and without the code, login, logout, two-step login on and off, ending another session. |
-| `features/account-data` | A data export built, emailed and downloaded; deleting the account and cancelling it by signing in. |
+| `features/account-data` | A data export asked for with the password, built, emailed and downloaded; deleting the account and cancelling it by signing in. |
 | `features/friends` | Friend requests, including acceptance from the row menu. Messaging from the friends menu, blocking, and unblocking. |
 | `features/legacy-app-paths` | Permanent redirects for old `/app` links, including the friends view selected by a query and the settings section selected by a fragment. |
 | `features/dm` | Talking in a DM, unread counts, no DM without friendship, row menus in the list and rail, muting a DM across tabs. |
