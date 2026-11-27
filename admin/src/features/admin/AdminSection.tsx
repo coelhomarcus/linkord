@@ -4,7 +4,7 @@ import { cn } from '@/shared/lib/utils';
 
 export function AdminPageTitle({ title, description, actions }: { title: string; description?: ReactNode; actions?: ReactNode }) {
   return (
-    <header className="mb-1 flex flex-wrap items-end justify-between gap-x-6 gap-y-3">
+    <header className="flex flex-wrap items-end justify-between gap-x-8 gap-y-4">
       <div className="min-w-0 flex-1 basis-64">
         <h1 className="admin-page-heading">{title}</h1>
         {description && <p className="mt-2 max-w-prose text-label text-text-muted">{description}</p>}
@@ -25,7 +25,7 @@ export function AdminSection({ id, title, description, danger, children, classNa
 }) {
   const headingId = useId();
   return (
-    <section id={id} aria-labelledby={headingId} className={cn('admin-panel flex min-w-0 scroll-mt-6 flex-col p-4 @[540px]:p-5', danger && 'border-red/50', className)}>
+    <section id={id} aria-labelledby={headingId} className={cn('admin-panel flex min-w-0 scroll-mt-6 flex-col p-4 @[540px]:p-6', danger && 'border-red/50', className)}>
       <h2 id={headingId} className={cn('text-title font-bold', danger ? 'text-red-text' : 'text-text-strong')}>{title}</h2>
       {description && <p className="mt-1 text-label text-text-muted">{description}</p>}
       <div className="mt-5 flex min-w-0 flex-col gap-4">{children}</div>

@@ -46,7 +46,7 @@ function ServerHistory({ id, revision }: { id: string; revision: string }) {
   const list = useCursorList(fetchPage, id, { getKey: (row) => row.id, revision });
   return (
     <AdminSection title={t('entity.fullHistoryServer')} description={t('entity.historyServerDescription')}>
-      <ListChrome list={list} empty={{ illustration: 'document', title: t('entity.noServerHistory'), compact: true }} skeleton={<AuditListSkeleton />}><AuditList items={list.items} /></ListChrome>
+      <ListChrome list={list} empty={{ title: t('entity.noServerHistory'), compact: true }} skeleton={<AuditListSkeleton />}><AuditList items={list.items} /></ListChrome>
     </AdminSection>
   );
 }

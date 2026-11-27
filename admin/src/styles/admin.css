@@ -16,15 +16,14 @@
 
   .admin-nav-link {
     display: flex;
-    min-height: 2.5rem;
+    min-height: 2.375rem;
     align-items: center;
-    gap: 0.75rem;
-    border: 1px solid transparent;
-    border-radius: var(--radius-lg);
-    padding-inline: 0.6875rem;
+    gap: 0.625rem;
+    border-radius: var(--radius-md);
+    padding-inline: 0.75rem;
     color: var(--color-text-secondary);
     font-size: var(--text-label);
-    font-weight: 600;
+    font-weight: 500;
     transition: background-color 150ms, color 150ms;
   }
 
@@ -34,14 +33,14 @@
   }
 
   .admin-nav-link[aria-current="page"] {
-    color: var(--color-accent-text);
+    color: var(--color-text-strong);
+    font-weight: 600;
     background: var(--color-nav-active);
-    border-color: #315176;
   }
 
   .admin-page-heading {
     color: var(--color-text-strong);
-    font-size: clamp(1.75rem, 1.42rem + 1.15vw, 2.375rem);
+    font-size: clamp(1.625rem, 1.42rem + 0.85vw, 2.125rem);
     font-weight: 700;
     letter-spacing: -0.035em;
     line-height: 1.12;
@@ -53,104 +52,25 @@
     border: 1px solid var(--color-border-default);
     border-radius: var(--radius-xl);
     background: var(--color-surface-panel);
-    box-shadow: var(--shadow-panel);
   }
 
   .admin-data-surface th {
-    background: var(--color-surface-raised);
-  }
-
-  .admin-hero {
-    position: relative;
-    isolation: isolate;
-    overflow: hidden;
-    border: 1px solid #314863;
-    border-radius: var(--radius-xl);
-    background: linear-gradient(107deg, #17273c 5%, #142235 55%, #102a43 100%);
-  }
-
-  .admin-hero::before,
-  .admin-login-art::before,
-  .admin-login::before {
-    position: absolute;
-    z-index: -1;
-    inset: 0;
-    content: "";
-    background-image: radial-gradient(circle, rgb(139 189 255 / 0.25) 1px, transparent 1px);
-    background-size: 20px 20px;
-  }
-
-  .admin-hero::before {
-    mask-image: linear-gradient(to right, transparent 25%, #000 90%);
-  }
-
-  .admin-hero::after,
-  .admin-login-art::after {
-    position: absolute;
-    z-index: -1;
-    width: 27rem;
-    aspect-ratio: 1;
-    content: "";
-    border-radius: 50%;
-    background: radial-gradient(circle, #1b3a5d 0%, #1b3a5d 17%, transparent 17.4%, transparent 29%,
-      #365c83 29.3%, transparent 29.7%, transparent 39%, #365c83 39.3%, transparent 39.7%,
-      transparent 49%, #365c83 49.3%, transparent 49.7%, transparent 59%, #365c83 59.3%, transparent 59.7%);
-    opacity: 0.68;
-  }
-
-  .admin-hero::after {
-    top: 50%;
-    right: -4rem;
-    translate: 0 -50%;
-  }
-
-  .admin-login {
-    position: relative;
-    isolation: isolate;
-    background: radial-gradient(ellipse at 12% 0%, #1b2d44, transparent 58%), var(--color-surface-app);
-  }
-
-  .admin-login::before {
-    mask-image: linear-gradient(130deg, #000, transparent 60%);
-  }
-
-  .admin-login-art {
-    position: relative;
-    isolation: isolate;
-    overflow: hidden;
-    background: radial-gradient(circle at 50% 53%, #213e5f, #152a40 66%, #142438);
-  }
-
-  .admin-login-art::before {
-    mask-image: radial-gradient(ellipse at 50% 53%, #000, transparent 88%);
-    opacity: 0.7;
-  }
-
-  .admin-login-art::after {
-    top: 53%;
-    left: 50%;
-    translate: -50% -50%;
-  }
-
-  @container (width < 38rem) {
-    .admin-hero::after {
-      right: -13rem;
-      opacity: 0.35;
-    }
+    background: var(--color-surface-panel);
   }
 }
 
 .admin-nav-drawer {
   inset: 0 auto 0 0;
-  width: min(19rem, calc(100% - 3rem));
+  width: min(17rem, calc(100% - 2.5rem));
   max-width: none;
   max-height: 100dvh;
   display: flex;
   flex-direction: column;
   gap: 0;
   translate: none;
+  border-width: 0 1px 0 0;
   border-radius: 0;
-  padding: max(1.5rem, env(safe-area-inset-top)) 1rem max(1.5rem, env(safe-area-inset-bottom));
+  padding: max(1.25rem, env(safe-area-inset-top)) 0.875rem max(1.25rem, env(safe-area-inset-bottom));
   background: var(--color-surface-rail);
   scale: 1;
 }

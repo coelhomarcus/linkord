@@ -1,6 +1,5 @@
 {
   "nav": {
-    "workspace": "Painel",
     "overview": "Visão geral",
     "management": "Gestão",
     "users": "Usuários",
@@ -40,13 +39,11 @@
   "layout": {
     "navigation": "Navegação do Admin",
     "openNavigation": "Abrir navegação",
-    "breadcrumb": "Localização",
     "title": "Administração",
     "accessLostTitle": "Você não tem mais acesso à administração",
     "sessionEndedTitle": "Sua sessão terminou"
   },
   "overview": {
-    "description": "Acompanhe a atividade, a moderação e o estado da sua instância.",
     "totalAccounts": "Total de contas",
     "newAccounts_one": "{{formatted}} nova na última hora",
     "newAccounts_other": "{{formatted}} novas na última hora",

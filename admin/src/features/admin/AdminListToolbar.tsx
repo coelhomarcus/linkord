@@ -79,7 +79,7 @@ export function AdminListToolbar({ search, filters, advanced, advancedActive, su
   const open = advancedOpen || advancedActive === true;
 
   return (
-    <div className="admin-panel flex flex-col gap-3 p-4">
+    <div className="flex flex-col gap-3">
       <div className="flex flex-wrap items-end gap-3">
         {search && (
           <div className="flex h-10 min-w-0 basis-full items-center gap-2 rounded-lg border border-border-field bg-bg-textarea px-3 focus-within:border-border-accent @[720px]:flex-[1_1_14rem]">
@@ -103,7 +103,7 @@ export function AdminListToolbar({ search, filters, advanced, advancedActive, su
       </div>
       {advanced && open && <div id={panelId} className="flex flex-wrap items-end gap-3">{advanced}</div>}
       {(summary || onClear || loading) && (
-        <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border-divider pt-2.5 text-caption text-text-muted">
+        <div className="flex flex-wrap items-center justify-between gap-2 text-caption text-text-muted">
           {summary
             ? <p aria-live="polite">{summary}</p>
             : loading && <span className="flex h-[1lh] items-center"><Skeleton shape="text" className="h-2.5 w-20" /></span>}

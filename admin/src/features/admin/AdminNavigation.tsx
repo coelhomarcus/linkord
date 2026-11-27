@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { NavLink } from 'react-router';
-import { MenuIcon, iconWeight } from '@/shared/ui/icons';
+import { MenuIcon } from '@/shared/ui/icons';
 import { Button } from '@/shared/ui/primitives/button';
 import { Dialog, DialogContent, DialogTitle, DialogTrigger } from '@/shared/ui/primitives/dialog';
 import { ADMIN_GROUPS, adminSectionPath } from './adminCatalog';
@@ -9,22 +9,18 @@ import { ADMIN_GROUPS, adminSectionPath } from './adminCatalog';
 export function AdminNavigation({ onNavigate }: { onNavigate?: () => void }) {
   const { t } = useTranslation('admin');
   return (
-    <nav aria-label={t('layout.navigation')} className="flex min-w-0 flex-col gap-7">
+    <nav aria-label={t('layout.navigation')} className="flex min-w-0 flex-col gap-5">
       {ADMIN_GROUPS.map((group) => (
-        <div key={group.labelKey}>
-          <p className="mb-2 px-3 text-micro font-semibold tracking-[0.11em] text-text-muted uppercase">{t(group.labelKey)}</p>
+        <div key={group.labelKey ?? 'overview'}>
+          {group.labelKey && <p className="mb-1.5 px-3 text-micro font-semibold tracking-[0.06em] text-text-muted uppercase">{t(group.labelKey)}</p>}
           <ul className="grid gap-0.5">
             {group.sections.map((section) => {
               const Icon = section.icon;
               return (
                 <li key={section.id}>
                   <NavLink to={adminSectionPath(section)} end={section.id === 'overview'} onClick={onNavigate} className="admin-nav-link focus-ring">
-                    {({ isActive }) => (
-                      <>
-                        <Icon size={19} weight={iconWeight(isActive)} aria-hidden className="shrink-0" />
-                        <span className="truncate">{t(section.labelKey)}</span>
-                      </>
-                    )}
+                    <Icon size={17} aria-hidden className="shrink-0" />
+                    <span className="truncate">{t(section.labelKey)}</span>
                   </NavLink>
                 </li>
               );
@@ -46,7 +42,7 @@ export function AdminMobileNavigation() {
         <MenuIcon aria-hidden />
       </DialogTrigger>
       <DialogContent className="admin-nav-drawer">
-        <DialogTitle className="mb-4 pr-8">{t('layout.title')}</DialogTitle>
+        <DialogTitle className="mb-5 px-3 pr-10">{t('layout.title')}</DialogTitle>
         <AdminNavigation onNavigate={() => setOpen(false)} />
       </DialogContent>
     </Dialog>

@@ -10,13 +10,13 @@ export interface AdminSection {
 }
 
 interface AdminGroup {
-  labelKey: NavKey;
+  labelKey?: NavKey;
   sections: AdminSection[];
 }
 
 const OVERVIEW: AdminSection = { id: 'overview', labelKey: 'nav.overview', icon: DashboardIcon };
 export const ADMIN_GROUPS: AdminGroup[] = [
-  { labelKey: 'nav.workspace', sections: [OVERVIEW] },
+  { sections: [OVERVIEW] },
   {
     labelKey: 'nav.management',
     sections: [

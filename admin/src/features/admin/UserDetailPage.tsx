@@ -44,7 +44,7 @@ function UserHistory({ id, revision }: { id: string; revision: string }) {
   const list = useCursorList(fetchPage, id, { getKey: (row) => row.id, revision });
   return (
     <AdminSection title={t('detail.fullHistory')} description={t('detail.historyDescription')}>
-      <ListChrome list={list} empty={{ illustration: 'document', title: t('detail.noHistory'), compact: true }} skeleton={<AuditListSkeleton />}><AuditList items={list.items} /></ListChrome>
+      <ListChrome list={list} empty={{ title: t('detail.noHistory'), compact: true }} skeleton={<AuditListSkeleton />}><AuditList items={list.items} /></ListChrome>
     </AdminSection>
   );
 }
@@ -131,7 +131,7 @@ function UserDetail({ id, viewerId }: { id: string; viewerId: string }) {
 
       {tab === 'servers' && (
         <AdminSection title={t('detail.servers')} description={t('detail.serversDescription')}>
-          {servers.length === 0 ? <EmptyState size="compact" illustration="servers" title={t('detail.noServersTitle')} /> : (
+          {servers.length === 0 ? <EmptyState size="compact" title={t('detail.noServersTitle')} /> : (
             <ul className="flex flex-col divide-y divide-border-divider">
               {servers.map((g) => (
                 <li key={g.id} className="flex flex-wrap items-center gap-x-3 gap-y-1 py-2.5">

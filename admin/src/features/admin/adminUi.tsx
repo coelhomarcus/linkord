@@ -5,22 +5,20 @@ import { Button } from '@/shared/ui/primitives/button';
 import { cn } from '@/shared/lib/utils';
 import { AdminNotice } from './AdminNotice';
 import { EmptyState } from '@/shared/ui/empty-state';
-import type { EmptyIllustrationName } from '@/shared/ui/empty-state';
 import type { AuditRow } from './adminApi';
 import { actionLabel, formatWhen } from './adminFormat';
 import type { AdminDetailStatus } from './useAdminDetail';
 import { AppLink } from '@/shared/ui/app-link';
 import { SkeletonGroup } from '@/shared/ui/primitives/skeleton';
 import { AdminDetailSkeleton, AdminStackedSkeleton } from './AdminSkeletons';
-import { ArrowLeftIcon, ClockCounterClockwiseIcon } from '@/shared/ui/icons';
+import { ArrowLeftIcon } from '@/shared/ui/icons';
 import { useLanguage } from '@/i18n/useLanguage';
 
 const TONES: Record<string, string> = {
-  active: 'bg-green/15 text-green', suspended: 'bg-red/15 text-red-text',
-  open: 'bg-yellow/15 text-yellow', reviewing: 'bg-primary/15 text-accent-text',
-  resolved: 'bg-green/15 text-green', dismissed: 'bg-fill-active text-text-muted',
-  admin: 'bg-primary/15 text-accent-text', user: 'bg-fill-active text-text-muted',
-  failed: 'bg-red/15 text-red-text',
+  suspended: 'text-red-text',
+  resolved: 'text-green',
+  dismissed: 'text-text-muted',
+  failed: 'text-red-text',
 };
 /** In-flow navigation that used to be a raw underlined `<AppLink>`. */
 export function AdminTextLink({ to, state, children, className }: {
@@ -48,31 +46,26 @@ export function AdminBackLink({ to, state, children }: { to: LinkProps['to']; st
 
 export function Badge({ value }: { value: string }) {
   const { t } = useTranslation('admin');
-  return <span className={cn('inline-flex flex-none items-center gap-1.5 rounded-full px-2.5 py-0.5 text-caption font-semibold', TONES[value] ?? 'bg-fill-active text-text-muted')}><span className="size-1.5 rounded-full bg-current" aria-hidden />{t(`status.${value}`, { defaultValue: value })}</span>;
+  return <span className={cn('inline-flex flex-none items-center rounded-full border border-border-default bg-fill-subtle px-2 py-0.5 text-caption font-medium', TONES[value] ?? 'text-text-secondary')}>{t(`status.${value}`, { defaultValue: value })}</span>;
 }
 
 export function AuditList({ items, empty, compact }: { items: AuditRow[]; empty?: string; compact?: boolean }) {
   const language = useLanguage();
   const { t } = useTranslation('admin');
-  if (items.length === 0) return <EmptyState size="compact" illustration="document" title={empty ?? t('audit.empty')} />;
+  if (items.length === 0) return <EmptyState size="compact" title={empty ?? t('audit.empty')} />;
   return (
     <ul className="flex flex-col divide-y divide-border-divider">
       {items.map((row) => (
-        <li key={row.id} className="flex gap-3 py-3.5 text-label first:pt-0 last:pb-0">
-          <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-fill-hover text-accent-text">
-            <ClockCounterClockwiseIcon size={17} aria-hidden />
-          </span>
-          <div className="min-w-0 flex-1">
-            <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5">
-              <span className="font-semibold break-words text-text-primary">{actionLabel(row.action, language)}</span>
-              <time dateTime={row.at} className="text-caption text-text-muted">{formatWhen(row.at, language)}</time>
-            </div>
-            <p className="mt-0.5 text-caption break-words text-text-muted">
-              {t('common.by')} {row.actorLabel || t('common.system')}{row.targetLabel ? ` · ${t('common.target')}: ${row.targetLabel}` : ''}
-            </p>
-            {row.result === 'failed' && <Badge value="failed" />}
-            {!compact && row.reason && <p className="mt-1 text-caption break-words text-text-secondary">“{row.reason}”</p>}
+        <li key={row.id} className="min-w-0 py-3 text-label first:pt-0 last:pb-0">
+          <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5">
+            <span className="font-medium break-words text-text-primary">{actionLabel(row.action, language)}</span>
+            <time dateTime={row.at} className="text-caption text-text-muted">{formatWhen(row.at, language)}</time>
           </div>
+          <p className="mt-0.5 text-caption break-words text-text-muted">
+            {t('common.by')} {row.actorLabel || t('common.system')}{row.targetLabel ? ` · ${t('common.target')}: ${row.targetLabel}` : ''}
+          </p>
+          {row.result === 'failed' && <Badge value="failed" />}
+          {!compact && row.reason && <p className="mt-1 text-caption break-words text-text-secondary">“{row.reason}”</p>}
         </li>
       ))}
     </ul>
@@ -96,7 +89,6 @@ interface ChromeList {
  * a failed re-read never replace the rows already on screen. */
 /** What an empty list says when no filter explains it: the first time, before there is any data. */
 export interface ListEmpty {
-  illustration: EmptyIllustrationName;
   title: string;
   description?: string;
   /** a history inside a detail page, not a page of its own */
@@ -127,17 +119,16 @@ export function ListChrome({ list, empty, onClearFilters, skeleton, children }: 
     if (onClearFilters) {
       return (
         <EmptyState
-          illustration="filter"
           title={t('chrome.filteredTitle')}
           description={t('chrome.filteredText')}
           action={<Button type="button" variant="secondary" size="sm" onClick={onClearFilters}>{t('ui.clearFilters')}</Button>}
-          className="admin-panel border-dashed"
+          className="admin-panel"
         />
       );
     }
     return empty.compact
-      ? <EmptyState size="compact" illustration={empty.illustration} title={empty.title} description={empty.description} />
-      : <EmptyState illustration={empty.illustration} title={empty.title} description={empty.description} className="admin-panel border-dashed" />;
+      ? <EmptyState size="compact" title={empty.title} description={empty.description} />
+      : <EmptyState title={empty.title} description={empty.description} className="admin-panel" />;
   }
   return (
     <>

@@ -155,7 +155,7 @@ export function AuditPage() {
   const actionOptions = [{ value: '', label: t('ui.allActions') }, ...(action && !ACTION_LABELS[action] ? [{ value: action, label: `${action} (${t('audit.unknownCode')})` }] : []), ...Object.keys(ACTION_LABELS).sort((a, b) => actionLabel(a, language).localeCompare(actionLabel(b, language), undefined, { sensitivity: 'base' })).map((value) => ({ value, label: actionLabel(value, language) }))];
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-5 @[760px]:gap-6">
       <AdminPageTitle title={t('nav.audit')} description={t('pages.audit')} />
       <AdminListToolbar
         filters={(
@@ -178,7 +178,7 @@ export function AuditPage() {
         summary={list.status === 'ready' && list.items.length > 0 ? `${list.items.length} ${t('ui.record', { count: list.items.length })}${list.hasMore ? t('ui.moreResults') : ''}` : undefined}
         onClear={active ? clear : undefined}
       />
-      <ListChrome list={list} empty={{ illustration: 'document', title: t('emptyList.audit.title'), description: t('emptyList.audit.text') }} onClearFilters={active ? clear : undefined} skeleton={tableFits ? <AdminTableSkeleton columns={5} /> : <AdminStackedSkeleton />}>
+      <ListChrome list={list} empty={{ title: t('emptyList.audit.title'), description: t('emptyList.audit.text') }} onClearFilters={active ? clear : undefined} skeleton={tableFits ? <AdminTableSkeleton columns={5} /> : <AdminStackedSkeleton />}>
         {tableFits ? (
           <AdminTable caption={t('ui.auditRecords')} className="min-w-[560px] table-fixed">
             <thead>

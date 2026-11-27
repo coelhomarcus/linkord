@@ -1,6 +1,5 @@
 {
   "nav": {
-    "workspace": "Dashboard",
     "overview": "Overview",
     "management": "Management",
     "users": "Users",
@@ -40,13 +39,11 @@
   "layout": {
     "navigation": "Admin navigation",
     "openNavigation": "Open navigation",
-    "breadcrumb": "Breadcrumb",
     "title": "Administration",
     "accessLostTitle": "You no longer have access to administration",
     "sessionEndedTitle": "Your session ended"
   },
   "overview": {
-    "description": "Monitor activity, moderation, and the status of your instance.",
     "totalAccounts": "Total accounts",
     "newAccounts_one": "{{formatted}} new in the last hour",
     "newAccounts_other": "{{formatted}} new in the last hour",
