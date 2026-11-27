@@ -1,9 +1,9 @@
 import assert from 'node:assert/strict';
 import { afterEach, beforeEach, describe, it, mock } from 'node:test';
 import { config } from '../../../src/config/env.js';
-import { sendAuthCodeEmail } from '../../../src/modules/auth/email.js';
+import { sendAuthCodeEmail, sendPasswordChangedEmail } from '../../../src/modules/auth/email.js';
 
-describe('sendAuthCodeEmail', () => {
+describe('auth emails', () => {
   const saved = { key: config.RESEND_API_KEY, from: config.RESEND_FROM_EMAIL, appUrl: config.APP_URL };
   let sent: { subject: string; text: string; html: string } | null = null;
 
@@ -44,5 +44,32 @@ describe('sendAuthCodeEmail', () => {
     config.APP_URL = '';
     await sendAuthCodeEmail({ to: 'ana@example.test', code: '123456', purpose: 'login', username: 'ana', locale: 'en-US' });
     assert.ok(!sent!.html.includes('<p></p>'));
+  });
+
+  const CHROME_WINDOWS = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36';
+  const AT = new Date('2026-11-27T14:05:00Z');
+
+  it('tells a password change apart from a reset, with the browser, address and time', async () => {
+    await sendPasswordChangedEmail({ to: 'ana@example.test', username: 'ana', locale: 'en-US', how: 'change', ip: '203.0.113.7', userAgent: CHROME_WINDOWS, at: AT });
+    assert.equal(sent!.subject, 'Your Overcord password was changed');
+    assert.ok(sent!.text.includes('was changed in Settings → Security'));
+    assert.ok(sent!.text.includes('Browser: Chrome on Windows'));
+    assert.ok(sent!.text.includes('IP address: 203.0.113.7'));
+    assert.ok(sent!.text.includes('November 27, 2026'));
+    assert.ok(sent!.text.includes('UTC'));
+    assert.ok(sent!.text.includes('"Forgot your password?"'));
+    assert.ok(sent!.text.includes('https://chat.example.test'));
+
+    await sendPasswordChangedEmail({ to: 'ana@example.test', username: 'ana', locale: 'pt-BR', how: 'reset', ip: '', userAgent: '', at: AT });
+    assert.ok(sent!.text.includes('foi redefinida com um código enviado para este e-mail'));
+    assert.ok(sent!.text.includes('Endereço IP: ?'), 'a missing address reads as unknown');
+    assert.ok(sent!.text.includes('"Esqueceu sua senha?"'));
+  });
+
+  it('escapes the password notice and leaves the link out without an app URL', async () => {
+    config.APP_URL = '';
+    await sendPasswordChangedEmail({ to: 'ana@example.test', username: '<b>ana</b>', locale: 'en-US', how: 'change', ip: '203.0.113.7', userAgent: CHROME_WINDOWS, at: AT });
+    assert.ok(!sent!.html.includes('<b>ana</b>'));
+    assert.ok(!sent!.html.includes('<a '));
   });
 });

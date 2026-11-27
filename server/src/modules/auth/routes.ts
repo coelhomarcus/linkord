@@ -20,7 +20,7 @@ import { checkRegistrationAllowed } from './registrationLimits.js';
 import { sanitizeDisplayName } from '../profile/sanitize.js';
 import type { User } from '../../db/schema.js';
 import { consumeLoginChallenge, findLoginChallenge, hasLiveAuthCode, issueAuthCode, verifyAuthCode, type AuthCodePurpose } from './codes.js';
-import { isEmailDeliveryConfigured, sendAuthCodeEmail, sendEmailChangedEmail } from './email.js';
+import { isEmailDeliveryConfigured, sendAuthCodeEmail, sendEmailChangedEmail, sendPasswordChangedEmail } from './email.js';
 import { isKnownBrowser, noticeLogin, noticeRegistration } from './loginAlert.js';
 import { cancelScheduledDeletion, isPastDeletion, scheduleAccountDeletion } from './accountDeletion.js';
 import { clientIpOf, rateLimitSubjectOf, sessionOriginOf } from '../../http/clientInfo.js';
@@ -550,6 +550,7 @@ async function handleRecoveryReset(request: FastifyRequest, reply: FastifyReply)
   // whoever knew the old password is signed out everywhere, live sockets included
   dropSessionConnections(await destroyOtherSessions(user.id, ''));
   await recordAudit({ actor: { id: user.id, username: user.username }, action: 'account.password_reset', targetType: 'user', targetId: user.id, targetLabel: user.username, requestId: request.id });
+  await notifyPasswordChanged(request, user, 'reset');
   sendJson(reply, 200, { ok: true });
 }
 
@@ -885,7 +886,19 @@ async function handlePasswordChange(request: FastifyRequest, reply: FastifyReply
     detail: { endedSessions: ended.length }, requestId: request.id,
   });
   log.info('password changed', { userId: sess.userId, endedSessions: ended.length });
+  const user = await findById(sess.userId);
+  if (user) await notifyPasswordChanged(request, user, 'change');
   sendJson(reply, 200, { endedSessions: ended.length });
+}
+
+/** Emails the account that its password changed, from which browser and when: the other sessions just ended,
+ * and alone that reads like an ordinary expiry. Best-effort: the password has already changed, so a failure
+ * is only logged. */
+async function notifyPasswordChanged(request: FastifyRequest, user: User, how: 'change' | 'reset'): Promise<void> {
+  if (!user.email || !isEmailDeliveryConfigured()) return;
+  const { ip, userAgent } = sessionOriginOf(request);
+  await sendPasswordChangedEmail({ to: user.email, username: user.username, locale: resolveLocale(user.locale), how, ip, userAgent, at: new Date() })
+    .catch((err) => log.warn('could not email a password change', { userId: user.id, how, err }));
 }
 
 async function handleListSessions(request: FastifyRequest, reply: FastifyReply): Promise<void> {

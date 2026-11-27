@@ -22,6 +22,8 @@ type TextKey =
   | 'email.twoFactorDisableSubject' | 'email.twoFactorDisableTitle' | 'email.twoFactorDisableIntro'
   | 'email.loginAlertDisableSubject' | 'email.loginAlertDisableTitle' | 'email.loginAlertDisableIntro'
   | 'email.changedSubject' | 'email.changedTitle' | 'email.changedIntro' | 'email.changedWarning'
+  | 'email.passwordChangedSubject' | 'email.passwordChangedTitle' | 'email.passwordChangedIntro' | 'email.passwordResetIntro'
+  | 'email.passwordChangedAction'
   | 'server.textCategory' | 'server.textChannel' | 'server.voiceCategory' | 'server.voiceChannel';
 
 const TEXT: Record<Locale, Record<TextKey, string>> = {
@@ -78,6 +80,10 @@ const TEXT: Record<Locale, Record<TextKey, string>> = {
     'email.changedSubject': 'O e-mail da sua conta Overcord foi trocado', 'email.changedTitle': 'E-mail trocado',
     'email.changedIntro': 'O e-mail da conta "{{username}}" agora é {{email}}. Este endereço não recebe mais códigos nem avisos dela.',
     'email.changedWarning': 'Se não foi você, entre em contato com o administrador do servidor o quanto antes.',
+    'email.passwordChangedSubject': 'A senha da sua conta Overcord foi trocada', 'email.passwordChangedTitle': 'Senha trocada',
+    'email.passwordChangedIntro': 'A senha da conta "{{username}}" foi trocada em Configurações → Segurança. Os outros dispositivos foram desconectados.',
+    'email.passwordResetIntro': 'A senha da conta "{{username}}" foi redefinida com um código enviado para este e-mail. Todos os dispositivos foram desconectados.',
+    'email.passwordChangedAction': 'Se não foi você, recupere a conta agora: na tela de entrada, use "Esqueceu sua senha?" para receber um código neste e-mail e criar uma nova senha.',
     'server.textCategory': 'Canais de texto', 'server.textChannel': 'geral',
     'server.voiceCategory': 'Canais de voz', 'server.voiceChannel': 'Geral',
   },
@@ -134,6 +140,10 @@ const TEXT: Record<Locale, Record<TextKey, string>> = {
     'email.changedSubject': 'Your Overcord email was changed', 'email.changedTitle': 'Email changed',
     'email.changedIntro': 'The email of the account "{{username}}" is now {{email}}. This address no longer gets its codes or alerts.',
     'email.changedWarning': 'If this was not you, contact the server administrator as soon as possible.',
+    'email.passwordChangedSubject': 'Your Overcord password was changed', 'email.passwordChangedTitle': 'Password changed',
+    'email.passwordChangedIntro': 'The password of the account "{{username}}" was changed in Settings → Security. Your other devices were signed out.',
+    'email.passwordResetIntro': 'The password of the account "{{username}}" was reset with a code sent to this email. Every device was signed out.',
+    'email.passwordChangedAction': 'If this was not you, recover the account now: on the sign-in screen, use "Forgot your password?" to get a code at this email and set a new password.',
     'server.textCategory': 'Text Channels', 'server.textChannel': 'general',
     'server.voiceCategory': 'Voice Channels', 'server.voiceChannel': 'General',
   },

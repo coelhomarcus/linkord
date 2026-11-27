@@ -48,6 +48,7 @@ Transactional email: one `POST https://api.resend.com/emails` per message (`serv
 | 6-digit code | Password recovery and email changes (also linking a first address to an older account): 30 minutes. Turning two-step login on: 30 minutes. A login's second step: 10 minutes. With two-step login on, a code to the *current* address also confirms deleting the account, turning two-step login or sign-in alerts off and changing the email. Each code allows 5 tries and confirms only its own purpose. |
 | New sign-in alert | A password login (or second step) from a browser the account has not used in the last 30 days, naming the browser and system, the IP address and the time. On by default, switchable in Settings → Security; at most 5 per hour. |
 | Email changed | To the old address, with the new one masked. The change also signs out every other session. |
+| Password changed | After a change in Settings → Security or a reset by recovery code, naming which of the two, the browser and system, the IP address and the time, and pointing to recovery if it was not the owner. |
 | Account deletion | When it is scheduled (with the date; signing in before then cancels it) and once it is done. |
 | Data export ready | The download link (only the signed-in account can open it) and its expiry. |
 
@@ -55,7 +56,7 @@ Transactional email: one `POST https://api.resend.com/emails` per message (`serv
 - **Configuration:** `RESEND_API_KEY`, `RESEND_FROM_EMAIL`, `APP_URL`. `RESEND_API_URL` (default `https://api.resend.com`) points at a mail sink in development and the end-to-end stack.
 - **When missing:** code requests fail with `email_not_configured` and two-step login cannot be turned on; alerts and notices are skipped, and an older account without an email stays on the "link your email" screen. A rejected send fails the request with `503 email_delivery_failed`; notices only log a failure.
 - **Two-step login depends on it:** an account with two-step login on cannot finish a login while email is unavailable (`503 email_unavailable`), so removing the `RESEND_*` variables locks those accounts out.
-- **Data sent:** the recipient, the code or notice, the username and `APP_URL`; for a sign-in alert also the browser, system, IP address and time.
+- **Data sent:** the recipient, the code or notice, the username and `APP_URL`; for a sign-in alert or a password change also the browser, system, IP address and time.
 
 ## Web Push
 

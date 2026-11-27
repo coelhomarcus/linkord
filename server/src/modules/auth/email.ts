@@ -105,6 +105,32 @@ export async function sendLoginAlertEmail(
   });
 }
 
+/** Tells an account its password was changed (`change`, from settings) or reset (`reset`, by an emailed code),
+ * by which browser and when. The other sessions were just ended, which on its own reads like an ordinary
+ * expiry: this is what tells the owner their account may have been taken, and that recovery takes it back. */
+export async function sendPasswordChangedEmail(
+  { to, username, locale, how, ip, userAgent, at }:
+  { to: string; username: string; locale: Locale; how: 'change' | 'reset'; ip: string; userAgent: string; at: Date },
+): Promise<void> {
+  const subject = localeText(locale, 'email.passwordChangedSubject');
+  const title = localeText(locale, 'email.passwordChangedTitle');
+  const intro = localeText(locale, how === 'reset' ? 'email.passwordResetIntro' : 'email.passwordChangedIntro', { username });
+  const details = [
+    localeText(locale, 'email.loginAlertDevice', { device: deviceName(locale, userAgent) }),
+    localeText(locale, 'email.loginAlertIp', { ip: ip || '?' }),
+    localeText(locale, 'email.loginAlertTime', { time: emailDate(locale, at) }),
+  ];
+  const action = localeText(locale, 'email.passwordChangedAction');
+  const link = config.APP_URL;
+
+  await deliverEmail({
+    to,
+    subject,
+    text: `${title}\n\n${intro}\n\n${details.join('\n')}\n\n${action}${link ? `\n${link}` : ''}`,
+    html: `<h2>${escapeHtml(title)}</h2><p>${escapeHtml(intro)}</p><ul>${details.map((line) => `<li>${escapeHtml(line)}</li>`).join('')}</ul><p>${escapeHtml(action)}</p>${link ? `<p><a href="${escapeHtml(link)}">${escapeHtml(link)}</a></p>` : ''}`,
+  });
+}
+
 /** A date for an email, in UTC with its name spelled out: the server does not know the reader's time zone. */
 function emailDate(locale: Locale, at: Date): string {
   return `${new Intl.DateTimeFormat(locale, { dateStyle: 'long', timeStyle: 'short', timeZone: 'UTC' }).format(at)} UTC`;
