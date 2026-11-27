@@ -389,7 +389,7 @@ test.describe('unread', () => {
     await expect(railItem(other, '2 mensagens não lidas')).toBeVisible();
 
     await railItem(b, '2 mensagens não lidas').click({ button: 'right' });
-    await b.page.getByRole('menuitem', { name: 'Marcar servidor como lido' }).click();
+    await b.page.getByRole('menuitem', { name: 'Marcar como lido', exact: true }).click();
     await expect(railItem(b)).toBeVisible();
     await expect(railItem(other)).toBeVisible();
 
