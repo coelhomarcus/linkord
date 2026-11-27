@@ -85,6 +85,23 @@ describe.skip('SystemPage', () => {
   });
 });
 
+describe('SystemPage storage capacity', () => {
+  it('reports usage over the limit while keeping the meter within its range', async () => {
+    mocked.fetchSystem.mockResolvedValue(info({ storage: { usedBytes: 1500, maxBytes: 1000, files: 2 } }));
+    open();
+    const meter = await screen.findByRole('meter', { name: 'Armazenamento da instância' });
+    expect(meter).toHaveAttribute('aria-valuenow', '1000');
+    expect(meter).toHaveAttribute('aria-valuetext', '150% do limite em uso');
+  });
+
+  it('shows usage without a meter if storage has no configured limit', async () => {
+    mocked.fetchSystem.mockResolvedValue(info({ storage: { usedBytes: 512, maxBytes: 0, files: 1 } }));
+    open();
+    expect(await screen.findByText('512 B em uso. O limite de armazenamento não foi informado.')).toBeInTheDocument();
+    expect(screen.queryByRole('meter')).not.toBeInTheDocument();
+  });
+});
+
 describe('SystemPage retention section', () => {
   it('shows each table\'s limit, "forever" for 0, and what the last sweep deleted', async () => {
     mocked.fetchSystem.mockResolvedValue(info({

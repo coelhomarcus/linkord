@@ -112,7 +112,7 @@ export function ServersPage() {
         ) : (
           <AdminStackedList>
             {list.items.map((g) => (
-              <li key={g.id} className="flex flex-col gap-2 p-3">
+              <li key={g.id} className="flex flex-col gap-2">
                 <div className="flex items-center gap-2">
                   <div className="min-w-0 flex-1"><ServerIdentity server={g} from={origin} /></div>
                   <RowActions server={g} />

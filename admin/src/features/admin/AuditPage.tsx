@@ -116,7 +116,7 @@ function CompactRow({ row }: { row: AuditRow }) {
   const [open, setOpen] = useState(false);
   const detailsId = `audit-${row.id}`;
   return (
-    <li className="flex flex-col gap-2 p-3 text-label text-text-secondary">
+    <li className="flex flex-col gap-2 text-label text-text-secondary">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <span className="font-medium text-text-primary">{actionLabel(row.action, language)}</span>
         <Result row={row} />

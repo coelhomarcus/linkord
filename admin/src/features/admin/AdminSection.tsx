@@ -14,21 +14,27 @@ export function AdminPageTitle({ title, description, actions }: { title: string;
   );
 }
 
-export function AdminSection({ id, title, description, danger, children, className }: {
+export function AdminSection({ id, title, description, actions, danger, children, className }: {
   /** anchor target (`/admin/system#storage`) */
   id?: string;
   title: string;
   description?: ReactNode;
+  actions?: ReactNode;
   danger?: boolean;
   children: ReactNode;
   className?: string;
 }) {
   const headingId = useId();
   return (
-    <section id={id} aria-labelledby={headingId} className={cn('admin-panel flex min-w-0 scroll-mt-6 flex-col p-4 @[540px]:p-6', danger && 'border-red/50', className)}>
-      <h2 id={headingId} className={cn('text-title font-bold', danger ? 'text-red-text' : 'text-text-strong')}>{title}</h2>
-      {description && <p className="mt-1 text-label text-text-muted">{description}</p>}
-      <div className="mt-5 flex min-w-0 flex-col gap-4">{children}</div>
+    <section id={id} aria-labelledby={headingId} className={cn('admin-panel flex min-w-0 scroll-mt-6 flex-col', danger && 'border-red/50', className)}>
+      <header className="admin-card-inset flex flex-wrap items-start justify-between gap-x-4 gap-y-2 border-b border-border-divider">
+        <div className="min-w-0 flex-1">
+          <h2 id={headingId} className={cn('text-body font-semibold wrap-anywhere', danger ? 'text-red-text' : 'text-text-strong')}>{title}</h2>
+          {description && <p className="mt-1 max-w-prose text-label text-text-muted">{description}</p>}
+        </div>
+        {actions}
+      </header>
+      <div className="admin-card-inset flex min-w-0 flex-1 flex-col gap-4">{children}</div>
     </section>
   );
 }

@@ -14,17 +14,19 @@ export function AdminEntityHeader({ avatar, title, subtitle, id, badges }: {
 }) {
   const { t } = useTranslation('admin');
   return (
-    <header className="admin-panel flex flex-wrap items-center gap-x-4 gap-y-3 p-4 @[540px]:p-5">
-      <div className="flex-none">{avatar}</div>
-      <div className="min-w-0 flex-1 basis-48">
-        <h1 className="admin-page-heading">{title}</h1>
-        {subtitle && <p className="mt-0.5 truncate text-label text-text-muted">{subtitle}</p>}
-        <p className="mt-1.5 flex items-center gap-1 text-caption text-text-muted">
-          <span className="min-w-0 break-all font-mono">{id}</span>
-          <CopyIdButton id={id} label={t('ui.copyId', { name: title })} />
-        </p>
+    <header className="admin-panel admin-card-inset flex flex-wrap items-start justify-between gap-4">
+      <div className="flex min-w-0 flex-1 basis-64 items-start gap-4">
+        <div className="shrink-0">{avatar}</div>
+        <div className="min-w-0 flex-1">
+          <h1 className="admin-page-heading">{title}</h1>
+          {subtitle && <p className="mt-1 wrap-anywhere text-label text-text-muted">{subtitle}</p>}
+          <div className="mt-2 inline-flex max-w-full items-center gap-1 rounded-md bg-fill-subtle pl-2 text-caption text-text-muted">
+            <code className="min-w-0 wrap-anywhere">{id}</code>
+            <CopyIdButton id={id} label={t('ui.copyId', { name: title })} />
+          </div>
+        </div>
       </div>
-      {badges && <div className="flex flex-none flex-wrap items-center gap-2">{badges}</div>}
+      {badges && <div className="flex min-w-0 flex-wrap items-center gap-2">{badges}</div>}
     </header>
   );
 }

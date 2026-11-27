@@ -54,8 +54,31 @@
     background: var(--color-surface-panel);
   }
 
-  .admin-data-surface th {
-    background: var(--color-surface-panel);
+  .admin-card-inset {
+    padding: 1rem;
+  }
+
+  @container (width >= 38rem) {
+    .admin-card-inset {
+      padding-inline: 1.25rem;
+    }
+  }
+
+  .admin-metric {
+    min-width: 0;
+    display: grid;
+    grid-template-rows: auto 1fr;
+    gap: 0.625rem;
+  }
+
+  .admin-metric-label {
+    min-block-size: 2.9em;
+  }
+
+  @container (width >= 27rem) {
+    .admin-metric-label {
+      min-block-size: 0;
+    }
   }
 }
 

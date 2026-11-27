@@ -126,7 +126,7 @@ export function UsersPage() {
         ) : (
           <AdminStackedList>
             {list.items.map((u) => (
-              <li key={u.id} className="flex flex-col gap-2 p-3">
+              <li key={u.id} className="flex flex-col gap-2">
                 <div className="flex items-center gap-2">
                   <div className="min-w-0 flex-1"><UserIdentity user={u} from={origin} /></div>
                   <RowActions user={u} />

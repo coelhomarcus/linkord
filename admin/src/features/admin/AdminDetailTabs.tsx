@@ -16,8 +16,8 @@ export function AdminDetailTabs<T extends string>({ label, tabs, active, default
 }) {
   const { pathname, state } = useLocation();
   return (
-    <nav aria-label={label} className="admin-panel scrollbar-none overflow-x-auto p-1.5">
-      <ul className="flex min-w-max gap-1">
+    <nav aria-label={label} className="scrollbar-none overflow-x-auto border-b border-border-divider">
+      <ul className="flex min-w-max gap-2">
         {tabs.map((tab) => {
           const current = tab.id === active;
           return (
@@ -28,8 +28,8 @@ export function AdminDetailTabs<T extends string>({ label, tabs, active, default
                 state={state}
                 aria-current={current ? 'page' : undefined}
                 className={cn(
-                  'flex h-9 items-center rounded-lg px-3 text-label font-semibold focus-ring focus-visible:ring-inset transition-colors',
-                  current ? 'bg-nav-active text-accent-text' : 'text-text-muted hover:bg-nav-hover hover:text-text-primary',
+                  'flex h-10 items-center rounded-t-md border-b-2 border-transparent px-3 pt-0.5 text-label font-medium focus-ring focus-visible:ring-inset transition-colors',
+                  current ? 'border-b-text-primary text-text-strong' : 'text-text-muted hover:border-b-border-strong hover:text-text-primary',
                 )}
               >
                 {tab.label}

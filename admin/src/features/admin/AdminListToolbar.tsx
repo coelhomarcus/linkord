@@ -80,7 +80,7 @@ export function AdminListToolbar({ search, filters, advanced, advancedActive, su
 
   return (
     <div className="flex flex-col gap-3">
-      <div className="flex flex-wrap items-end gap-3">
+      <div className="flex min-w-0 flex-wrap items-end gap-x-3 gap-y-3">
         {search && (
           <div className="flex h-10 min-w-0 basis-full items-center gap-2 rounded-lg border border-border-field bg-bg-textarea px-3 focus-within:border-border-accent @[720px]:flex-[1_1_14rem]">
             <MagnifyingGlassIcon size={20} aria-hidden className="flex-none text-text-muted" />
@@ -95,15 +95,15 @@ export function AdminListToolbar({ search, filters, advanced, advancedActive, su
         )}
         {filters}
         {advanced && (
-          <Button type="button" variant="secondary" className="h-10" aria-expanded={open} aria-controls={panelId} onClick={() => setAdvancedOpen((v) => !v)}>
+          <Button type="button" variant="secondary" className="h-10" aria-expanded={open} aria-controls={open ? panelId : undefined} onClick={() => setAdvancedOpen((v) => !v)}>
             {t('ui.moreFilters')}
             <CaretDownIcon size={16} aria-hidden className={cn('transition-transform', open && 'rotate-180')} />
           </Button>
         )}
       </div>
-      {advanced && open && <div id={panelId} className="flex flex-wrap items-end gap-3">{advanced}</div>}
+      {advanced && open && <div id={panelId} className="flex min-w-0 flex-wrap items-end gap-x-3 gap-y-3">{advanced}</div>}
       {(summary || onClear || loading) && (
-        <div className="flex flex-wrap items-center justify-between gap-2 text-caption text-text-muted">
+        <div className="flex min-h-6 flex-wrap items-center justify-between gap-2 text-caption text-text-muted">
           {summary
             ? <p aria-live="polite">{summary}</p>
             : loading && <span className="flex h-[1lh] items-center"><Skeleton shape="text" className="h-2.5 w-20" /></span>}

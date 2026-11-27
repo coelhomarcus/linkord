@@ -6,7 +6,7 @@ import { cn } from '@/shared/lib/utils';
  * one presentation mounted at a time so assistive tech doesn't read both. */
 export function AdminTable({ caption, children, className }: { caption: string; children: ReactNode; className?: string }) {
   return (
-    <div className="admin-panel admin-data-surface overflow-x-auto">
+    <div className="admin-panel overflow-x-auto">
       <table className={cn('w-full min-w-[640px] border-collapse text-left', className)}>
         <caption className="sr-only">{caption}</caption>
         {children}
@@ -16,7 +16,7 @@ export function AdminTable({ caption, children, className }: { caption: string; 
 }
 
 export function AdminTh({ className, ...props }: ComponentProps<'th'>) {
-  return <th scope="col" className={cn('overflow-hidden text-ellipsis whitespace-nowrap border-b border-border-divider px-4 py-3 text-caption font-semibold tracking-wide text-text-muted', className)} {...props} />;
+  return <th scope="col" className={cn('overflow-hidden text-ellipsis whitespace-nowrap border-b border-border-divider bg-surface-raised px-4 py-3 text-caption font-semibold text-text-secondary', className)} {...props} />;
 }
 
 export function AdminTd({ className, ...props }: ComponentProps<'td'>) {
@@ -24,10 +24,10 @@ export function AdminTd({ className, ...props }: ComponentProps<'td'>) {
 }
 
 export function AdminTr({ className, ...props }: ComponentProps<'tr'>) {
-  return <tr className={cn('group/row transition-colors hover:bg-fill-subtle', className)} {...props} />;
+  return <tr className={cn('group/row transition-colors hover:bg-fill-subtle focus-within:bg-fill-subtle', className)} {...props} />;
 }
 
 /** The compact counterpart of a table: one bordered list, a row per item. */
 export function AdminStackedList({ children }: { children: ReactNode }) {
-  return <ul className="admin-panel flex flex-col divide-y divide-border-divider">{children}</ul>;
+  return <ul className="admin-panel flex flex-col divide-y divide-border-divider [&>li]:px-4 [&>li]:py-3.5">{children}</ul>;
 }

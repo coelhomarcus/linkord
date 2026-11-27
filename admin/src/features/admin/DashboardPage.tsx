@@ -1,15 +1,16 @@
-import { useId, type ReactNode } from 'react';
+import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useLanguage } from '@/i18n/useLanguage';
 import { categoryLabel } from '@/features/reports/reportCategories';
 import { AppLink } from '@/shared/ui/app-link';
-import { Button } from '@/shared/ui/primitives/button';
+import { Button, buttonVariants } from '@/shared/ui/primitives/button';
 import { Skeleton, SkeletonGroup } from '@/shared/ui/primitives/skeleton';
 import { ArrowRightIcon, CaretRightIcon, RefreshIcon } from '@/shared/ui/icons';
 import { cn } from '@/shared/lib/utils';
 import { formatFileSize } from '@/shared/lib/formatBytes';
 import { AdminNotice } from './AdminNotice';
-import { AdminPageTitle } from './AdminSection';
+import { AdminCapacityBar } from './AdminCapacityBar';
+import { AdminPageTitle, AdminSection } from './AdminSection';
 import { AuditList } from './adminUi';
 import { AuditListSkeleton } from './AdminSkeletons';
 import { fetchAdminReports, fetchAudit, type AdminReportRow, type SystemInfo } from './adminApi';
@@ -20,24 +21,29 @@ import { useAdminSystem } from './adminSystemResource';
 const readAudit = () => fetchAudit({}, null);
 const readReports = () => fetchAdminReports({ status: 'open' }, null);
 
-function Metric({ label, value, detail, to, meter }: {
+function Metric({ label, value, detail, to, meter, className }: {
   label: string;
   value?: string;
   detail?: string;
   to: string;
   meter?: ReactNode;
+  className?: string;
 }) {
   return (
-    <AppLink to={to} className="group flex min-w-0 flex-col bg-surface-panel p-4 focus-ring focus-visible:ring-inset transition-colors hover:bg-surface-raised @[620px]:p-5">
-      <div className="flex items-start justify-between gap-2">
-        <p className="text-caption font-medium text-text-secondary @[620px]:text-label">{label}</p>
-        <CaretRightIcon size={14} aria-hidden className="mt-0.5 shrink-0 text-text-muted group-hover:text-text-strong" />
+    <AppLink to={to} className={cn('admin-metric admin-card-inset group focus-ring focus-visible:ring-inset transition-colors hover:bg-surface-raised', className)}>
+      <div className="flex items-start justify-between gap-1.5">
+        <p className="admin-metric-label text-caption font-medium text-text-secondary @[620px]:text-label">{label}</p>
+        <CaretRightIcon size={14} aria-hidden className="mt-0.5 shrink-0 text-text-muted group-hover:text-text-primary" />
       </div>
-      {value !== undefined
-        ? <p className="mt-2 text-[clamp(1.375rem,1.05rem+1vw,1.875rem)] leading-tight font-semibold tracking-tight text-text-strong tabular-nums">{value}</p>
-        : <Skeleton className="mt-3 mb-1 h-5 w-14" />}
-      {detail && <p className="mt-1 text-caption text-text-muted">{detail}</p>}
-      {meter}
+      <div className="flex min-w-0 flex-col">
+        <div className="text-[clamp(1.375rem,1.05rem+1vw,1.875rem)] leading-tight font-semibold tracking-tight wrap-anywhere text-text-strong tabular-nums">
+          {value ?? <Skeleton className="my-1 h-5 w-14" />}
+        </div>
+        {detail
+          ? <p className="mt-1 text-caption wrap-anywhere text-text-muted">{detail}</p>
+          : value === undefined && <Skeleton shape="text" className="mt-2 h-2.5 w-20" />}
+        {meter && <div className="mt-auto pt-3">{meter}</div>}
+      </div>
     </AppLink>
   );
 }
@@ -47,59 +53,52 @@ function SystemMetrics({ info }: { info?: SystemInfo }) {
   const language = useLanguage();
   const number = new Intl.NumberFormat(language);
   const { accounts, connections, storage } = info ?? {};
-  const storagePercent = storage && storage.maxBytes > 0 ? Math.min(1, storage.usedBytes / storage.maxBytes) : null;
+  const storagePercent = storage && storage.maxBytes > 0 ? storage.usedBytes / storage.maxBytes : null;
 
   return (
-    <div className="admin-panel grid grid-cols-2 gap-px overflow-hidden bg-border-divider @[740px]:grid-cols-4">
-      <Metric label={t('overview.totalAccounts')} to="/admin/users"
-        value={accounts && number.format(accounts.total)}
-        detail={accounts && t('overview.newAccounts', { count: accounts.newLastHour, formatted: number.format(accounts.newLastHour) })} />
-      <Metric label={t('common.onlineAccounts')} to="/admin/system"
-        value={connections && number.format(connections.onlineAccounts)} detail={accounts && t('overview.ofAccounts', { total: number.format(accounts.total) })} />
-      <Metric label={t('common.liveConnections')} to="/admin/system"
+    <div className="grid grid-cols-2 gap-3 @[740px]:grid-cols-4 @[740px]:gap-4">
+      <div className="admin-panel col-span-2 grid grid-cols-2 divide-x divide-border-divider overflow-hidden">
+        <Metric label={t('overview.totalAccounts')} to="/admin/users"
+          value={accounts && number.format(accounts.total)}
+          detail={accounts && t('overview.newAccounts', { count: accounts.newLastHour, formatted: number.format(accounts.newLastHour) })} />
+        <Metric label={t('common.onlineAccounts')} to="/admin/system"
+          value={connections && number.format(connections.onlineAccounts)}
+          detail={accounts && t('overview.ofAccounts', { total: number.format(accounts.total) })} />
+      </div>
+      <Metric className="admin-panel" label={t('common.liveConnections')} to="/admin/system"
         value={connections && number.format(connections.live)}
-        detail={connections && t('overview.connectionLimit', { max: number.format(connections.max) })} />
-      <Metric label={t('overview.usedStorage')} to="/admin/system"
+        detail={connections && connections.max > 0 ? t('overview.connectionLimit', { max: number.format(connections.max) }) : undefined}
+        meter={connections && connections.max > 0 && <AdminCapacityBar value={connections.live} max={connections.max} />} />
+      <Metric className="admin-panel" label={t('overview.usedStorage')} to="/admin/system"
         value={storage && formatFileSize(storage.usedBytes, language)}
         detail={storage && (storagePercent === null
           ? t('system.storageFiles', { count: storage.files })
           : t('overview.storageLimit', { max: formatFileSize(storage.maxBytes, language), percent: new Intl.NumberFormat(language, { style: 'percent' }).format(storagePercent) }))}
-        meter={storagePercent !== null && (
-          <div aria-hidden className="mt-3 h-1 overflow-hidden rounded-full bg-fill-active">
-            <div className={cn('h-full rounded-full', storagePercent >= 0.9 ? 'bg-yellow' : 'bg-text-muted')} style={{ width: `${storagePercent * 100}%` }} />
-          </div>
-        )} />
+        meter={storage && storage.maxBytes > 0 && <AdminCapacityBar value={storage.usedBytes} max={storage.maxBytes} />} />
     </div>
   );
 }
 
-function DashboardPanel({ title, to, link, children }: { title: string; to: string; link: string; children: ReactNode }) {
-  const headingId = useId();
+function PanelLink({ to, children }: { to: string; children: ReactNode }) {
   return (
-    <section className="admin-panel flex flex-col" aria-labelledby={headingId}>
-      <header className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 border-b border-border-divider px-4 py-3.5 @[620px]:px-5">
-        <h2 id={headingId} className="text-body font-semibold text-text-strong">{title}</h2>
-        <AppLink to={to} className="flex shrink-0 items-center gap-1.5 rounded-sm text-caption font-medium text-text-secondary focus-ring hover:text-text-strong hover:underline">
-          {link}<ArrowRightIcon size={14} aria-hidden />
-        </AppLink>
-      </header>
-      <div className="p-4 @[620px]:px-5">{children}</div>
-    </section>
+    <AppLink to={to} className={buttonVariants({ variant: 'ghost', size: 'sm', className: 'h-7 gap-1.5 px-2 text-text-secondary [&_svg]:size-3.5' })}>
+      {children}<ArrowRightIcon size={14} aria-hidden />
+    </AppLink>
   );
 }
 
 function ReportPreview({ reports }: { reports: AdminReportRow[] }) {
   const { t } = useTranslation('admin');
   const language = useLanguage();
-  if (!reports.length) return <p className="text-label text-text-muted">{t('overview.noOpenReports')}</p>;
+  if (!reports.length) return <p className="my-auto py-2 text-label text-text-muted">{t('overview.noOpenReports')}</p>;
   return (
     <ul className="divide-y divide-border-divider">
       {reports.slice(0, 3).map((report) => (
-        <li key={report.id} className="py-2.5 first:pt-0 last:pb-0">
-          <AppLink to={`/admin/reports/${encodeURIComponent(report.id)}`} className="group flex items-center gap-2 rounded-md focus-ring">
+        <li key={report.id}>
+          <AppLink to={`/admin/reports/${encodeURIComponent(report.id)}`} className="group -mx-2 flex items-center gap-2 rounded-md px-2 py-2.5 focus-ring transition-colors hover:bg-fill-subtle">
             <span className="min-w-0 flex-1">
               <span className="block truncate text-label font-semibold text-text-primary group-hover:text-accent-text">{report.targetLabel || report.targetId}</span>
-              <span className="block text-caption text-text-muted">{categoryLabel(report.category)} · {formatWhenShort(report.createdAt, language)}</span>
+              <span className="block text-caption text-text-muted">{categoryLabel(report.category)} · <time dateTime={report.createdAt}>{formatWhenShort(report.createdAt, language)}</time></span>
             </span>
             <CaretRightIcon size={16} aria-hidden className="shrink-0 text-text-muted" />
           </AppLink>
@@ -173,29 +172,29 @@ export function DashboardPage() {
           ? <SystemMetrics info={system.data.info} />
           : <SkeletonGroup label={t('chrome.loading')}><SystemMetrics /></SkeletonGroup>
       )}
-      <div className="grid items-start gap-5 @[810px]:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)] @[810px]:gap-6">
-        <DashboardPanel title={t('overview.recentActivity')} to="/admin/audit" link={t('overview.viewAudit')}>
+      <div className="grid gap-4 @[800px]:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)]">
+        <AdminSection title={t('overview.recentActivity')} actions={<PanelLink to="/admin/audit">{t('overview.viewAudit')}</PanelLink>}>
           {audit.status === 'ready' && audit.data
             ? <AuditList items={audit.data.items.slice(0, 5)} compact />
             : audit.status === 'loading'
               ? <SkeletonGroup label={t('chrome.loading')}><AuditListSkeleton /></SkeletonGroup>
               : <p className="text-label text-text-muted">{t('chrome.loadFailed')}</p>}
-        </DashboardPanel>
-        <div className="grid min-w-0 gap-5">
-          <DashboardPanel title={t('overview.openReports')} to="/admin/reports" link={t('overview.viewQueue')}>
+        </AdminSection>
+        <div className="grid min-w-0 gap-4 @[800px]:grid-rows-[1fr_auto]">
+          <AdminSection title={t('overview.openReports')} actions={<PanelLink to="/admin/reports">{t('overview.viewQueue')}</PanelLink>}>
             {reports.status === 'ready' && reports.data
               ? <ReportPreview reports={reports.data.items} />
               : reports.status === 'loading'
                 ? <SkeletonGroup label={t('chrome.loading')}><AuditListSkeleton rows={2} /></SkeletonGroup>
                 : <p className="text-label text-text-muted">{t('chrome.loadFailed')}</p>}
-          </DashboardPanel>
-          <DashboardPanel title={t('common.services')} to="/admin/system" link={t('overview.viewSystem')}>
+          </AdminSection>
+          <AdminSection title={t('common.services')} actions={<PanelLink to="/admin/system">{t('overview.viewSystem')}</PanelLink>}>
             {system.data
               ? <ServiceSummary info={system.data.info} />
               : systemFailed
                 ? <p className="text-label text-text-muted">{t('chrome.loadFailed')}</p>
                 : <SkeletonGroup label={t('chrome.loading')}><AuditListSkeleton rows={1} /></SkeletonGroup>}
-          </DashboardPanel>
+          </AdminSection>
         </div>
       </div>
     </>

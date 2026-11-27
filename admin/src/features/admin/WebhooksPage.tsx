@@ -101,7 +101,7 @@ export function WebhooksPage() {
         ) : (
           <AdminStackedList>
             {list.items.map((w) => (
-              <li key={w.id} className="flex flex-col gap-2 p-3">
+              <li key={w.id} className="flex flex-col gap-2">
                 <div className="flex items-center gap-2">
                   <div className="min-w-0 flex-1"><WebhookIdentity webhook={w} from={origin} /></div>
                   <RowActions webhook={w} />

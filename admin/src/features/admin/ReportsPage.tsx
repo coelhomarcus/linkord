@@ -91,7 +91,7 @@ export function ReportsPage() {
         ) : (
           <AdminStackedList>
             {list.items.map((r) => (
-              <li key={r.id} className="flex flex-col gap-2 p-3">
+              <li key={r.id} className="flex flex-col gap-2">
                 <ReportLink report={r} from={origin} />
                 <div className="flex flex-wrap items-center gap-2 text-caption text-text-muted">
                   <Badge value={r.status} />

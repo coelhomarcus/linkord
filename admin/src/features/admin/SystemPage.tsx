@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Button } from '@/shared/ui/primitives/button';
 import { formatFileSize } from '@/shared/lib/formatBytes';
 import { AdminNotice } from './AdminNotice';
+import { AdminCapacityBar } from './AdminCapacityBar';
 import { sweepOrphans } from './adminApi';
 import type { RetentionInfo, SweepResult } from './adminApi';
 import { AdminActionRow, AdminFieldRow, AdminFields, AdminPageTitle, AdminSection } from './AdminSection';
@@ -25,23 +26,15 @@ function useGraceText() {
   };
 }
 
-/** The limit may be absent or zero: no meter, no division — and no pretending it is unlimited. */
 function StorageMeter({ used, max }: { used: number; max: number }) {
   const { t } = useTranslation('admin');
-  if (!(max > 0)) return <p className="text-body text-text-secondary">{t('system.storageNoLimit', { used: formatFileSize(used) })}</p>;
-  const percent = Math.round(Math.min(100, (used / max) * 100));
+  const language = useLanguage();
+  if (!(max > 0)) return <p className="text-body text-text-secondary">{t('system.storageNoLimit', { used: formatFileSize(used, language) })}</p>;
+  const percent = Math.round((used / max) * 100);
   return (
-    <div className="flex flex-col gap-2">
-      <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <p className="text-body font-medium text-text-primary">{t('system.storageUsed', { used: formatFileSize(used), max: formatFileSize(max), percent })}</p>
-      </div>
-      <div
-        className="h-2 w-full overflow-hidden rounded-full bg-fill-active"
-        role="meter" aria-label={t('system.storageMeter')} aria-valuemin={0} aria-valuemax={max} aria-valuenow={Math.min(used, max)}
-        aria-valuetext={t('system.storageMeterValue', { percent })}
-      >
-        <div className={percent >= 90 ? 'h-full rounded-full bg-red' : 'h-full rounded-full bg-primary'} style={{ width: `${percent}%` }} />
-      </div>
+    <div className="flex flex-col gap-3">
+      <p className="text-body font-medium text-text-primary">{t('system.storageUsed', { used: formatFileSize(used, language), max: formatFileSize(max, language), percent })}</p>
+      <AdminCapacityBar value={used} max={max} label={t('system.storageMeter')} valueText={t('system.storageMeterValue', { percent })} />
     </div>
   );
 }
@@ -96,8 +89,7 @@ function RetentionSection({ retention }: { retention: RetentionInfo }) {
   );
 }
 
-/** Operational view of the instance — the numbers an administrator acts on, read when the page opens or
- * on "Refresh", never polled. The instance-wide storage figure only exists here. */
+/** Operational view of the instance, read when the page opens or the administrator refreshes. */
 export function SystemPage() {
   const language = useLanguage();
   const { t, i18n } = useTranslation('admin');

@@ -69,8 +69,8 @@ export function AuditListSkeleton({ rows = 4 }: { rows?: number }) {
   return (
     <div className="flex flex-col divide-y divide-border-divider">
       {Array.from({ length: rows }, (_, row) => (
-        <div key={row} className="flex flex-col gap-1 py-3.5 first:pt-0 last:pb-0">
-          <div className="flex items-center gap-2 text-label">
+        <div key={row} className="flex flex-col gap-0.5 py-3 first:pt-0 last:pb-0">
+          <div className="flex flex-wrap items-center justify-between gap-2 text-label">
             <span className={LINE}><Skeleton shape="text" className={cn('w-36', row % 2 && 'w-28')} /></span>
             <span className={cn(LINE, 'text-caption')}><Skeleton shape="text" className="h-2.5 w-16" /></span>
           </div>
@@ -87,21 +87,24 @@ export function AdminDetailSkeleton({ tabs = true }: { tabs?: boolean }) {
   return (
     <div className="flex flex-col gap-6">
       <span className={cn(LINE, 'text-label')}><Skeleton shape="text" className="w-28" /></span>
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-3 admin-panel p-4 @[540px]:p-5">
-        <Skeleton shape="circle" className="size-16" />
-        <div className="min-w-0 flex-1 basis-48">
-          <span className={cn(LINE, 'text-heading')}><Skeleton shape="text" className="h-4 w-48" /></span>
-          <span className={cn(LINE, 'mt-0.5 text-label')}><Skeleton shape="text" className="w-28" /></span>
-          {/* the id and its copy button */}
-          <span className="mt-1.5 flex h-8 items-center"><Skeleton shape="text" className="h-2.5 w-56" /></span>
+      <div className="admin-panel admin-card-inset flex flex-wrap items-start justify-between gap-4">
+        <div className="flex min-w-0 flex-1 basis-64 items-start gap-4">
+          <Skeleton shape="circle" className="size-16" />
+          <div className="min-w-0 flex-1">
+            <span className={cn(LINE, 'text-display')}><Skeleton shape="text" className="h-4 w-48" /></span>
+            <span className={cn(LINE, 'mt-1 text-label')}><Skeleton shape="text" className="w-28" /></span>
+            <div className="mt-2 flex h-8 w-fit max-w-full items-center rounded-md bg-fill-subtle px-2">
+              <Skeleton shape="text" className="h-2.5 w-48" />
+            </div>
+          </div>
         </div>
-        <div className="flex flex-none items-center gap-2">
+        <div className="flex items-center gap-2">
           <Skeleton shape="circle" className="h-5 w-16" />
           <Skeleton shape="circle" className="h-5 w-14" />
         </div>
       </div>
       {tabs && (
-        <div className="flex h-11 items-center gap-5 shadow-[inset_0_-1px_0_var(--color-border)]">
+        <div className="flex h-10 items-center gap-5 border-b border-border-divider px-3">
           {['w-20', 'w-16', 'w-24', 'w-16'].map((className, index) => <Skeleton key={index} shape="text" className={cn('h-3.5', className)} />)}
         </div>
       )}
@@ -123,10 +126,12 @@ export function AdminSectionsSkeleton({ sections = 3 }: { sections?: number }) {
   return (
     <div className="grid gap-4 @[780px]:grid-cols-2">
       {Array.from({ length: sections }, (_, index) => (
-        <div key={index} className="admin-panel flex flex-col gap-3 p-5">
-          <span className={cn(LINE, 'text-body')}><Skeleton shape="text" className="h-3.5 w-32" /></span>
-          <span className={cn(LINE, 'text-label')}><Skeleton shape="text" className="w-64" /></span>
-          <Skeleton className="h-24 w-full rounded-lg" />
+        <div key={index} className="admin-panel">
+          <div className="admin-card-inset flex flex-col gap-1 border-b border-border-divider">
+            <span className={cn(LINE, 'text-body')}><Skeleton shape="text" className="h-3.5 w-32" /></span>
+            <span className={cn(LINE, 'text-label')}><Skeleton shape="text" className="w-64" /></span>
+          </div>
+          <div className="admin-card-inset"><Skeleton className="h-24 w-full rounded-lg" /></div>
         </div>
       ))}
     </div>
