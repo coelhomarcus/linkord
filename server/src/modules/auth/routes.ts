@@ -10,7 +10,7 @@ import {
   verifyCurrentEmailCode,
 } from './accountConfirmation.js';
 import {
-  ADMIN_SESSION_SECONDS, createSession, resolveSession, destroySession, destroyOtherSessions, destroySessionById, listSessionsForUser,
+  ADMIN_SESSION_SECONDS, createSession, resolveSession, destroySession, destroyAdminSessionsForUser, destroyOtherSessions, destroySessionById, listSessionsForUser,
   type SessionScope,
 } from './session.js';
 import { dropSessionConnections } from './sessionConnections.js';
@@ -109,6 +109,10 @@ function setSessionCookie(request: FastifyRequest, reply: FastifyReply, rawToken
 
 function adminIdentity(user: { id: string; username: string; locale: string }) {
   return { id: user.id, username: user.username, locale: resolveLocale(user.locale) };
+}
+
+function adminTwoFactorRequired(reply: FastifyReply): void {
+  sendError(reply, 403, 'admin_two_factor_required', 'Ative a verificação em duas etapas em Configurações → Segurança no Overcord.');
 }
 
 async function handleRegister(request: FastifyRequest, reply: FastifyReply): Promise<void> {
@@ -242,6 +246,7 @@ async function handleLogin(request: FastifyRequest, reply: FastifyReply, scope: 
   }
   if (isPastDeletion(user)) return accountDeletedError(reply);
   if (scope === 'admin' && user.role !== 'admin') return sendError(reply, 403, 'forbidden', 'Apenas administradores.');
+  if (scope === 'admin' && !user.twoFactorEmail) return adminTwoFactorRequired(reply);
 
   if (needsRehash(user.passwordHash)) {
     hashPassword(password)
@@ -325,7 +330,7 @@ async function loginChallengeFor(request: FastifyRequest, reply: FastifyReply, c
   const found = await findLoginChallenge(challengeHash);
   if (!found || found.startedAt.getTime() + LOGIN_CHALLENGE_MAX_MS < Date.now()) return expired();
   const user = await findById(found.userId);
-  if (!user || !user.email) return expired();
+  if (!user || !user.email || !user.twoFactorEmail) return expired();
   if (user.status !== 'active') {
     sendError(reply, 403, 'account_unavailable', 'Esta conta está indisponível. Fale com a administração.');
     return { refused: true };
@@ -537,6 +542,13 @@ async function handleRecoveryReset(request: FastifyRequest, reply: FastifyReply)
   sendJson(reply, 200, { ok: true });
 }
 
+// A password-only email change started before promotion cannot replace an admin's second factor.
+function emailChangeCodeFor(user: User) {
+  const purpose = user.role === 'admin' ? 'admin_email_change' : 'email_change';
+  const challengeHash = user.role === 'admin' ? crypto.createHash('sha256').update(user.email ?? '').digest('hex') : undefined;
+  return { purpose, challengeHash } as const;
+}
+
 async function handleEmailChangeRequest(request: FastifyRequest, reply: FastifyReply): Promise<void> {
   const sess = await sessionForRequest(request);
   if (!sess) return sendError(reply, 401, 'unauthenticated', 'Não autenticado.');
@@ -556,34 +568,40 @@ async function handleEmailChangeRequest(request: FastifyRequest, reply: FastifyR
     return sendError(reply, 429, 'rate_limited', 'Muitas solicitações. Tente novamente mais tarde.');
   }
   await ratelimit.recordFailure(changeKey);
-  // With two-step login on, the current address is asked first: only once its code is confirmed does a code
-  // go to the new one, so a stolen session plus the password cannot move the account's second factor away.
+  // Also require the current address for an admin setting up two-step login, since this address gets their codes.
   // A live code to this new address means that step was already passed, and asking again resends it.
   const user = await findById(sess.userId);
   if (!user) return sendError(reply, 404, 'user_not_found', 'Conta não encontrada.');
-  if (user.twoFactorEmail && !(await hasLiveAuthCode(user.id, 'email_change', email))) {
+  if (user.role === 'admin' && !user.email) {
+    return sendError(reply, 409, 'admin_email_required', 'Peça a um operador para remover seu acesso administrativo antes de adicionar um e-mail.');
+  }
+  const { purpose, challengeHash } = emailChangeCodeFor(user);
+  if ((user.twoFactorEmail || user.role === 'admin') && !(await hasLiveAuthCode(user.id, purpose, email, { challengeHash }))) {
     return sendCurrentEmailCode(reply, user, 'email_change_current');
   }
   try {
-    await issueAndSendCode(sess.userId, email, sess.username, 'email_change', resolveLocale(sess.locale));
+    await issueAndSendCode(user.id, email, user.username, purpose, resolveLocale(user.locale), challengeHash);
   } catch {
     return sendError(reply, 503, 'email_unavailable', 'Não foi possível enviar o código agora. Tente novamente mais tarde.');
   }
   sendJson(reply, 200, { ok: true });
 }
 
-/** With two-step login on: the code sent to the current address, which earns the code to the new one. */
+/** The code sent to the current address earns the code to the new one. */
 async function handleEmailChangeVerifyCurrent(request: FastifyRequest, reply: FastifyReply): Promise<void> {
   const sess = await sessionForRequest(request);
   if (!sess) return sendError(reply, 401, 'unauthenticated', 'Não autenticado.');
   const email = normalizeEmail(String(jsonBody(request.body).email ?? ''));
   if (!isValidEmail(email)) return sendError(reply, 400, 'invalid_email', 'Informe um e-mail válido.');
   if (sess.email && normalizeEmail(sess.email) === email) return sendError(reply, 400, 'same_email', 'Informe um e-mail diferente do atual.');
-  if (!(await verifyCurrentEmailCode(request, reply, sess, 'email_change_current'))) return;
+  const user = await findById(sess.userId);
+  if (!user) return sendError(reply, 404, 'user_not_found', 'Conta não encontrada.');
+  if (!(await verifyCurrentEmailCode(request, reply, { userId: user.id, email: user.email }, 'email_change_current'))) return;
   const existing = await findByEmailLower(email);
   if (existing && existing.id !== sess.userId) return sendError(reply, 409, 'email_taken', 'Esse e-mail já está em uso.');
+  const { purpose, challengeHash } = emailChangeCodeFor(user);
   try {
-    await issueAndSendCode(sess.userId, email, sess.username, 'email_change', resolveLocale(sess.locale));
+    await issueAndSendCode(user.id, email, user.username, purpose, resolveLocale(user.locale), challengeHash);
   } catch {
     return sendError(reply, 503, 'email_unavailable', 'Não foi possível enviar o código agora. Tente novamente mais tarde.');
   }
@@ -598,12 +616,15 @@ async function handleEmailChangeConfirm(request: FastifyRequest, reply: FastifyR
   const code = String(body.code == null ? '' : body.code).trim();
   if (!isValidEmail(email)) return sendError(reply, 400, 'invalid_email', 'Informe um e-mail válido.');
   if (!/^\d{6}$/.test(code)) return sendError(reply, 400, 'invalid_code', 'Informe o código de 6 dígitos.');
-  const result = await verifyAuthCode(sess.userId, 'email_change', email, code);
+  const before = await findById(sess.userId);
+  if (!before) return sendError(reply, 404, 'user_not_found', 'Conta não encontrada.');
+  const { purpose, challengeHash } = emailChangeCodeFor(before);
+  const result = await verifyAuthCode(sess.userId, purpose, email, code, { challengeHash });
   if (!result.ok) return purposeError(reply, result.reason);
   const existing = await findByEmailLower(email);
   if (existing && existing.id !== sess.userId) return sendError(reply, 409, 'email_taken', 'Esse e-mail já está em uso.');
-  const user = await updateEmail(sess.userId, email);
-  if (!user) return sendError(reply, 404, 'user_not_found', 'Conta não encontrada.');
+  const user = await updateEmail(before, email);
+  if (!user) return sendError(reply, 409, 'conflict', 'A conta mudou. Solicite um novo código.');
   // the address is how the account is recovered: whoever else is signed in is signed out, and the old
   // address hears about it, so a change that was not its owner's does not go unnoticed
   const ended = await destroyOtherSessions(sess.userId, sess.tokenHash);
@@ -749,7 +770,10 @@ async function handleTwoFactorDisableConfirm(request: FastifyRequest, reply: Fas
   const sess = await sessionForRequest(request);
   if (!sess) return sendError(reply, 401, 'unauthenticated', 'Não autenticado.');
   if (!(await verifyCurrentEmailCode(request, reply, sess, 'two_factor_disable'))) return;
-  await db.update(users).set({ twoFactorEmail: false, updatedAt: new Date() }).where(eq(users.id, sess.userId));
+  await db.transaction(async (tx) => {
+    await tx.update(users).set({ twoFactorEmail: false, updatedAt: new Date() }).where(eq(users.id, sess.userId));
+    await destroyAdminSessionsForUser(sess.userId, tx);
+  });
   await recordAudit({ actor: auditActor(sess), action: 'account.two_factor_disable', targetType: 'user', targetId: sess.userId, targetLabel: sess.username, requestId: request.id });
   log.info('two-step login turned off', { userId: sess.userId });
   sendJson(reply, 200, { twoFactorEnabled: false });

@@ -123,8 +123,7 @@ export const authCodes = pgTable('auth_codes', {
   userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
   purpose: varchar('purpose', { length: 32 }).notNull(), // see AuthCodePurpose in auth/codes.ts
   email: varchar('email', { length: 320 }).notNull(),
-  // sha256 of the login challenge a 'login' code belongs to (null for every other purpose), so the
-  // code can only finish the login it was sent for
+  // SHA-256 of the login challenge or action the code belongs to, when scoped.
   challengeHash: text('challenge_hash'),
   codeHash: text('code_hash').notNull(),
   attempts: integer('attempts').notNull().default(0),

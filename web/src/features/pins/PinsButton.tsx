@@ -111,7 +111,7 @@ function PinsList({ conversation, onOpenProfile, unpinFailed, onUnpin }: {
     <div className="flex min-h-0 flex-col gap-2 overflow-y-auto p-3">
       {unpinFailed && <p role="alert" className="px-1 text-label text-red-text">{t('unpinFailed')}</p>}
       {list.items.map((item) => {
-        const canUnpin = messagePermissions(item.message, { userId: me.userId, role: me.role }, conversation).pin;
+        const canUnpin = messagePermissions(item.message, me.userId, conversation).pin;
         return (
           <MessageCard
             key={item.message.msgId}

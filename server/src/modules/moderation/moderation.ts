@@ -5,8 +5,6 @@ import { participants, send, sendSocketError, setCallConversationId } from '../p
 import * as livekit from '../../integrations/livekit/livekit.js';
 import { hasPermission, outranks, PERMISSIONS } from '../servers/permissions.js';
 import { channelPermissionsIn, loadServerSnapshot, memberInput } from '../servers/serverAccess.js';
-import { isActiveAdmin } from '../admin/adminAuth.js';
-import { recordAudit } from '../admin/auditLog.js';
 import { recordServerAudit } from '../servers/serverAuditLog.js';
 import { ERROR_CODES } from '../../http/errors.js';
 import type { AppSocket, HandlerTable } from '../../types.js';
@@ -15,16 +13,13 @@ import { logger } from '../../lib/logger.js';
 const log = logger.child({ component: 'audit' });
 
 // Disconnecting someone from a voice channel, or moving them to another (a
-// member with MOVE_MEMBERS there who outranks them, or an instance admin). A
-// server moderator's action goes to that server's audit log, an instance
-// admin's to the instance trail. Account deletion, suspension and the rest of
-// the administrative actions live in modules/admin/ (HTTP, audited).
+// member with MOVE_MEMBERS there who outranks them). Actions go to the
+// affected server's audit log.
 
 /** Kick-from-call authority: MOVE_MEMBERS in the voice channel and a higher
- * place in the role hierarchy than the target. Instance admins keep their
- * power as an audited moderation action. */
-export function canKickFromCall(input: { actorIsAdmin: boolean; actorCanMove: boolean; actorOutranksTarget: boolean }): boolean {
-  return input.actorIsAdmin || (input.actorCanMove && input.actorOutranksTarget);
+ * place in the role hierarchy than the target. */
+export function canKickFromCall(input: { actorCanMove: boolean; actorOutranksTarget: boolean }): boolean {
+  return input.actorCanMove && input.actorOutranksTarget;
 }
 
 /** Removes one CONNECTION (not account) from its current voice channel —
@@ -51,15 +46,13 @@ async function handleCallKick(socket: AppSocket, msg: { participantId?: string }
   const snapshot = await loadServerSnapshot(callConversation.serverId);
   const actor = snapshot ? memberInput(snapshot, p.userId) : null;
   const targetMember = snapshot ? memberInput(snapshot, target.userId) : null;
-  const actorIsAdmin = await isActiveAdmin(p.userId);
   const actorCanMove = !!snapshot && !!actor && hasPermission(channelPermissionsIn(snapshot, callId, p.userId), PERMISSIONS.MOVE_MEMBERS);
-  const asModerator = canKickFromCall({
-    actorIsAdmin: false,
+  const allowed = canKickFromCall({
     actorCanMove,
     // someone no longer in the server is always below whoever moderates it
     actorOutranksTarget: !!snapshot && !!actor && (!targetMember || outranks(actor, targetMember, snapshot.roles)),
   });
-  if (!asModerator && !actorIsAdmin) {
+  if (!allowed) {
     sendSocketError(socket, ERROR_CODES.forbidden, 'Você não tem permissão para remover essa pessoa da chamada.');
     return;
   }
@@ -77,30 +70,22 @@ async function handleCallKick(socket: AppSocket, msg: { participantId?: string }
   setCallConversationId(target, null);
 
   // nothing to roll back if this fails: the person is already out of the call
-  if (asModerator) {
-    await recordServerAudit(db, {
-      serverId: callConversation.serverId, actorId: p.userId, action: 'member.voice_disconnect', targetType: 'user', targetId: target.userId,
-      extra: { channelId: callId, channel: callConversation.title },
-    }).catch((err) => log.error('member.voice_disconnect', err));
-  } else {
-    await recordAudit({
-      actor: { id: p.userId, username: p.name }, action: 'call.kick', targetType: 'user', targetId: target.userId, targetLabel: target.name,
-      detail: { conversationId: callId },
-    }).catch((err) => log.error('call.kick', err));
-  }
+  await recordServerAudit(db, {
+    serverId: callConversation.serverId, actorId: p.userId, action: 'member.voice_disconnect', targetType: 'user', targetId: target.userId,
+    extra: { channelId: callId, channel: callConversation.title },
+  }).catch((err) => log.error('member.voice_disconnect', err));
 }
 
 /** Move authority, as in Discord: MOVE_MEMBERS where the person is now and a
  * way into the destination, plus the same hierarchy rule as a kick (pulling
  * someone out of a channel is the same power). Whoever is moved must be able
  * to connect to the destination themselves: their client rejoins it with
- * their own permissions. Instance admins keep the power, audited. */
+ * their own permissions. */
 export function canMoveInCall(input: {
-  actorIsAdmin: boolean; actorCanMove: boolean; actorCanConnectToDestination: boolean;
+  actorCanMove: boolean; actorCanConnectToDestination: boolean;
   actorOutranksTarget: boolean; targetCanConnectToDestination: boolean;
 }): boolean {
-  if (!input.targetCanConnectToDestination) return false;
-  return input.actorIsAdmin || (input.actorCanMove && input.actorCanConnectToDestination && input.actorOutranksTarget);
+  return input.targetCanConnectToDestination && input.actorCanMove && input.actorCanConnectToDestination && input.actorOutranksTarget;
 }
 
 /** Moves one CONNECTION from its voice channel to another of the same
@@ -129,18 +114,15 @@ async function handleCallMove(socket: AppSocket, msg: { participantId?: string; 
   const snapshot = await loadServerSnapshot(source.serverId);
   const actor = snapshot ? memberInput(snapshot, p.userId) : null;
   const targetMember = snapshot ? memberInput(snapshot, target.userId) : null;
-  const actorIsAdmin = await isActiveAdmin(p.userId);
   const can = (channelId: string, userId: string, bit: number) => !!snapshot && hasPermission(channelPermissionsIn(snapshot, channelId, userId), bit);
   const actorCanMove = !!actor && can(sourceId, p.userId, PERMISSIONS.MOVE_MEMBERS);
-  const decide = (asAdmin: boolean) => canMoveInCall({
-    actorIsAdmin: asAdmin,
+  const allowed = canMoveInCall({
     actorCanMove,
     actorCanConnectToDestination: can(destinationId, p.userId, PERMISSIONS.CONNECT),
     actorOutranksTarget: !!snapshot && !!actor && !!targetMember && outranks(actor, targetMember, snapshot.roles),
     targetCanConnectToDestination: can(destinationId, target.userId, PERMISSIONS.CONNECT),
   });
-  const asModerator = decide(false);
-  if (!asModerator && !decide(actorIsAdmin)) {
+  if (!allowed) {
     sendSocketError(socket, ERROR_CODES.forbidden, 'Você não tem permissão para mover essa pessoa para esse canal.');
     return;
   }
@@ -155,17 +137,10 @@ async function handleCallMove(socket: AppSocket, msg: { participantId?: string; 
   setCallConversationId(target, null);
   send(target.socket, { t: 'call-moved', conversationId: destinationId });
 
-  if (asModerator) {
-    await recordServerAudit(db, {
-      serverId: source.serverId, actorId: p.userId, action: 'member.voice_move', targetType: 'user', targetId: target.userId,
-      changes: [{ key: 'channel', before: source.title, after: destination.title }],
-    }).catch((err) => log.error('member.voice_move', err));
-  } else {
-    await recordAudit({
-      actor: { id: p.userId, username: p.name }, action: 'call.move', targetType: 'user', targetId: target.userId, targetLabel: target.name,
-      detail: { from: sourceId, to: destinationId },
-    }).catch((err) => log.error('call.move', err));
-  }
+  await recordServerAudit(db, {
+    serverId: source.serverId, actorId: p.userId, action: 'member.voice_move', targetType: 'user', targetId: target.userId,
+    changes: [{ key: 'channel', before: source.title, after: destination.title }],
+  }).catch((err) => log.error('member.voice_move', err));
 }
 
 export const handlers: HandlerTable = {

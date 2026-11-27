@@ -1,5 +1,5 @@
 import crypto from 'node:crypto';
-import { eq } from 'drizzle-orm';
+import { and, eq, isNull } from 'drizzle-orm';
 import { db } from '../../db/client.js';
 import { users, type User } from '../../db/schema.js';
 import type { Role } from '../../types.js';
@@ -35,13 +35,13 @@ export async function updateLocale(id: string, locale: Locale): Promise<void> {
   invalidateSessionsForUser(id);
 }
 
-export async function updateEmail(id: string, email: string): Promise<User | null> {
+export async function updateEmail(user: Pick<User, 'id' | 'role' | 'email'>, email: string): Promise<User | null> {
   try {
     const [row] = await db.update(users)
       .set({ email: normalizeEmail(email), updatedAt: new Date() })
-      .where(eq(users.id, id))
+      .where(and(eq(users.id, user.id), eq(users.role, user.role), user.email === null ? isNull(users.email) : eq(users.email, user.email)))
       .returning();
-    invalidateSessionsForUser(id);
+    if (row) invalidateSessionsForUser(user.id);
     return row || null;
   } catch (err: unknown) {
     const cause = (err as { cause?: { code?: string } } | undefined)?.cause;

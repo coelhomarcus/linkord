@@ -1,22 +1,16 @@
-import { test, expect, type User } from '../../fixtures/test';
+import { test, expect } from '../../fixtures/test';
 import { acceptInvite, createInvite, createServer } from '../../fixtures/api';
+import { enableTwoFactor, signInAdminThroughApi } from '../../fixtures/admin';
 import { ADMIN_URL, grantAdmin } from '../../stack/stack';
-
-async function signInAdmin(admin: User) {
-  const response = await admin.api.post(`${ADMIN_URL}/api/admin/auth/login`, {
-    data: { username: admin.username, password: admin.password },
-    headers: { origin: ADMIN_URL },
-  });
-  expect(response.ok(), await response.text()).toBe(true);
-}
 
 test.describe('reports and administration', () => {
   test('a reported message reaches the admin, who deletes it for everyone', async ({ users }) => {
     const alice = await users.create('alice');
     const bob = await users.create('bob');
     const admin = await users.create('admin');
+    await enableTwoFactor(admin);
     grantAdmin(admin.username);
-    await signInAdmin(admin);
+    await signInAdminThroughApi(admin);
     const server = await createServer(alice.api, 'E2E reports');
     await acceptInvite(bob.api, await createInvite(alice.api, server.id));
     const a = await alice.app();
@@ -44,8 +38,9 @@ test.describe('reports and administration', () => {
   test('suspending an account ends its session; only an admin can do it', async ({ users }) => {
     const alice = await users.create('alice');
     const admin = await users.create('admin');
+    await enableTwoFactor(admin);
     grantAdmin(admin.username);
-    await signInAdmin(admin);
+    await signInAdminThroughApi(admin);
 
     const refused = await alice.api.post(`${ADMIN_URL}/api/admin/auth/login`, {
       data: { username: alice.username, password: alice.password }, headers: { origin: ADMIN_URL },

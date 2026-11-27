@@ -127,6 +127,8 @@
       "banned": "Você foi banido desse servidor.",
       "invalid_invite": "Esse convite é inválido ou expirou.",
       "hierarchy": "Isso está acima do seu cargo.",
+      "admin_two_factor_required": "Ative a verificação em duas etapas em Configurações → Segurança no Overcord.",
+      "admin_email_required": "Peça a um operador para remover seu acesso administrativo antes de adicionar um e-mail.",
       "invalid_password": "Senha incorreta.",
       "login_expired": "O login expirou. Entre com sua senha de novo.",
       "email_required": "Adicione um e-mail à conta antes de ativar a verificação em duas etapas.",

@@ -74,7 +74,7 @@ function MessageActions({ item, close, children }: {
   const context = item?.message;
   const message = context ? messagesByConversation.get(context.conversationId)?.find((m) => m.msgId === context.msgId) : undefined;
   const conversation = context ? conversations.find((c) => c.id === context.conversationId) : undefined;
-  const can = message ? messagePermissions(message, { userId: state.me.userId, role: state.me.role }, conversation) : null;
+  const can = message ? messagePermissions(message, state.me.userId, conversation) : null;
 
   const actions: ViewerAction[] = [];
   if (message && can?.reply && activeConversationId === message.conversationId) {

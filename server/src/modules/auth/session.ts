@@ -1,5 +1,5 @@
 import crypto from 'node:crypto';
-import { and, desc, eq, inArray, lt, ne, or } from 'drizzle-orm';
+import { and, desc, eq, inArray, like, lt, ne, or } from 'drizzle-orm';
 import { db } from '../../db/client.js';
 import { sessions, users } from '../../db/schema.js';
 import { config } from '../../config/env.js';
@@ -25,6 +25,7 @@ const LAST_SEEN_STALE_MS = 60 * 1000;
 const DAY_MS = 24 * 60 * 60 * 1000;
 export const ADMIN_SESSION_SECONDS = 12 * 60 * 60;
 export type SessionScope = 'app' | 'admin';
+type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
 
 function idleCutoff(): Date | null {
   return config.SESSION_IDLE_DAYS > 0 ? new Date(Date.now() - config.SESSION_IDLE_DAYS * DAY_MS) : null;
@@ -38,8 +39,9 @@ interface CacheEntry {
 const cache = new Map<string, CacheEntry>(); // tokenHash -> { value, expiresAtMs }
 
 function hashToken(rawToken: string, scope: SessionScope): string {
-  if (scope === 'admin') return `admin:${crypto.createHash('sha256').update(rawToken).digest('hex')}`;
-  return crypto.createHash('sha256').update(rawToken).digest('hex');
+  const hash = crypto.createHash('sha256').update(rawToken).digest('hex');
+  // Sessions issued before two-step login became mandatory may only prove the password.
+  return scope === 'admin' ? `admin:2fa:${hash}` : hash;
 }
 
 function cacheGet(tokenHash: string): SessionUser | undefined {
@@ -105,6 +107,7 @@ export async function resolveSession(rawToken: string | undefined | null, scope:
       role: users.role,
       locale: users.locale,
       status: users.status,
+      twoFactorEmail: users.twoFactorEmail,
     })
     .from(sessions)
     .innerJoin(users, eq(sessions.userId, users.id))
@@ -116,6 +119,7 @@ export async function resolveSession(rawToken: string | undefined | null, scope:
     cacheInvalidate(tokenHash);
     return null;
   }
+  if (scope === 'admin' && (!row.twoFactorEmail || !row.email)) return null;
   if (!isSessionLive(row)) {
     cacheInvalidate(tokenHash);
     // an idle one would otherwise wait for the sweep; deleting it now keeps the session list honest
@@ -166,6 +170,11 @@ export async function destroySession(rawToken: string | undefined | null, scope:
 export async function destroyAllSessionsForUser(userId: string): Promise<void> {
   await db.delete(sessions).where(eq(sessions.userId, userId));
   invalidateSessionsForUser(userId);
+}
+
+/** End panel sessions in the same transaction that removes the role or second factor. */
+export async function destroyAdminSessionsForUser(userId: string, tx: Tx): Promise<void> {
+  await tx.delete(sessions).where(and(eq(sessions.userId, userId), like(sessions.tokenHash, 'admin:%')));
 }
 
 export interface SessionSummary {

@@ -127,6 +127,8 @@
       "banned": "You were banned from this server.",
       "invalid_invite": "This invite is invalid or has expired.",
       "hierarchy": "That is above your role.",
+      "admin_two_factor_required": "Turn on two-step verification in Settings → Security in Overcord.",
+      "admin_email_required": "Ask an operator to remove your administrator access before adding an email address.",
       "invalid_password": "Wrong password.",
       "login_expired": "The sign-in expired. Enter your password again.",
       "email_required": "Add an email to the account before turning on two-step verification.",

@@ -16,7 +16,7 @@ import { ErrorBanner } from '@/shared/ErrorBanner';
 import { EmptyState } from '@/shared/ui/empty-state';
 import { ROUTES } from '@/shared/lib/routes';
 import { cn } from '@/shared/lib/utils';
-import { useRoom, useRoomState } from '@/state/RoomContext';
+import { useRoom } from '@/state/RoomContext';
 import { getPreference, setPreference, usePreferenceValue } from '@/shared/preferences/accountPreferences';
 import type { CategorySummary, ChannelSummary, ServerSummary } from '@/shared/types/protocol';
 import { PERMISSIONS } from './permissionBits';
@@ -51,7 +51,6 @@ function ChannelRow({ server, channel, active, onOpen, onInvite, onDelete, onOpe
   const { badgeByConversation, mentionsByConversation, notificationPolicyFor, moveToCall, unreadByConversation, unreadStartByConversation, markConversationRead } = useRoom(
     'badgeByConversation', 'mentionsByConversation', 'notificationPolicyFor', 'moveToCall', 'unreadByConversation', 'unreadStartByConversation', 'markConversationRead',
   );
-  const state = useRoomState('me');
   const { openChannelSettings } = useServerSettings();
   const [dropping, setDropping] = useState(false);
   const menu = useRowMenu();
@@ -68,7 +67,7 @@ function ChannelRow({ server, channel, active, onOpen, onInvite, onDelete, onOpe
   // a muted channel reads as quiet: dimmed, its own unread hidden (only mentions still count)
   const muted = channel.type === 'text' && notificationPolicyFor({ id: channel.id, serverId: server.id }).muted;
   // someone dragged out of another voice channel can land in this one
-  const accepts = channel.type === 'voice' && !!drag && drag.fromChannelId !== channel.id && canMoveInto(channel, state.me.role === 'admin');
+  const accepts = channel.type === 'voice' && !!drag && drag.fromChannelId !== channel.id && canMoveInto(channel);
   const dropHandlers = accepts ? {
     onDragOver: (event: DragEvent) => { event.preventDefault(); event.dataTransfer.dropEffect = 'move'; setDropping(true); },
     onDragLeave: (event: DragEvent) => { if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setDropping(false); },

@@ -23,8 +23,8 @@ before(async () => { app = createApp(); await app.ready(); });
 after(async () => { await app.close(); await pool.end(); });
 
 interface Actor { id: string; username: string; token: string; adminToken?: string }
-async function actor(prefix: string, role: 'user' | 'admin' = 'user'): Promise<Actor> {
-  const user = await makeUser(prefix, role);
+async function actor(prefix: string, role: 'user' | 'admin' = 'user', twoFactorEmail?: boolean): Promise<Actor> {
+  const user = await makeUser(prefix, role, twoFactorEmail);
   return { ...user, token: (await createSession(user.id)).rawToken };
 }
 
@@ -65,7 +65,9 @@ describe('matrix: admin routes', () => {
     ['reactivate user', 'POST', '/api/admin/users/x/reactivate'],
     ['revoke sessions', 'POST', '/api/admin/users/x/revoke-sessions'],
     ['grant admin', 'POST', '/api/admin/users/x/grant-admin'],
+    ['request grant code', 'POST', '/api/admin/users/x/grant-admin/request'],
     ['remove admin', 'POST', '/api/admin/users/x/revoke-admin'],
+    ['request removal code', 'POST', '/api/admin/users/x/revoke-admin/request'],
     ['delete user', 'DELETE', '/api/admin/users/x'],
     ['list servers', 'GET', '/api/admin/servers'],
     ['server detail', 'GET', '/api/admin/servers/x'],
@@ -86,7 +88,7 @@ describe('matrix: admin routes', () => {
   const body = { reason: 'valid reason for the test', dryRun: true };
 
   it('no session: 401; a plain user, a demoted admin and a suspended one never reach the action', async () => {
-    const plain = await actor('pl');
+    const plain = await actor('pl', 'user', true);
     const demoted = await actor('dm', 'admin');
     await db.update(users).set({ role: 'user' }).where(eq(users.id, demoted.id)); // session still carries role=admin
     const suspended = await actor('sp', 'admin');
@@ -112,7 +114,7 @@ describe('matrix: admin routes', () => {
     }
     expectDenied(await call(admin, 'POST', `/api/admin/users/${admin.id}/suspend`, {}), 400, 'reason_required', 'no reason');
     expectDenied(await call(admin, 'POST', `/api/admin/users/${admin.id}/suspend`, body), 409, 'self_action', 'self-suspension');
-    expectDenied(await call(admin, 'POST', `/api/admin/users/${admin.id}/revoke-admin`, body), 409, 'self_action', 'self-demotion');
+    expectDenied(await call(admin, 'POST', `/api/admin/users/${admin.id}/revoke-admin`, body), 400, 'invalid_code', 'missing confirmation');
   });
 });
 

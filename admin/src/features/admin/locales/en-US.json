@@ -42,7 +42,7 @@
     "backToAdmin": "Back to administration"
   },
   "site": {
-    "signInSubtitle": "Sign in with your Overcord administrator account.",
+    "signInSubtitle": "Sign in with your Overcord administrator account. You’ll need a code sent by email.",
     "signOut": "Sign out",
     "signOutFailed": "Could not end the session. Try again."
   },
@@ -158,6 +158,11 @@
   "dialog": {
     "reasonLabel": "Reason (recorded in the audit)",
     "confirmPrompt": "To confirm, type",
+    "currentPassword": "Current password",
+    "verificationCode": "Verification code",
+    "codeSent": "We sent a code to {{email}}.",
+    "sendCode": "Send code",
+    "newCode": "Request a new code",
     "cancel": "Cancel",
     "wait": "Please wait…"
   },

@@ -104,11 +104,13 @@ It is a development setting. The server refuses to start when it is set with `NO
 
 ## Create an administrator
 
+Configure an [email provider](INTEGRATIONS.md#resend) or the local mail sink and turn on two-step verification in the account's **Settings → Security** before provisioning. See [administrator provisioning](DEPLOY.md#administration-site).
+
 ```bash
 bun run admin:grant <your-username>
 ```
 
-To develop the separate panel, start the backend with `ADMIN_URL=http://127.0.0.1:5174` and run `bun run dev:admin` in a second terminal. Open `http://127.0.0.1:5174` and sign in with the administrator account. The public Vite app stays at `http://localhost:5173`. Without `ADMIN_URL`, the backend starts with the administration API disabled.
+To develop the separate panel, start the backend with `ADMIN_URL=http://127.0.0.1:5174` and run `bun run dev:admin` in a second terminal. Open `http://127.0.0.1:5174` and sign in with the administrator's password and emailed code. The public Vite app stays at `http://localhost:5173`. Without `ADMIN_URL`, the backend starts with the administration API disabled.
 
 ## Desktop app
 
@@ -243,7 +245,7 @@ Playwright runs on Bun and uses the installed Google Chrome. Its CLI scripts use
 | `features/stickers` | Uploading, sending across servers, replying to one, a deleted sticker. |
 | `features/profile` | Profile edits reaching a friend, animated photo and banner, the games widgets and Wall editing, the phone layout. |
 | `features/activity` | Ranked activity and the summary published on the Wall from the desktop history. |
-| `features/admin-site` | The admin site on its own host and session: sign-in, suspending an account, the retired public routes returning `404`, the phone layout, login codes bound to the site that asked. |
+| `features/admin-site` | The admin site on its own host and session: mandatory email verification, fresh codes for granting and removing administrator access, account suspension, the retired public routes returning `404`, and the phone layout. |
 | `features/reports-admin` | A reported message reaching the admin, who deletes it for everyone. |
 | `features/settings` | Language and theme following the account to another browser; text size staying on the device. |
 | `features/security` | No framing, a foreign script refused and reported, YouTube as a sandboxed iframe. |

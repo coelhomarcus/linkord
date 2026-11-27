@@ -67,33 +67,32 @@ function fakeConversation(overrides: Partial<Conversation> = {}): Conversation {
 
 const menuTarget = { key: 'p-2:avatar', participantId: 'p-2', kind: 'avatar' as const, rect: { left: 0, top: 0, right: 0, bottom: 0 } };
 // "Remover da chamada" only exists for GROUP calls (mirrors the server-side
-// restriction in modules/moderation.ts#handleCallKick) — every test that
-// expects it to be reachable needs the active call to resolve to a group.
+// restriction in modules/moderation.ts#handleCallKick).
 const groupCallContext = { activeCallConversationId: 'conv-1', conversations: [fakeConversation()] };
+const voiceModeratorContext = { ...groupCallContext, conversations: [fakeConversation({ permissions: PERMISSIONS.MOVE_MEMBERS })] };
 
 describe('TileMenu — remove from call', () => {
-  it('appears for an admin looking at another person\'s tile in a group call', () => {
+  it('requires channel permissions even for a platform administrator', () => {
     const participants = new Map([['p-2', fakeParticipant()]]);
     renderWithRoom(<TileMenu onOpenProfile={vi.fn()} />, {
       state: { ...initialRoomState, me: { ...initialRoomState.me, id: 'p-1', role: 'admin' }, participants },
       menuTarget,
       ...groupCallContext,
     });
-    expect(screen.getByText('Remover da chamada')).toBeInTheDocument();
+    expect(screen.queryByText('Remover da chamada')).not.toBeInTheDocument();
   });
 
-  it('appears for the group OWNER (non-admin) looking at a member of that group', () => {
+  it('appears with MOVE_MEMBERS in the voice channel', () => {
     const participants = new Map([['p-2', fakeParticipant()]]);
     renderWithRoom(<TileMenu onOpenProfile={vi.fn()} />, {
       state: { ...initialRoomState, me: { ...initialRoomState.me, id: 'p-1', role: 'user' }, participants },
       menuTarget,
-      activeCallConversationId: 'conv-1',
-      conversations: [fakeConversation({ permissions: PERMISSIONS.MOVE_MEMBERS })],
+      ...voiceModeratorContext,
     });
     expect(screen.getByText('Remover da chamada')).toBeInTheDocument();
   });
 
-  it('does not appear for someone who is not an admin', () => {
+  it('does not appear for a member without MOVE_MEMBERS', () => {
     const participants = new Map([['p-2', fakeParticipant()]]);
     renderWithRoom(<TileMenu onOpenProfile={vi.fn()} />, {
       state: { ...initialRoomState, me: { ...initialRoomState.me, id: 'p-1', role: 'user' }, participants },
@@ -103,23 +102,23 @@ describe('TileMenu — remove from call', () => {
     expect(screen.queryByText('Remover da chamada')).not.toBeInTheDocument();
   });
 
-  it('does not appear on your own tile, even as admin', () => {
+  it('does not appear on your own tile even with MOVE_MEMBERS', () => {
     const participants = new Map([['p-1', fakeParticipant({ id: 'p-1', userId: 'u-1' })]]);
     renderWithRoom(<TileMenu onOpenProfile={vi.fn()} />, {
       state: { ...initialRoomState, me: { ...initialRoomState.me, id: 'p-1', role: 'admin' }, participants },
       menuTarget: { ...menuTarget, participantId: 'p-1' },
-      ...groupCallContext,
+      ...voiceModeratorContext,
     });
     expect(screen.queryByText('Remover da chamada')).not.toBeInTheDocument();
   });
 
-  it('does not appear in a 1:1 (direct) call, even as admin', () => {
+  it('does not appear in a 1:1 call even with MOVE_MEMBERS', () => {
     const participants = new Map([['p-2', fakeParticipant()]]);
     renderWithRoom(<TileMenu onOpenProfile={vi.fn()} />, {
       state: { ...initialRoomState, me: { ...initialRoomState.me, id: 'p-1', role: 'admin' }, participants },
       menuTarget,
       activeCallConversationId: 'conv-1',
-      conversations: [fakeConversation({ type: 'direct', title: '' })],
+      conversations: [fakeConversation({ type: 'direct', title: '', permissions: PERMISSIONS.MOVE_MEMBERS })],
     });
     expect(screen.queryByText('Remover da chamada')).not.toBeInTheDocument();
   });
@@ -129,11 +128,11 @@ describe('TileMenu — remove from call', () => {
     const closeTileMenu = vi.fn(() => true);
     const participants = new Map([['p-2', fakeParticipant()]]);
     renderWithRoom(<TileMenu onOpenProfile={vi.fn()} />, {
-      state: { ...initialRoomState, me: { ...initialRoomState.me, id: 'p-1', role: 'admin' }, participants },
+      state: { ...initialRoomState, me: { ...initialRoomState.me, id: 'p-1' }, participants },
       menuTarget,
       kickFromCall,
       closeTileMenu,
-      ...groupCallContext,
+      ...voiceModeratorContext,
     });
     fireEvent.click(screen.getByText('Remover da chamada'));
     expect(kickFromCall).toHaveBeenCalledWith('p-2');

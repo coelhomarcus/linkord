@@ -312,7 +312,7 @@ export function registerConnectionRoutes(app: FastifyInstance): void {
   app.get('/api/users/:userId/wall', async (request: FastifyRequest<{ Params: { userId: string } }>, reply) => {
     const me = await session(request, reply); if (!me) return;
     const target = await findById(request.params.userId);
-    if (!target || !await canViewProfile(me.userId, me.role, target.id)) return sendError(reply, 404, 'user_not_found', 'Conta não encontrada.');
+    if (!target || !await canViewProfile(me.userId, target.id)) return sendError(reply, 404, 'user_not_found', 'Conta não encontrada.');
     sendJson(reply, 200, await readWall(target.id, false, extendedCatalog(request)));
   });
 }

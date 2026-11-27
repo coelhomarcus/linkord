@@ -42,7 +42,7 @@
     "backToAdmin": "Voltar à administração"
   },
   "site": {
-    "signInSubtitle": "Entre com sua conta de administrador do Overcord.",
+    "signInSubtitle": "Entre com sua conta de administrador do Overcord. Você vai precisar de um código enviado por e-mail.",
     "signOut": "Sair",
     "signOutFailed": "Não foi possível encerrar a sessão. Tente novamente."
   },
@@ -158,6 +158,11 @@
   "dialog": {
     "reasonLabel": "Motivo (fica registrado na auditoria)",
     "confirmPrompt": "Para confirmar, digite",
+    "currentPassword": "Senha atual",
+    "verificationCode": "Código de verificação",
+    "codeSent": "Enviamos um código para {{email}}.",
+    "sendCode": "Enviar código",
+    "newCode": "Solicitar novo código",
     "cancel": "Cancelar",
     "wait": "Aguarde…"
   },

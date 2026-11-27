@@ -5,7 +5,7 @@ import { Avatar } from '@overcord/frontend-shared/Avatar';
 import { Button } from '@overcord/frontend-shared/ui/primitives/button';
 import { formatFileSize } from '@overcord/frontend-shared/lib/formatBytes';
 import { useCursorList } from '@overcord/frontend-shared/hooks/useCursorList';
-import { deleteUser, fetchAdminUser, fetchAudit, grantAdmin, grantBadge, reactivateUser, revokeAdmin, revokeBadge, revokeUserSessions, suspendUser } from './adminApi';
+import { changeAdminRole, deleteUser, fetchAdminUser, fetchAudit, grantBadge, reactivateUser, requestAdminRoleCode, revokeBadge, revokeUserSessions, suspendUser } from './adminApi';
 import { AdminDetailTabs } from './AdminDetailTabs';
 import { AdminEntityHeader } from './AdminEntityHeader';
 import { AdminActionRow, AdminFieldRow, AdminFields, AdminSection } from './AdminSection';
@@ -240,12 +240,14 @@ function UserDetail({ id, viewerId }: { id: string; viewerId: string }) {
       <ReasonDialog open={dialog === 'revoke'} onOpenChange={(o) => !o && setDialog(null)} title={t('detail.revokeTitle')}
         description={t('detail.revokeDialog', { username: user.username })} confirmLabel={t('common.revoke')}
         onSubmit={revokeSessions} />
-      <ReasonDialog open={dialog === 'grant-admin'} onOpenChange={(o) => !o && setDialog(null)} title={t('detail.grantTitle')}
-        description={t('detail.grantDialog', { username: user.username })}
-        confirmLabel={t('detail.grant')} confirmText={user.username} onSubmit={(reason) => mutate(() => grantAdmin(user.id, reason))} />
-      <ReasonDialog open={dialog === 'revoke-admin'} onOpenChange={(o) => !o && setDialog(null)} title={t('detail.revokeAdminTitle')}
-        description={t('detail.revokeAdminDialog', { username: user.username })}
-        confirmLabel={t('detail.removeAdmin')} destructive confirmText={user.username} onSubmit={(reason) => mutate(() => revokeAdmin(user.id, reason))} />
+      {(['grant', 'revoke'] as const).map((roleAction) => <ReasonDialog key={roleAction} open={dialog === `${roleAction}-admin`} onOpenChange={(o) => !o && setDialog(null)}
+        title={t(roleAction === 'grant' ? 'detail.grantTitle' : 'detail.revokeAdminTitle')}
+        description={t(roleAction === 'grant' ? 'detail.grantDialog' : 'detail.revokeAdminDialog', { username: user.username })}
+        confirmLabel={t(roleAction === 'grant' ? 'detail.grant' : 'detail.removeAdmin')} destructive={roleAction === 'revoke'} confirmText={user.username}
+        verification={{
+          requestCode: (reason, password) => requestAdminRoleCode(user.id, roleAction, reason, password),
+          onConfirm: (reason, code) => mutate(() => changeAdminRole(user.id, roleAction, reason, code)),
+        }} />)}
       <ReasonDialog open={!!badgeDialog} onOpenChange={(o) => !o && setDialog(null)}
         title={badgeDialog?.action === 'revoke' ? t('detail.revokeBadgeTitle') : t('detail.grantBadgeTitle')}
         description={badgeDialog ? t(badgeDialog.action === 'revoke' ? 'detail.revokeBadgeDialog' : 'detail.grantBadgeDialog', { username: user.username, badge: badgeName(badgeDialog.badge) }) : ''}

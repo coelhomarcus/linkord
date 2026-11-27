@@ -62,8 +62,11 @@ export const fetchAdminUsers = (filters: { q?: string; status?: string; role?: s
 export const fetchAdminUser = (id: string) => adminFetch<AdminUserDetail>(`/api/admin/users/${encodeURIComponent(id)}`);
 export const suspendUser = (id: string, reason: string) => post(`/api/admin/users/${encodeURIComponent(id)}/suspend`, { reason });
 export const reactivateUser = (id: string, reason: string) => post(`/api/admin/users/${encodeURIComponent(id)}/reactivate`, { reason });
-export const grantAdmin = (id: string, reason: string) => post(`/api/admin/users/${encodeURIComponent(id)}/grant-admin`, { reason });
-export const revokeAdmin = (id: string, reason: string) => post(`/api/admin/users/${encodeURIComponent(id)}/revoke-admin`, { reason });
+const adminRolePath = (id: string, action: 'grant' | 'revoke') => `/api/admin/users/${encodeURIComponent(id)}/${action}-admin`;
+export const requestAdminRoleCode = (id: string, action: 'grant' | 'revoke', reason: string, password: string) =>
+  post<{ codeRequired: true; email: string }>(`${adminRolePath(id, action)}/request`, { reason, password });
+export const changeAdminRole = (id: string, action: 'grant' | 'revoke', reason: string, code: string) =>
+  post(adminRolePath(id, action), { reason, code });
 export const revokeUserSessions = (id: string, reason: string) => post(`/api/admin/users/${encodeURIComponent(id)}/revoke-sessions`, { reason });
 export const grantBadge = (id: string, badge: BadgeId, reason: string) => post(`/api/admin/users/${encodeURIComponent(id)}/badges/${badge}`, { reason });
 export const revokeBadge = (id: string, badge: BadgeId, reason: string) =>

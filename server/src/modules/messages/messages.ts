@@ -1,5 +1,3 @@
-import { isActiveAdmin } from '../admin/adminAuth.js';
-import { recordAudit } from '../admin/auditLog.js';
 import { eq, and, desc, asc, lt, gt, gte, inArray, sql } from 'drizzle-orm';
 import { config } from '../../config/env.js';
 import { db } from '../../db/client.js';
@@ -837,20 +835,15 @@ export async function broadcastChanged(row: Message, author: AuthorIdentity): Pr
   await broadcastToConversationMembers(row.conversationId, { t: 'chat-edited', message: rowToMessage(rowWithParticipant(row, author), attachment, reactionsByEmoji, undefined, undefined, sticker) });
 }
 
-/** A text message in a conversation the actor still belongs to, for what
- * removing an attachment or a card requires: the author, like an edit — or,
- * when `adminToo`, a platform admin as well (re-read, not taken from the
- * connection's frozen role, §7.5). */
-async function removableTextMessage(p: Participant, rawId: unknown, what: string, adminToo: boolean): Promise<{ row: Message; isAuthor: boolean } | ActionFailure> {
+/** An authored text message in a conversation the actor still belongs to. */
+async function removableTextMessage(p: Participant, rawId: unknown, what: string): Promise<{ row: Message } | ActionFailure> {
   const msgId = parseSerialId(rawId);
   if (msgId === null) return { code: 'not_found', message: 'Essa mensagem não existe mais.' };
   const [row] = await db.select().from(messages).where(eq(messages.id, msgId)).limit(1);
   if (!row) return { code: 'not_found', message: 'Essa mensagem não existe mais.' };
-  const isAuthor = row.authorId === p.userId;
-  const allowed = row.kind === 'text' && (isAuthor || (adminToo && await isActiveAdmin(p.userId)));
-  if (!allowed) return { code: 'forbidden', message: `Você só pode remover ${what} das suas mensagens.` };
+  if (row.kind !== 'text' || row.authorId !== p.userId) return { code: 'forbidden', message: `Você só pode remover ${what} das suas mensagens.` };
   if (!(await conversationExistsForUser(row.conversationId, p.userId))) return { code: 'conversation_not_found', message: 'Conversa não encontrada.' };
-  return { row, isAuthor };
+  return { row };
 }
 
 /** The identity to show on a message someone else changed. */
@@ -866,14 +859,11 @@ export async function authorIdentityOf(row: Message): Promise<AuthorIdentity> {
 }
 
 /** Takes one attachment out of a message (Discord's "remove attachment"):
- * the author's own, or anyone's when a platform admin does it, which leaves a
- * trail and does not mark the message as edited by its author. The message
- * has to keep something, text or another
- * attachment: taking away all it has is deleting it, which is its own action. */
+ * the message has to keep text or another attachment. */
 async function removeAttachment(p: Participant, msg: { msgId?: unknown; attachmentId?: unknown }): Promise<ActionFailure | null> {
-  const found = await removableTextMessage(p, msg.msgId, 'anexos', true);
+  const found = await removableTextMessage(p, msg.msgId, 'anexos');
   if (!('row' in found)) return found;
-  const { row, isAuthor } = found;
+  const { row } = found;
   const attachmentId = typeof msg.attachmentId === 'string' ? msg.attachmentId : '';
   const current = (await attachments.getByMessageIds([row.id])).get(row.id) ?? [];
   if (!current.some((attachment) => attachment.id === attachmentId)) return { code: 'not_found', message: 'Esse anexo não existe mais.' };
@@ -881,19 +871,8 @@ async function removeAttachment(p: Participant, msg: { msgId?: unknown; attachme
     return { code: 'invalid_message', message: 'Esse anexo é tudo o que a mensagem tem. Para tirá-lo, apague a mensagem.' };
   }
   if (!(await deleteAttachmentOfMessage(row.id, attachmentId))) return { code: 'not_found', message: 'Esse anexo não existe mais.' };
-  // an admin's removal is not something the author said: no "edited" mark
-  const [updated] = isAuthor
-    ? await db.update(messages).set({ editedAt: new Date() }).where(eq(messages.id, row.id)).returning()
-    : [row];
-  // the author's quota just got room back
-  if (!isAuthor) {
-    // moderation, so it leaves a trail — ids only, never the message body
-    await recordAudit({
-      actor: { id: p.userId, username: p.name }, action: 'message.attachment.remove', targetType: 'message', targetId: String(row.id),
-      detail: { conversationId: row.conversationId, authorId: row.authorId, attachmentId },
-    }).catch((err) => log.error('message.attachment.remove', err));
-  }
-  await broadcastChanged(updated!, isAuthor ? p : await authorIdentityOf(row));
+  const [updated] = await db.update(messages).set({ editedAt: new Date() }).where(eq(messages.id, row.id)).returning();
+  if (updated) await broadcastChanged(updated, p);
   return null;
 }
 
@@ -901,7 +880,7 @@ async function removeAttachment(p: Participant, msg: { msgId?: unknown; attachme
  * embed"): the link stays in the text, as a plain link, and its card is never
  * fetched again. Not an edit of what was said, so it doesn't mark one. */
 async function suppressEmbed(p: Participant, msg: { msgId?: unknown; url?: unknown }): Promise<ActionFailure | null> {
-  const found = await removableTextMessage(p, msg.msgId, 'incorporações', false);
+  const found = await removableTextMessage(p, msg.msgId, 'incorporações');
   if (!('row' in found)) return found;
   const { row } = found;
   const url = typeof msg.url === 'string' ? msg.url : '';
@@ -974,9 +953,7 @@ async function handleChatReact(socket: AppSocket, msg: { msgId?: unknown; emoji?
   answerAction(socket, msg, null);
 }
 
-// the original author OR an admin can delete — same split as
-// handleChatEdit, except admin gets delete too (never edit, see above).
-// "Clear all" no longer exists: deleting the whole conversation covers that now.
+// Authors and channel moderators can delete a message.
 async function deleteMessage(p: Participant, msg: { msgId?: unknown }): Promise<ActionFailure | null> {
   const msgId = parseSerialId(msg.msgId);
   if (msgId === null) return { code: 'not_found', message: 'Essa mensagem não existe mais.' };
@@ -994,8 +971,7 @@ async function deleteMessage(p: Participant, msg: { msgId?: unknown }): Promise<
   // server, so it goes to the server's audit log rather than the instance's
   const isChannelModerator = isServerChannel(conversation)
     && hasPermission(await channelPermissions(conversation.serverId, conversation.id, p.userId), PERMISSIONS.MANAGE_MESSAGES);
-  // admin authority is re-read, not taken from the connection's frozen role (§7.5)
-  if (!isAuthor && !isChannelModerator && !(await isActiveAdmin(p.userId))) return { code: 'forbidden', message: 'Você só pode apagar as suas mensagens.' };
+  if (!isAuthor && !isChannelModerator) return { code: 'forbidden', message: 'Você só pode apagar as suas mensagens.' };
   // before the row goes: a card that vanished while its invitation stayed
   // acceptable is exactly the desync this prevents
   if (existing.kind === 'server_invite' && existing.serverInvitationId) {
@@ -1018,13 +994,6 @@ async function deleteMessage(p: Participant, msg: { msgId?: unknown }): Promise<
   });
   // the author's quota just got room back
   await recordConversationActivity(existing.conversationId);
-  if (!isAuthor && !isChannelModerator) {
-    // moderation, so it leaves a trail — ids only, never the message body
-    await recordAudit({
-      actor: { id: p.userId, username: p.name }, action: 'message.delete', targetType: 'message', targetId: String(msgId),
-      detail: { conversationId: existing.conversationId, authorId: existing.authorId },
-    }).catch((err) => log.error('message.delete', err));
-  }
   await broadcastToConversationMembers(existing.conversationId, {
     t: 'chat-deleted',
     conversationId: existing.conversationId,

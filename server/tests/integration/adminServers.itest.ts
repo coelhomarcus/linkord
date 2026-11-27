@@ -14,7 +14,7 @@ after(async () => { await app.close(); await pool.end(); });
 
 interface Actor { id: string; username: string; cookie: string; adminToken: string }
 async function actor(prefix: string, role: 'user' | 'admin' = 'user'): Promise<Actor> {
-  const user = await makeUser(prefix, role);
+  const user = await makeUser(prefix, role, true);
   return { ...user, cookie: `${config.SESSION_COOKIE}=${(await createSession(user.id)).rawToken}`, adminToken: await makeAdminSession(user.id) };
 }
 

@@ -26,10 +26,8 @@ export function AdminLogin({ onSignedIn, notice }: { onSignedIn: (user: AdminIde
     setError(null);
     try {
       const result = await loginAdmin(username, password);
-      if ('twoFactor' in result) {
-        setPassword('');
-        setChallenge(result.twoFactor);
-      } else onSignedIn(result.user);
+      setPassword('');
+      setChallenge(result.twoFactor);
     } catch (err) {
       setError(describeApiError(err, 'auth:login.failed'));
     } finally {

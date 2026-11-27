@@ -23,13 +23,13 @@ export interface MessagePermissions {
  * The server checks again; this only decides what to offer. */
 export function messagePermissions(
   message: ChatMessage,
-  me: { userId: string | null; role: string },
+  userId: string | null,
   conversation?: Pick<Conversation, 'type' | 'permissions'> | null,
 ): MessagePermissions {
   const isCallLog = message.kind === 'dm_call';
   const isNotice = message.kind === 'pin_notice';
   const isInvite = message.kind === 'server_invite' || message.kind === 'call_invite' || isCallLog || isNotice;
-  const isMine = !!me.userId && message.id === me.userId;
+  const isMine = !!userId && message.id === userId;
   // in a channel the server's roles decide; a DM leaves the friendship gate to the server
   const channel = conversation?.permissions;
   const may = (bit: number) => channel === undefined || hasPermission(channel, bit);
@@ -41,13 +41,11 @@ export function messagePermissions(
     // longer send here may not rewrite either (the server refuses both)
     edit: isMine && !isInvite && message.sticker === undefined && may(PERMISSIONS.SEND_MESSAGES),
     // a pin notice is the pinner's to take back, like a message of theirs
-    delete: !isCallLog && (isMine || me.role === 'admin' || (channel !== undefined && hasPermission(channel, PERMISSIONS.MANAGE_MESSAGES))),
+    delete: !isCallLog && (isMine || (channel !== undefined && hasPermission(channel, PERMISSIONS.MANAGE_MESSAGES))),
     report: !isMine && !isInvite && !!message.id,
-    // taking the only thing a message has is deleting it; an admin may take
-    // anyone's attachment out
-    removeAttachment: (isMine || me.role === 'admin') && !isInvite
+    // An attachment-only message must keep at least one attachment.
+    removeAttachment: isMine && !isInvite
       && (!!message.text.trim() || (message.attachments?.length ?? 0) > 1),
-    // only the author: an admin may take attachments out, not reshape the text
     removeEmbed: isMine && !isInvite,
     // only a message: a card or a notice has nothing to come back to.
     // A DM leaves the friendship gate to the server, as replies do.

@@ -107,7 +107,7 @@ async function handleHistory(request: FastifyRequest<{ Params: { userId: string 
   if (!sess) return sendError(reply, 401, 'unauthenticated', 'Não autenticado.');
   const targetId = String(request.params.userId || '');
   const target = targetId ? await findById(targetId) : null;
-  if (!target || !(await canViewProfile(sess.userId, sess.role, target.id))) {
+  if (!target || !(await canViewProfile(sess.userId, target.id))) {
     return sendError(reply, 404, 'user_not_found', 'Conta não encontrada.');
   }
   const history = await readActivityHistory(target.id);

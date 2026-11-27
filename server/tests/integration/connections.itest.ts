@@ -174,7 +174,7 @@ describe('profile Wall publication (real Postgres)', () => {
     const denied = await app.inject({ method: 'GET', url: `/api/users/${owner.id}/wall`, headers: await headers(stranger.id) });
     const missing = await app.inject({ method: 'GET', url: '/api/users/missing/wall', headers: await headers(stranger.id) });
     assert.equal(denied.statusCode, 404); assert.deepEqual(denied.json(), missing.json());
-    assert.equal((await app.inject({ method: 'GET', url: `/api/users/${owner.id}/wall`, headers: await headers(admin.id) })).statusCode, 200);
+    assert.equal((await app.inject({ method: 'GET', url: `/api/users/${owner.id}/wall`, headers: await headers(admin.id) })).statusCode, 404);
     await makeServerWithMembers(owner.id, [stranger.id]);
     assert.equal((await app.inject({ method: 'GET', url: `/api/users/${owner.id}/wall`, headers: await headers(stranger.id) })).statusCode, 200);
   });

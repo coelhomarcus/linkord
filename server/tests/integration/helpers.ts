@@ -29,10 +29,13 @@ export function adminHeaders(token?: string) {
   };
 }
 
-export async function makeUser(prefix: string, role: 'user' | 'admin' = 'user'): Promise<{ id: string; username: string }> {
+export async function makeUser(prefix: string, role: 'user' | 'admin' = 'user', twoFactorEmail = role === 'admin'): Promise<{ id: string; username: string }> {
   const id = crypto.randomUUID();
   const username = `${prefix}_${id.slice(0, 8)}`;
-  await db.insert(users).values({ id, username, passwordHash: 'x', role });
+  await db.insert(users).values({
+    id, username, passwordHash: 'x', role,
+    ...(twoFactorEmail ? { email: `${username}@example.test`, twoFactorEmail } : {}),
+  });
   return { id, username };
 }
 
