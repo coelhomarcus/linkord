@@ -44,6 +44,34 @@ test.describe('auth', () => {
     expect((await alice.api.get('/api/auth/me')).status()).toBe(401);
   });
 
+  test('recovering a password with an emailed code signs out only that account', async ({ users, browser }) => {
+    const alice = await users.create('alice');
+    const bob = await users.create('bob');
+    const email = `${alice.username}@example.test`;
+    const seen = await emailCount(email);
+    const context = await browser.newContext({ baseURL: BASE_URL, locale: 'pt-BR' });
+    const page = await context.newPage();
+    await page.goto('/');
+
+    await page.getByRole('button', { name: 'Esqueceu sua senha?' }).click();
+    await page.getByRole('textbox', { name: 'E-mail ou nome de usuário' }).fill(email);
+    await page.getByRole('button', { name: 'Enviar código' }).click();
+    await page.getByLabel('Código de recuperação').pressSequentially(await waitForEmailCode(email, seen));
+    const newPassword = `${alice.password}-new`;
+    await page.getByLabel('Nova senha').fill(newPassword);
+    await page.getByRole('button', { name: 'Alterar senha' }).click();
+    await expect(page.getByRole('heading', { name: 'Senha alterada' })).toBeVisible();
+
+    expect((await alice.api.get('/api/auth/me')).status()).toBe(401);
+    expect((await bob.api.get('/api/auth/me')).status()).toBe(200);
+    await page.getByRole('button', { name: 'Entrar', exact: true }).click();
+    await page.getByLabel('Usuário').fill(alice.username);
+    await page.getByLabel('Senha', { exact: true }).fill(newPassword);
+    await page.getByRole('button', { name: 'Entrar', exact: true }).click();
+    await expect(page.getByText(alice.username).first()).toBeVisible();
+    await context.close();
+  });
+
   test('two-step login: turned on in Settings with the emailed code, then asked for at the next login', async ({ users, browser }) => {
     const alice = await users.create('alice');
     const email = `${alice.username}@example.test`;

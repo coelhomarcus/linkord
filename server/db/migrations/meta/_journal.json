@@ -610,6 +610,13 @@
       "when": 1795703327775,
       "tag": "0086_user_badges",
       "breakpoints": true
+    },
+    {
+      "idx": 87,
+      "version": "7",
+      "when": 1795807622678,
+      "tag": "0087_progressive_recovery_lockout",
+      "breakpoints": true
     }
   ]
 }

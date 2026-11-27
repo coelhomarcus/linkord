@@ -501,7 +501,7 @@ async function handleRecoveryReset(request: FastifyRequest, reply: FastifyReply)
     const reason = result && !result.ok ? result.reason : 'invalid_code';
     if (reason === 'invalid_code' || reason === 'too_many_attempts') {
       await ratelimit.recordFailure(ipKey);
-      await ratelimit.recordFailure(accountKey);
+      await ratelimit.recordRecoveryFailure(accountKey);
     }
     log.warn('password reset code refused', { userId: user?.id, reason, ip: ipOfRequest(request) });
     return purposeError(reply, reason);

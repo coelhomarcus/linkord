@@ -1,5 +1,5 @@
 import crypto from 'node:crypto';
-import { lt, sql } from 'drizzle-orm';
+import { and, lt, sql } from 'drizzle-orm';
 import { db } from '../../db/client.js';
 import { rateLimitWindows } from '../../db/schema.js';
 import { logger } from '../../lib/logger.js';
@@ -22,6 +22,9 @@ export interface Rule {
 
 /** Failed logins and wrong invite codes: 10 mistakes block the key for the rest of the 15 minutes. */
 export const FAILURE_RULE: Rule = { windowMs: 15 * 60 * 1000, max: 10 };
+
+const MAX_RECOVERY_BLOCK_MS = 24 * 60 * 60 * 1000;
+const RECOVERY_BLOCK_HISTORY = sql`interval '24 hours'`;
 
 const log = logger.child({ component: 'ratelimit' });
 
@@ -92,6 +95,31 @@ export async function recordFailure(key: string, rule: Rule = FAILURE_RULE): Pro
   await guarded('record a failure', () => hit(key, rule));
 }
 
+/** Recovery account and unknown-identifier counters keep their last block for a day after it ends. */
+export async function recordRecoveryFailure(key: string): Promise<void> {
+  const t = rateLimitWindows;
+  const { max, windowMs } = FAILURE_RULE;
+  const window = sql`(${windowMs}::double precision * interval '1 millisecond')`;
+  const nextCount = sql`(case when ${t.windowEndsAt} <= now() then 1 else ${t.count} + 1 end)`;
+  const nextDuration = sql`(case when ${t.blockedUntil} > now() - ${RECOVERY_BLOCK_HISTORY}
+    then least(${MAX_RECOVERY_BLOCK_MS}, greatest(${windowMs}, ${t.blockDurationMs} * 2))
+    else ${windowMs} end)`;
+  const blockEnd = sql`now() + ${nextDuration} * interval '1 millisecond'`;
+  // A concurrent failure or a known browser can arrive during a block. Keep the original deadline
+  // and start counting toward the next block only after this one ends.
+  await guarded('record a recovery failure', () => db.execute(sql`
+    insert into rate_limit_windows (key, count, window_ends_at)
+    values (${storedKey(key)}, 1, now() + ${window})
+    on conflict (key) do update set
+      count = ${nextCount},
+      window_ends_at = case when ${nextCount} >= ${max} then ${blockEnd}
+        when ${t.windowEndsAt} <= now() then now() + ${window} else ${t.windowEndsAt} end,
+      blocked_until = case when ${nextCount} >= ${max} then ${blockEnd} else ${t.blockedUntil} end,
+      block_duration_ms = case when ${nextCount} >= ${max} then ${nextDuration} else ${t.blockDurationMs} end
+    where ${t.blockedUntil} is null or ${t.blockedUntil} <= now()
+  `));
+}
+
 /** Counts one attempt and says whether it may go ahead, for limits on requests rather than on mistakes
  * (a code email sent, an account created). The attempt is counted even when refused. */
 export async function consume(key: string, rule: Rule): Promise<{ allowed: true } | { allowed: false; retryAfterSec: number }> {
@@ -103,11 +131,13 @@ export async function reset(key: string): Promise<void> {
   await guarded('reset a key', () => db.execute(sql`delete from rate_limit_windows where key = ${storedKey(key)}`));
 }
 
-/** Drops the rows whose window is over (they would be reset on their next hit anyway); called
- * periodically from app/bootstrap.ts so keys that never come back do not pile up. */
+/** Drops expired windows after any recent progressive block has aged out. */
 export async function sweepExpiredRateLimits(): Promise<number> {
   const rows = await db.delete(rateLimitWindows)
-    .where(lt(rateLimitWindows.windowEndsAt, sql`now()`))
+    .where(and(
+      lt(rateLimitWindows.windowEndsAt, sql`now()`),
+      sql`(${rateLimitWindows.blockDurationMs} = 0 or ${rateLimitWindows.blockedUntil} <= now() - ${RECOVERY_BLOCK_HISTORY})`,
+    ))
     .returning({ key: rateLimitWindows.key });
   return rows.length;
 }

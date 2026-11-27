@@ -645,6 +645,39 @@ describe('guessing password reset codes', () => {
     assert.equal((await reset({ username }, '123456')).status, 429);
   });
 
+  it('escalates recovery blocks for accounts and missing identifiers while leaving other accounts free', async () => {
+    const user = await makeAccount();
+    const other = await makeAccount();
+    const unknown = `ghost_${uid().slice(0, 10)}`;
+    const keyHash = (key: string) => crypto.createHash('sha256').update(key).digest('hex');
+    const expireBlock = async (key: string) => {
+      const past = new Date(Date.now() - 60_000);
+      await db.update(rateLimitWindows).set({ windowEndsAt: past, blockedUntil: past })
+        .where(eq(rateLimitWindows.key, keyHash(key)));
+    };
+
+    for (const minutes of [15, 30]) {
+      for (let i = 0; i < FAILURE_RULE.max; i++) {
+        const identifier = i % 2 ? { username: user.username } : { email: user.email };
+        assert.equal((await reset(identifier, '000000')).status, 400);
+        assert.equal((await reset({ username: unknown }, '000000')).status, 400);
+      }
+      for (const identifier of [{ email: user.email }, { username: user.username }, { username: unknown }]) {
+        const blocked = await reset(identifier, '000000');
+        assert.equal(blocked.status, 429);
+        const seconds = Number(blocked.headers['retry-after']);
+        assert.ok(seconds <= minutes * 60 && seconds > minutes * 60 - 5);
+      }
+      if (minutes === 15) {
+        await expireBlock(`reset-code:${user.id}`);
+        await expireBlock(`reset-code-unknown:username:${unknown}`);
+      }
+    }
+
+    await call('POST', '/api/auth/recovery/request', { payload: { username: other.username } });
+    assert.equal((await reset({ username: other.username }, lastCode())).status, 200);
+  });
+
   it('a correct reset clears the account counter', async () => {
     const user = await makeAccount();
     await call('POST', '/api/auth/recovery/request', { payload: { username: user.username } });

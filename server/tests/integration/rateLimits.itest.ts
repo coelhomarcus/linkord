@@ -9,7 +9,7 @@ import { createApp } from '../../src/http/app.js';
 import { hashPassword } from '../../src/modules/auth/password.js';
 import { createSession } from '../../src/modules/auth/session.js';
 import {
-  FAILURE_RULE, RateLimitUnavailableError, checkBlocked, consume, recordFailure, reset, sweepExpiredRateLimits,
+  FAILURE_RULE, RateLimitUnavailableError, checkBlocked, consume, recordFailure, recordRecoveryFailure, reset, sweepExpiredRateLimits,
 } from '../../src/modules/auth/ratelimit.js';
 import { checkRegistrationAllowed } from '../../src/modules/auth/registrationLimits.js';
 import { db, makeUser, pool } from './helpers.js';
@@ -141,6 +141,52 @@ describe('sweep of expired windows', () => {
     for (let i = 0; i < FAILURE_RULE.max; i++) await recordFailure(key);
     await sweepExpiredRateLimits();
     assert.notEqual(await checkBlocked(key), null);
+  });
+});
+
+describe('progressive recovery blocks', () => {
+  it('doubles each block up to 24 hours and freezes the counter while blocked', async () => {
+    const key = `reset-code:${uid()}`;
+    for (const minutes of [15, 30, 60, 120, 240, 480, 960, 1440, 1440]) {
+      for (let i = 0; i < FAILURE_RULE.max - 1; i++) await recordRecoveryFailure(key);
+      assert.equal(await checkBlocked(key), null);
+
+      // Only one of the concurrent failures can close the window.
+      await Promise.all(Array.from({ length: 5 }, () => recordRecoveryFailure(key)));
+      const blocked = (await rowOf(key))!;
+      assert.equal(blocked.count, FAILURE_RULE.max);
+      assert.equal(blocked.blockDurationMs, minutes * 60_000);
+      assert.equal(blocked.windowEndsAt.getTime(), blocked.blockedUntil?.getTime());
+      const seconds = await checkBlocked(key);
+      assert.ok(seconds !== null && seconds <= minutes * 60 && seconds > minutes * 60 - 5);
+
+      await expireWindow(key);
+      await sweepExpiredRateLimits();
+      assert.ok(await rowOf(key), 'the expired block still counts toward escalation');
+    }
+  });
+
+  it('starts at 15 minutes after a day without a block and sweeps old history', async () => {
+    const key = `reset-code:${uid()}`;
+    const failWindow = async () => {
+      for (let i = 0; i < FAILURE_RULE.max; i++) await recordRecoveryFailure(key);
+    };
+    const ageBlock = () => db.update(rateLimitWindows)
+      .set({ windowEndsAt: ago(25 * 60 * 60_000), blockedUntil: ago(25 * 60 * 60_000) })
+      .where(eq(rateLimitWindows.key, keyHash(key)));
+
+    await failWindow();
+    await expireWindow(key);
+    await failWindow();
+    assert.equal((await rowOf(key))?.blockDurationMs, 30 * 60_000);
+
+    await ageBlock();
+    await failWindow();
+    assert.equal((await rowOf(key))?.blockDurationMs, 15 * 60_000);
+
+    await ageBlock();
+    await sweepExpiredRateLimits();
+    assert.equal(await rowOf(key), undefined);
   });
 });
 
