@@ -23,6 +23,7 @@ const COPY = {
   email_change_current: { subject: 'email.changeCurrentSubject', title: 'email.changeCurrentTitle', intro: 'email.changeCurrentIntro', expires: 'email.expires' },
   two_factor_disable: { subject: 'email.twoFactorDisableSubject', title: 'email.twoFactorDisableTitle', intro: 'email.twoFactorDisableIntro', expires: 'email.expires' },
   login_alert_disable: { subject: 'email.loginAlertDisableSubject', title: 'email.loginAlertDisableTitle', intro: 'email.loginAlertDisableIntro', expires: 'email.expires' },
+  data_export: { subject: 'email.exportCodeSubject', title: 'email.exportCodeTitle', intro: 'email.exportCodeIntro', expires: 'email.expires' },
 } as const satisfies Record<AuthCodePurpose, Record<string, Parameters<typeof localeText>[1]>>;
 
 // Every text that goes into an email's HTML is escaped: a username or an address is never markup.
@@ -102,6 +103,32 @@ export async function sendLoginAlertEmail(
     subject,
     text: `${title}\n\n${intro}\n\n${details.join('\n')}\n\n${action}\n${link}\n\n${optOut}`,
     html: `<h2>${escapeHtml(title)}</h2><p>${escapeHtml(intro)}</p><ul>${details.map((line) => `<li>${escapeHtml(line)}</li>`).join('')}</ul><p>${escapeHtml(action)}</p>${link ? `<p><a href="${escapeHtml(link)}">${escapeHtml(link)}</a></p>` : ''}<p style="color:#666">${escapeHtml(optOut)}</p>`,
+  });
+}
+
+/** Tells an account its password was changed (`change`, from settings) or reset (`reset`, by an emailed code),
+ * by which browser and when. The other sessions were just ended, which on its own reads like an ordinary
+ * expiry: this is what tells the owner their account may have been taken, and that recovery takes it back. */
+export async function sendPasswordChangedEmail(
+  { to, username, locale, how, ip, userAgent, at }:
+  { to: string; username: string; locale: Locale; how: 'change' | 'reset'; ip: string; userAgent: string; at: Date },
+): Promise<void> {
+  const subject = localeText(locale, 'email.passwordChangedSubject');
+  const title = localeText(locale, 'email.passwordChangedTitle');
+  const intro = localeText(locale, how === 'reset' ? 'email.passwordResetIntro' : 'email.passwordChangedIntro', { username });
+  const details = [
+    localeText(locale, 'email.loginAlertDevice', { device: deviceName(locale, userAgent) }),
+    localeText(locale, 'email.loginAlertIp', { ip: ip || '?' }),
+    localeText(locale, 'email.loginAlertTime', { time: emailDate(locale, at) }),
+  ];
+  const action = localeText(locale, 'email.passwordChangedAction');
+  const link = config.APP_URL;
+
+  await deliverEmail({
+    to,
+    subject,
+    text: `${title}\n\n${intro}\n\n${details.join('\n')}\n\n${action}${link ? `\n${link}` : ''}`,
+    html: `<h2>${escapeHtml(title)}</h2><p>${escapeHtml(intro)}</p><ul>${details.map((line) => `<li>${escapeHtml(line)}</li>`).join('')}</ul><p>${escapeHtml(action)}</p>${link ? `<p><a href="${escapeHtml(link)}">${escapeHtml(link)}</a></p>` : ''}`,
   });
 }
 

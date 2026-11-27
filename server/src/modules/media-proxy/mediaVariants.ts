@@ -1,5 +1,6 @@
 import crypto from 'node:crypto';
 import sharp, { type Metadata } from 'sharp';
+import { decodedPixels, MAX_FRAMES, MAX_INPUT_PIXELS } from '../../lib/imageLimits.js';
 
 // A proxied picture at the size the browser draws it: `width`/`height` (fit
 // inside, never enlarged), `format=webp`, `quality`, `animated=false` (the
@@ -12,9 +13,7 @@ import sharp, { type Metadata } from 'sharp';
 export const PROXY_IMAGE_SIZES = [16, 32, 64, 128, 256, 400, 640, 800, 1280, 1920] as const;
 
 const QUALITY = { high: 80, low: 50 } as const;
-// The decoded size sharp may take on, all frames counted: a few-KB file can
-// claim to be 30000x30000, and decoding it would cost gigabytes.
-export const MAX_INPUT_PIXELS = 40_000_000;
+// Tighter than lib/imageLimits.ts's: a reader is waiting for the picture.
 const RENDER_TIMEOUT_S = 5;
 const PARAMS = ['width', 'height', 'format', 'quality', 'animated'] as const;
 
@@ -71,9 +70,10 @@ export function etagOf(body: Buffer): string {
 }
 
 /** The variant of a picture, or the original when that is no larger. Throws
- * PixelLimitError for a picture too large to decode safely; any other failure (an ICO, which sharp does not read, a
- * broken file) gives the original back: a variant only saves bytes, it is
- * never a reason to lose the picture. */
+ * PixelLimitError for a picture too large to decode safely (lib/imageLimits.ts);
+ * an animation of more frames than that allows, or any other failure (an ICO,
+ * which sharp does not read, a broken file), gives the original back: a
+ * variant only saves bytes, it is never a reason to lose the picture. */
 export async function renderVariant(original: Picture, variant: Variant): Promise<Picture> {
   let meta: Metadata;
   try {
@@ -82,8 +82,8 @@ export async function renderVariant(original: Picture, variant: Variant): Promis
     return original;
   }
   const frames = variant.animated ? (meta.pages ?? 1) : 1;
-  const frameHeight = meta.pageHeight ?? meta.height ?? 0;
-  if ((meta.width ?? 0) * frameHeight * frames > MAX_INPUT_PIXELS) throw new PixelLimitError();
+  if (decodedPixels(meta, variant.animated) > MAX_INPUT_PIXELS) throw new PixelLimitError();
+  if (frames > MAX_FRAMES) return original;
   const format = variant.webp ? 'webp' : meta.format;
   const contentType = format ? OUTPUT_TYPES[format] : undefined;
   if (!contentType) return original;

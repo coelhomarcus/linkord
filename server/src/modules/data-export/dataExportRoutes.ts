@@ -2,12 +2,16 @@ import fs from 'node:fs';
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import { config } from '../../config/env.js';
 import { parseCookies } from '../../http/cookies.js';
-import { sendError, sendJson } from '../../http/respond.js';
+import { jsonBody, sendError, sendJson } from '../../http/respond.js';
 import { recordAudit } from '../admin/auditLog.js';
+import { confirmPassword, sendCurrentEmailCode, verifyCurrentEmailCode } from '../auth/accountConfirmation.js';
 import { resolveSession } from '../auth/session.js';
+import { findById } from '../users/users.js';
 import { findDownload, getExportStatus, requestDataExport } from './dataExport.js';
 
-// /api/account/data-export — asking for a copy of your data, its state, and downloading it.
+// /api/account/data-export — asking for a copy of your data, its state, and downloading it. The copy holds
+// every DM the account has, so asking for it takes the current password and, with two-step login on, a code
+// sent to the account's email (`/confirm`), like deleting the account: a stolen session alone is not enough.
 
 const SETTINGS_SECTION = '/settings/privacy#data-export';
 
@@ -21,17 +25,39 @@ async function handleStatus(request: FastifyRequest, reply: FastifyReply): Promi
   sendJson(reply, 200, await getExportStatus(sess.userId));
 }
 
+function rateLimited(reply: FastifyReply, retryAt: Date): void {
+  reply.header('Retry-After', String(Math.max(1, Math.ceil((retryAt.getTime() - Date.now()) / 1000))));
+  sendJson(reply, 429, {
+    error: { code: 'rate_limited', message: 'Você já pediu uma cópia dos seus dados hoje. Tente novamente mais tarde.', retryAt: retryAt.toISOString() },
+  });
+}
+
+async function queueExport(request: FastifyRequest, reply: FastifyReply, sess: { userId: string; username: string }): Promise<void> {
+  const result = await requestDataExport({ id: sess.userId, username: sess.username }, request.id);
+  if (result.code === 'rate_limited') return rateLimited(reply, result.retryAt);
+  sendJson(reply, 202, { export: result.export });
+}
+
+/** The password, then either the export (202) or, with two-step login on, a code to the account's email
+ * (`{ codeRequired, email }`) that `handleConfirm` takes. */
 async function handleRequest(request: FastifyRequest, reply: FastifyReply): Promise<void> {
   const sess = await sessionFor(request);
   if (!sess) return sendError(reply, 401, 'unauthenticated', 'Não autenticado.');
-  const result = await requestDataExport({ id: sess.userId, username: sess.username }, request.id);
-  if (result.code === 'rate_limited') {
-    reply.header('Retry-After', String(Math.max(1, Math.ceil((result.retryAt.getTime() - Date.now()) / 1000))));
-    return sendJson(reply, 429, {
-      error: { code: 'rate_limited', message: 'Você já pediu uma cópia dos seus dados hoje. Tente novamente mais tarde.', retryAt: result.retryAt.toISOString() },
-    });
-  }
-  sendJson(reply, 202, { export: result.export });
+  if (!(await confirmPassword(reply, sess, String(jsonBody(request.body).password ?? '')))) return;
+  const user = await findById(sess.userId);
+  if (!user) return sendError(reply, 404, 'user_not_found', 'Conta não encontrada.');
+  if (!user.twoFactorEmail) return queueExport(request, reply, sess);
+  // no code for a request the daily limit would refuse anyway
+  const { nextRequestAt } = await getExportStatus(sess.userId);
+  if (nextRequestAt) return rateLimited(reply, new Date(nextRequestAt));
+  return sendCurrentEmailCode(reply, user, 'data_export');
+}
+
+async function handleConfirm(request: FastifyRequest, reply: FastifyReply): Promise<void> {
+  const sess = await sessionFor(request);
+  if (!sess) return sendError(reply, 401, 'unauthenticated', 'Não autenticado.');
+  if (!(await verifyCurrentEmailCode(request, reply, sess, 'data_export'))) return;
+  return queueExport(request, reply, sess);
 }
 
 async function handleDownload(request: FastifyRequest<{ Params: { id: string } }>, reply: FastifyReply): Promise<unknown> {
@@ -60,5 +86,6 @@ async function handleDownload(request: FastifyRequest<{ Params: { id: string } }
 export function registerDataExportRoutes(fastify: FastifyInstance): void {
   fastify.get('/api/account/data-export', handleStatus);
   fastify.post('/api/account/data-export', handleRequest);
+  fastify.post('/api/account/data-export/confirm', handleConfirm);
   fastify.get<{ Params: { id: string } }>('/api/account/data-export/:id/download', handleDownload);
 }

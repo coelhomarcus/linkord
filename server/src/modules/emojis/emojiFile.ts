@@ -1,4 +1,5 @@
-import sharp, { type Metadata } from 'sharp';
+import type { Metadata } from 'sharp';
+import { decodeUntrusted, fitsDecodeLimits, readImageHeader } from '../../lib/imageLimits.js';
 import { cropPipeline, fitCrop, frameSize, type CropRect } from '../attachments/imageCrop.js';
 
 // Every server emoji is stored the same way, whatever was uploaded: a 128px
@@ -13,10 +14,6 @@ export const MAX_EMOJI_UPLOAD_BYTES = 12 * 1024 * 1024;
 // a long animation at 128px can still come out heavy; past this it's refused
 const MAX_EMOJI_FILE_BYTES = 512 * 1024;
 const MAX_SOURCE_DIMENSION = 4096;
-const MAX_FRAMES = 300;
-// every frame counts (sharp measures the whole strip): 4096² still or, say,
-// a 500px GIF of ~250 frames
-const MAX_INPUT_PIXELS = 64 * 1024 * 1024;
 const ACCEPTED_FORMATS = new Set(['png', 'jpeg', 'gif', 'webp']);
 
 export type EmojiEncodeError = 'invalid_image' | 'invalid_crop' | 'emoji_too_large';
@@ -42,14 +39,14 @@ export async function encodeSquareWebp(
 ): Promise<EncodedEmoji | 'invalid_image' | 'invalid_crop' | 'too_large'> {
   let meta: Metadata;
   try {
-    meta = await sharp(input, { animated: true, limitInputPixels: MAX_INPUT_PIXELS }).metadata();
+    meta = await readImageHeader(input);
   } catch {
     return 'invalid_image';
   }
   const pages = meta.pages ?? 1;
   const frameHeight = meta.pageHeight ?? meta.height ?? 0;
   if (!meta.format || !ACCEPTED_FORMATS.has(meta.format)) return 'invalid_image';
-  if (!meta.width || !frameHeight || meta.width > MAX_SOURCE_DIMENSION || frameHeight > MAX_SOURCE_DIMENSION || pages > MAX_FRAMES) return 'invalid_image';
+  if (!meta.width || !frameHeight || meta.width > MAX_SOURCE_DIMENSION || frameHeight > MAX_SOURCE_DIMENSION || !fitsDecodeLimits(meta)) return 'invalid_image';
   const animated = pages > 1;
   let rect: CropRect | null = null;
   if (options.crop) {
@@ -59,7 +56,7 @@ export async function encodeSquareWebp(
   }
   let data: Buffer;
   try {
-    const image = rect ? cropPipeline(input, rect, animated, false) : sharp(input, { animated, limitInputPixels: false });
+    const image = rect ? cropPipeline(input, rect, animated) : decodeUntrusted(input, animated);
     data = await image
       .resize(options.size, options.size, { fit: 'contain', background: { r: 0, g: 0, b: 0, alpha: 0 } })
       .webp({ quality: 85, effort: 4 })

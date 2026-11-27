@@ -2,6 +2,7 @@ import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import sharp from 'sharp';
 import { EMOJI_SIZE_PX, encodeEmoji } from '../../../src/modules/emojis/emojiFile.js';
+import { gifBomb } from '../../fixtures/gifBomb.js';
 
 function solid(width: number, height: number) {
   return sharp({ create: { width, height, channels: 4, background: { r: 255, g: 0, b: 0, alpha: 1 } } });
@@ -52,5 +53,9 @@ describe('encodeEmoji', () => {
 
   it('refuses a source past the size it accepts', async () => {
     assert.equal(await encodeEmoji(await solid(5000, 10).png().toBuffer()), 'invalid_image');
+  });
+
+  it('refuses an animation past the decode limits', async () => {
+    assert.equal(await encodeEmoji(gifBomb({ width: 4096, height: 4096, frames: 5 })), 'invalid_image');
   });
 });

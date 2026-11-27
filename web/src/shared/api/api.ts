@@ -205,8 +205,13 @@ export function fetchDataExportStatus(): Promise<DataExportStatus> {
   return apiFetch('/api/account/data-export');
 }
 
-export function requestDataExport(): Promise<{ export: DataExport }> {
-  return apiFetch('/api/account/data-export', { method: 'POST' });
+/** The password queues the copy, or with two-step login on earns an emailed code (`confirmDataExport`). */
+export function requestDataExport(password: string): Promise<{ export: DataExport } | CurrentEmailCodeSent> {
+  return apiFetch('/api/account/data-export', { method: 'POST', body: JSON.stringify({ password }) });
+}
+
+export function confirmDataExport(code: string): Promise<{ export: DataExport }> {
+  return apiFetch('/api/account/data-export/confirm', { method: 'POST', body: JSON.stringify({ code }) });
 }
 
 export const dataExportDownloadUrl = (id: string) => `/api/account/data-export/${encodeURIComponent(id)}/download`;

@@ -224,9 +224,22 @@ const MEDIA_PROXY_ENABLED = process.env.MEDIA_PROXY !== '0';
 // FILES only live on that instance's disk (UPLOAD_DIR is always local, never
 // synced). Set this to that instance's base URL and serveUpload will fetch
 // (and cache) a missing file from there on first request instead of 404ing.
-// Never needed in the deployment this var would point AT. Trailing slash
-// stripped so `${UPLOADS_REMOTE_URL}/uploads/<id>` doesn't double up.
-const UPLOADS_REMOTE_URL = (process.env.UPLOADS_REMOTE_URL || '').trim().replace(/\/+$/, '');
+// The fetch carries the caller's session cookie, so a production server stops
+// the boot instead: a copied or stale value would hand every user's session to
+// another host. HTTPS is required for the same reason, except on loopback.
+export function parseUploadsRemoteUrl(raw: string | undefined, nodeEnv: string | undefined): string {
+  const text = (raw ?? '').trim();
+  if (text === '') return '';
+  if (nodeEnv === 'production') throw new Error('UPLOADS_REMOTE_URL is for development only and cannot be set when NODE_ENV=production.');
+  const url = URL.parse(text);
+  if (!url || url.username || url.password || url.search || url.hash
+    || (url.protocol !== 'https:' && !(url.protocol === 'http:' && ['localhost', '127.0.0.1', '[::1]'].includes(url.hostname)))) {
+    throw new Error('UPLOADS_REMOTE_URL must be an HTTPS base URL without credentials, query or fragment (HTTP is allowed on loopback).');
+  }
+  // trailing slash stripped so `${UPLOADS_REMOTE_URL}/uploads/<id>` doesn't double up
+  return `${url.origin}${url.pathname.replace(/\/+$/, '')}`;
+}
+const UPLOADS_REMOTE_URL = parseUploadsRemoteUrl(process.env.UPLOADS_REMOTE_URL, process.env.NODE_ENV);
 
 // ---- abuse limits (initial estimates; tune based on actual usage) ----
 const REGISTRATIONS_PER_IP_PER_HOUR = Number(process.env.REGISTRATIONS_PER_IP_PER_HOUR || 5);

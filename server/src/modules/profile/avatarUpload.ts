@@ -1,6 +1,6 @@
 import fs from 'node:fs/promises';
 import type { FastifyReply, FastifyRequest } from 'fastify';
-import sharp, { type Metadata } from 'sharp';
+import type { Metadata } from 'sharp';
 import { config } from '../../config/env.js';
 import { db } from '../../db/client.js';
 import { attachments as attachmentsTable } from '../../db/schema.js';
@@ -10,6 +10,7 @@ import { resolveSession } from '../auth/session.js';
 import { newId, filePathFor } from '../attachments/attachmentStorage.js';
 import { hasRoomFor } from '../attachments/attachmentQuota.js';
 import { cropPipeline, fitCrop, frameSize, parseCropParam, type CropRect } from '../attachments/imageCrop.js';
+import { decodeUntrusted, fitsDecodeLimits, readImageHeader } from '../../lib/imageLimits.js';
 import * as floodControl from '../../realtime/floodControl.js';
 import { logger } from '../../lib/logger.js';
 
@@ -35,7 +36,9 @@ const AVATAR_UPLOAD_LIMIT = { windowMs: 60_000, max: 5 };
 const MAX_OUTPUT_DIMENSION = 4096;
 const FIT_OUTPUT = { width: MAX_OUTPUT_DIMENSION, height: MAX_OUTPUT_DIMENSION, fit: 'inside', withoutEnlargement: true } as const;
 
-type ProfileImageErrorCode = 'crop_failed' | 'invalid_crop';
+type ProfileImageErrorCode = 'crop_failed' | 'invalid_crop' | 'image_too_large';
+
+const ERROR_STATUS: Record<ProfileImageErrorCode, number> = { crop_failed: 400, invalid_crop: 400, image_too_large: 413 };
 
 class ProfileImageProcessingError extends Error {
   readonly code: ProfileImageErrorCode;
@@ -72,8 +75,9 @@ async function cropAndEncode(buffer: Buffer, crop: CropRect, meta: Metadata, ani
 /** Crops (when `crop` is given) and stores a profile image; when animated,
  * also freezes the first frame as a JPEG poster for the call UI. Without a
  * crop the bytes are stored as they came: tabs on a build from before the
- * server cropped send an image the browser already cut. Sharp's default
- * pixel limit is the decompression-bomb guard. `uploaderId` is who gets to
+ * server cropped send an image the browser already cut. A picture past the
+ * decode limits (lib/imageLimits.ts) is refused either way: everyone who
+ * sees the profile would decode it too. `uploaderId` is who gets to
  * later claim this as their own avatar/banner/server icon. */
 export async function encodeAndStoreProfileImage(
   buffer: Buffer,
@@ -84,11 +88,14 @@ export async function encodeAndStoreProfileImage(
   let outMime: string;
   let animated = false;
   try {
-    const meta = await sharp(buffer, { animated: true }).metadata();
+    const meta = await readImageHeader(buffer);
     const frameHeight = meta.pageHeight ?? meta.height ?? 0;
     const mime = mimeForFormat(meta.format);
     if (!meta.width || !frameHeight || !mime) {
       throw new ProfileImageProcessingError('crop_failed', 'Não foi possível processar a imagem.');
+    }
+    if (!fitsDecodeLimits(meta)) {
+      throw new ProfileImageProcessingError('image_too_large', 'Imagem grande demais para processar. Use uma com menos pixels ou, se for animada, menos quadros.');
     }
     animated = (meta.pages ?? 1) > 1;
     if (crop) {
@@ -119,7 +126,7 @@ export async function encodeAndStoreProfileImage(
   if (animated) {
     const posterId = newId();
     try {
-      const posterBuffer = await sharp(stored, { animated: false }).jpeg({ quality: 88 }).toBuffer();
+      const posterBuffer = await decodeUntrusted(stored, false).jpeg({ quality: 88 }).toBuffer();
       await fs.writeFile(filePathFor(posterId), posterBuffer);
       try {
         await db.insert(attachmentsTable).values({ id: posterId, messageId: null, uploaderId, fileName: 'avatar-poster', mimeType: 'image/jpeg', size: posterBuffer.length });
@@ -173,7 +180,7 @@ export async function handleAvatarUpload(request: FastifyRequest<{ Querystring: 
   } catch (err) {
     if (err instanceof ProfileImageProcessingError) {
       log.warn('failed to store avatar', { err: err.message });
-      return sendError(reply, 400, err.code, err.message);
+      return sendError(reply, ERROR_STATUS[err.code], err.code, err.message);
     }
     log.warn('failed to store avatar', { err: err instanceof Error ? err.message : String(err) });
     throw err;

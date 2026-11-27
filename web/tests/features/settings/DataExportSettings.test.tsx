@@ -7,11 +7,13 @@ import { DataExportSettings } from '@/features/settings/DataExportSettings';
 
 const fetchDataExportStatus = vi.fn();
 const requestDataExport = vi.fn();
+const confirmDataExport = vi.fn();
 
 vi.mock('@/shared/api/api', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@/shared/api/api')>()),
   fetchDataExportStatus: (...args: unknown[]) => fetchDataExportStatus(...args),
   requestDataExport: (...args: unknown[]) => requestDataExport(...args),
+  confirmDataExport: (...args: unknown[]) => confirmDataExport(...args),
 }));
 
 const exportOf = (status: DataExport['status'], extra: Partial<DataExport> = {}): DataExport => ({
@@ -22,7 +24,15 @@ const statusOf = (latest: DataExport | null, nextRequestAt: string | null = null
 beforeEach(() => {
   fetchDataExportStatus.mockReset();
   requestDataExport.mockReset();
+  confirmDataExport.mockReset();
 });
+
+/** Opens the request and confirms it with the password, as the settings page asks. */
+async function requestWithPassword(user: ReturnType<typeof userEvent.setup>, password = 'minha senha') {
+  await user.click(await screen.findByRole('button', { name: 'Pedir cópia' }));
+  await user.type(screen.getByLabelText('Senha atual'), password);
+  await user.click(screen.getByRole('button', { name: 'Confirmar pedido' }));
+}
 afterEach(() => vi.useRealTimers());
 
 describe('DataExportSettings', () => {
@@ -31,10 +41,34 @@ describe('DataExportSettings', () => {
     fetchDataExportStatus.mockResolvedValueOnce(statusOf(null)).mockResolvedValue(statusOf(exportOf('pending'), '2026-11-13T10:00:00.000Z'));
     requestDataExport.mockResolvedValue({ export: exportOf('pending') });
     render(<DataExportSettings />);
-    await user.click(await screen.findByRole('button', { name: 'Pedir cópia' }));
-    expect(requestDataExport).toHaveBeenCalledTimes(1);
+    await requestWithPassword(user);
+    expect(requestDataExport).toHaveBeenCalledWith('minha senha');
     expect(await screen.findByRole('button', { name: 'Preparando…' })).toBeDisabled();
     expect(screen.getByRole('status')).toHaveTextContent('o link também chega por e-mail');
+    expect(screen.queryByLabelText('Senha atual')).not.toBeInTheDocument();
+  });
+
+  it('asks for the emailed code when two-step login is on', async () => {
+    const user = userEvent.setup();
+    fetchDataExportStatus.mockResolvedValueOnce(statusOf(null)).mockResolvedValue(statusOf(exportOf('pending'), '2026-11-13T10:00:00.000Z'));
+    requestDataExport.mockResolvedValue({ codeRequired: true, email: 'a***@example.com' });
+    confirmDataExport.mockResolvedValue({ export: exportOf('pending') });
+    render(<DataExportSettings />);
+    await requestWithPassword(user);
+    expect(await screen.findByText('Enviamos um código para a***@example.com. Digite-o para pedir a cópia.')).toBeInTheDocument();
+    await user.type(screen.getByLabelText('Código de verificação'), '123456');
+    await waitFor(() => expect(confirmDataExport).toHaveBeenCalledWith('123456'));
+    expect(await screen.findByRole('button', { name: 'Preparando…' })).toBeDisabled();
+  });
+
+  it('keeps the form open on a wrong password', async () => {
+    const user = userEvent.setup();
+    fetchDataExportStatus.mockResolvedValue(statusOf(null));
+    requestDataExport.mockRejectedValue(new ApiError(403, 'invalid_password', 'Senha incorreta.'));
+    render(<DataExportSettings />);
+    await requestWithPassword(user, 'errada');
+    expect(await screen.findByRole('alert')).toBeInTheDocument();
+    expect(screen.getByLabelText('Senha atual')).toBeInTheDocument();
   });
 
   it('offers the download of a ready copy, with its size and expiry, until another can be asked for', async () => {
@@ -69,7 +103,7 @@ describe('DataExportSettings', () => {
     fetchDataExportStatus.mockResolvedValue(statusOf(null));
     requestDataExport.mockRejectedValue(new ApiError(503, 'internal_error', 'x'));
     render(<DataExportSettings />);
-    await user.click(await screen.findByRole('button', { name: 'Pedir cópia' }));
+    await requestWithPassword(user);
     expect(await screen.findByRole('alert')).toBeInTheDocument();
     expect(fetchDataExportStatus).toHaveBeenCalledTimes(2);
   });

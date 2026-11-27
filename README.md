@@ -53,7 +53,7 @@ Overcord is a self-hosted place to chat and call with friends. Talk in direct me
 
 **Account**
 - Two-step login by email, sign-in alerts, and a list of active sessions you can end.
-- Username and password changes, account deletion, and a download of your data.
+- Username and password changes (the account's email hears about every password change or reset), account deletion, and a download of your data behind the password.
 - Themes, density, fonts, languages (Portuguese and English) and notification sounds, synced across your devices.
 - Custom empty-state illustrations use shades of the selected theme’s accent color.
 - Installable as a web app (PWA), with share-to-Overcord on Android.

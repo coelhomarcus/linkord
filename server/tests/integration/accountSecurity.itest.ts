@@ -809,6 +809,65 @@ describe('changing the password', () => {
     assert.equal((await me(a.cookie)).status, 401);
     assert.equal(tab.disconnected, true);
   });
+
+  it('emails the account which browser changed the password, and how to take it back', async () => {
+    const user = await makeAccount();
+    const here = await cookieFor(user.id);
+    const ip = freshIp();
+    const ua = 'Mozilla/5.0 (X11; Linux x86_64; rv:132.0) Gecko/20100101 Firefox/132.0';
+
+    await call('POST', '/api/auth/password', { cookie: here.cookie, ip, ua, payload: { currentPassword: 'nope', newPassword: 'a brand new password' } });
+    assert.equal(mailbox.length, 0, 'a refused change sends nothing');
+
+    const res = await call('POST', '/api/auth/password', { cookie: here.cookie, ip, ua, payload: { currentPassword: PASSWORD, newPassword: 'a brand new password' } });
+    assert.equal(res.status, 200);
+    const notice = mailbox.at(-1);
+    assert.deepEqual(notice?.to, [user.email]);
+    assert.match(notice!.subject, /senha .* foi trocada/);
+    assert.match(notice!.text, /trocada em Configurações → Segurança/);
+    assert.match(notice!.text, /Firefox em Linux/);
+    assert.ok(notice!.text.includes(ip), 'names the address the change came from');
+    assert.match(notice!.text, /Esqueceu sua senha\?/);
+    assert.ok(!/\b\d{6}\b/.test(notice!.text), 'carries no code');
+  });
+
+  it('emails the account when the password is reset by recovery', async () => {
+    const user = await makeAccount();
+    await db.update(users).set({ locale: 'en-US' }).where(eq(users.id, user.id));
+    await call('POST', '/api/auth/recovery/request', { payload: { username: user.username } });
+    const code = lastCode();
+    const res = await call('POST', '/api/auth/recovery/reset', { payload: { username: user.username, code, password: 'another new password' } });
+    assert.equal(res.status, 200);
+    const notice = mailbox.at(-1);
+    assert.deepEqual(notice?.to, [user.email]);
+    assert.equal(notice!.subject, 'Your Overcord password was changed');
+    assert.match(notice!.text, /was reset with a code sent to this email/);
+    assert.match(notice!.text, /Forgot your password\?/);
+  });
+
+  it('a refused reset sends no notice, and a failed delivery does not undo the change', async () => {
+    const user = await makeAccount();
+    await call('POST', '/api/auth/recovery/request', { payload: { username: user.username } });
+    const right = lastCode();
+    mailbox = [];
+    assert.equal((await call('POST', '/api/auth/recovery/reset', { payload: { username: user.username, code: wrongCode(right), password: 'another new password' } })).status, 400);
+    assert.equal(mailbox.length, 0);
+
+    mock.restoreAll();
+    mock.method(globalThis, 'fetch', async () => new Response('down', { status: 500 }));
+    const res = await call('POST', '/api/auth/recovery/reset', { payload: { username: user.username, code: right, password: 'another new password' } });
+    assert.equal(res.status, 200);
+    assert.equal((await login(user.username, 'another new password')).status, 200);
+  });
+
+  it('sends nothing without email delivery, and still changes the password', async () => {
+    const user = await makeAccount();
+    const here = await cookieFor(user.id);
+    config.RESEND_API_KEY = '';
+    const res = await call('POST', '/api/auth/password', { cookie: here.cookie, payload: { currentPassword: PASSWORD, newPassword: 'a brand new password' } });
+    assert.equal(res.status, 200);
+    assert.equal(mailbox.length, 0);
+  });
 });
 
 describe('new sign-in alerts', () => {

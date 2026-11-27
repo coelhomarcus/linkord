@@ -8,6 +8,7 @@ import { config } from '../../../src/config/env.js';
 import { db } from '../../../src/db/client.js';
 import { filePathFor } from '../../../src/modules/attachments/attachmentStorage.js';
 import { encodeAndStoreProfileImage } from '../../../src/modules/profile/avatarUpload.js';
+import { gifBomb } from '../../fixtures/gifBomb.js';
 
 let uploadDir: string;
 let previousUploadDir: string;
@@ -112,6 +113,18 @@ describe('encodeAndStoreProfileImage', () => {
       () => encodeAndStoreProfileImage(input, UPLOADER_ID, { left: 4, top: 0, width: 8, height: 5 }),
       (err: Error & { code?: string }) => err.code === 'invalid_crop',
     );
+    assert.deepEqual(await fs.readdir(uploadDir), []);
+  });
+
+  test('refuses an animation past the decode limits, cropped or not, and stores nothing', async () => {
+    // 84 megapixels across its frames, from a few hundred bytes
+    const bomb = gifBomb({ width: 4096, height: 4096, frames: 5 });
+    for (const crop of [null, { left: 0, top: 0, width: 512, height: 512 }]) {
+      await assert.rejects(
+        () => encodeAndStoreProfileImage(bomb, UPLOADER_ID, crop),
+        (err: Error & { code?: string }) => err.code === 'image_too_large',
+      );
+    }
     assert.deepEqual(await fs.readdir(uploadDir), []);
   });
 

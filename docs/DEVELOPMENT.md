@@ -96,6 +96,12 @@ bun run db:seed
 
 Creates four accounts (`ana`, `bruno`, `carla`, `davi`; the shared password is printed at the end and set at the top of `server/src/scripts/seedDev.ts`), friendships and a pending request, two DMs, and a server ("Equipe do projeto") with `#geral`, a read-only `#avisos` fed by a webhook, a voice channel and a hoisted moderators role. It only runs against a database on `localhost`, and running it again leaves existing rows alone. Restart `bun run dev` afterwards: the server caches memberships in memory.
 
+## Files from another instance
+
+When `DATABASE_URL` points at a database a deployed instance also uses, attachment rows exist locally but their files live on that instance's disk. Set `UPLOADS_REMOTE_URL` to that instance's base URL and the local server fetches a missing file from it on first request, forwarding only your session cookie, and caches it in `UPLOAD_DIR`.
+
+It is a development setting. The server refuses to start when it is set with `NODE_ENV=production` (the Docker image sets it), and it must be HTTPS except on loopback. Never set it on the instance it points at.
+
 ## Create an administrator
 
 ```bash
@@ -149,6 +155,7 @@ Runs the server test typecheck, lint for both frontends, the dependency audit, t
 - **End-to-end** (`.github/workflows/e2e.yml`) runs the `features`, `restart` and `upgrade` projects in parallel on pull requests into `main`, and on demand from the Actions tab. A failed job uploads the Playwright report and traces.
 - **Desktop installer** (`.github/workflows/desktop.yml`) runs only by hand; see [DEPLOY.md](DEPLOY.md#building-the-installer).
 - **Audit:** `bun audit --prod --audit-level=high` for the root, `web/` and `admin/`. Keep build-only packages such as Tailwind and Vite plugins in `devDependencies`. The image ships only the frontends' build output.
+- **Pinned dependencies:** `web/` pins the `@twinkleplop/*` highlighter packages to exact versions because chat code blocks and text previews insert their output as HTML. Bump them deliberately and run `web/tests/shared/lib/highlightCode.test.ts`, which checks escaping in every grammar and alias.
 
 ## Scripts
 
@@ -217,7 +224,7 @@ Playwright runs on Bun and uses the installed Google Chrome. Its CLI scripts use
 | Spec | What it checks |
 | --- | --- |
 | `features/auth` | Sign-up with and without the code, login, logout, two-step login on and off, ending another session. |
-| `features/account-data` | A data export built, emailed and downloaded; deleting the account and cancelling it by signing in. |
+| `features/account-data` | A data export asked for with the password, built, emailed and downloaded; deleting the account and cancelling it by signing in. |
 | `features/friends` | Friend requests, including acceptance from the row menu. Messaging from the friends menu, blocking, and unblocking. |
 | `features/legacy-app-paths` | Permanent redirects for old `/app` links, including the friends view selected by a query and the settings section selected by a fragment. |
 | `features/dm` | Talking in a DM, unread counts, no DM without friendship, row menus in the list and rail, muting a DM across tabs. |
@@ -296,7 +303,7 @@ A chunked upload reserves its declared size against `MAX_STORAGE_BYTES` (30 GB) 
 
 ### Socket connection caps
 
-`join` refuses a new live connection past `MAX_PARTICIPANTS` (500, the whole instance, answered with `full`), `MAX_CONNECTIONS_PER_USER` (4) or `MAX_CONNECTIONS_PER_IP` (20), both answered with `too_many_connections`. A resume (`join {id, token}`) is never refused, and a connection waiting out its reconnect grace holds no slot. The per-address cap needs `TRUST_PROXY=1` behind a proxy, or every client shares the proxy's address.
+`join` refuses a new live connection past `MAX_PARTICIPANTS` (500, the whole instance, answered with `full`), `MAX_CONNECTIONS_PER_USER` (4) or `MAX_CONNECTIONS_PER_IP` (20), both answered with `too_many_connections`. A resume (`join {id, token}`) is never refused, and a connection waiting out its reconnect grace holds no slot. The per-address cap needs `TRUST_PROXY=1` behind a proxy, or every client shares the proxy's address. It counts addresses as the [brute-force limits](#brute-force-limits) do.
 
 ### Brute-force limits
 
@@ -308,6 +315,7 @@ Each email code also has its own attempt limit. Verification counts the attempt 
 - **The owner gets through:** a browser the account signed in from in the last 30 days (`known_logins`) passes a blocked account counter with the right password or code. Anyone else gets the same answer as for a wrong password, so the block reveals nothing, and getting through does not clear it.
 - **Fail closed:** if the database cannot answer, the attempt is refused with `503 rate_limit_unavailable`.
 - **In memory on purpose:** socket flood control, link previews and game searches only cap short bursts, so losing their counts on a restart costs nothing.
+- **Per address** means IPv4 as is and IPv6 by its /64 prefix, since one IPv6 client holds the whole /64 and could take a fresh address for each request. An IPv4-mapped address (`::ffff:a.b.c.d`) counts as its IPv4. Every per-address key, here and in flood control, goes through `rateLimitSubject` (`http/clientInfo.ts`); logs and the session list keep the full address.
 - **A new limit** uses `checkBlocked` / `recordFailure` / `reset` for mistakes, or `consume` for requests counted either way, with a key namespace of its own (tests in `server/tests/integration/rateLimits.itest.ts`).
 
 ## Restarting the server during a call

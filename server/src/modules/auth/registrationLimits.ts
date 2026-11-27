@@ -19,12 +19,13 @@ export function isRegistrationPaused(recentAccounts: number, cap = config.MAX_NE
  * a per-IP hourly cap, and an instance-wide cap on new accounts per hour (the
  * public sign-up must not be able to fill the room or the database faster
  * than someone can react). Both counters are in the database, so
- * they survive restarts and are shared by every process. */
-export async function checkRegistrationAllowed(ip: string): Promise<RegistrationGate> {
+ * they survive restarts and are shared by every process. `subject` is the caller's
+ * `rateLimitSubject`, so an IPv6 /64 counts as one address. */
+export async function checkRegistrationAllowed(subject: string): Promise<RegistrationGate> {
   const [row] = await db.select({ n: sql<number>`count(*)::int` }).from(users)
     .where(gte(users.createdAt, new Date(Date.now() - HOUR_MS)));
   if (isRegistrationPaused(row?.n ?? 0)) return 'paused';
-  const perIp = await consume(`register:${ip}`, { windowMs: HOUR_MS, max: config.REGISTRATIONS_PER_IP_PER_HOUR });
+  const perIp = await consume(`register:${subject}`, { windowMs: HOUR_MS, max: config.REGISTRATIONS_PER_IP_PER_HOUR });
   if (!perIp.allowed) return 'ip_limited';
   return 'ok';
 }
