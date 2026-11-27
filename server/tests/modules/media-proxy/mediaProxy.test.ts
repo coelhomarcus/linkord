@@ -5,6 +5,7 @@ import type { AddressInfo, LookupFunction } from 'node:net';
 import { after, before, describe, it } from 'node:test';
 import Fastify from 'fastify';
 import sharp from 'sharp';
+import { MAX_INPUT_PIXELS } from '../../../src/lib/imageLimits.js';
 import { createSteamBannerFetcher } from '../../../src/integrations/steam/steamBanner.js';
 import { steamHeaderUrl } from '../../../src/integrations/steam/steamAssets.js';
 import {
@@ -294,7 +295,8 @@ describe('createMediaProxy — variants', () => {
   });
 
   it('a picture past the pixel limit answers image_too_large for its variants', async () => {
-    const bomb = await sharp({ create: { width: 7000, height: 7000, channels: 3, background: '#000' } }).png({ compressionLevel: 9 }).toBuffer();
+    const side = Math.ceil(Math.sqrt(MAX_INPUT_PIXELS)) + 10;
+    const bomb = await sharp({ create: { width: side, height: side, channels: 3, background: '#000' } }).png({ compressionLevel: 9 }).toBuffer();
     const proxy = createMediaProxy({ fetch: async () => ({ body: bomb, contentType: 'image/png', etag: etagOf(bomb) }) });
     await assert.rejects(proxy.get('u-variant-bomb', { url: 'https://cdn.example/bomb.png', redirects: 0 }, parseVariant({ width: '400' })), failsWith('image_too_large'));
   });

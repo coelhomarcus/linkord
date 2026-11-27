@@ -1,5 +1,5 @@
-import sharp from 'sharp';
 import { rgbaToThumbHash } from 'thumbhash';
+import { decodeUntrusted, fitsDecodeLimits, readImageHeader } from '../../lib/imageLimits.js';
 import { logger } from '../../lib/logger.js';
 
 const log = logger.child({ component: 'attachments' });
@@ -10,22 +10,13 @@ const log = logger.child({ component: 'attachments' });
 export const THUMBNAIL_SOURCE_MIME_TYPES = new Set(['image/png', 'image/jpeg', 'image/gif', 'image/webp']);
 const THUMBNAIL_MAX_DIMENSION = 640;
 
-/** Resizes a just-uploaded chat image down to a small inline-preview copy —
- * same animated-frame handling as the avatar crop (avatarUpload.ts)
- * (`{ animated: true }` + checking `meta.pages`), reused rather than
- * duplicated in spirit, kept separate in code since the encode choices
- * genuinely differ: a chat image can be a transparent PNG (screenshot,
- * sticker) where the avatar path's "always flatten single-frame to JPEG"
- * would bake in an ugly background. Returns null (never throws) when
- * there's nothing worth generating — the source is already thumbnail-sized,
- * or sharp failed for any reason; either way the original attachment still
- * serves fine without a thumbnail. */
 /** The size an image is DISPLAYED at — EXIF orientations 5–8 swap width
  * and height — so the client can reserve the right box before it loads.
- * One frame's height for an animation. Null when it can't be read. */
+ * One frame's height for an animation. Null when it can't be read. Read from
+ * the header, so a picture too large to process still gets its box. */
 export async function readImageDimensions(src: string | Buffer): Promise<{ width: number; height: number } | null> {
   try {
-    const meta = await sharp(src, { animated: true }).metadata();
+    const meta = await readImageHeader(src);
     const width = meta.width ?? 0;
     const height = meta.pageHeight ?? meta.height ?? 0;
     if (!width || !height) return null;
@@ -42,10 +33,11 @@ const PLACEHOLDER_MAX_DIMENSION = 100;
  * the box to show while the real pixels load. Drawn from the picture as
  * displayed (EXIF orientation applied) and its first frame, with transparency
  * kept so a see-through image isn't painted over a solid colour. Null — never
- * a throw — when it can't be made: the box just stays plain. */
+ * a throw — when it can't be made, a first frame past the pixel cap included:
+ * the box just stays plain. */
 export async function readImagePlaceholder(src: string | Buffer): Promise<string | null> {
   try {
-    const { data, info } = await sharp(src, { animated: false })
+    const { data, info } = await decodeUntrusted(src, false)
       .rotate()
       .resize(PLACEHOLDER_MAX_DIMENSION, PLACEHOLDER_MAX_DIMENSION, { fit: 'inside' })
       .ensureAlpha()
@@ -57,13 +49,29 @@ export async function readImagePlaceholder(src: string | Buffer): Promise<string
   }
 }
 
+/** Resizes a just-uploaded chat image down to a small inline-preview copy —
+ * same animated-frame handling as the avatar crop (avatarUpload.ts)
+ * (`{ animated: true }` + checking `meta.pages`), reused rather than
+ * duplicated in spirit, kept separate in code since the encode choices
+ * genuinely differ: a chat image can be a transparent PNG (screenshot,
+ * sticker) where the avatar path's "always flatten single-frame to JPEG"
+ * would bake in an ugly background. Returns null (never throws) when
+ * there's nothing worth generating — the source is already thumbnail-sized
+ * or too large to decode safely (lib/imageLimits.ts), or sharp failed for any
+ * reason, its timeout included; either way the original attachment still
+ * serves fine without a thumbnail. */
 export async function generateThumbnail(srcPath: string): Promise<{ buffer: Buffer; mime: string } | null> {
   try {
-    const image = sharp(srcPath, { animated: true });
-    const meta = await image.metadata();
+    const meta = await readImageHeader(srcPath);
     const frameHeight = meta.pageHeight ?? meta.height ?? 0;
     if (!meta.width || !frameHeight) return null;
     if (meta.width <= THUMBNAIL_MAX_DIMENSION && frameHeight <= THUMBNAIL_MAX_DIMENSION) return null;
+    // the original is still sent, just without a lighter copy to show first
+    if (!fitsDecodeLimits(meta)) {
+      log.info('thumbnail skipped: image past the decode limits', { width: meta.width, frameHeight, frames: meta.pages ?? 1 });
+      return null;
+    }
+    const image = decodeUntrusted(srcPath, true);
 
     // .rotate() with no angle applies the EXIF orientation: the thumbnail
     // loses its metadata, so a phone photo would otherwise come out sideways

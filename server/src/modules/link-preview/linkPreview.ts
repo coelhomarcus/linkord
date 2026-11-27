@@ -3,7 +3,7 @@ import { config } from '../../config/env.js';
 import { sendJson, sendError } from '../../http/respond.js';
 import { parseCookies } from '../../http/cookies.js';
 import { resolveSession } from '../auth/session.js';
-import sharp from 'sharp';
+import { readImageHeader } from '../../lib/imageLimits.js';
 import { readImageDimensions, readImagePlaceholder } from '../attachments/attachmentThumbnails.js';
 import { mediaProxy, PREVIEW_REDIRECTS } from '../media-proxy/mediaProxy.js';
 import { allowedTarget, proxiedImageUrl } from '../media-proxy/mediaProxyUrls.js';
@@ -81,7 +81,7 @@ export function withProxiedImages(preview: LinkPreviewResult): LinkPreviewResult
 }
 
 async function frameCount(body: Buffer): Promise<number> {
-  try { return (await sharp(body, { animated: true }).metadata()).pages ?? 1; } catch { return 1; }
+  try { return (await readImageHeader(body)).pages ?? 1; } catch { return 1; }
 }
 
 /** The preview's picture, fetched through the media proxy (whose cache then

@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import sharp from 'sharp';
 import { thumbHashToAverageRGBA, thumbHashToApproximateAspectRatio } from 'thumbhash';
 import { readImagePlaceholder } from '../../../src/modules/attachments/attachmentThumbnails.js';
+import { gifBomb } from '../../fixtures/gifBomb.js';
 
 const decode = (placeholder: string) => Uint8Array.from(Buffer.from(placeholder, 'base64'));
 
@@ -31,6 +32,10 @@ describe('readImagePlaceholder', () => {
     const placeholder = await readImagePlaceholder(png);
     assert.ok(placeholder);
     assert.ok(thumbHashToAverageRGBA(decode(placeholder)).a < 0.05);
+  });
+
+  test('returns null when even the first frame is past the pixel cap', async () => {
+    assert.equal(await readImagePlaceholder(gifBomb({ width: 9000, height: 9000, frames: 2 })), null);
   });
 
   test('returns null, never throws, for something that is not an image', async () => {

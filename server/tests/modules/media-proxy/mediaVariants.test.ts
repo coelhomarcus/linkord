@@ -3,7 +3,9 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { describe, it } from 'node:test';
 import sharp from 'sharp';
-import { etagOf, InvalidVariantError, MAX_INPUT_PIXELS, parseVariant, PixelLimitError, PROXY_IMAGE_SIZES, renderVariant, variantKey, type Picture } from '../../../src/modules/media-proxy/mediaVariants.js';
+import { MAX_FRAMES, MAX_INPUT_PIXELS } from '../../../src/lib/imageLimits.js';
+import { gifBomb } from '../../fixtures/gifBomb.js';
+import { etagOf, InvalidVariantError, parseVariant, PixelLimitError, PROXY_IMAGE_SIZES, renderVariant, variantKey, type Picture } from '../../../src/modules/media-proxy/mediaVariants.js';
 
 const WEB_MIRROR = path.resolve(import.meta.dirname, '../../../../web/src/shared/lib/mediaProxy.ts');
 
@@ -89,6 +91,11 @@ describe('renderVariant', () => {
     const bomb = picture(await solid(side, side).png({ compressionLevel: 9 }).toBuffer(), 'image/png');
     assert.ok(bomb.body.length < 1024 * 1024);
     await assert.rejects(renderVariant(bomb, parseVariant({ width: '400' })!), PixelLimitError);
+  });
+
+  it('gives the original back for an animation of more frames than allowed', async () => {
+    const long = picture(gifBomb({ width: 64, height: 64, frames: MAX_FRAMES + 1 }), 'image/gif');
+    assert.equal(await renderVariant(long, parseVariant({ width: '32' })!), long);
   });
 
   it('gives the original back when sharp cannot read it (an ICO)', async () => {

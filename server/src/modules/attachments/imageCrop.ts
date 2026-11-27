@@ -1,4 +1,5 @@
-import sharp, { type Metadata, type Sharp } from 'sharp';
+import type { Metadata, Sharp } from 'sharp';
+import { decodeUntrusted } from '../../lib/imageLimits.js';
 
 // The crop a person picked in the browser's crop dialog, applied here with
 // sharp. Shared by profile images (avatar, banner, server icon, webhook
@@ -44,9 +45,10 @@ export function fitCrop(rect: CropRect, width: number, height: number): CropRect
 }
 
 /** Every frame cut to `rect` (sharp reads GIF/WebP frames whole, so deltas
- * don't matter). Turning upright first matches what the browser showed. */
-export function cropPipeline(input: Buffer, rect: CropRect, animated: boolean, limitInputPixels?: number | boolean): Sharp {
-  return sharp(input, { animated, ...(limitInputPixels === undefined ? {} : { limitInputPixels }) })
+ * don't matter). Turning upright first matches what the browser showed.
+ * Within the decode limits (lib/imageLimits.ts), which callers check first. */
+export function cropPipeline(input: Buffer, rect: CropRect, animated: boolean): Sharp {
+  return decodeUntrusted(input, animated)
     .autoOrient()
     .extract(rect);
 }

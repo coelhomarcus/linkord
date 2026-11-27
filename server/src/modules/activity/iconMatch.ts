@@ -1,4 +1,4 @@
-import sharp from 'sharp';
+import { decodeUntrusted } from '../../lib/imageLimits.js';
 
 // How alike two icons look, to pick among SteamGridDB's community icons the one that is the game's
 // real icon (Steam's own) rather than fan art: both are reduced to a tiny thumbnail and compared pixel
@@ -7,7 +7,7 @@ import sharp from 'sharp';
 const SIDE = 16;
 
 async function thumbnail(image: Buffer): Promise<Buffer> {
-  return sharp(image).flatten({ background: '#000000' }).resize(SIDE, SIDE, { fit: 'cover' }).removeAlpha().raw().toBuffer();
+  return decodeUntrusted(image, false).flatten({ background: '#000000' }).resize(SIDE, SIDE, { fit: 'cover' }).removeAlpha().raw().toBuffer();
 }
 
 /** 0 for the same picture, up to 1 for opposite ones (the mean difference of every channel). */
