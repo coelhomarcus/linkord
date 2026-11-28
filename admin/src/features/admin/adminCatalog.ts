@@ -1,10 +1,10 @@
-import { DashboardIcon, FileArchiveIcon, FlagIcon, HardDrivesIcon, ScrollIcon, SquaresFourIcon, UsersIcon, WebhooksLogoIcon, type IconComponent } from '@/shared/ui/icons';
+import { ClockCounterClockwiseIcon, DashboardIcon, FileArchiveIcon, FlagIcon, HardDrivesIcon, ScrollIcon, SquaresFourIcon, UsersIcon, WebhooksLogoIcon, type IconComponent } from '@/shared/ui/icons';
 import type ptBR from './locales/pt-BR.json';
 
 type NavKey = `nav.${keyof typeof ptBR.nav}`;
 
 export interface AdminSection {
-  id: 'overview' | 'users' | 'servers' | 'webhooks' | 'reports' | 'audit' | 'system' | 'backup';
+  id: 'overview' | 'call-metrics' | 'users' | 'servers' | 'webhooks' | 'reports' | 'audit' | 'system' | 'backup';
   labelKey: NavKey;
   icon: IconComponent;
 }
@@ -16,7 +16,7 @@ interface AdminGroup {
 
 const OVERVIEW: AdminSection = { id: 'overview', labelKey: 'nav.overview', icon: DashboardIcon };
 export const ADMIN_GROUPS: AdminGroup[] = [
-  { sections: [OVERVIEW] },
+  { sections: [OVERVIEW, { id: 'call-metrics', labelKey: 'nav.callMetrics', icon: ClockCounterClockwiseIcon }] },
   {
     labelKey: 'nav.management',
     sections: [

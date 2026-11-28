@@ -1,6 +1,7 @@
 {
   "nav": {
     "overview": "Overview",
+    "callMetrics": "Calls and screen shares",
     "management": "Management",
     "users": "Users",
     "moderation": "Moderation",
@@ -11,6 +12,23 @@
     "servers": "Servers",
     "webhooks": "Webhooks",
     "backup": "Backup"
+  },
+  "metrics": {
+    "liveActivity": "Live activity",
+    "activeCalls": "Active calls",
+    "transmittingScreens": "Screens streaming",
+    "accountsInCall": "Accounts in calls",
+    "uptime": "Uptime",
+    "viewHistory": "View history",
+    "history": "Peaks over the last 7 days",
+    "historyDescription": "Highest observed count per day, in the {{timeZone}} time zone.",
+    "callPeaks": "Call peaks",
+    "screenPeaks": "Screen sharing peaks",
+    "unavailable": "Unavailable",
+    "noData": "No data",
+    "loadFailed": "Could not load call and screen sharing metrics.",
+    "refreshFailed": "Could not refresh metrics. The displayed totals may be out of date.",
+    "screensStale": "The screen sharing total is out of date. Last successful reading at {{time}}."
   },
   "status": {
     "active": "Active",

@@ -617,6 +617,13 @@
       "when": 1795807622678,
       "tag": "0087_progressive_recovery_lockout",
       "breakpoints": true
+    },
+    {
+      "idx": 88,
+      "version": "7",
+      "when": 1795841020083,
+      "tag": "0088_admin_call_peaks",
+      "breakpoints": true
     }
   ]
 }

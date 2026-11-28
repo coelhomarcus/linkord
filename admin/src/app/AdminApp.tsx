@@ -6,7 +6,7 @@ import { AdminLogin } from '@/features/admin/AdminLogin';
 import { AdminRoutes } from '@/features/admin/AdminRoutes';
 import { subscribeAdminAccessLost, subscribeAdminSessionEnded } from '@/features/admin/adminAccess';
 import { invalidateAdminLists } from '@/features/admin/adminListCache';
-import { clearAdminSystem } from '@/features/admin/adminSystemResource';
+import { clearAdminResources } from '@/features/admin/adminResources';
 import { fetchAdminSession, logoutAdmin, type AdminIdentity } from '@/features/admin/adminSessionApi';
 import { ApiError } from '@/shared/api/transport';
 import { ErrorBanner } from '@/shared/ErrorBanner';
@@ -26,7 +26,7 @@ export function AdminApp() {
 
   const signIn = useCallback((account: AdminIdentity) => {
     invalidateAdminLists();
-    clearAdminSystem();
+    clearAdminResources();
     setUser(account);
     setNotice(null);
     setSignOutFailed(false);
@@ -35,7 +35,7 @@ export function AdminApp() {
 
   const clearSession = useCallback((nextNotice: AccessNotice) => {
     invalidateAdminLists();
-    clearAdminSystem();
+    clearAdminResources();
     setUser(null);
     setNotice(nextNotice);
   }, []);

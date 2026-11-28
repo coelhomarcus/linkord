@@ -36,6 +36,11 @@ beforeEach(() => {
     retention: { targets: [], last: null },
     orphanSweep: { dryRunByDefault: true, last: null },
   });
+  api.fetchCallMetrics.mockResolvedValue({
+    current: { calls: 0, accountsInCall: 0, onlineAccounts: 2, at: '2026-01-01T00:00:00.000Z', screens: null },
+    timeZone: 'America/Belem',
+    history: [],
+  });
   api.fetchAudit.mockResolvedValue({ items: [], nextCursor: null });
   api.fetchAdminReports.mockResolvedValue({ items: [], nextCursor: null });
   api.fetchAdminUsers.mockResolvedValue({ items: [], nextCursor: null });
@@ -55,6 +60,7 @@ describe('admin app', () => {
     open('/admin');
     expect(await screen.findByRole('heading', { name: 'Visão geral' })).toBeInTheDocument();
     expect(await screen.findByRole('link', { name: /Total de contas 23/ })).toHaveAttribute('href', '/admin/users');
+    expect(await screen.findByRole('link', { name: 'Ver histórico' })).toHaveAttribute('href', '/admin/call-metrics');
     const user = userEvent.setup();
     await user.click(screen.getByRole('button', { name: 'Abrir navegação' }));
     const dialog = screen.getByRole('dialog', { name: 'Administração' });

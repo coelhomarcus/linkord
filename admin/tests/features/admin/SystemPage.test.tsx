@@ -3,7 +3,7 @@ import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { renderAdmin } from './adminFixture';
 import { ApiError } from '@/shared/api/transport';
-import { clearAdminSystem } from '@/features/admin/adminSystemResource';
+import { clearAdminResources } from '@/features/admin/adminResources';
 import { SystemPage } from '@/features/admin/SystemPage';
 import * as adminApi from '@/features/admin/adminApi';
 
@@ -25,7 +25,7 @@ const info = (over: Partial<adminApi.SystemInfo> = {}): adminApi.SystemInfo => (
 const open = () => renderAdmin(<SystemPage />, { path: '/admin/system', pattern: '/admin/system' });
 
 beforeEach(() => {
-  clearAdminSystem();
+  clearAdminResources();
   vi.clearAllMocks();
   mocked.fetchSystem.mockResolvedValue(info());
 });

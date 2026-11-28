@@ -6,6 +6,7 @@ import { broadcast, restoreCallParticipants, setCallPresenceStore } from '../mod
 import { callPresenceStore, loadCallPresence } from '../modules/presence/callPresenceRepository.js';
 import { restoreDmCalls, setDmCallStore } from '../modules/calls/dmCalls.js';
 import { startCallRoomSync } from '../modules/calls/callRoomSync.js';
+import { observeAdminScreens, startAdminCallMetrics, flushAdminCallPeaks } from '../modules/admin/adminCallMetrics.js';
 import { dmCallStore, loadActiveDmCalls } from '../modules/calls/dmCallRepository.js';
 import { createApp } from '../http/app.js';
 import { createWsServer } from '../realtime/socket.js';
@@ -99,7 +100,8 @@ export async function bootstrap(): Promise<void> {
   const activityPruneTimer = setInterval(pruneActivity, ACTIVITY_DAY_MS).unref();
   const activityCheckpointTimer = setInterval(checkpointActivitySessions, ACTIVITY_CHECKPOINT_MS).unref();
   // LiveKit rooms follow the server's call membership from here on: anyone else is removed
-  const callRoomSyncTimer = startCallRoomSync();
+  const callRoomSyncTimer = startCallRoomSync(observeAdminScreens);
+  const adminCallMetricsTimer = startAdminCallMetrics();
 
   const fastify = createApp();
   // fastify.server (the underlying http.Server) already exists once
@@ -202,6 +204,7 @@ export async function bootstrap(): Promise<void> {
       clearInterval(activityPruneTimer);
       clearInterval(activityCheckpointTimer);
       if (callRoomSyncTimer) clearInterval(callRoomSyncTimer);
+      clearInterval(adminCallMetricsTimer);
       broadcast({ t: 'server-restart' });
       // Not removeParticipant: leaving the call for everyone is exactly what a
       // deploy must not do. The persisted rows are what the next process restores.
@@ -214,7 +217,7 @@ export async function bootstrap(): Promise<void> {
     },
     closeHttp: async () => {
       await fastify.close();
-      await activitySessionsWritten();
+      await Promise.all([activitySessionsWritten(), flushAdminCallPeaks()]);
     },
   });
 }

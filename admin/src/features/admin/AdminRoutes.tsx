@@ -2,6 +2,7 @@ import type { ComponentProps } from 'react';
 import { Navigate, Route, Routes } from 'react-router';
 import { AuditPage } from './AuditPage';
 import { BackupPage } from './BackupPage';
+import { CallMetricsPage } from './CallMetricsPage';
 import { ADMIN_PATH } from './adminCatalog';
 import { AdminLayout } from './AdminLayout';
 import { DashboardPage } from './DashboardPage';
@@ -19,6 +20,7 @@ export function AdminRoutes(layout: ComponentProps<typeof AdminLayout>) {
     <Routes>
       <Route element={<AdminLayout {...layout} />}>
         <Route index element={<DashboardPage />} />
+        <Route path="call-metrics" element={<CallMetricsPage />} />
         <Route path="users" element={<UsersPage />} />
         <Route path="users/:id" element={<UserDetailPage viewerId={layout.viewer.id} />} />
         <Route path="servers" element={<ServersPage />} />

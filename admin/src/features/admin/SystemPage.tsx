@@ -9,10 +9,10 @@ import type { RetentionInfo, SweepResult } from './adminApi';
 import { AdminActionRow, AdminFieldRow, AdminFields, AdminPageTitle, AdminSection } from './AdminSection';
 import { ReasonDialog } from './ReasonDialog';
 import { describeAdminError } from './adminErrors';
-import { formatWhen } from './adminFormat';
+import { formatUptime, formatWhen } from './adminFormat';
 import { AdminTextLink, DetailStatusView } from './adminUi';
 import { AdminSectionsSkeleton } from './AdminSkeletons';
-import { useAdminSystem } from './adminSystemResource';
+import { useAdminSystem } from './adminResources';
 import { useLanguage } from '@/i18n/useLanguage';
 
 const AUDIT_SWEEP_FAILURES = '/admin/audit?action=storage.orphan_delete';
@@ -149,6 +149,7 @@ export function SystemPage() {
             <AdminFieldRow label={t('common.liveConnections')}>{t('system.connectionsValue', { live: connections.live, max: connections.max, perAccount: connections.perAccountMax, perIp: connections.perIpMax })}</AdminFieldRow>
             <AdminFieldRow label={t('common.onlineAccounts')}>{connections.onlineAccounts}</AdminFieldRow>
             <AdminFieldRow label={t('common.startedAt')}>{new Date(info.startedAt).toLocaleString(i18n.language)}</AdminFieldRow>
+            <AdminFieldRow label={t('metrics.uptime')}>{formatUptime(info.uptimeSeconds ?? (at - Date.parse(info.startedAt)) / 1000, language)}</AdminFieldRow>
           </AdminFields>
         </AdminSection>
 

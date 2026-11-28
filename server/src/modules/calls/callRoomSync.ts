@@ -1,3 +1,4 @@
+import { ServerError, TrackSource } from 'livekit-server-sdk';
 import { participants, setCallLeftHook } from '../presence/participants.js';
 import { callRoomsApi, conversationIdOfRoom, isLiveKitConfigured, removeFromCall } from '../../integrations/livekit/livekit.js';
 import type { CallRoomsApi } from '../../integrations/livekit/livekit.js';
@@ -8,7 +9,7 @@ const log = logger.child({ component: 'calls' });
 /** How often the rooms are checked. Short, because a LiveKit token cannot be recalled: whoever kept
  * one (or the refreshed one LiveKit hands a connected client) can rejoin after every removal, and
  * this sweep is what finds them again. */
-const CALL_ROOM_SWEEP_MS = 15_000;
+export const CALL_ROOM_SWEEP_MS = 15_000;
 /** An identity met here after the server removed it is kicked on sight, for this long. Longer than
  * any token LiveKit refreshes for a connected client. */
 const REMOVED_MEMORY_MS = 60 * 60 * 1000;
@@ -53,21 +54,35 @@ const suspects = new Set<string>();
 /** Removes every identity connected to one of this deployment's rooms that the server does not
  * consider in that call: a client that ignored call-leave, or one that rejoined with a kept token.
  * One already removed by the server goes at once, any other on its second sighting. */
-export async function sweepCallRooms(api: CallRoomsApi = callRoomsApi(), now = Date.now()): Promise<string[]> {
+export async function sweepCallRooms(
+  api: CallRoomsApi = callRoomsApi(),
+  now = Date.now(),
+  observeScreens?: (total: number | null) => void,
+): Promise<string[]> {
   forgetOldRemovals(now);
   const seen = new Set<string>();
   const removed: string[] = [];
+  const sharingAccounts = new Set<string>();
+  let complete = true;
   for (const room of await api.listRooms()) {
     const conversationId = conversationIdOfRoom(room.name);
     if (!conversationId) continue;
-    let live: { identity: string }[];
+    let live: Awaited<ReturnType<CallRoomsApi['listParticipants']>>;
     try {
       live = await api.listParticipants(room.name);
-    } catch {
-      continue; // the room closed between the two calls
+    } catch (err) {
+      // A room can close between the two calls. Other errors leave the count incomplete.
+      if (!(err instanceof ServerError && err.code === 'not_found')) complete = false;
+      continue;
     }
-    for (const { identity } of live) {
-      if (isExpectedInCall(identity, conversationId)) continue;
+    for (const { identity, tracks } of live) {
+      const participant = participants.get(identity);
+      if (participant?.callConversationId === conversationId) {
+        if (observeScreens && tracks?.some(({ source, muted }) => source === TrackSource.SCREEN_SHARE && !muted)) {
+          sharingAccounts.add(participant.userId);
+        }
+        continue;
+      }
       const k = key(conversationId, identity);
       if (!removedAt.has(k) && !suspects.has(k)) {
         seen.add(k);
@@ -79,6 +94,7 @@ export async function sweepCallRooms(api: CallRoomsApi = callRoomsApi(), now = D
   suspects.clear();
   for (const k of seen) suspects.add(k);
   if (removed.length > 0) log.warn('removed connections the server does not have in those calls', { connections: removed.length });
+  observeScreens?.(complete ? sharingAccounts.size : null);
   return removed;
 }
 
@@ -90,15 +106,18 @@ export function resetCallRoomSync(): void {
 
 /** Wires media removal into every way a connection leaves a call and starts the sweep. Called
  * after restoreCalls: before it, every restored connection would look unexpected. */
-export function startCallRoomSync(): NodeJS.Timeout | null {
+export function startCallRoomSync(observeScreens?: (total: number | null) => void): NodeJS.Timeout | null {
   if (!isLiveKitConfigured()) return null;
   setCallLeftHook((p, conversationId) => { void closeCallMedia(p.id, conversationId); });
   let running = false;
   const timer = setInterval(() => {
     if (running) return;
     running = true;
-    sweepCallRooms()
-      .catch((err) => log.error('call room sweep failed', err))
+    sweepCallRooms(undefined, undefined, observeScreens)
+      .catch((err) => {
+        observeScreens?.(null);
+        log.error('call room sweep failed', err);
+      })
       .finally(() => { running = false; });
   }, CALL_ROOM_SWEEP_MS);
   timer.unref();

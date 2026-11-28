@@ -1,7 +1,7 @@
 import type { ConnectionProvider, ConnectionSnapshot, WidgetType } from '../modules/connections/types.js';
 import type { GameList } from '../modules/games/types.js';
 import type { BadgeId, BadgeSource } from '../modules/badges/badgeCatalog.js';
-import { pgTable, uuid, text, varchar, timestamp, integer, bigint, jsonb, serial, boolean, uniqueIndex, index, primaryKey, check, customType, foreignKey, type AnyPgColumn } from 'drizzle-orm/pg-core';
+import { pgTable, uuid, text, varchar, timestamp, date, integer, bigint, jsonb, serial, boolean, uniqueIndex, index, primaryKey, check, customType, foreignKey, type AnyPgColumn } from 'drizzle-orm/pg-core';
 import { sql, type SQL } from 'drizzle-orm';
 import { messageSearchVector } from './textSearch.js';
 
@@ -828,6 +828,17 @@ export const dmCallsActive = pgTable('dm_calls_active', {
   answeredAt: bigint('answered_at', { mode: 'number' }),
 }, (t) => [
   check('dm_calls_active_phase_check', sql`${t.phase} IN ('ringing','active')`),
+]);
+
+/** Only the maximum observed deployment-wide count for each local calendar day. */
+export const adminCallPeaks = pgTable('admin_call_peaks', {
+  day: date('day').notNull(),
+  metric: text('metric').$type<'calls' | 'screens'>().notNull(),
+  peak: integer('peak').notNull(),
+}, (t) => [
+  primaryKey({ columns: [t.day, t.metric] }),
+  check('admin_call_peaks_metric_check', sql`${t.metric} IN ('calls','screens')`),
+  check('admin_call_peaks_peak_check', sql`${t.peak} >= 0`),
 ]);
 
 export type User = typeof users.$inferSelect;

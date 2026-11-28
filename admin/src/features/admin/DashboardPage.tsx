@@ -10,13 +10,14 @@ import { cn } from '@/shared/lib/utils';
 import { formatFileSize } from '@/shared/lib/formatBytes';
 import { AdminNotice } from './AdminNotice';
 import { AdminCapacityBar } from './AdminCapacityBar';
+import { CallMetricsSummary } from './CallMetricsSummary';
 import { AdminPageTitle, AdminSection } from './AdminSection';
 import { AuditList } from './adminUi';
 import { AuditListSkeleton } from './AdminSkeletons';
 import { fetchAdminReports, fetchAudit, type AdminReportRow, type SystemInfo } from './adminApi';
 import { formatWhenShort } from './adminFormat';
 import { useAdminDetail } from './useAdminDetail';
-import { useAdminSystem } from './adminSystemResource';
+import { useAdminCallMetrics, useAdminSystem } from './adminResources';
 
 const readAudit = () => fetchAudit({}, null);
 const readReports = () => fetchAdminReports({ status: 'open' }, null);
@@ -48,11 +49,12 @@ function Metric({ label, value, detail, to, meter, className }: {
   );
 }
 
-function SystemMetrics({ info }: { info?: SystemInfo }) {
+function SystemMetrics({ info, onlineAccounts }: { info?: SystemInfo; onlineAccounts?: number }) {
   const { t } = useTranslation('admin');
   const language = useLanguage();
   const number = new Intl.NumberFormat(language);
   const { accounts, connections, storage } = info ?? {};
+  const online = onlineAccounts ?? connections?.onlineAccounts;
   const storagePercent = storage && storage.maxBytes > 0 ? storage.usedBytes / storage.maxBytes : null;
 
   return (
@@ -62,7 +64,7 @@ function SystemMetrics({ info }: { info?: SystemInfo }) {
           value={accounts && number.format(accounts.total)}
           detail={accounts && t('overview.newAccounts', { count: accounts.newLastHour, formatted: number.format(accounts.newLastHour) })} />
         <Metric label={t('common.onlineAccounts')} to="/admin/system"
-          value={connections && number.format(connections.onlineAccounts)}
+          value={online === undefined ? undefined : number.format(online)}
           detail={accounts && t('overview.ofAccounts', { total: number.format(accounts.total) })} />
       </div>
       <Metric className="admin-panel" label={t('common.liveConnections')} to="/admin/system"
@@ -132,6 +134,7 @@ export function DashboardPage() {
   const { t } = useTranslation('admin');
   const language = useLanguage();
   const system = useAdminSystem();
+  const callMetrics = useAdminCallMetrics();
   const audit = useAdminDetail('overview-audit', readAudit);
   const reports = useAdminDetail('overview-reports', readReports);
   const loading = system.status === 'loading' || audit.status === 'loading' || reports.status === 'loading';
@@ -142,6 +145,7 @@ export function DashboardPage() {
 
   function refresh() {
     void system.refresh();
+    void callMetrics.refresh();
     if (audit.status === 'ready') void audit.refresh();
     else audit.reload();
     if (reports.status === 'ready') void reports.refresh();
@@ -169,9 +173,10 @@ export function DashboardPage() {
       )}
       {!systemFailed && (
         system.data
-          ? <SystemMetrics info={system.data.info} />
+          ? <SystemMetrics info={system.data.info} onlineAccounts={callMetrics.data?.info.current.onlineAccounts} />
           : <SkeletonGroup label={t('chrome.loading')}><SystemMetrics /></SkeletonGroup>
       )}
+      <CallMetricsSummary metrics={callMetrics} actions={<PanelLink to="/admin/call-metrics">{t('metrics.viewHistory')}</PanelLink>} />
       <div className="grid gap-4 @[800px]:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)]">
         <AdminSection title={t('overview.recentActivity')} actions={<PanelLink to="/admin/audit">{t('overview.viewAudit')}</PanelLink>}>
           {audit.status === 'ready' && audit.data
