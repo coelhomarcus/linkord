@@ -7,6 +7,8 @@ import { RoomStoreProvider } from '@/state/RoomStoreProvider';
 import { createFakeRoomContextValue, renderWithRoom } from '@tests/fixtures/roomContextFixture';
 import { PERMISSIONS } from '@/features/servers/permissionBits';
 import { TileMenu } from '@/features/calls/TileMenu';
+import { createCallSubscriptions } from '@/features/calls/callSubscriptions';
+import { fakeCallMediaRoom, fakePublication } from '@tests/fixtures/callMediaFixture';
 import type { Conversation, Participant } from '@/shared/types/protocol';
 
 interface FakePublication {
@@ -431,41 +433,42 @@ describe('TileMenu — my own shared screen', () => {
 });
 
 describe('TileMenu — watch/stop watching another person\'s screen', () => {
-  it('offers "Parar de assistir" — never your own screen\'s actions', () => {
-    const participants = new Map([['p-2', fakeParticipant()]]);
+  function renderScreenMenu(watching: boolean) {
+    const { room, addRemote, publish } = fakeCallMediaRoom();
+    const video = fakePublication(Track.Source.ScreenShare, 'share');
+    publish(addRemote('p-2'), video);
+    const callSubscriptions = createCallSubscriptions(room);
+    callSubscriptions.beginCall('conv-1');
+    if (watching) callSubscriptions.setWatching('p-2', 'track:share', true);
     renderWithRoom(<TileMenu onOpenProfile={vi.fn()} />, {
-      state: { ...initialRoomState, me: { ...initialRoomState.me, id: 'p-1' }, participants },
+      livekitRoom: room,
+      callSubscriptions,
+      state: { ...initialRoomState, me: { ...initialRoomState.me, id: 'p-1' }, participants: new Map([['p-2', fakeParticipant()]]) },
       menuTarget: { ...menuTarget, key: 'p-2:screen', kind: 'screen' },
     });
+    return video;
+  }
+
+  it('offers "Parar de assistir" for a watched remote screen', () => {
+    renderScreenMenu(true);
     expect(screen.getByText('Parar de assistir')).toBeInTheDocument();
     expect(screen.queryByText('Trocar fonte')).not.toBeInTheDocument();
     expect(screen.queryByText('Qualidade')).not.toBeInTheDocument();
     expect(screen.queryByText('Encerrar compartilhamento')).not.toBeInTheDocument();
   });
 
-  it('clicking dispatches TOGGLE_SCREEN_WATCH with the right key', () => {
-    const dispatch = vi.fn();
-    const participants = new Map([['p-2', fakeParticipant()]]);
-    renderWithRoom(<TileMenu onOpenProfile={vi.fn()} />, {
-      state: { ...initialRoomState, me: { ...initialRoomState.me, id: 'p-1' }, participants },
-      menuTarget: { ...menuTarget, key: 'p-2:screen', kind: 'screen' },
-      dispatch,
-    });
+  it('stops the specific screen subscription', () => {
+    const video = renderScreenMenu(true);
     fireEvent.click(screen.getByText('Parar de assistir'));
-    expect(dispatch).toHaveBeenCalledWith({ type: 'TOGGLE_SCREEN_WATCH', key: 'p-2:screen' });
+    expect(video.setSubscribed).toHaveBeenLastCalledWith(false);
   });
 
   it('when no longer watching, shows "Assistir" instead', () => {
-    const participants = new Map([['p-2', fakeParticipant()]]);
-    renderWithRoom(<TileMenu onOpenProfile={vi.fn()} />, {
-      state: {
-        ...initialRoomState, me: { ...initialRoomState.me, id: 'p-1' }, participants,
-        unwatchedScreenKeys: new Set(['p-2:screen']),
-      },
-      menuTarget: { ...menuTarget, key: 'p-2:screen', kind: 'screen' },
-    });
+    const video = renderScreenMenu(false);
     expect(screen.getByText('Assistir')).toBeInTheDocument();
     expect(screen.queryByText('Parar de assistir')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByText('Assistir'));
+    expect(video.setSubscribed).toHaveBeenCalledExactlyOnceWith(true);
   });
 });
 

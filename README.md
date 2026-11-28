@@ -29,6 +29,7 @@ Overcord is a self-hosted place to chat and call with friends. Talk in direct me
 
 **Voice and video**
 - Voice channels and one-to-one DM calls, with camera and screen sharing.
+- Choose **Watch** on each screen share to start its video and shared audio. Viewers keep watching when the presenter switches sources. Microphones and cameras are received automatically. Screen video adapts to the viewer's layout and connection, including fullscreen and picture-in-picture. It pauses when it leaves view while shared audio keeps playing.
 - One call per account: every tab and device shows the call you are in, and can take it over after asking.
 - A soundboard per server, usable in any call.
 
@@ -62,7 +63,8 @@ Overcord is a self-hosted place to chat and call with friends. Talk in direct me
 
 **Administration**
 - An optional [administration site](docs/DEPLOY.md#administration-site) with a dedicated hostname and mandatory two-step sign-in by email for managing users and their badges, servers, webhooks, reports, audit history and uploads.
-- The administration dashboard groups account activity in one card and shows capacity bars for connections and storage. It also shows recent audit activity and open reports. The dashboard uses a dark monochrome theme, and the sidebar becomes a navigation menu on smaller screens.
+- The administration dashboard groups account activity in one card and shows capacity bars for connections and storage. It also shows recent audit activity and open reports. The dashboard uses a dark monochrome theme. The sidebar shows the signed-in account's profile picture and becomes a navigation menu on smaller screens.
+- **Calls and screen shares** shows live totals for active calls, accounts in calls and screens transmitting video. Paused video drops out of the total. The seven-day history stores only the highest service-wide totals observed each day since collection began, using the Belém time zone. The System tab shows connection and storage capacity, pending and failed notifications, and server uptime.
 - [Full backups](docs/DEPLOY.md#backups) downloaded from the administration site as one ZIP of the database and every stored file, never kept on the server.
 
 ## ⚡ Quick start

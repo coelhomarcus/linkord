@@ -107,8 +107,8 @@ function setSessionCookie(request: FastifyRequest, reply: FastifyReply, rawToken
   reply.header('Set-Cookie', cookie);
 }
 
-function adminIdentity(user: { id: string; username: string; locale: string }) {
-  return { id: user.id, username: user.username, locale: resolveLocale(user.locale) };
+function adminIdentity(id: string, user: Pick<User, 'username' | 'locale' | 'avatar' | 'avatarColor'>) {
+  return { id, username: user.username, locale: resolveLocale(user.locale), avatar: user.avatar, avatarColor: user.avatarColor };
 }
 
 function adminTwoFactorRequired(reply: FastifyReply): void {
@@ -272,7 +272,7 @@ async function finishLogin(request: FastifyRequest, reply: FastifyReply, user: U
   }
   noticeLogin(user, origin, device?.known ?? false);
   log.info('login', { userId: user.id, username: user.username, scope, twoFactor });
-  sendJson(reply, 200, scope === 'admin' ? { user: adminIdentity(user) } : await signedIn(request, user));
+  sendJson(reply, 200, scope === 'admin' ? { user: adminIdentity(user.id, user) } : await signedIn(request, user));
 }
 
 /** Who a failed login was for, without the typed name: it may be the person's password. A name that
@@ -432,7 +432,7 @@ function adminOnly(handler: ScopedAuthHandler) {
 
 async function handleAdminMe(request: FastifyRequest, reply: FastifyReply): Promise<void> {
   const sess = await requireAdminSession(request, reply);
-  if (sess) sendJson(reply, 200, { user: adminIdentity({ id: sess.userId, username: sess.username, locale: sess.locale }) });
+  if (sess) sendJson(reply, 200, { user: adminIdentity(sess.userId, sess) });
 }
 
 function sessionForRequest(request: FastifyRequest) {

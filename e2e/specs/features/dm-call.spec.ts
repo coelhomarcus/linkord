@@ -1,6 +1,7 @@
 import { test, expect, type User } from '../../fixtures/test';
 import { befriend } from '../../fixtures/api';
 import type { AppPage } from '../../fixtures/app';
+import { expectStreamImage, screenTile, watchButton } from '../../fixtures/screenShare';
 
 async function friendsInTheirDm(users: { create(prefix?: string): Promise<User> }): Promise<{ alice: User; bob: User; a: AppPage; b: AppPage }> {
   const alice = await users.create('alice');
@@ -51,10 +52,17 @@ test.describe('DM calls', () => {
     await expect(b.page.getByText(new RegExp(`${alice.username} iniciou uma chamada`))).toBeVisible();
   });
 
-  test('a video call starts with the caller\'s camera on', async ({ users }) => {
+  test('a video call receives the camera automatically and waits to watch the screen', async ({ users }) => {
     const { alice, a, b } = await friendsInTheirDm(users);
     await call(a, true);
     await b.page.getByRole('button', { name: 'Atender' }).click();
     await expect(b.page.locator('[data-tile-kind="camera"]').filter({ hasText: alice.username })).toBeVisible();
+    await a.expectRemoteAudio(1);
+    await a.page.getByRole('button', { name: 'Compartilhar tela' }).first().click();
+    const share = screenTile(b.page, alice.username);
+    await expect(watchButton(share, alice.username)).toBeVisible();
+    await expect(share.locator('video')).toHaveCount(0);
+    await watchButton(share, alice.username).click();
+    await expectStreamImage(share);
   });
 });

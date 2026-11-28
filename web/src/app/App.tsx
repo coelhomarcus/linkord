@@ -116,11 +116,11 @@ function currentPath(): string {
 
 function Shell() {
   const {
-    dispatch, livekitRoom, closeTileMenu, sendWs, retryConnection, notifyActiveView, registerRequestChatView, registerOpenCall,
+    dispatch, livekitRoom, callSubscriptions, closeTileMenu, sendWs, retryConnection, notifyActiveView, registerRequestChatView, registerOpenCall,
     activeCallConversationId, activeConversationId, joinCall, leaveCall, toggleMicMuted, conversations, allUsers, servers,
     dmStageConversationId, clearDmStage, dmCall,
     serverMemberRevision, setServerMemberSnapshot, messageSearch, runMessageSearch, closeMessageSearch,
-  } = useRoom('dispatch', 'livekitRoom', 'closeTileMenu', 'sendWs', 'retryConnection', 'notifyActiveView', 'registerRequestChatView', 'registerOpenCall', 'activeCallConversationId', 'activeConversationId', 'joinCall', 'leaveCall', 'toggleMicMuted', 'conversations', 'allUsers', 'servers', 'dmStageConversationId', 'clearDmStage', 'dmCall', 'serverMemberRevision', 'setServerMemberSnapshot', 'messageSearch', 'runMessageSearch', 'closeMessageSearch');
+  } = useRoom('dispatch', 'livekitRoom', 'callSubscriptions', 'closeTileMenu', 'sendWs', 'retryConnection', 'notifyActiveView', 'registerRequestChatView', 'registerOpenCall', 'activeCallConversationId', 'activeConversationId', 'joinCall', 'leaveCall', 'toggleMicMuted', 'conversations', 'allUsers', 'servers', 'dmStageConversationId', 'clearDmStage', 'dmCall', 'serverMemberRevision', 'setServerMemberSnapshot', 'messageSearch', 'runMessageSearch', 'closeMessageSearch');
   const state = useRoomState('roomError', 'me', 'joined', 'callJoinError', 'focusedId', 'clientOutdated', 'reconnecting');
   const roster = useCallRoster();
   const roomError = state.roomError;
@@ -207,6 +207,7 @@ function Shell() {
 
   function handleOpenCall(conversationId: string, options?: OpenCallOptions) {
     const watch = options?.watchScreenOf ? { conversationId, participantId: options.watchScreenOf } : null;
+    if (watch && activeCallConversationId === conversationId) callSubscriptions.watchFromCall(conversationId, watch.participantId);
     dispatch({ type: 'SET_PENDING_SCREEN_FOCUS', target: watch });
     // "connecting" only once the join is on its way: one waiting to move the call from another tab
     // shows the lobby, and stays there if the person keeps the call where it is

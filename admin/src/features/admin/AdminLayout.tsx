@@ -1,9 +1,9 @@
 import { useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, Outlet, useLocation } from 'react-router';
+import { Avatar } from '@/shared/Avatar';
 import { ErrorBanner } from '@/shared/ErrorBanner';
 import { useElementWidth } from '@/shared/hooks/useElementWidth';
-import { personInitials } from '@/shared/lib/initials';
 import { cn } from '@/shared/lib/utils';
 import { SignOutIcon } from '@/shared/ui/icons';
 import { Button } from '@/shared/ui/primitives/button';
@@ -11,11 +11,12 @@ import { AdminBrand } from './AdminBrand';
 import { AdminMobileNavigation, AdminNavigation } from './AdminNavigation';
 import { ADMIN_PATH, sectionForPath } from './adminCatalog';
 import { consumeScrollRestore, invalidateAdminLists } from './adminListCache';
+import type { AdminIdentity } from './adminSessionApi';
 import { useAdminLayout } from './useAdminLayout';
 import type { AdminOutletContext } from './useAdminMode';
 
-export function AdminLayout({ username, onSignOut, signingOut, signOutFailed }: {
-  username: string;
+export function AdminLayout({ viewer, onSignOut, signingOut, signOutFailed }: {
+  viewer: AdminIdentity;
   onSignOut: () => void;
   signingOut: boolean;
   signOutFailed: boolean;
@@ -46,8 +47,10 @@ export function AdminLayout({ username, onSignOut, signingOut, signOutFailed }: 
 
   const account = (
     <div className="flex min-w-0 items-center gap-2">
-      <span aria-hidden className="hidden size-7 shrink-0 place-items-center rounded-full bg-surface-overlay text-caption font-semibold text-text-secondary min-[440px]:grid">{personInitials(username)}</span>
-      <span className="hidden min-w-0 flex-1 truncate text-label text-text-secondary min-[360px]:block" title={`@${username}`}>@{username}</span>
+      <span aria-hidden className="hidden shrink-0 min-[440px]:flex">
+        <Avatar id={viewer.id} name={viewer.username} avatar={viewer.avatar ?? ''} avatarColor={viewer.avatarColor} size={28} />
+      </span>
+      <span className="hidden min-w-0 flex-1 truncate text-label text-text-secondary min-[360px]:block" title={`@${viewer.username}`}>@{viewer.username}</span>
       <Button type="button" variant="ghost" size="icon" className="text-text-muted" aria-label={t('site.signOut')} title={t('site.signOut')} disabled={signingOut} onClick={onSignOut}>
         <SignOutIcon aria-hidden className="size-4" />
       </Button>

@@ -5,7 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { ConnectionQuality } from 'livekit-client';
 
 import { useRoom, useRoomSelector, useRoomState } from '@/state/RoomContext';
-import { getParticipant, useParticipantMedia, useAttachTrack, useIsSpeaking, useConnectionQuality, useWatchScreenShare } from './useLiveKitTrack';
+import { getParticipant, useParticipantMedia, useAttachTrack, useIsSpeaking, useConnectionQuality, useScreenWatchState } from './useLiveKitTrack';
 import { participantMicMuted, useOwnMic } from './micState';
 import { useMuteForMe } from './useMuteForMe';
 import { useTileSizing } from './useTileSizing';
@@ -34,8 +34,8 @@ interface TileProps {
 
 export function Tile({ participantId, kind, isMine, loading = false, paused = false, fit = 'contain', sizing = 'fill', avatarSize = 96, nameSize = 'body' }: TileProps) {
   const { t } = useTranslation('calls');
-  const { dispatch, openTileMenu, tileDomRegistry, deafened, showTileBanners, mirrorCameraPreview, livekitRoom } = useRoom('dispatch', 'openTileMenu', 'tileDomRegistry', 'deafened', 'showTileBanners', 'mirrorCameraPreview', 'livekitRoom');
-  const state = useRoomState('me', 'hiddenVideoKeys', 'unwatchedScreenKeys', 'focusedId');
+  const { dispatch, openTileMenu, tileDomRegistry, deafened, showTileBanners, mirrorCameraPreview, livekitRoom, callSubscriptions } = useRoom('dispatch', 'openTileMenu', 'tileDomRegistry', 'deafened', 'showTileBanners', 'mirrorCameraPreview', 'livekitRoom', 'callSubscriptions');
+  const state = useRoomState('me', 'hiddenVideoKeys', 'focusedId');
   const key = tileKey(participantId, kind);
   const rootRef = useRef<HTMLDivElement | null>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);
@@ -62,12 +62,10 @@ export function Tile({ participantId, kind, isMine, loading = false, paused = fa
 
   // Hiding a tile is presentation-only; it never changes the media subscription.
   const hiddenForMe = kind === 'camera' && !isMine && state.hiddenVideoKeys.has(key);
-  // "Parar de assistir" a remote screen share — unlike hiddenForMe, this
-  // really unsubscribes (see useWatchScreenShare), a deliberate bandwidth
-  // saving rather than a purely local presentation choice.
-  const notWatching = kind === 'screen' && !isMine && state.unwatchedScreenKeys.has(key);
-  useWatchScreenShare(livekitRoom, participantId, notWatching);
-  const showsVideo = kind !== 'avatar' && !hiddenForMe && !notWatching && !paused;
+  const remoteScreen = kind === 'screen' && !isMine;
+  const watchState = useScreenWatchState(remoteScreen ? participantId : null, media.screenShareId);
+  const needsWatch = remoteScreen && watchState !== 'watching';
+  const showsVideo = kind !== 'avatar' && !hiddenForMe && !needsWatch && !paused && (!remoteScreen || !!media.screenTrack);
   const videoTrack = kind === 'screen' ? media.screenTrack : kind === 'camera' ? media.cameraTrack : null;
   const { containerRef, frameStyle } = useTileSizing(sizing, `${participantId}:${kind}`, showsVideo, videoTrack, videoRef, rootRef);
   useAttachTrack(showsVideo ? videoTrack : null, videoRef);
@@ -165,16 +163,38 @@ export function Tile({ participantId, kind, isMine, loading = false, paused = fa
           style={isMine && kind === 'camera' && mirrorCameraPreview ? { transform: 'scaleX(-1)' } : undefined}
         />
       ) : kind === 'screen' ? (
-        <div className="relative flex h-full w-full flex-col items-center justify-center gap-2 bg-bg-call">
-          {notWatching ? (
-            <span className="flex items-center gap-1.5 rounded-full bg-black/60 px-2.5 py-1 text-caption text-white/75">
-              <MonitorIcon size={16} />
-              {t('tile.stoppedWatching')}
-            </span>
-          ) : (
+        <div className="relative flex h-full w-full flex-col items-center justify-center gap-1 bg-bg-call px-1 pb-6">
+          {needsWatch ? (
+            <>
+              {watchState === 'stopped' && (
+                <span className="flex max-w-full items-center gap-1 rounded-full bg-black/60 px-1.5 py-0.5 text-caption text-white/75">
+                  <MonitorIcon size={14} className="shrink-0" />
+                  <span className="truncate">{t('tile.stoppedWatching')}</span>
+                </span>
+              )}
+              {watchState === 'failed' && <span role="status" className="max-w-full truncate text-caption text-red-text">{t('tile.watchFailed')}</span>}
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
+                aria-label={t('tile.watchLabel', { name: name || t('tile.participant') })}
+                disabled={!media.screenShareId}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  callSubscriptions.setWatching(participantId, media.screenShareId, true);
+                }}
+              >
+                {t('menu.watch')}
+              </Button>
+            </>
+          ) : paused ? (
             <span className="flex items-center gap-1.5 rounded-full bg-black/60 px-2.5 py-1 text-caption text-white/75">
               <MonitorPlayIcon size={16} />
               {t('tile.previewPaused')}
+            </span>
+          ) : (
+            <span role="status" aria-label={t('tile.watchLoading')}>
+              <CircleNotchIcon size={24} className="animate-spin text-text-muted" />
             </span>
           )}
         </div>
@@ -199,7 +219,7 @@ export function Tile({ participantId, kind, isMine, loading = false, paused = fa
       )}
 
       <div className={cn(
-        'absolute bottom-1.5 left-1.5 flex max-w-[calc(100%-12px)] items-center gap-1 rounded-md border border-white/10 bg-black/85 py-0.5 pr-1.5',
+        'pointer-events-none absolute bottom-1.5 left-1.5 flex max-w-[calc(100%-12px)] items-center gap-1 rounded-md border border-white/10 bg-black/85 py-0.5 pr-1.5',
         kind === 'screen' || !showsVideo ? 'pl-1.5' : 'pl-0.5'
       )}>
         {kind === 'screen' && <MonitorIcon size={16} weight="fill" className="flex-none text-green" />}

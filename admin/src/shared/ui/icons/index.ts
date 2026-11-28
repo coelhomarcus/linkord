@@ -1,2 +1,2 @@
-export type { IconComponent, IconWeight } from './createIcon';
+export type { IconComponent } from './createIcon';
 export * from './fluent';

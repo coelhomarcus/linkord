@@ -76,11 +76,8 @@ export function RoomProvider({ children }: { children: ReactNode }) {
   const intentionalCloseRef = useRef(false);
   const hasWelcomedRef = useRef(false);
 
-  // Adaptive stream picks the camera simulcast layer from the tile's size.
-  // `screen` counts device pixels: a plain `true` ignores a 2x display, so a
-  // retina tile stays on the soft layer while a screen share (one layer, no
-  // simulcast) stays sharp beside it. Dynacast stops encoding a layer nobody
-  // is watching.
+  // Request camera and screen share quality in device pixels so small tiles
+  // stay sharp on high-density displays. Dynacast pauses unused higher layers.
   // LiveKit's own page-leave handling disconnects on `beforeunload`, which
   // fires before the "leave this page?" prompt: cancelling it left the tab
   // without media while still in the call. The `pagehide` handler in App.tsx
@@ -613,7 +610,7 @@ export function RoomProvider({ children }: { children: ReactNode }) {
         audioUnlocked: callLifecycle.audioUnlocked, deafened: callLifecycle.deafened, toggleDeafened: callLifecycle.toggleDeafened,
         preferMuted: callLifecycle.preferMuted, setPreferMuted: callLifecycle.setPreferMuted, micStarting: callLifecycle.micStarting,
         reconnecting: callLifecycle.reconnecting,
-        livekitRoom, notifyActiveView,
+        livekitRoom, callSubscriptions: callLifecycle.callSubscriptions, notifyActiveView,
         registerRequestChatView, requestChatView, registerOpenCall, openCall,
         activeCallConversationId: callLifecycle.activeCallConversationId, joinCall, leaveCall: callLifecycle.leaveCall,
         callElsewhere, callMove: callMoveDialog,

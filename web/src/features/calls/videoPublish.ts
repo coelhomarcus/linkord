@@ -9,16 +9,14 @@ import type { ShareQualityId } from './shareQualityPresets';
  * simulcasts, and the layers the SDK invents are 180p at 20 fps / 160 kbps
  * and 360p at 20 fps / 450 kbps. Its default degradation preference for a
  * camera is `maintain-framerate`, so the first thing a constrained call
- * gives up is resolution. Screen share opts out of simulcast, sends one
- * layer at 4.5–6 Mbps and keeps resolution. That is why a share stays sharp
- * in the same tile a camera looks soft in.
+ * gives up is resolution. Screen share has its own encodings and degradation
+ * preferences for games and text.
  *
  * Camera keeps simulcast: several faces can be on screen, and dynacast stops
  * encoding a layer nobody is watching. The layers are explicit, all 30 fps,
  * and the floor is 360p — a 720p webcam never reaches the SDK's third layer
  * (that needs a 960px short side), so an 180p floor is what a grid tile
- * actually receives. Screen share stays one layer: a half-resolution
- * simulcast layer is what a game tile would be subscribed to.
+ * actually receives.
  */
 
 /** Ideal capture. The browser negotiates down when the webcam cannot do it. */
@@ -70,6 +68,7 @@ export function screenSharePublishOptions(qualityId: ShareQualityId): TrackPubli
   return {
     screenShareEncoding: quality.encoding,
     degradationPreference: quality.degradationPreference,
-    simulcast: false,
+    // LiveKit adds a half-resolution layer at the preset's frame rate.
+    simulcast: true,
   };
 }

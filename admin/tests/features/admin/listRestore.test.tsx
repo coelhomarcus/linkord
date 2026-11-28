@@ -30,7 +30,7 @@ beforeEach(() => {
 });
 afterEach(() => { delete (Element.prototype as { scrollTo?: unknown }).scrollTo; });
 
-const routes = <AdminRoutes viewerId="admin-1" username="ana" signingOut={false} signOutFailed={false} onSignOut={() => {}} />;
+const routes = <AdminRoutes viewer={{ id: 'admin-1', username: 'ana', locale: 'pt-BR' }} signingOut={false} signOutFailed={false} onSignOut={() => {}} />;
 
 const renderArea = (path = '/admin/users') => renderAdmin(routes, { path, pattern: '/admin/*' });
 

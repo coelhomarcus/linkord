@@ -50,7 +50,11 @@ test('administration uses its own origin and session', async ({ users, request }
   await expect(page.getByRole('alert')).toContainText('Ative a verificação em duas etapas');
   expect((await page.request.get(`${ADMIN_URL}/api/admin/auth/me`)).status()).toBe(401);
   await enableTwoFactor(signedIn);
+  const verified = page.waitForResponse(`${ADMIN_URL}/api/admin/auth/login/verify`);
   await signInWithCode(page, signedIn);
+  const headers = await (await verified).headersArray();
+  const sessionCookie = headers.find(({ name, value }) => name.toLowerCase() === 'set-cookie' && value.startsWith('overcord_admin='));
+  expect(sessionCookie?.value.split('; ')).toContain('Max-Age=604800');
   await expect(page.getByRole('heading', { name: 'Acesso', exact: true })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Sair', exact: true })).toBeVisible();
   expect((await page.request.get(`${ADMIN_URL}/api/admin/users`)).ok()).toBe(true);
@@ -120,6 +124,42 @@ test('the administration dashboard works on desktop and mobile', async ({ users 
   await expect(navigation).toBeHidden();
   await expect(page.getByRole('heading', { name: 'Usuários', exact: true })).toBeVisible();
   await expect(main.getByRole('link').filter({ hasText: `@${member.username}` })).toBeVisible();
+});
+
+test('the admin account shows its profile photo after sign-in and reload', async ({ users }) => {
+  const admin = await users.create('admin');
+  const app = await admin.app();
+  await app.page.goto('/profile');
+  await app.page.getByRole('button', { name: 'Meu perfil' }).filter({ hasText: 'Meu perfil' }).click();
+  await app.page.getByRole('button', { name: 'Alterar foto de perfil' }).click();
+  const chooser = app.page.waitForEvent('filechooser');
+  await app.page.getByRole('menuitem', { name: 'Enviar do computador' }).click();
+  await (await chooser).setFiles(threeFrameGif());
+  const upload = app.page.waitForResponse((response) => new URL(response.url()).pathname === '/api/avatar' && response.ok());
+  await app.page.getByRole('dialog', { name: 'Recortar foto de perfil' }).getByRole('button', { name: 'Salvar' }).click();
+  const { avatar } = await (await upload).json() as { avatar: string };
+  await expect.poll(async () => {
+    const response = await admin.api.get(`/api/users/${admin.id}/profile`);
+    const { user } = await response.json() as { user: { avatar: string } };
+    return user.avatar;
+  }).toBe(avatar);
+  await enableTwoFactor(admin);
+  grantAdmin(admin.username);
+
+  const page = await admin.context.newPage();
+  await page.goto(ADMIN_URL);
+  await signInWithCode(page, admin);
+  const sidebar = page.getByRole('complementary');
+  const picture = sidebar.locator(`img[src="${avatar}"]`);
+  await expect(sidebar.getByText(`@${admin.username}`, { exact: true })).toBeVisible();
+  await expect(picture).toBeVisible();
+  expect(await picture.evaluate((image: HTMLImageElement) => image.naturalWidth)).toBeGreaterThan(0);
+
+  await page.reload();
+  await expect(picture).toBeVisible();
+
+  await page.setViewportSize({ width: 480, height: 800 });
+  await expect(page.getByRole('banner').locator(`img[src="${avatar}"]`)).toBeVisible();
 });
 
 test('a login code is bound to the site that requested it', async ({ users }) => {

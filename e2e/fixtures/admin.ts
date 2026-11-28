@@ -24,3 +24,15 @@ export async function signInAdminThroughApi(user: User) {
   });
   expect(verify.ok(), await verify.text()).toBe(true);
 }
+
+export const ADMIN_CALL_METRICS_URL = `${ADMIN_URL}/api/admin/call-metrics`;
+
+export async function readAdminCallMetrics(user: User) {
+  const response = await user.api.get(ADMIN_CALL_METRICS_URL);
+  expect(response.ok(), await response.text()).toBe(true);
+  return response.json() as Promise<{
+    current: { calls: number; accountsInCall: number; onlineAccounts: number; at: string; screens: { count: number; at: string; stale: boolean } | null };
+    timeZone: string;
+    history: { day: string; calls: number | null; screens: number | null }[];
+  }>;
+}

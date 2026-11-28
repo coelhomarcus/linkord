@@ -6,6 +6,8 @@ import { initialRoomState } from '@/state/roomReducer';
 import { RoomStoreProvider } from '@/state/RoomStoreProvider';
 import { createFakeRoomContextValue, renderWithRoom } from '@tests/fixtures/roomContextFixture';
 import { Tile } from '@/features/calls/Tile';
+import { createCallSubscriptions } from '@/features/calls/callSubscriptions';
+import { fakeCallMediaRoom, fakePublication } from '@tests/fixtures/callMediaFixture';
 import type { Participant } from '@/shared/types/protocol';
 
 function fakeParticipant(overrides: Partial<Participant> = {}): Participant {
@@ -23,6 +25,17 @@ function setVideoSize(video: HTMLVideoElement, width: number, height: number, ev
     videoHeight: { configurable: true, value: height },
   });
   fireEvent(video, new Event(event));
+}
+
+function remoteScreen(watching = true) {
+  const media = fakeCallMediaRoom();
+  const remote = media.addRemote('p-2');
+  const track = { attach: vi.fn(), detach: vi.fn() };
+  media.publish(remote, fakePublication(Track.Source.ScreenShare, 'share', { track }));
+  const callSubscriptions = createCallSubscriptions(media.room);
+  callSubscriptions.beginCall('conv-1');
+  if (watching) callSubscriptions.setWatching('p-2', 'track:share', true);
+  return { livekitRoom: media.room, callSubscriptions, track };
 }
 
 describe('Tile — muted for me', () => {
@@ -101,6 +114,7 @@ describe('Tile — media aspect ratio', () => {
 describe('Tile — video background', () => {
   it.each(['camera', 'screen'] as const)('uses black behind a %s even with a profile banner', (kind) => {
     const { container } = renderWithRoom(<Tile participantId="p-2" kind={kind} isMine={false} />, {
+      ...remoteScreen(),
       state: { ...initialRoomState, participants: new Map([['p-2', fakeParticipant({ banner: '/banner.webp', bannerPoster: '/poster.webp' })]]) },
     });
     expect(container.querySelector('[data-tile-kind]')).toHaveClass('bg-bg-call');
@@ -167,7 +181,7 @@ describe('Tile — focused source sizing', () => {
   });
 
   it('falls back to 16:9 until metadata is available and handles zero dimensions', () => {
-    const { container } = renderWithRoom(<Tile participantId="p-2" kind="screen" isMine={false} sizing="source" />);
+    const { container } = renderWithRoom(<Tile participantId="p-2" kind="screen" isMine={false} sizing="source" />, remoteScreen());
     const frame = container.querySelector('[data-tile-kind]')!;
     expect(frame).toHaveStyle({ width: '800px', height: '450px' });
     setVideoSize(container.querySelector('video')!, 0, 0);
@@ -175,7 +189,7 @@ describe('Tile — focused source sizing', () => {
   });
 
   it('updates orientation and available space without replacing the video or registered frame', () => {
-    const value = createFakeRoomContextValue();
+    const value = createFakeRoomContextValue(remoteScreen());
     const { container, unmount } = renderWithRoom(<Tile participantId="p-2" kind="screen" isMine={false} sizing="source" />, value);
     const video = container.querySelector('video')!;
     const frame = container.querySelector('[data-tile-kind]')!;
@@ -203,7 +217,7 @@ describe('Tile — focused source sizing', () => {
   });
 
   it('resets the old ratio when the source changes and restores paused screen video', () => {
-    const value = createFakeRoomContextValue();
+    const value = createFakeRoomContextValue(remoteScreen());
     const renderTile = (kind: 'camera' | 'screen', paused = false) => (
       <RoomStoreProvider value={value}>
         <Tile participantId="p-2" kind={kind} isMine={false} sizing="source" paused={paused} />
@@ -302,6 +316,7 @@ describe('Tile — video hidden for me', () => {
     mine.unmount();
 
     const shared = renderWithRoom(<Tile participantId="p-2" kind="screen" isMine={false} />, {
+      ...remoteScreen(),
       state: { ...initialRoomState, me: { ...initialRoomState.me, id: 'p-1' }, participants: new Map([['p-2', fakeParticipant()]]), hiddenVideoKeys: new Set(['p-2:screen']) },
     });
     expect(shared.container.querySelector('video')).toBeInTheDocument();
@@ -310,18 +325,34 @@ describe('Tile — video hidden for me', () => {
 });
 
 describe('Tile — paused share and stopped watching', () => {
+  it('starts the exact remote screen from its button without moving focus', () => {
+    const fixture = remoteScreen(false);
+    const dispatch = vi.fn();
+    const { container } = renderWithRoom(<Tile participantId="p-2" kind="screen" isMine={false} />, {
+      ...fixture, dispatch,
+      state: { ...initialRoomState, participants: new Map([['p-2', fakeParticipant()]]) },
+    });
+    expect(container.querySelector('video')).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Assistir à transmissão de Fulana' }));
+    expect(fixture.track.attach).toHaveBeenCalledWith(container.querySelector('video'));
+    expect(dispatch).not.toHaveBeenCalled();
+  });
+
   it('a paused share says so, and stopping watching wins over the pause', () => {
+    const fixture = remoteScreen();
     const paused = renderWithRoom(<Tile participantId="p-2" kind="screen" isMine={false} paused />, {
+      ...fixture,
       state: { ...initialRoomState, me: { ...initialRoomState.me, id: 'p-1' }, participants: new Map([['p-2', fakeParticipant()]]) },
     });
     expect(paused.container.querySelector('video')).not.toBeInTheDocument();
     expect(screen.getByText('Prévia pausada')).toBeInTheDocument();
     paused.unmount();
 
+    fixture.callSubscriptions.setWatching('p-2', 'track:share', false);
     const stopped = renderWithRoom(<Tile participantId="p-2" kind="screen" isMine={false} paused />, {
+      ...fixture,
       state: {
         ...initialRoomState, me: { ...initialRoomState.me, id: 'p-1' }, participants: new Map([['p-2', fakeParticipant()]]),
-        unwatchedScreenKeys: new Set(['p-2:screen']),
       },
     });
     expect(screen.getByText('Você parou de assistir')).toBeInTheDocument();
@@ -329,7 +360,7 @@ describe('Tile — paused share and stopped watching', () => {
     stopped.unmount();
 
     const own = renderWithRoom(<Tile participantId="p-1" kind="screen" isMine />, {
-      state: { ...initialRoomState, me: { ...initialRoomState.me, id: 'p-1' }, unwatchedScreenKeys: new Set(['p-1:screen']) },
+      state: { ...initialRoomState, me: { ...initialRoomState.me, id: 'p-1' } },
     });
     expect(own.container.querySelector('video')).toBeInTheDocument();
     expect(screen.queryByText('Você parou de assistir')).not.toBeInTheDocument();

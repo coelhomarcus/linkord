@@ -22,6 +22,10 @@ const log = logger.child({ component: 'dm-call' });
 let state: DmCallState = EMPTY_DM_CALLS;
 const timers = new Map<string, NodeJS.Timeout>();
 
+export function answeredDmConversationIds(): string[] {
+  return state.calls.filter((call) => call.phase === 'active').map((call) => call.conversationId);
+}
+
 /** Where a live call outlives the process. Injected so this module and its
  * tests stay free of the database. */
 export interface DmCallStore {

@@ -151,6 +151,7 @@ export interface RetentionInfo {
 export interface SystemInfo {
   /** when this server process started, i.e. the last deploy or restart */
   startedAt: string;
+  uptimeSeconds?: number;
   storage: { usedBytes: number; files: number; maxBytes: number };
   connections: { live: number; onlineAccounts: number; max: number; perAccountMax: number; perIpMax: number };
   accounts: { total: number; newLastHour: number; newPerHourCap: number; activeAdmins: number; suspended: number };
@@ -162,6 +163,21 @@ export interface SystemInfo {
 }
 
 export const fetchSystem = (signal?: AbortSignal) => adminFetch<SystemInfo>('/api/admin/system', { signal });
+
+export interface CallMetricDay { day: string; calls: number | null; screens: number | null }
+export interface CallMetrics {
+  current: {
+    calls: number;
+    accountsInCall: number;
+    onlineAccounts: number;
+    at: string;
+    screens: { count: number; at: string; stale: boolean } | null;
+  };
+  timeZone: string;
+  history: CallMetricDay[];
+}
+
+export const fetchCallMetrics = (signal?: AbortSignal) => adminFetch<CallMetrics>('/api/admin/call-metrics', { signal });
 
 // ---- backup ------------------------------------------------------------------
 

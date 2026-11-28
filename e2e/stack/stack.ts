@@ -81,6 +81,11 @@ export async function startApp(): Promise<void> {
   await waitHealthy();
 }
 
+/** Restarts the SFU independently of the web and signaling server. */
+export function restartLiveKit(): void {
+  compose(['restart', 'livekit']);
+}
+
 export function down(): void {
   if (!readState()) return;
   compose(['down', '-v', '--remove-orphans']);

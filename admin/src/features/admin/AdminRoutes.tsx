@@ -2,6 +2,7 @@ import type { ComponentProps } from 'react';
 import { Navigate, Route, Routes } from 'react-router';
 import { AuditPage } from './AuditPage';
 import { BackupPage } from './BackupPage';
+import { CallMetricsPage } from './CallMetricsPage';
 import { ADMIN_PATH } from './adminCatalog';
 import { AdminLayout } from './AdminLayout';
 import { DashboardPage } from './DashboardPage';
@@ -14,13 +15,14 @@ import { ReportsPage } from './ReportsPage';
 import { SystemPage } from './SystemPage';
 import { UserDetailPage } from './UserDetailPage';
 import { UsersPage } from './UsersPage';
-export function AdminRoutes({ viewerId, ...layout }: { viewerId: string } & ComponentProps<typeof AdminLayout>) {
+export function AdminRoutes(layout: ComponentProps<typeof AdminLayout>) {
   return (
     <Routes>
       <Route element={<AdminLayout {...layout} />}>
         <Route index element={<DashboardPage />} />
+        <Route path="call-metrics" element={<CallMetricsPage />} />
         <Route path="users" element={<UsersPage />} />
-        <Route path="users/:id" element={<UserDetailPage viewerId={viewerId} />} />
+        <Route path="users/:id" element={<UserDetailPage viewerId={layout.viewer.id} />} />
         <Route path="servers" element={<ServersPage />} />
         <Route path="servers/:id" element={<ServerDetailPage />} />
         <Route path="webhooks" element={<WebhooksPage />} />

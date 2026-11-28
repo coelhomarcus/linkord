@@ -1,6 +1,7 @@
 import { after, afterEach, before, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import crypto from 'node:crypto';
+import { ServerError, TrackSource } from 'livekit-server-sdk';
 import type { AppSocket, Participant } from '../../../src/types.js';
 import { config } from '../../../src/config/env.js';
 import { join, participants, removeParticipant, setCallConversationId, setCallLeftHook } from '../../../src/modules/presence/participants.js';
@@ -139,5 +140,40 @@ describe('sweepCallRooms', () => {
     await sweepCallRooms(api);
     await sweepCallRooms(api);
     assert.deepEqual(removed, []);
+  });
+
+  it('counts transmitting screens once per eligible account and ignores audio and paused video', async () => {
+    const conversationId = crypto.randomUUID();
+    const room = roomNameFor(conversationId);
+    const first = connect('first');
+    const extraTab = connect('first');
+    const paused = connect('paused');
+    for (const p of [first, extraTab, paused]) setCallConversationId(p, conversationId);
+    const { api } = fakeSfu({ [room]: [] });
+    const video = { source: TrackSource.SCREEN_SHARE, muted: false };
+    const audio = { source: TrackSource.SCREEN_SHARE_AUDIO, muted: false };
+    let count: number | null | undefined;
+    await sweepCallRooms({
+      ...api,
+      listParticipants: async () => [
+        { identity: first.id, tracks: [video, audio] },
+        { identity: extraTab.id, tracks: [video] },
+        { identity: paused.id, tracks: [{ ...video, muted: true }, audio] },
+        { identity: 'unexpected', tracks: [video] },
+      ],
+    }, undefined, (total) => { count = total; });
+    assert.equal(count, 1);
+  });
+
+  it('distinguishes a closed room from an incomplete screen reading', async () => {
+    const { api } = fakeSfu({ [roomNameFor(crypto.randomUUID())]: [] });
+    const counts: Array<number | null> = [];
+    for (const error of [new ServerError('not found', 'room closed', 404, 'not_found'), new Error('timeout')]) {
+      await sweepCallRooms({
+        ...api,
+        listParticipants: async () => { throw error; },
+      }, undefined, (total) => counts.push(total));
+    }
+    assert.deepEqual(counts, [0, null]);
   });
 });

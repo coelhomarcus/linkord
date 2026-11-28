@@ -238,9 +238,9 @@ Playwright runs on Bun and uses the installed Google Chrome. Its CLI scripts use
 | `features/servers` | Creating, invites, permissions, an animated icon, mute levels, and context menus for category and channel management, member moderation, and reordering servers by touch. Channel reordering and category moves across accounts preserve access rules. |
 | `features/pins` | Pinning and unpinning, the `PIN_MESSAGES` permission, saved messages. |
 | `features/search` | The header search's filters, keyboard submission with suggestions open, sort, jump to message and history. |
-| `features/voice` | Hearing each other, mute, camera, screen share, moving and disconnecting a member. |
+| `features/voice` | Automatic microphone and camera, selective screen video and audio, source changes with and without republishing, multiple watched screens, Adaptive Stream, Dynacast, and member moves and disconnects. |
 | `features/call-membership` | A LiveKit client using a kept token is removed from the room after leaving or being banned. |
-| `features/dm-call` | Decline, cancel, an answered call with audio both ways, a video call. |
+| `features/dm-call` | Decline, cancel, an answered call with audio both ways, automatic camera, and explicit screen watching. |
 | `features/call-tabs` | One call per account across two tabs, for voice channels and DM calls. |
 | `features/webhooks` | Text and cards through the ingress, invalid payloads, rotating and deleting the URL, the webhook picture. |
 | `features/soundboard` | Uploading and playing sounds, the `CREATE_EXPRESSIONS` permission, sounds from another server. |
@@ -249,11 +249,12 @@ Playwright runs on Bun and uses the installed Google Chrome. Its CLI scripts use
 | `features/profile` | Profile edits reaching a friend, animated photo and banner, the games widgets and Wall editing, the phone layout. |
 | `features/activity` | Ranked activity and the summary published on the Wall from the desktop history. |
 | `features/admin-site` | The admin site on its own host and session: mandatory email verification, fresh codes for granting and removing administrator access, account suspension, the retired public routes returning `404`, the dashboard and its phone navigation. |
+| `features/admin-call-metrics` | Administrator access to aggregate call metrics and the seven-day history. With two accounts in a call, the live screen total follows start, pause, resume and stop, and the daily peak stays visible. |
 | `features/reports-admin` | A reported message reaching the admin, who deletes it for everyone. |
 | `features/settings` | Language and theme following the account to another browser; text size staying on the device. |
 | `features/security` | No framing, a foreign script refused and reported, YouTube as a sandboxed iframe. |
 | `features/presence` | Status and custom status reaching other devices and friends, invisible, status kept across a reload. |
-| `restart/voice` | A voice call survives a redeploy, and someone joining afterwards hears the others. |
+| `restart/voice` | A voice call survives a redeploy, newcomers hear the others, chosen screens recover after app and LiveKit restarts, and the admin keeps the recorded peak. |
 | `restart/dm-call` | An answered DM call and a ringing one survive a redeploy. |
 | `restart/chat` | Messages sent during a redeploy are stored and shown exactly once. Separate steps report failures in PostgreSQL persistence and in each participant's view. |
 | `restart/voice-message` | A voice message sent while the server is down arrives once. |
@@ -262,6 +263,8 @@ Playwright runs on Bun and uses the installed Google Chrome. Its CLI scripts use
 | `upgrade/upgrade` | Old and new tabs exchanging messages and friend requests, and a call going on across the upgrade. |
 
 When you add a user-facing flow, add it to the matching spec (or a new `features/<area>.spec.ts`) and to this table.
+
+For adaptive screen sharing, compare the received video dimensions in a thumbnail and fullscreen. On Windows, also keep the stream visible on a second monitor in Chrome and the desktop app while using another app on the first. Verify that it keeps playing, that minimizing the viewer pauses only video, and that a visible native picture-in-picture window keeps playing and adapts when resized.
 
 ## Backup scripts locally
 
@@ -292,7 +295,7 @@ A daily sweep (`modules/retention/`, two minutes after boot, then every 24 hours
 | `OUTBOX_RETENTION_DAYS` | `7` | delivered `outbox_events` (failed ones stay for an administrator to see) |
 | `SERVER_AUDIT_RETENTION_DAYS` | `90` | `server_audit_logs`, each server's own log |
 
-Login sessions go when they expire (`SESSION_TTL_DAYS`, 30) or sit unused for `SESSION_IDLE_DAYS` (14; `0` turns it off), with the address and browser stored with them. Activity sessions are pruned 400 days after they were last seen. `/admin/system` shows each limit and what the last sweep deleted.
+App login sessions expire after `SESSION_TTL_DAYS` (30 by default). [Administration site sessions](DEPLOY.md#administration-site) expire after 7 days. Both also end after `SESSION_IDLE_DAYS` of inactivity (14 by default, with `0` to turn off idle expiry). Login sessions store the address and browser. Activity sessions are pruned 400 days after they were last seen. `/admin/system` shows each limit and what the last sweep deleted.
 
 A new table with retention gets an entry in `modules/retention/retentionTargets.ts` (or calls `registerRetentionTarget`) with its own variable read through `parseRetentionDays`, a row above, a line in `.env.optional.example` and a label under `system.retentionTables` in the admin locales.
 

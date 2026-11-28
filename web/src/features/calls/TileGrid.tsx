@@ -81,7 +81,8 @@ export function TileGrid({ descriptors, focusedId, minTileWidth = DEFAULT_MIN_TI
   const meetsMinimum = fitGrid(n, settledSize.w, settledSize.h, minTileWidth)?.meetsMinimum ?? true;
   useEffect(() => {
     if (n === 0) return;
-    onCapacityChange?.(meetsMinimum, descriptors[0]?.key ?? null);
+    const visibleMedia = descriptors.find((d) => d.kind !== 'screen' || d.watching);
+    onCapacityChange?.(meetsMinimum, visibleMedia?.key ?? null);
   }, [meetsMinimum, n, descriptors, onCapacityChange]);
 
   // Grid cells and thumbnails stay uniform; only the focused frame follows its source.

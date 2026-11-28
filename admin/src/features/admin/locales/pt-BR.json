@@ -1,6 +1,7 @@
 {
   "nav": {
     "overview": "Visão geral",
+    "callMetrics": "Chamadas e transmissões",
     "management": "Gestão",
     "users": "Usuários",
     "moderation": "Moderação",
@@ -11,6 +12,23 @@
     "servers": "Servidores",
     "webhooks": "Webhooks",
     "backup": "Backup"
+  },
+  "metrics": {
+    "liveActivity": "Atividade ao vivo",
+    "activeCalls": "Chamadas ativas",
+    "transmittingScreens": "Telas transmitindo",
+    "accountsInCall": "Contas em chamada",
+    "uptime": "Tempo no ar",
+    "viewHistory": "Ver histórico",
+    "history": "Picos dos últimos 7 dias",
+    "historyDescription": "Maior total observado por dia, no fuso {{timeZone}}.",
+    "callPeaks": "Picos de chamadas",
+    "screenPeaks": "Picos de telas transmitindo",
+    "unavailable": "Indisponível",
+    "noData": "Sem dados",
+    "loadFailed": "Não foi possível carregar as métricas de chamadas e transmissões.",
+    "refreshFailed": "Não foi possível atualizar as métricas. Os totais exibidos podem estar desatualizados.",
+    "screensStale": "O total de telas está desatualizado. Última leitura válida em {{time}}."
   },
   "status": {
     "active": "Ativo",

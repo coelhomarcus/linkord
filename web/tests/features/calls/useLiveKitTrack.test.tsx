@@ -4,7 +4,7 @@ import type { ReactNode } from 'react';
 import { ConnectionQuality, Track } from 'livekit-client';
 import type { Participant, Room } from 'livekit-client';
 import {
-  activeTrack, getParticipant, isScreenPaused, useConnectionQuality, useParticipantMedia, useWatchScreenShare,
+  activeTrack, getParticipant, isScreenPaused, useConnectionQuality, useParticipantMedia,
 } from '@/features/calls/useLiveKitTrack';
 import { RoomStoreProvider } from '@/state/RoomStoreProvider';
 import { createFakeRoomContextValue } from '@tests/fixtures/roomContextFixture';
@@ -102,58 +102,12 @@ describe('isScreenPaused', () => {
     expect(isScreenPaused(fakeParticipant({ isMuted: false, track: {} }))).toBe(false);
   });
 
-  it('a muted publication but STILL without a track, false — still loading, not "intentionally paused"', () => {
-    expect(isScreenPaused(fakeParticipant({ isMuted: true, track: undefined }))).toBe(false);
+  it('recognizes the presenter pause while the viewer is unsubscribed', () => {
+    expect(isScreenPaused(fakeParticipant({ isMuted: true, track: undefined }))).toBe(true);
   });
 
   it('a muted publication with a track present, true — intentionally paused (pauseSharePreview)', () => {
     expect(isScreenPaused(fakeParticipant({ isMuted: true, track: {} }))).toBe(true);
-  });
-});
-
-describe('useWatchScreenShare', () => {
-  function fakeRoomWithRemoteScreen() {
-    const setEnabledVideo = vi.fn();
-    const setEnabledAudio = vi.fn();
-    const room = {
-      on: vi.fn(),
-      off: vi.fn(),
-      localParticipant: { identity: 'me', getTrackPublication: () => undefined },
-      getParticipantByIdentity: vi.fn(() => ({
-        getTrackPublication: (source: Track.Source) => {
-          if (source === Track.Source.ScreenShare) return { isLocal: false, setEnabled: setEnabledVideo };
-          if (source === Track.Source.ScreenShareAudio) return { isLocal: false, setEnabled: setEnabledAudio };
-          return undefined;
-        },
-      })),
-    };
-    return { room: room as unknown as Room, setEnabledVideo, setEnabledAudio };
-  }
-
-  it('watching (notWatching=false): enables video AND audio of the remote screen', () => {
-    const { room, setEnabledVideo, setEnabledAudio } = fakeRoomWithRemoteScreen();
-    renderHook(() => useWatchScreenShare(room, 'bia', false));
-    expect(setEnabledVideo).toHaveBeenCalledWith(true);
-    expect(setEnabledAudio).toHaveBeenCalledWith(true);
-  });
-
-  it('stopped watching (notWatching=true): disables video AND audio — preserves the microphone (out of scope for this call)', () => {
-    const { room, setEnabledVideo, setEnabledAudio } = fakeRoomWithRemoteScreen();
-    renderHook(() => useWatchScreenShare(room, 'bia', true));
-    expect(setEnabledVideo).toHaveBeenCalledWith(false);
-    expect(setEnabledAudio).toHaveBeenCalledWith(false);
-  });
-
-  it('never calls setEnabled on a LOCAL publication — "watching" only makes sense for someone else\'s screen', () => {
-    const setEnabledLocal = vi.fn();
-    const room = {
-      on: vi.fn(),
-      off: vi.fn(),
-      localParticipant: { identity: 'me', getTrackPublication: () => ({ isLocal: true, setEnabled: setEnabledLocal }) },
-      getParticipantByIdentity: vi.fn(() => undefined),
-    } as unknown as Room;
-    renderHook(() => useWatchScreenShare(room, 'me', true));
-    expect(setEnabledLocal).not.toHaveBeenCalled();
   });
 });
 

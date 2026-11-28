@@ -126,43 +126,16 @@ describe('roomReducer', () => {
       expect(next.focusedId).toBe('p1:screen');
     });
 
-    it('clears hiddenVideoKeys and unwatchedScreenKeys for the participant who left, without touching another person\'s', () => {
+    it('clears hiddenVideoKeys for the participant who left, without touching another person\'s', () => {
       const state = {
         ...initialRoomState,
         participants: new Map([['p1', participant()], ['p2', participant({ id: 'p2' })]]),
         hiddenVideoKeys: new Set(['p1:participant', 'p2:participant']),
-        unwatchedScreenKeys: new Set(['p1:screen', 'p2:screen']),
       };
       const next = roomReducer(state, { type: 'PARTICIPANT_LEFT', id: 'p1' });
       expect(next.hiddenVideoKeys).toEqual(new Set(['p2:participant']));
-      expect(next.unwatchedScreenKeys).toEqual(new Set(['p2:screen']));
     });
 
-    it('does not confuse prefixes when clearing unwatchedScreenKeys — "p1x" leaving does not touch "p1:screen"', () => {
-      const state = {
-        ...initialRoomState,
-        participants: new Map([['p1', participant()], ['p1x', participant({ id: 'p1x' })]]),
-        unwatchedScreenKeys: new Set(['p1:screen']),
-      };
-      const next = roomReducer(state, { type: 'PARTICIPANT_LEFT', id: 'p1x' });
-      expect(next.unwatchedScreenKeys).toEqual(new Set(['p1:screen']));
-    });
-  });
-
-  describe('TOGGLE_SCREEN_WATCH', () => {
-    it('toggles the key in/out of unwatchedScreenKeys', () => {
-      const first = roomReducer(initialRoomState, { type: 'TOGGLE_SCREEN_WATCH', key: 'p1:screen' });
-      expect(first.unwatchedScreenKeys).toEqual(new Set(['p1:screen']));
-
-      const second = roomReducer(first, { type: 'TOGGLE_SCREEN_WATCH', key: 'p1:screen' });
-      expect(second.unwatchedScreenKeys).toEqual(new Set());
-    });
-
-    it('does not touch hiddenVideoKeys (they are independent)', () => {
-      const state = { ...initialRoomState, hiddenVideoKeys: new Set(['p1:participant']) };
-      const next = roomReducer(state, { type: 'TOGGLE_SCREEN_WATCH', key: 'p1:screen' });
-      expect(next.hiddenVideoKeys).toEqual(new Set(['p1:participant']));
-    });
   });
 
   describe('TOGGLE_HIDDEN_VIDEO', () => {

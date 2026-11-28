@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { useRoom, useRoomSelector, useRoomState } from '../../state/RoomContext';
-import { useParticipantMedia, useAttachTrack } from './useLiveKitTrack';
+import { useParticipantMedia, useAttachTrack, useScreenWatchState } from './useLiveKitTrack';
 import { loadCallVolume } from '../settings/useCallVolumePreference';
 import { loadDevicePreference } from '../settings/useDevicePreference';
 import { useAudioPreferences } from './audioPreferences';
@@ -11,11 +11,13 @@ function ParticipantAudio({ participantId }: { participantId: string }) {
   const { audioRegistry, audioUnlocked, deafened } = useRoom('audioRegistry', 'audioUnlocked', 'deafened');
   const userId = useRoomSelector((room) => room.state.participants.get(participantId)?.userId ?? null);
   const media = useParticipantMedia(participantId);
+  const watching = useScreenWatchState(participantId, media.screenShareId) === 'watching';
+  const screenAudio = watching ? media.screenAudioTrack : null;
   const { outputVolume } = useAudioPreferences();
   const micRef = useRef<HTMLAudioElement | null>(null);
   const screenRef = useRef<HTMLAudioElement | null>(null);
   useAttachTrack(media.micTrack, micRef);
-  useAttachTrack(media.screenAudioTrack, screenRef);
+  useAttachTrack(screenAudio, screenRef);
 
   useEffect(() => {
     for (const el of [micRef.current, screenRef.current]) {
@@ -23,7 +25,7 @@ function ParticipantAudio({ participantId }: { participantId: string }) {
       el.muted = !audioUnlocked || deafened;
       if (audioUnlocked && !deafened) el.play().catch(() => {});
     }
-  }, [audioUnlocked, deafened, media.micTrack, media.screenAudioTrack]);
+  }, [audioUnlocked, deafened, media.micTrack, screenAudio]);
 
   useEffect(() => {
     const registry = audioRegistry.current;
@@ -43,7 +45,7 @@ function ParticipantAudio({ participantId }: { participantId: string }) {
     }
     // Register screen audio only when a track exists so a missing share is not
     // exposed as a mutable audio control in the tile menu.
-    if (screenEl && media.screenAudioTrack) {
+    if (screenEl && screenAudio) {
       setParticipantVolume(screenEl, userId ? loadCallVolume(`${userId}:screen`) : 1);
       registry.set(screenKey, { element: screenEl });
     } else {
@@ -53,7 +55,7 @@ function ParticipantAudio({ participantId }: { participantId: string }) {
       registry.delete(participantId);
       registry.delete(screenKey);
     };
-  }, [participantId, userId, audioRegistry, media.screenAudioTrack]);
+  }, [participantId, userId, audioRegistry, screenAudio]);
 
   // a volume given to this person on another device (or in another tab) applies at once
   const micVolume = usePreferenceValue(() => (userId ? loadCallVolume(userId) : 1));

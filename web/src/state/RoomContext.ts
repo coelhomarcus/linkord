@@ -7,6 +7,7 @@ import type { DmCallNotice } from '@/features/calls/useDmCall';
 import type { CallElsewhere } from '@/features/calls/callElsewhere';
 import type { RoomAction, RoomState } from './roomReducer';
 import type { TileKind } from '@/features/calls/tileTypes';
+import type { CallSubscriptions } from '@/features/calls/callSubscriptions';
 import type { OutboxEntry, OutboxFile } from '@/features/chat/useMessageOutbox';
 import type { ChatView } from '@/features/chat/useChatMessages';
 import type { ReactionParticipantsTarget } from '@/features/chat/reactionParticipants';
@@ -71,6 +72,7 @@ export interface RoomContextValue {
   micStarting: boolean;
   reconnecting: boolean;
   livekitRoom: Room;
+  callSubscriptions: CallSubscriptions;
   notifyActiveView: (view: ChatView) => void;
   registerRequestChatView: (fn: (conversationId?: string) => void) => void;
   requestChatView: (conversationId?: string) => void;

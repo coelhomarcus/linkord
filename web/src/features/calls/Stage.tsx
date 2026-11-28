@@ -27,11 +27,11 @@ const BAR_GRID_GAP = 12;
 export function Stage({ allIds, onBack }: StageProps) {
   const { t } = useTranslation('calls');
   const { dispatch, hideAudioOnlyTiles, setHideAudioOnlyTiles, callStageRef, activeCallConversationId, conversations } = useRoom('dispatch', 'hideAudioOnlyTiles', 'setHideAudioOnlyTiles', 'callStageRef', 'activeCallConversationId', 'conversations');
-  const state = useRoomState('focusOrigin', 'focusedId');
+  const state = useRoomState('focusOrigin', 'focusedId', 'me');
   const allDescriptors = useCallTiles(allIds);
   const descriptors = hideAudioOnlyTiles ? allDescriptors.filter((d) => d.kind !== 'avatar') : allDescriptors;
   const focusScreenShare = useCallback((key: string) => dispatch({ type: 'SET_FOCUSED', id: key, origin: 'automatic' }), [dispatch]);
-  useAutoFocusScreenShare(allDescriptors, state.focusOrigin, focusScreenShare);
+  useAutoFocusScreenShare(allDescriptors.filter((d) => d.participantId === state.me.id), state.focusOrigin, focusScreenShare);
   // after the automatic focus, so a share asked for by name wins over whichever one appeared first
   useWatchedScreenFocus(allDescriptors);
   // Explain an empty stage caused by the audio-only filter and offer a way back.

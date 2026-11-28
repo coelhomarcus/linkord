@@ -1,5 +1,12 @@
 import i18n from 'i18next';
 
+export function formatUptime(seconds: number, language: string): string {
+  const elapsed = Math.max(0, Math.floor(seconds));
+  const units = [['day', 86_400], ['hour', 3_600], ['minute', 60], ['second', 1]] as const;
+  const [unit, size] = units.find(([, size]) => elapsed >= size) ?? units[3];
+  return new Intl.NumberFormat(language, { style: 'unit', unit, unitDisplay: 'long' }).format(Math.floor(elapsed / size));
+}
+
 export function formatWhen(iso: string | null | undefined, language: string): string {
   if (!iso) return '-';
   const date = new Date(iso);

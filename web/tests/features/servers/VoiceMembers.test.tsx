@@ -15,7 +15,7 @@ vi.mock('@/features/calls/useLiveKitTrack', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@/features/calls/useLiveKitTrack')>()),
   useIsSpeaking: vi.fn(() => false),
   useParticipantMedia: vi.fn(() => ({
-    screenTrack: null, screenAudioTrack: null, cameraTrack: null, micTrack: null, micActivated: true, micMuted: false, screenPaused: false,
+    screenTrack: null, screenAudioTrack: null, cameraTrack: null, micTrack: null, micActivated: true, micMuted: false, screenShareId: null, screenPaused: false,
   })),
 }));
 const mockedTrack = vi.mocked(liveKitTrack);
@@ -134,7 +134,7 @@ describe('VoiceMembers — your own row', () => {
 
   it('shows your own mute and deafen', () => {
     mockedTrack.useParticipantMedia.mockReturnValue({
-      screenTrack: null, screenAudioTrack: null, cameraTrack: null, micTrack: null, micActivated: true, micMuted: true, screenPaused: false,
+      screenTrack: null, screenAudioTrack: null, cameraTrack: null, micTrack: null, micActivated: true, micMuted: true, screenShareId: null, screenPaused: false,
     });
     renderList({ room: { activeCallConversationId: 'v1', deafened: true } });
     expect(within(row('Eu')).getByRole('img', { name: 'Microfone desativado' })).toBeInTheDocument();

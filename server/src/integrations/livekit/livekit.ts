@@ -117,6 +117,11 @@ interface RoomApi {
 
 export interface CallRoomsApi extends RoomApi {
   listRooms(): Promise<{ name: string }[]>;
+  listParticipants(room: string): Promise<Array<{
+    identity: string;
+    metadata?: string;
+    tracks?: readonly { source: TrackSource; muted: boolean }[];
+  }>>;
 }
 
 export function callRoomsApi(): CallRoomsApi {

@@ -2,30 +2,31 @@ import { useEffect, useState } from 'react';
 import { RoomEvent, Track } from 'livekit-client';
 import type { Room } from 'livekit-client';
 import { useRoom } from '../../state/RoomContext';
-import { activeTrack, getParticipant, isScreenPaused, isTrackPending } from './useLiveKitTrack';
+import { activeTrack, getParticipant, isTrackPending } from './useLiveKitTrack';
+import { screenShareId } from './screenSharePublication';
+import type { CallSubscriptions } from './callSubscriptions';
 import { tileKey } from './tileTypes';
 import type { TileDescriptor } from './tileTypes';
 
 /** The server's call members, then anyone else LiveKit has in the room: the server removes such a
- * connection, but until it does it hears and sees everything, so it is never left without a tile. */
+ * connection, but until it does the call still represents its LiveKit publications. */
 function tileIds(room: Room, participantIds: string[]): string[] {
   const known = new Set(participantIds);
   const unknown = [...room.remoteParticipants.keys()].filter((id) => !known.has(id));
   return unknown.length > 0 ? [...participantIds, ...unknown] : participantIds;
 }
 
-function buildDescriptors(room: Room, participantIds: string[]): TileDescriptor[] {
+function buildDescriptors(room: Room, subscriptions: CallSubscriptions, participantIds: string[]): TileDescriptor[] {
   const out: TileDescriptor[] = [];
   for (const id of tileIds(room, participantIds)) {
     const participant = getParticipant(room, id);
     if (!participant) continue;
-    const hasScreen = !!activeTrack(participant, Track.Source.ScreenShare);
+    const screen = participant.getTrackPublication(Track.Source.ScreenShare);
     const hasCamera = !!activeTrack(participant, Track.Source.Camera);
-    const screenPending = !hasScreen && isTrackPending(participant, Track.Source.ScreenShare);
     const cameraPending = !hasCamera && isTrackPending(participant, Track.Source.Camera);
-    const screenPaused = !hasScreen && !screenPending && isScreenPaused(participant);
-    if (hasScreen || screenPending || screenPaused) {
-      out.push({ key: tileKey(id, 'screen'), participantId: id, kind: 'screen', loading: screenPending, paused: screenPaused });
+    if (screen) {
+      const watching = id === room.localParticipant.identity || subscriptions.screenState(id, screenShareId(screen)) === 'watching';
+      out.push({ key: tileKey(id, 'screen'), participantId: id, kind: 'screen', loading: watching && !screen.isMuted && !screen.track, paused: screen.isMuted, watching });
     }
     const selfKind = hasCamera ? 'camera' : 'avatar';
     out.push({ key: tileKey(id, selfKind), participantId: id, kind: selfKind, loading: cameraPending, paused: false });
@@ -37,6 +38,7 @@ const CALL_TILE_EVENTS = [
   // the local tile otherwise waits for a track event, and someone who joined
   // alone without a mic never publishes one
   RoomEvent.Connected,
+  RoomEvent.Reconnected,
   RoomEvent.TrackPublished,
   RoomEvent.TrackUnpublished,
   RoomEvent.TrackSubscribed,
@@ -50,17 +52,20 @@ const CALL_TILE_EVENTS = [
 ];
 
 export function useCallTiles(participantIds: string[]): TileDescriptor[] {
-  const { livekitRoom } = useRoom('livekitRoom');
+  const { livekitRoom, callSubscriptions } = useRoom('livekitRoom', 'callSubscriptions');
   const [descriptors, setDescriptors] = useState<TileDescriptor[]>([]);
   const idsKey = participantIds.join(',');
 
   useEffect(() => {
-    const refresh = () => setDescriptors(buildDescriptors(livekitRoom, idsKey ? idsKey.split(',') : []));
+    const refresh = () => setDescriptors(buildDescriptors(livekitRoom, callSubscriptions, idsKey ? idsKey.split(',') : []));
     refresh();
     for (const ev of CALL_TILE_EVENTS) livekitRoom.on(ev, refresh);
-    return () => { for (const ev of CALL_TILE_EVENTS) livekitRoom.off(ev, refresh); };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [livekitRoom, idsKey]);
+    const unsubscribe = callSubscriptions.subscribe(refresh);
+    return () => {
+      unsubscribe();
+      for (const ev of CALL_TILE_EVENTS) livekitRoom.off(ev, refresh);
+    };
+  }, [livekitRoom, callSubscriptions, idsKey]);
 
   return descriptors;
 }

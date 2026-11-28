@@ -23,7 +23,7 @@ function TestPip(props: ComponentProps<typeof FloatingPip>) {
 }
 
 function descriptor(overrides: Partial<TileDescriptor> = {}): TileDescriptor {
-  return { key: 'p-2:screen', participantId: 'p-2', kind: 'screen', loading: false, paused: false, ...overrides };
+  return { key: 'p-2:screen', participantId: 'p-2', kind: 'screen', loading: false, paused: false, watching: true, ...overrides };
 }
 
 function currentTile() {
@@ -31,6 +31,12 @@ function currentTile() {
 }
 
 describe('FloatingPip — selection by stable identity', () => {
+  it('does not select a remote screen before it has been chosen', () => {
+    vi.mocked(useCallTiles).mockReturnValue([descriptor({ watching: false })]);
+    renderWithRoom(<TestPip allIds={['p-2']} />);
+    expect(screen.queryByTestId('pip-tile')).not.toBeInTheDocument();
+  });
+
   it('audio-only (no non-avatar descriptors): renders nothing', () => {
     vi.mocked(useCallTiles).mockReturnValue([]);
     const { container } = renderWithRoom(<TestPip allIds={['p-1', 'p-2']} />);

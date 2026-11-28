@@ -47,6 +47,9 @@
     "unfocusLabel": "Desfazer destaque de {{name}}",
     "participant": "participante",
     "stoppedWatching": "Você parou de assistir",
+    "watchLabel": "Assistir à transmissão de {{name}}",
+    "watchLoading": "Carregando transmissão",
+    "watchFailed": "Não foi possível carregar a transmissão",
     "previewPaused": "Prévia pausada",
     "hiddenVideo": "Vídeo oculto",
     "moreActions": "Mais ações de {{name}}"
