@@ -109,7 +109,7 @@ export function StickerEditorDialog({ serverId, open, onOpenChange, sticker = nu
   return (
     <Dialog open={open} onOpenChange={(next) => { if (!submitting) onOpenChange(next); }}>
       <DialogContent className="max-h-[calc(100dvh-2rem)] gap-0 overflow-hidden p-0 text-text-primary sm:max-w-md">
-        <form id={formId} onSubmit={(event) => void handleSubmit(event)} className="flex min-h-0 flex-col">
+        <form id={formId} onSubmit={(event) => void handleSubmit(event)} className="flex min-h-0 min-w-0 flex-col">
           <DialogHeader className="px-5 pt-5 pb-3">
             <DialogTitle className="text-title">{editing ? t('editor.titleEdit') : t('editor.titleCreate')}</DialogTitle>
             {!editing && <DialogDescription>{t('editor.rules', { max: formatMB(MAX_STICKER_UPLOAD_BYTES) })}</DialogDescription>}
@@ -137,7 +137,7 @@ export function StickerEditorDialog({ serverId, open, onOpenChange, sticker = nu
                 </Label>
                 <div className="flex h-10 items-center gap-2 rounded-md border border-border-strong bg-fill-subtle pr-1 pl-3">
                   <UploadSimpleIcon size={16} className="flex-none text-text-muted" />
-                  <span className={cn('min-w-0 flex-1 truncate text-label', file ? 'text-text-primary' : 'text-text-muted')}>
+                  <span title={file?.name} className={cn('min-w-0 flex-1 truncate text-label', file ? 'text-text-primary' : 'text-text-muted')}>
                     {file?.name || t('editor.noFile')}
                   </span>
                   <Button type="button" variant="secondary" size="sm" disabled={submitting} onClick={() => fileInputRef.current?.click()}>

@@ -233,7 +233,7 @@ Playwright runs on Bun and uses the installed Google Chrome. Its CLI scripts use
 | `features/friends` | Friend requests, including acceptance from the row menu. Messaging from the friends menu, blocking, and unblocking. |
 | `features/legacy-app-paths` | Permanent redirects for old `/app` links, including the friends view selected by a query and the settings section selected by a fragment. |
 | `features/dm` | Talking in a DM, unread counts, no DM without friendship, row menus in the list and rail, muting a DM across tabs. |
-| `features/chat` | Send, typing, reply, edit, delete, reactions, search, image and video attachments, the new-messages line, marking as read. |
+| `features/chat` | Send, typing, reply, edit, delete, reactions, search, image and video attachments, long filenames in attachment cards, errors and removal, the new-messages line, marking as read. |
 | `features/voice-messages` | Recording and playing a voice message; recording refused during a call without breaking its microphone. |
 | `features/servers` | Creating, invites, permissions, an animated icon, mute levels, and context menus for category and channel management, member moderation, and reordering servers by touch. Channel reordering and category moves across accounts preserve access rules. |
 | `features/pins` | Pinning and unpinning, the `PIN_MESSAGES` permission, saved messages. |
@@ -243,9 +243,9 @@ Playwright runs on Bun and uses the installed Google Chrome. Its CLI scripts use
 | `features/dm-call` | Decline, cancel, an answered call with audio both ways, automatic camera, and explicit screen watching. |
 | `features/call-tabs` | One call per account across two tabs, for voice channels and DM calls. |
 | `features/webhooks` | Text and cards through the ingress, invalid payloads, rotating and deleting the URL, the webhook picture. |
-| `features/soundboard` | Uploading and playing sounds, the `CREATE_EXPRESSIONS` permission, sounds from another server. |
-| `features/emoji` | Shortcodes, server emojis across servers and DMs, uploading one, the composer on desktop and phone. |
-| `features/stickers` | Uploading, sending across servers, replying to one, a deleted sticker. |
+| `features/soundboard` | Uploading sounds with long filenames, playing sounds, the `CREATE_EXPRESSIONS` permission, sounds from another server. |
+| `features/emoji` | Shortcodes, server emojis across servers and DMs, cropping and uploading a file with a long name, the composer on desktop and phone. |
+| `features/stickers` | Uploading files with long names, sending across servers, replying to one, a deleted sticker. |
 | `features/profile` | Profile edits reaching a friend, animated photo and banner, the games widgets and Wall editing, the phone layout. |
 | `features/activity` | Ranked activity and the summary published on the Wall from the desktop history. |
 | `features/admin-site` | The admin site on its own host and session: mandatory email verification, fresh codes for granting and removing administrator access, account suspension, the retired public routes returning `404`, the dashboard and its phone navigation. |

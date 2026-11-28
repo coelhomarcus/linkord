@@ -17,7 +17,11 @@ test('an admin uploads a sticker from the server settings, with its emoji, name 
   await settings.getByRole('button', { name: 'Enviar figurinha' }).first().click();
 
   const dialog = a.page.getByRole('dialog', { name: 'Enviar figurinha' });
-  await dialog.locator('input[type=file]').setInputFiles(threeFrameGif());
+  const name = `${'W'.repeat(200)}.gif`;
+  await dialog.getByLabel('Arquivo').setInputFiles({ ...threeFrameGif(), name });
+  const fileName = dialog.getByTitle(name, { exact: true });
+  await expect.poll(() => fileName.evaluate((el) => el.scrollWidth > el.clientWidth)).toBe(true);
+  await expect(dialog.getByRole('button', { name: 'Navegar' })).toBeInViewport({ ratio: 1 });
   await dialog.getByRole('button', { name: 'Emoji relacionado' }).click();
   await a.page.getByRole('grid', { name: 'Emojis' }).getByRole('gridcell').first().click();
   await expect(dialog.getByRole('button', { name: /^Emoji relacionado: / })).toBeVisible();

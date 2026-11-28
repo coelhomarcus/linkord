@@ -205,7 +205,7 @@ export function SoundEditorDialog({ serverId, open, onOpenChange, sound = null, 
   return (
     <Dialog open={open} onOpenChange={(next) => { if (!submitting) onOpenChange(next); }}>
       <DialogContent container={container} className="gap-0 p-0 text-text-primary sm:max-w-md">
-        <form onSubmit={(event) => void handleSubmit(event)} className="flex flex-col">
+        <form onSubmit={(event) => void handleSubmit(event)} className="flex min-w-0 flex-col">
           <DialogHeader className="px-5 pt-5 pb-3">
             <DialogTitle className="text-title">{editing ? t('editor.titleEdit') : t('editor.titleCreate')}</DialogTitle>
           </DialogHeader>
@@ -255,7 +255,7 @@ export function SoundEditorDialog({ serverId, open, onOpenChange, sound = null, 
                 </Label>
                 <div className="flex h-10 items-center gap-2 rounded-md border border-border-strong bg-fill-subtle pr-1 pl-3">
                   <UploadSimpleIcon size={16} className="flex-none text-text-muted" />
-                  <span className={cn('min-w-0 flex-1 truncate text-label', fileName ? 'text-text-primary' : 'text-text-muted')}>
+                  <span title={fileName || undefined} className={cn('min-w-0 flex-1 truncate text-label', fileName ? 'text-text-primary' : 'text-text-muted')}>
                     {fileName || t('editor.noFile')}
                   </span>
                   <Button type="button" variant="secondary" size="sm" disabled={submitting} onClick={() => fileInputRef.current?.click()}>

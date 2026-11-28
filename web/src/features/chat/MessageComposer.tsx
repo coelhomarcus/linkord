@@ -484,7 +484,7 @@ export const MessageComposer = forwardRef<MessageComposerHandle, { conversationI
 
         <ComposerAttachmentTray files={pendingFiles} onRemove={removeFile} onFocusFallback={focusFieldElement} />
 
-        {attachError && <p role="alert" className="mx-2 mt-2 rounded-md border border-red/20 bg-red/10 px-3 py-2 text-label text-red-text">{attachError}</p>}
+        {attachError && <p role="alert" className="mx-2 mt-2 rounded-md border border-red/20 bg-red/10 px-3 py-2 text-label wrap-anywhere text-red-text">{attachError}</p>}
         {voice.noticeText && <VoiceNoticeBanner text={voice.noticeText} onDismiss={voice.dismissNotice} />}
 
         <div className="flex items-end gap-1 px-2 py-[9px]">

@@ -78,7 +78,7 @@ export function ServerEmojisPanel({ serverId, myUserId, canUpload, canManage }: 
               <span role="cell" className="min-w-0">
                 {canEdit(emoji)
                   ? <EmojiNameField key={emoji.name} emoji={emoji} onRename={rename} />
-                  : <span className="truncate text-label font-medium">:{emoji.name}:</span>}
+                  : <span title={`:${emoji.name}:`} className="block truncate text-label font-medium">:{emoji.name}:</span>}
               </span>
               <span role="cell" className="flex min-w-0 items-center gap-2">
                 {emoji.uploader ? (
@@ -164,6 +164,7 @@ function EmojiNameField({ emoji, onRename }: { emoji: ServerEmoji; onRename: (em
   return (
     <input
       value={value}
+      title={value}
       aria-label={t('panel.nameLabel', { name: emoji.name })}
       aria-invalid={!valid || undefined}
       maxLength={32}
@@ -175,7 +176,7 @@ function EmojiNameField({ emoji, onRename }: { emoji: ServerEmoji; onRename: (em
         if (event.key === 'Escape') { event.preventDefault(); setValue(emoji.name); }
       }}
       className={cn(
-        'h-8 w-full rounded-md border border-transparent bg-transparent px-2 text-label font-medium outline-none hover:border-border-field focus:border-border-accent focus:bg-bg-textarea',
+        'h-8 w-full rounded-md border border-transparent bg-transparent px-2 text-label font-medium text-ellipsis outline-none hover:border-border-field focus:border-border-accent focus:bg-bg-textarea',
         !valid && 'border-red focus:border-red',
       )}
     />
