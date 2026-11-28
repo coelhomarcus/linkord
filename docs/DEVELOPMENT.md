@@ -292,7 +292,7 @@ A daily sweep (`modules/retention/`, two minutes after boot, then every 24 hours
 | `OUTBOX_RETENTION_DAYS` | `7` | delivered `outbox_events` (failed ones stay for an administrator to see) |
 | `SERVER_AUDIT_RETENTION_DAYS` | `90` | `server_audit_logs`, each server's own log |
 
-Login sessions go when they expire (`SESSION_TTL_DAYS`, 30) or sit unused for `SESSION_IDLE_DAYS` (14; `0` turns it off), with the address and browser stored with them. Activity sessions are pruned 400 days after they were last seen. `/admin/system` shows each limit and what the last sweep deleted.
+App login sessions expire after `SESSION_TTL_DAYS` (30 by default). [Administration site sessions](DEPLOY.md#administration-site) expire after 7 days. Both also end after `SESSION_IDLE_DAYS` of inactivity (14 by default, with `0` to turn off idle expiry). Login sessions store the address and browser. Activity sessions are pruned 400 days after they were last seen. `/admin/system` shows each limit and what the last sweep deleted.
 
 A new table with retention gets an entry in `modules/retention/retentionTargets.ts` (or calls `registerRetentionTarget`) with its own variable read through `parseRetentionDays`, a row above, a line in `.env.optional.example` and a label under `system.retentionTables` in the admin locales.
 

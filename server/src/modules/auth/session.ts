@@ -23,7 +23,7 @@ import { resolveLocale } from '../users/locale.js';
 const SESSION_CACHE_TTL_MS = 60 * 1000;
 const LAST_SEEN_STALE_MS = 60 * 1000;
 const DAY_MS = 24 * 60 * 60 * 1000;
-export const ADMIN_SESSION_SECONDS = 12 * 60 * 60;
+export const ADMIN_SESSION_SECONDS = 7 * 24 * 60 * 60;
 export type SessionScope = 'app' | 'admin';
 type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
 
