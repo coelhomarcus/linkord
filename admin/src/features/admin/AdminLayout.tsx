@@ -59,7 +59,7 @@ export function AdminLayout({ viewer, onSignOut, signingOut, signOutFailed }: {
 
   return (
     <div ref={areaRef} className="flex h-full min-h-0 min-w-0">
-      <aside className="admin-sidebar hidden w-55 shrink-0 flex-col min-[960px]:flex">
+      <aside className="admin-sidebar hidden w-64 shrink-0 flex-col min-[960px]:flex">
         <Link to={ADMIN_PATH} className="mx-3 my-4 flex min-h-10 shrink-0 items-center rounded-md px-3 focus-ring"><AdminBrand /></Link>
         <div className="scrollbar-none min-h-0 flex-1 overflow-y-auto px-3 pt-2 pb-5"><AdminNavigation /></div>
         {wide && <div className="shrink-0 border-t border-border-divider px-4 py-3">{account}</div>}

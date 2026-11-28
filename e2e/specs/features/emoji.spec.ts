@@ -1,6 +1,6 @@
 import { deflateSync } from 'node:zlib';
 import { test, expect } from '../../fixtures/test';
-import { acceptInvite, befriend, createInvite, createServer } from '../../fixtures/api';
+import { acceptInvite, befriend, createInvite, createServer, grantEveryone, PERMISSIONS } from '../../fixtures/api';
 
 /** A solid square PNG, built by hand: a real image for the server to convert. */
 function squarePng(size = 64): Buffer {
@@ -105,7 +105,10 @@ test('a server emoji goes into a DM with someone outside the server, who sees th
 
 test('an admin uploads and crops an emoji from the server settings', async ({ users }) => {
   const alice = await users.create('alice');
+  const bob = await users.create('bob');
   const server = await createServer(alice.api, 'E2E emoji upload');
+  await grantEveryone(alice.api, server, PERMISSIONS.CREATE_EXPRESSIONS);
+  await acceptInvite(bob.api, await createInvite(alice.api, server.id));
   const a = await alice.app();
   await a.openChannel(server.id, server.text.id);
 
@@ -115,11 +118,21 @@ test('an admin uploads and crops an emoji from the server settings', async ({ us
   await a.page.getByRole('button', { name: 'Emojis', exact: true }).click();
   const chooser = a.page.waitForEvent('filechooser');
   await a.page.getByRole('button', { name: 'Enviar emoji' }).click();
-  await (await chooser).setFiles({ name: 'Sol Nascente.png', mimeType: 'image/png', buffer: squarePng(200) });
+  await (await chooser).setFiles({ name: `Sol Nascente_${'W'.repeat(200)}.png`, mimeType: 'image/png', buffer: squarePng(200) });
   const crop = a.page.getByRole('dialog', { name: 'Recortar emoji' });
+  await expect.poll(() => crop.evaluate((el) => el.scrollWidth - el.clientWidth)).toBe(0);
   await crop.getByRole('button', { name: 'Salvar' }).click();
   await expect(crop).toHaveCount(0);
-  await expect(a.page.getByRole('img', { name: ':sol_nascente:' })).toBeVisible();
+  const shortcode = `:sol_nascente_${'w'.repeat(19)}:`;
+  await expect(a.page.getByRole('img', { name: shortcode })).toBeVisible();
+
+  const b = await bob.app();
+  await b.openChannel(server.id, server.text.id);
+  await b.page.getByRole('button', { name: 'E2E emoji upload', exact: true, expanded: false }).click();
+  await b.page.getByRole('menuitem', { name: 'Configurações do servidor' }).click();
+  await b.page.setViewportSize({ width: 390, height: 844 });
+  const name = b.page.getByRole('dialog', { name: 'Configurações de E2E emoji upload' }).getByText(shortcode, { exact: true });
+  await expect.poll(() => name.evaluate((el) => el.scrollWidth > el.clientWidth)).toBe(true);
 });
 
 test('the message box draws emojis as they are typed and edits them as one character', async ({ users }) => {

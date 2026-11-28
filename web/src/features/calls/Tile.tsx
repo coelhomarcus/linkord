@@ -1,4 +1,4 @@
-import { CellSignalLowIcon, CellSignalNoneIcon, CircleNotchIcon, EyeSlashIcon, MicrophoneSlashIcon, MonitorIcon, MonitorPlayIcon, SpeakerSlashIcon } from '@/shared/ui/icons';
+import { CellSignalLowIcon, CellSignalNoneIcon, CircleNotchIcon, EyeIcon, EyeSlashIcon, MicrophoneSlashIcon, MonitorIcon, MonitorPlayIcon, SpeakerSlashIcon } from '@/shared/ui/icons';
 import { useEffect, useRef } from 'react';
 import type { KeyboardEvent as ReactKeyboardEvent, MouseEvent } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -135,6 +135,7 @@ export function Tile({ participantId, kind, isMine, loading = false, paused = fa
       aria-label={isFocused ? t('tile.unfocusLabel', { name: name || t('tile.participant') }) : t('tile.focusLabel', { name: name || t('tile.participant') })}
       className={cn(
         'tile-fullscreen-target relative h-full w-full shrink-0 cursor-pointer overflow-hidden rounded-lg border-[3.5px] transition-colors focus-ring',
+        needsWatch && '@container/tile',
         showsVideo || kind === 'screen' ? 'bg-bg-call' : 'bg-bg-tertiary',
         !showSpeakingBorder && 'border-white/10',
       )}
@@ -163,20 +164,21 @@ export function Tile({ participantId, kind, isMine, loading = false, paused = fa
           style={isMine && kind === 'camera' && mirrorCameraPreview ? { transform: 'scaleX(-1)' } : undefined}
         />
       ) : kind === 'screen' ? (
-        <div className="relative flex h-full w-full flex-col items-center justify-center gap-1 bg-bg-call px-1 pb-6">
+        <div className="grid h-full w-full place-items-center bg-bg-call">
           {needsWatch ? (
-            <>
-              {watchState === 'stopped' && (
-                <span className="flex max-w-full items-center gap-1 rounded-full bg-black/60 px-1.5 py-0.5 text-caption text-white/75">
-                  <MonitorIcon size={14} className="shrink-0" />
-                  <span className="truncate">{t('tile.stoppedWatching')}</span>
+            <div className="relative flex w-full justify-center">
+              {(watchState === 'stopped' || watchState === 'failed') && (
+                <span role="status" className={cn(
+                  'absolute inset-x-1 bottom-full mb-0.5 text-center text-caption leading-tight @[220px]/tile:mb-2 @max-[128px]/tile:sr-only',
+                  watchState === 'failed' ? 'text-red-text' : 'text-text-muted',
+                )}>
+                  {t(watchState === 'failed' ? 'tile.watchFailed' : 'tile.stoppedWatching')}
                 </span>
               )}
-              {watchState === 'failed' && <span role="status" className="max-w-full truncate text-caption text-red-text">{t('tile.watchFailed')}</span>}
               <Button
                 type="button"
-                variant="secondary"
-                size="sm"
+                size="lg"
+                className="h-9 rounded-full px-3.5 font-semibold @max-[128px]/tile:size-8 @max-[128px]/tile:p-0 @[220px]/tile:h-11 @[220px]/tile:gap-2 @[220px]/tile:px-5 @[220px]/tile:text-body"
                 aria-label={t('tile.watchLabel', { name: name || t('tile.participant') })}
                 disabled={!media.screenShareId}
                 onClick={(event) => {
@@ -184,9 +186,10 @@ export function Tile({ participantId, kind, isMine, loading = false, paused = fa
                   callSubscriptions.setWatching(participantId, media.screenShareId, true);
                 }}
               >
-                {t('menu.watch')}
+                <EyeIcon aria-hidden className="size-5" />
+                <span className="@max-[128px]/tile:sr-only">{t('menu.watch')}</span>
               </Button>
-            </>
+            </div>
           ) : paused ? (
             <span className="flex items-center gap-1.5 rounded-full bg-black/60 px-2.5 py-1 text-caption text-white/75">
               <MonitorPlayIcon size={16} />
@@ -220,6 +223,7 @@ export function Tile({ participantId, kind, isMine, loading = false, paused = fa
 
       <div className={cn(
         'pointer-events-none absolute bottom-1.5 left-1.5 flex max-w-[calc(100%-12px)] items-center gap-1 rounded-md border border-white/10 bg-black/85 py-0.5 pr-1.5',
+        needsWatch && '@max-[220px]/tile:bottom-0.5 @max-[128px]/tile:sr-only',
         kind === 'screen' || !showsVideo ? 'pl-1.5' : 'pl-0.5'
       )}>
         {kind === 'screen' && <MonitorIcon size={16} weight="fill" className="flex-none text-green" />}

@@ -66,7 +66,7 @@ export function ConfirmDialog({
           <DialogTitle className="text-title font-semibold text-text-primary">{title}</DialogTitle>
         </DialogHeader>
         <div className="min-h-0 overflow-y-auto px-6 py-4">
-          <DialogDescription className="select-none text-body text-text-secondary">{description}</DialogDescription>
+          <DialogDescription className="select-none text-body wrap-anywhere text-text-secondary">{description}</DialogDescription>
           {error && <div role="alert" className="mt-3"><ErrorBanner>{error}</ErrorBanner></div>}
         </div>
         <DialogFooter className="border-border-divider bg-bg-tertiary/60 px-6 py-4">

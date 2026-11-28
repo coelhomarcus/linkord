@@ -10,8 +10,8 @@ interface DocumentAttachmentCardProps {
   className?: string;
 }
 
-/** Standardized file identity — icon by family, name (extension always kept
- * visible when truncated), type and size. Used by the draft tray, the
+/** Standardized file identity — icon by family, name with space reserved for
+ * the extension, type and size. Used by the draft tray, the
  * pending (outbox) chip and the published card, so a document reads the
  * same everywhere in the app. No download control, no card chrome: those
  * belong to whichever surface wraps this (see FileAttachmentCard). */
@@ -30,9 +30,9 @@ export function DocumentAttachmentCard({ name, size, mime, className }: Document
         )}
       </div>
       <div className="min-w-0 flex-1">
-        <p className="flex min-w-0 items-baseline text-label font-medium text-text-secondary">
+        <p title={name} className="flex min-w-0 items-baseline text-label font-medium text-text-secondary">
           <span className="truncate">{baseName}</span>
-          {extension && <span className="flex-none overflow-hidden text-ellipsis">.{extension}</span>}
+          {extension && <span className="max-w-1/2 flex-none truncate">.{extension}</span>}
         </p>
         <p className="truncate text-caption text-text-muted">
           {t(`fileTypes.${typeLabelKey}`)} · {formatFileSize(size)}

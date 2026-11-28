@@ -131,6 +131,41 @@ test.describe('chat', () => {
     await expect(b.message('com imagem').locator('img').first()).toBeVisible();
   });
 
+  test('a long attachment name fits the draft, message, and removal dialog', async ({ users }) => {
+    const { a, b } = await twoInAChannel(users);
+    const name = `relatorio.${'w'.repeat(180)}`;
+    const input = a.page.locator('input[type=file]:not([accept])');
+    await input.evaluate((element: HTMLInputElement, name) => {
+      const file = new File([], name);
+      // Exercise the size check without allocating a file over the upload limit.
+      Object.defineProperty(file, 'size', { value: Number.MAX_SAFE_INTEGER });
+      const transfer = new DataTransfer();
+      transfer.items.add(file);
+      element.files = transfer.files;
+      element.dispatchEvent(new Event('change', { bubbles: true }));
+    }, name);
+    const error = a.page.getByRole('alert').filter({ hasText: name });
+    await expect.poll(() => error.evaluate((el) => el.scrollWidth - el.clientWidth)).toBe(0);
+
+    await input.setInputFiles({ name, mimeType: 'application/octet-stream', buffer: Buffer.from('folder contents') });
+    const draftName = a.page.getByTitle(name, { exact: true });
+    await expect.poll(() => draftName.evaluate((el) => el.scrollWidth - el.clientWidth)).toBe(0);
+    await a.send('com um documento');
+    const received = b.message('com um documento');
+    const receivedName = received.getByTitle(name, { exact: true });
+    await expect.poll(() => receivedName.evaluate((el) => el.scrollWidth - el.clientWidth)).toBe(0);
+    await expect(received.getByRole('link', { name: `Baixar ${name}` })).toHaveAttribute('download', name);
+
+    await a.message('com um documento').getByTitle(name, { exact: true }).click({ button: 'right' });
+    await a.page.getByRole('menuitem', { name: 'Remover anexo' }).click();
+    const confirm = a.page.getByRole('dialog', { name: 'Remover anexo' });
+    const description = confirm.getByText(name, { exact: false });
+    await expect.poll(() => description.evaluate((el) => el.scrollWidth - el.clientWidth)).toBe(0);
+    await confirm.getByRole('button', { name: 'Remover', exact: true }).click();
+    await expect(receivedName).toHaveCount(0);
+    await expect(received).toBeVisible();
+  });
+
   test('a video attachment keeps its shape before it loads and answers the keyboard', async ({ users }, testInfo) => {
     const { a, b } = await twoInAChannel(users);
     // the reader never gets the file, so the box can only come from the stored size

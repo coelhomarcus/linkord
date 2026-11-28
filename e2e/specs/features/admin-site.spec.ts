@@ -104,6 +104,11 @@ test('the administration dashboard works on desktop and mobile', async ({ users 
 
   const overview = page.getByRole('heading', { name: 'Visão geral', exact: true });
   await expect(overview).toBeVisible();
+  const nav = page.getByRole('navigation', { name: 'Navegação do Admin' });
+  const clippedLabels = () => nav.getByRole('link').locator('span').evaluateAll((labels) =>
+    labels.filter((label) => label.scrollWidth > label.clientWidth || label.scrollHeight > label.clientHeight).map((label) => label.textContent));
+  await expect(nav.getByRole('link', { name: 'Chamadas e transmissões' })).toBeVisible();
+  expect(await clippedLabels()).toEqual([]);
   await expect(page).toHaveURL(`${ADMIN_URL}/admin`);
   const main = page.getByRole('main');
   await expect(main.getByRole('link', { name: /Total de contas [0-9]/ })).toBeVisible();
@@ -120,6 +125,7 @@ test('the administration dashboard works on desktop and mobile', async ({ users 
   await page.getByRole('button', { name: 'Abrir navegação' }).click();
   const navigation = page.getByRole('dialog', { name: 'Administração' });
   await expect(navigation.getByRole('link', { name: 'Visão geral', exact: true })).toHaveAttribute('aria-current', 'page');
+  expect(await clippedLabels()).toEqual([]);
   await navigation.getByRole('link', { name: 'Usuários', exact: true }).click();
   await expect(navigation).toBeHidden();
   await expect(page.getByRole('heading', { name: 'Usuários', exact: true })).toBeVisible();

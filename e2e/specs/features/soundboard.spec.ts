@@ -59,7 +59,11 @@ test('a member adds a sound from the call when @everyone may, and only then', as
   await picker.click();
   await b.page.getByRole('button', { name: 'Adicionar som em E2E add sound' }).click();
   const editor = b.page.getByRole('dialog', { name: 'Enviar um som' });
-  await editor.getByLabel('Arquivo').setInputFiles({ name: 'tone.wav', mimeType: 'audio/wav', buffer: toneWav() });
+  const name = `${'W'.repeat(200)}.wav`;
+  await editor.getByLabel('Arquivo').setInputFiles({ name, mimeType: 'audio/wav', buffer: toneWav() });
+  const fileName = editor.getByTitle(name, { exact: true });
+  await expect.poll(() => fileName.evaluate((el) => el.scrollWidth > el.clientWidth)).toBe(true);
+  await expect(editor.getByRole('button', { name: 'Navegar' })).toBeInViewport({ ratio: 1 });
   await editor.getByLabel('Nome do som').fill('apito');
   await editor.getByRole('button', { name: 'Enviar' }).click();
   await expect(editor).toHaveCount(0);

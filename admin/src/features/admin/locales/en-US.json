@@ -21,7 +21,7 @@
     "uptime": "Uptime",
     "viewHistory": "View history",
     "history": "Peaks over the last 7 days",
-    "historyDescription": "Highest observed count per day, in the {{timeZone}} time zone.",
+    "historyDescription": "Highest observed count per day, in the {{timeZone}} time zone. Gaps mark days without data.",
     "callPeaks": "Call peaks",
     "screenPeaks": "Screen sharing peaks",
     "unavailable": "Unavailable",
