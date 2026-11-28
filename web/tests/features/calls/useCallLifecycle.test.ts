@@ -18,6 +18,7 @@ function fakeRoom(connect: () => Promise<void>) {
     off: vi.fn((event: string, fn: (...args: unknown[]) => void) => { listeners.get(event)?.delete(fn); }),
     connect: vi.fn(connect),
     disconnect: vi.fn(),
+    remoteParticipants: new Map(),
     localParticipant: { identity: 'me', getTrackPublication: vi.fn(() => undefined) },
   } as unknown as Room & { emit: (event: string, ...args: unknown[]) => void };
 }
@@ -222,7 +223,7 @@ describe('useCallLifecycle — DM media', () => {
 
     act(() => { result.current.armDmMedia('c1', true); });
     await act(async () => { result.current.onCallToken(token); });
-    await vi.waitFor(() => expect(livekitRoom.connect).toHaveBeenCalledWith('wss://lk', 't'));
+    await vi.waitFor(() => expect(livekitRoom.connect).toHaveBeenCalledWith('wss://lk', 't', { autoSubscribe: false }));
     expect(startCamera).toHaveBeenCalledOnce();
   });
 

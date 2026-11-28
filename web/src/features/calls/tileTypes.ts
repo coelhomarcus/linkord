@@ -12,6 +12,8 @@ export interface TileDescriptor {
   /** Only meaningful for `kind: 'screen'` — the share is paused (publication
    * exists and still has a track, but muted), not absent. See Tile.tsx. */
   paused: boolean;
+  /** A remote screen stays in the layout before it has been chosen. */
+  watching?: boolean;
 }
 
 /** avatar and camera are the same participant tile, just with or without

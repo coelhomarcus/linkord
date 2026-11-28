@@ -6,6 +6,7 @@ import type { LocalTrackPublication, Track as LKTrack } from 'livekit-client';
 import { playSound } from '@/shared/sounds';
 import { useTrackSpeaking } from '@/features/calls/useLiveKitTrack';
 import { cameraIsTransmitting, screenIsSharing } from '@/features/calls/mediaPublication';
+import { createCallSubscriptions } from './callSubscriptions';
 import type { RoomAction } from '@/state/roomReducer';
 import type { ClientMessage } from '@/shared/types/protocol';
 import { logger } from '@/shared/lib/logger';
@@ -37,6 +38,8 @@ interface CallLifecycleDeps {
  * this hook included, in the same call. */
 export function useCallLifecycle(deps: CallLifecycleDeps) {
   const { livekitRoom, dispatch, sendWs, stopCamera, stopSharing, activateMic, setMicMuted, leaveMic, startCamera, cameraOn, sharing } = deps;
+  const [callSubscriptions] = useState(() => createCallSubscriptions(livekitRoom));
+  useEffect(() => callSubscriptions.listen(), [callSubscriptions]);
 
   const [audioUnlocked, setAudioUnlocked] = useState(false);
   useEffect(() => {
@@ -117,16 +120,17 @@ export function useCallLifecycle(deps: CallLifecycleDeps) {
 
   const leaveCall = useCallback(async () => {
     const leaving = activeCallConversationIdRef.current;
-    if (cameraOn) await stopCamera();
-    if (sharing) await stopSharing();
-    await leaveMic();
-    livekitRoom.disconnect();
-    sendWs({ t: 'call-leave' });
+    callSubscriptions.endCall();
     // A DM can arm its own pending id while this leave is still stopping the
     // previous room. Only drop the id that belonged to the call we left.
     if (pendingCallConversationIdRef.current === leaving) pendingCallConversationIdRef.current = null;
+    if (cameraOn) await stopCamera();
+    if (sharing) await stopSharing();
+    await leaveMic();
+    await livekitRoom.disconnect();
+    sendWs({ t: 'call-leave' });
     if (activeCallConversationIdRef.current === leaving) setActiveCallConversationId(null);
-  }, [cameraOn, sharing, stopCamera, stopSharing, leaveMic, livekitRoom, sendWs, setActiveCallConversationId]);
+  }, [callSubscriptions, cameraOn, sharing, stopCamera, stopSharing, leaveMic, livekitRoom, sendWs, setActiveCallConversationId]);
 
   /** `replace` moves the account's call from another tab or device here (see useCallMoveGate). */
   const joinCall = useCallback(async (conversationId: string, options?: { replace?: boolean }) => {
@@ -205,7 +209,9 @@ export function useCallLifecycle(deps: CallLifecycleDeps) {
       try {
         if (switchingRef.current) await switchingRef.current;
         if (pendingCallConversationIdRef.current !== m.conversationId) return;
-        await livekitRoom.connect(m.livekitUrl, m.livekitToken);
+        callSubscriptions.beginCall(m.conversationId);
+        await livekitRoom.connect(m.livekitUrl, m.livekitToken, { autoSubscribe: false });
+        if (pendingCallConversationIdRef.current !== m.conversationId) return;
         await activateMic();
         if (preferMutedRef.current || deafenedRef.current) await setMicMuted(true);
       } finally {
@@ -224,6 +230,7 @@ export function useCallLifecycle(deps: CallLifecycleDeps) {
         // a failed connect also fires Disconnected, which clears the active
         // call before this runs.
         if (pendingCallConversationIdRef.current !== m.conversationId) return;
+        callSubscriptions.endCall();
         // Back out entirely, server side included: staying "in" a call that
         // never connected shows an empty stage, and joinCall ignores a
         // conversation it thinks is already active, so retrying did nothing.
@@ -233,7 +240,7 @@ export function useCallLifecycle(deps: CallLifecycleDeps) {
         dispatch({ type: 'SET_CALL_JOIN_ERROR', error: { conversationId: m.conversationId, message: i18n.t('calls:errors.joinCall') } });
       });
     setActiveCallConversationId(m.conversationId);
-  }, [livekitRoom, activateMic, setMicMuted, startCamera, setActiveCallConversationId, sendWs, dispatch, startMic, settleMic]);
+  }, [livekitRoom, callSubscriptions, activateMic, setMicMuted, startCamera, setActiveCallConversationId, sendWs, dispatch, startMic, settleMic]);
 
   /** If a conversation currently in a call gets deleted out from under us
    * (admin action), leave it — same as clicking "leave call" ourselves. */
@@ -256,6 +263,7 @@ export function useCallLifecycle(deps: CallLifecycleDeps) {
   useEffect(() => {
     const onDisconnected = (reason?: DisconnectReason) => {
       if (reason === DisconnectReason.CLIENT_INITIATED) return;
+      callSubscriptions.endCall();
       // The room is already gone, so stopping the devices only clears our
       // own flags. call-leave is what drops the camera/mic/share the server
       // is still advertising to everyone else.
@@ -266,7 +274,7 @@ export function useCallLifecycle(deps: CallLifecycleDeps) {
     };
     livekitRoom.on(RoomEvent.Disconnected, onDisconnected);
     return () => { livekitRoom.off(RoomEvent.Disconnected, onDisconnected); };
-  }, [livekitRoom, stopCamera, stopSharing, setActiveCallConversationId, cameraOn, sharing, sendWs]);
+  }, [livekitRoom, callSubscriptions, stopCamera, stopSharing, setActiveCallConversationId, cameraOn, sharing, sendWs]);
 
   useEffect(() => {
     const onLocalUnpublished = (pub: LocalTrackPublication) => {
@@ -357,7 +365,7 @@ export function useCallLifecycle(deps: CallLifecycleDeps) {
 
   return {
     audioUnlocked, deafened, toggleDeafened, preferMuted, setPreferMuted, micStarting, reconnecting,
-    activeCallConversationId, joinCall, leaveCall, armDmMedia, dropPendingCall, kickFromCall, moveToCall,
+    callSubscriptions, activeCallConversationId, joinCall, leaveCall, armDmMedia, dropPendingCall, kickFromCall, moveToCall,
     onCallToken, onCallMoved, onCallReplaced, onConversationDeleted, onCallJoinRejected, abandonPendingJoin, syncLocalMedia, reconcileAfterReconnect,
   };
 }

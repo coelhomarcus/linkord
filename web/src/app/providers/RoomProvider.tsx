@@ -610,7 +610,7 @@ export function RoomProvider({ children }: { children: ReactNode }) {
         audioUnlocked: callLifecycle.audioUnlocked, deafened: callLifecycle.deafened, toggleDeafened: callLifecycle.toggleDeafened,
         preferMuted: callLifecycle.preferMuted, setPreferMuted: callLifecycle.setPreferMuted, micStarting: callLifecycle.micStarting,
         reconnecting: callLifecycle.reconnecting,
-        livekitRoom, notifyActiveView,
+        livekitRoom, callSubscriptions: callLifecycle.callSubscriptions, notifyActiveView,
         registerRequestChatView, requestChatView, registerOpenCall, openCall,
         activeCallConversationId: callLifecycle.activeCallConversationId, joinCall, leaveCall: callLifecycle.leaveCall,
         callElsewhere, callMove: callMoveDialog,

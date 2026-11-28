@@ -1,9 +1,11 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { act } from '@testing-library/react';
 import { Room, Track } from 'livekit-client';
-import type { Room as LKRoom } from 'livekit-client';
 import { renderWithRoom } from '@tests/fixtures/roomContextFixture';
+import { fakeCallMediaRoom, fakePublication } from '@tests/fixtures/callMediaFixture';
 import { initialRoomState } from '@/state/roomReducer';
 import { ParticipantAudioLayer } from '@/features/calls/ParticipantAudioLayer';
+import { createCallSubscriptions } from '@/features/calls/callSubscriptions';
 import { saveDevicePreference } from '@/features/settings/useDevicePreference';
 import type { Participant } from '@/shared/types/protocol';
 
@@ -16,20 +18,14 @@ function fakeParticipant(overrides: Partial<Participant> = {}): Participant {
   };
 }
 
-function fakeRoomWithScreenAudio(screenAudioPub?: { isMuted: boolean; track: object }) {
-  const listeners = new Map<string, Set<() => void>>();
-  const remote = {
-    identity: 'p-2',
-    getTrackPublication: (source: Track.Source) => (source === Track.Source.ScreenShareAudio && screenAudioPub ? { ...screenAudioPub, isDesired: true } : undefined),
-  };
-  const room = {
-    on: vi.fn((event: string, fn: () => void) => { if (!listeners.has(event)) listeners.set(event, new Set()); listeners.get(event)!.add(fn); }),
-    off: vi.fn((event: string, fn: () => void) => { listeners.get(event)?.delete(fn); }),
-    localParticipant: { identity: 'p-1', getTrackPublication: () => undefined },
-    remoteParticipants: new Map([[remote.identity, remote]]),
-    getParticipantByIdentity: vi.fn(() => remote),
-  };
-  return room as unknown as LKRoom;
+function fakeRoomWithScreenAudio(track?: object) {
+  const media = fakeCallMediaRoom();
+  const remote = media.addRemote('p-2');
+  media.publish(remote, fakePublication(Track.Source.ScreenShare, 'screen'));
+  if (track) media.publish(remote, fakePublication(Track.Source.ScreenShareAudio, 'audio', { track }));
+  const callSubscriptions = createCallSubscriptions(media.room);
+  callSubscriptions.beginCall('conv-1');
+  return { livekitRoom: media.room, callSubscriptions };
 }
 
 describe('ParticipantAudioLayer — screen-share audio only registers when it actually exists', () => {
@@ -38,23 +34,30 @@ describe('ParticipantAudioLayer — screen-share audio only registers when it ac
     const participants = new Map([['p-2', fakeParticipant()]]);
     renderWithRoom(<ParticipantAudioLayer participantIds={['p-2']} />, {
       state: { ...initialRoomState, me: { ...initialRoomState.me, id: 'p-1' }, participants },
-      livekitRoom: fakeRoomWithScreenAudio(undefined),
+      ...fakeRoomWithScreenAudio(),
       audioRegistry,
     });
 
     expect(audioRegistry.current.has('p-2:screen')).toBe(false);
   });
 
-  it('with a real screen audio track, registers the ":screen" key', () => {
+  it('attaches screen audio only for a watched capture and detaches immediately on stop', () => {
     const audioRegistry = { current: new Map() };
     const participants = new Map([['p-2', fakeParticipant()]]);
+    const track = { attach: vi.fn(), detach: vi.fn() };
+    const fixture = fakeRoomWithScreenAudio(track);
     renderWithRoom(<ParticipantAudioLayer participantIds={['p-2']} />, {
       state: { ...initialRoomState, me: { ...initialRoomState.me, id: 'p-1' }, participants },
-      livekitRoom: fakeRoomWithScreenAudio({ isMuted: false, track: { attach: vi.fn(), detach: vi.fn() } }),
+      ...fixture,
       audioRegistry,
     });
 
+    expect(audioRegistry.current.has('p-2:screen')).toBe(false);
+    act(() => fixture.callSubscriptions.setWatching('p-2', 'track:screen', true));
     expect(audioRegistry.current.has('p-2:screen')).toBe(true);
+    act(() => fixture.callSubscriptions.setWatching('p-2', 'track:screen', false));
+    expect(track.detach).toHaveBeenCalledOnce();
+    expect(audioRegistry.current.has('p-2:screen')).toBe(false);
   });
 });
 

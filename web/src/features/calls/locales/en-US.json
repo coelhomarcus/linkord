@@ -47,6 +47,9 @@
     "unfocusLabel": "Remove focus from {{name}}",
     "participant": "participant",
     "stoppedWatching": "You stopped watching",
+    "watchLabel": "Watch {{name}}'s stream",
+    "watchLoading": "Loading stream",
+    "watchFailed": "Couldn't load the stream",
     "previewPaused": "Preview paused",
     "hiddenVideo": "Video hidden",
     "moreActions": "More actions for {{name}}"

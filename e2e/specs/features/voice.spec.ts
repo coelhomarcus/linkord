@@ -1,6 +1,7 @@
 import { test, expect, type User } from '../../fixtures/test';
 import { acceptInvite, createChannel, createInvite, createServer, type CreatedServer } from '../../fixtures/api';
 import type { AppPage } from '../../fixtures/app';
+import { expectStreamImage, installScreenCapture, observeCallRtp, outboundScreenVideo, publishedAudio, receivedCallTracks, screenTile, silenceScreenAudio, watchButton } from '../../fixtures/screenShare';
 
 async function twoInVoice(users: { create(prefix?: string): Promise<User> }): Promise<{ alice: User; bob: User; a: AppPage; b: AppPage; server: CreatedServer }> {
   const alice = await users.create('alice');
@@ -42,7 +43,11 @@ test.describe('voice channels', () => {
     await b.expectRemoteAudio(1);
     // The fake media UI accepts the picker with a fake screen, like a person choosing one.
     await b.page.getByRole('button', { name: 'Compartilhar tela' }).first().click();
-    await expect(a.page.locator('[data-tile-kind="screen"]').filter({ hasText: bob.username })).toBeVisible();
+    const share = screenTile(a.page, bob.username);
+    await expect(watchButton(share, bob.username)).toBeVisible();
+    await expect(share.locator('video')).toHaveCount(0);
+    await watchButton(share, bob.username).click();
+    await expectStreamImage(share);
     await b.page.getByRole('button', { name: 'Parar compartilhamento' }).first().click();
     await expect(a.page.locator('[data-tile-kind="screen"]')).toHaveCount(0);
   });
@@ -67,40 +72,7 @@ test.describe('voice channels', () => {
         },
       });
     });
-    await b.page.evaluate(() => {
-      Object.defineProperty(navigator.mediaDevices, 'getDisplayMedia', {
-        configurable: true,
-        value: async () => {
-          const canvas = document.createElement('canvas');
-          canvas.width = 1280;
-          canvas.height = 720;
-          const frame = canvas.getContext('2d')!;
-          let x = 0;
-          function draw() {
-            frame.fillStyle = '#123456';
-            frame.fillRect(0, 0, canvas.width, canvas.height);
-            frame.fillStyle = '#fedcba';
-            frame.fillRect(x++ % canvas.width, 0, 64, canvas.height);
-          }
-          draw();
-          const stream = canvas.captureStream(30);
-          const [video] = stream.getVideoTracks();
-          const settings = video.getSettings.bind(video);
-          video.getSettings = () => ({ ...settings(), displaySurface: 'browser' });
-          const timer = setInterval(draw, 33);
-          video.addEventListener('ended', () => clearInterval(timer), { once: true });
-
-          const audio = new AudioContext();
-          const destination = audio.createMediaStreamDestination();
-          const oscillator = audio.createOscillator();
-          oscillator.connect(destination);
-          oscillator.start();
-          await audio.resume();
-          stream.addTrack(destination.stream.getAudioTracks()[0]);
-          return stream;
-        },
-      });
-    });
+    await installScreenCapture(b.page);
 
     await b.page.getByRole('button', { name: 'Compartilhar tela' }).first().click();
     const share = a.page.locator('[data-tile-kind="screen"]').filter({ hasText: bob.username });
@@ -111,8 +83,10 @@ test.describe('voice channels', () => {
       await expect.poll(() => video.evaluate((el: HTMLVideoElement) => el.videoWidth)).toBe(width);
     };
     await expect(share).toBeVisible();
-    await a.expectRemoteAudio(2);
+    await a.expectRemoteAudio(1);
     await a.page.getByRole('button', { name: `Destacar ${alice.username}`, exact: true }).click();
+    await watchButton(share, bob.username).click();
+    await a.expectRemoteAudio(2);
     await expectWidth(640);
 
     await menu.press('Enter');
@@ -137,13 +111,12 @@ test.describe('voice channels', () => {
     await a.page.getByRole('menuitem', { name: 'Parar de assistir' }).click();
     await expect(share.getByText('Você parou de assistir')).toBeVisible();
     await a.expectRemoteAudio(1);
-    await menu.press('Enter');
-    await a.page.getByRole('menuitem', { name: 'Assistir', exact: true }).click();
+    await watchButton(share, bob.username).click();
     await expectWidth(640);
     await a.expectRemoteAudio(2);
   });
 
-  test('"ao vivo" in the channel list joins the call focused on that share, and focuses it again from inside', async ({ users }) => {
+  test('"ao vivo" joins and highlights the tile, then starts screen media only on confirmation', async ({ users }) => {
     const alice = await users.create('alice');
     const bob = await users.create('bob');
     const server = await createServer(alice.api, 'E2E watch');
@@ -167,12 +140,98 @@ test.describe('voice channels', () => {
     await expect(b.page.getByText('Em chamada')).toBeVisible();
     const share = b.page.locator('[data-tile-kind="screen"]').filter({ hasText: alice.username });
     await expect(share).toHaveAttribute('aria-pressed', 'true');
+    await expect(share.locator('video')).toHaveCount(0);
+    await watchButton(share, alice.username).click();
+    await expectStreamImage(share);
 
     // in the call, the badge itself focuses the share again
     await b.page.keyboard.press('Escape');
     await expect(share).toHaveAttribute('aria-pressed', 'false');
     await badge.click();
     await expect(share).toHaveAttribute('aria-pressed', 'true');
+  });
+
+  test('mic and camera arrive automatically while each screen and its audio require a watch', async ({ users }) => {
+    const alice = await users.create('alice');
+    const bob = await users.create('bob');
+    const carol = await users.create('carol');
+    const server = await createServer(alice.api, 'E2E media choice');
+    const invite = await createInvite(alice.api, server.id);
+    await acceptInvite(bob.api, invite);
+    await acceptInvite(carol.api, invite);
+    await observeCallRtp(alice.context);
+    await observeCallRtp(bob.context);
+    const a = await alice.app();
+    const b = await bob.app();
+    const c = await carol.app();
+    for (const tab of [a, b, c]) await tab.openChannel(server.id, server.text.id);
+
+    await a.joinVoice(server.voice.name);
+    await a.expectTilesFor([alice.username]);
+    await a.page.getByRole('button', { name: 'Ligar câmera' }).first().click();
+    await expect(a.page.locator('[data-tile-kind="camera"]')).toBeVisible();
+    await installScreenCapture(a.page, 2);
+    await a.page.getByRole('button', { name: 'Compartilhar tela' }).first().click();
+    await expect(screenTile(a.page, alice.username)).toBeVisible();
+
+    await b.joinVoice(server.voice.name);
+    const first = screenTile(b.page, alice.username);
+    await expect(watchButton(first, alice.username)).toBeVisible();
+    await expect.poll(() => receivedCallTracks(b.page)).toEqual({ audio: 1, video: 1 });
+
+    await c.joinVoice(server.voice.name);
+    await c.expectRemoteAudio(2);
+    await c.page.getByRole('button', { name: 'Ligar câmera' }).first().click();
+    await installScreenCapture(c.page);
+    await c.page.getByRole('button', { name: 'Compartilhar tela' }).first().click();
+    const second = screenTile(b.page, carol.username);
+    await expect(watchButton(second, carol.username)).toBeVisible();
+    await expect.poll(() => receivedCallTracks(b.page)).toEqual({ audio: 2, video: 2 });
+
+    await watchButton(first, alice.username).click();
+    await expectStreamImage(first);
+    await expect.poll(() => outboundScreenVideo(a.page)).toBeGreaterThan(0);
+    await b.expectRemoteAudio(2);
+    await screenTile(a.page, alice.username).getByRole('button', { name: `Mais ações de ${alice.username}` }).press('Enter');
+    await a.page.getByRole('menuitem', { name: 'Trocar fonte' }).click();
+    await b.expectRemoteAudio(3);
+    await expect.poll(() => publishedAudio(a.page)).toMatchObject({ microphoneDtx: true, screenDtx: true });
+    async function screenAudioDelta() {
+      const before = (await publishedAudio(a.page)).screenBytes;
+      await new Promise((resolve) => setTimeout(resolve, 1_000));
+      return (await publishedAudio(a.page)).screenBytes - before;
+    }
+    const withSound = await screenAudioDelta();
+    expect(withSound).toBeGreaterThan(0);
+    await silenceScreenAudio(a.page, true);
+    await expect.poll(screenAudioDelta).toBeLessThan(withSound / 2);
+    await silenceScreenAudio(a.page, false);
+
+    await watchButton(second, carol.username).click();
+    await expectStreamImage(first);
+    await expectStreamImage(second);
+    await b.expectRemoteAudio(4);
+
+    await first.getByRole('button', { name: `Mais ações de ${alice.username}` }).press('Enter');
+    await b.page.getByRole('menuitem', { name: 'Parar de assistir' }).click();
+    await expect(first.getByText('Você parou de assistir')).toBeVisible();
+    await expectStreamImage(second);
+    await b.expectRemoteAudio(3);
+    await expect.poll(async () => {
+      const before = await outboundScreenVideo(a.page);
+      await new Promise((resolve) => setTimeout(resolve, 1_000));
+      return await outboundScreenVideo(a.page) - before;
+    }, { timeout: 30_000 }).toBe(0);
+
+    await c.page.getByRole('button', { name: 'Parar compartilhamento' }).first().click();
+    await expect(second).toHaveCount(0);
+    await c.page.getByRole('button', { name: 'Compartilhar tela' }).first().click();
+    await expect(watchButton(second, carol.username)).toBeVisible();
+    await expect(second.locator('video')).toHaveCount(0);
+    await b.expectRemoteAudio(2);
+    await watchButton(second, carol.username).click();
+    await expectStreamImage(second);
+    await b.expectRemoteAudio(3);
   });
 
   test('leaving the call removes the tile for the other member', async ({ users }) => {

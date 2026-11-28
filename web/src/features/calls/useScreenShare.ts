@@ -11,6 +11,7 @@ import { i18n } from '@/shared/i18n/init';
 import { mayPublish } from './publishRights';
 import { audioCarriesTheCall, displayCaptureOptions } from './displayCapture';
 import { chooseDesktopSource, desktopScreenShare } from './desktopCapture';
+import { screenCaptureId, screenTrackName } from './screenSharePublication';
 
 interface ScreenShareApi {
   startSharing: () => Promise<void>;
@@ -30,6 +31,11 @@ interface Capture {
   audio: MediaStreamTrack | undefined;
   /** the captured sound would have carried the call back to it (see audioCarriesTheCall) */
   droppedAudio: boolean;
+}
+
+function discardCapture(capture: Capture): void {
+  capture.video.stop();
+  capture.audio?.stop();
 }
 
 function reportCaptureFailure(dispatch: Dispatch<RoomAction>, err: unknown): void {
@@ -70,7 +76,7 @@ function screenAudioTrack(audio: MediaStreamTrack): LocalAudioTrack {
   return track;
 }
 
-async function publishCapture(room: Room, capture: Capture, qualityId: ShareQualityId, dispatch: Dispatch<RoomAction>): Promise<boolean> {
+async function publishCapture(room: Room, capture: Capture, captureId: string, qualityId: ShareQualityId, dispatch: Dispatch<RoomAction>): Promise<boolean> {
   const screenVideo = new LocalVideoTrack(capture.video, undefined, false);
   screenVideo.source = Track.Source.ScreenShare;
   const tracks: LocalTrack[] = [screenVideo];
@@ -78,7 +84,12 @@ async function publishCapture(room: Room, capture: Capture, qualityId: ShareQual
 
   const publishOptions = screenSharePublishOptions(qualityId);
   try {
-    await Promise.all(tracks.map((track) => room.localParticipant.publishTrack(track, track === screenVideo ? publishOptions : undefined)));
+    await Promise.all(tracks.map((track) => room.localParticipant.publishTrack(
+      track,
+      track === screenVideo
+        ? { ...publishOptions, name: screenTrackName(captureId, 'video') }
+        : { name: screenTrackName(captureId, 'audio') },
+    )));
   } catch (err) {
     await Promise.allSettled(tracks.map((track) => room.localParticipant.unpublishTrack(track, true)));
     tracks.forEach((track) => track.stop());
@@ -96,7 +107,7 @@ async function publishCapture(room: Room, capture: Capture, qualityId: ShareQual
  * publications, so the tile, the viewers and the call's state never see the
  * share end. The sound follows the new source: replaced, added or removed.
  */
-async function replaceCapture(room: Room, capture: Capture, dispatch: Dispatch<RoomAction>): Promise<boolean> {
+async function replaceCapture(room: Room, capture: Capture, captureId: string, dispatch: Dispatch<RoomAction>): Promise<boolean> {
   const participant = room.localParticipant;
   const video = participant.getTrackPublication(Track.Source.ScreenShare)?.track;
   if (!(video instanceof LocalVideoTrack)) return false;
@@ -117,7 +128,7 @@ async function replaceCapture(room: Room, capture: Capture, dispatch: Dispatch<R
       await audio.replaceTrack(capture.audio, false);
       previousAudio.stop();
     } else if (capture.audio) {
-      await participant.publishTrack(screenAudioTrack(capture.audio));
+      await participant.publishTrack(screenAudioTrack(capture.audio), { name: screenTrackName(captureId, 'audio') });
     } else if (audio) {
       await participant.unpublishTrack(audio, true);
     }
@@ -154,8 +165,14 @@ export function useScreenShare(room: Room, dispatch: Dispatch<RoomAction>): Scre
     capturing.current = true;
     try {
       const qualityId = loadShareQuality();
+      const participantSid = room.localParticipant.sid;
       const capture = await captureDisplay(qualityId, dispatch);
-      if (capture && await publishCapture(room, capture, qualityId, dispatch)) publishedQuality.current = qualityId;
+      if (!capture) return;
+      if (room.state !== ConnectionState.Connected || room.localParticipant.sid !== participantSid) {
+        discardCapture(capture);
+        return;
+      }
+      if (await publishCapture(room, capture, crypto.randomUUID(), qualityId, dispatch)) publishedQuality.current = qualityId;
     } finally {
       capturing.current = false;
     }
@@ -181,14 +198,21 @@ export function useScreenShare(room: Room, dispatch: Dispatch<RoomAction>): Scre
     capturing.current = true;
     try {
       const qualityId = loadShareQuality();
+      const previous = room.localParticipant.getTrackPublication(Track.Source.ScreenShare);
+      if (!previous?.track) return;
+      const captureId = screenCaptureId(previous?.trackName, 'video') ?? crypto.randomUUID();
       const capture = await captureDisplay(qualityId, dispatch);
       if (!capture) return;
+      if (room.state !== ConnectionState.Connected || room.localParticipant.getTrackPublication(Track.Source.ScreenShare)?.track !== previous.track) {
+        discardCapture(capture);
+        return;
+      }
       // A quality picked since the share started needs the new encodings, which
       // only publishing again applies; the share still only ends once the new
       // source is in hand
-      if (qualityId === publishedQuality.current && await replaceCapture(room, capture, dispatch)) return;
+      if (qualityId === publishedQuality.current && await replaceCapture(room, capture, captureId, dispatch)) return;
       await room.localParticipant.setScreenShareEnabled(false).catch(() => {});
-      if (await publishCapture(room, capture, qualityId, dispatch)) publishedQuality.current = qualityId;
+      if (await publishCapture(room, capture, captureId, qualityId, dispatch)) publishedQuality.current = qualityId;
       else dispatch({ type: 'SET_LOCAL_SHARING', sharing: false });
     } finally {
       capturing.current = false;

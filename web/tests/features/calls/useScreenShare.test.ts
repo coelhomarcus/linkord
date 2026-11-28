@@ -107,6 +107,7 @@ describe('useScreenShare — quality applied to the capture', () => {
     }));
     expect(video.contentHint).toBe(preset.contentHint);
     expect(publishTrack).toHaveBeenCalledWith(expect.anything(), {
+      name: expect.stringMatching(/^overcord-screen-v1:video:/),
       screenShareEncoding: preset.encoding,
       degradationPreference: preset.degradationPreference,
       simulcast: true,
@@ -214,6 +215,22 @@ describe('useScreenShare — starting', () => {
 
     expect(getDisplayMedia).toHaveBeenCalledTimes(1);
   });
+
+  it('discards a picker result from a previous LiveKit connection', async () => {
+    let resolve!: (stream: MediaStream) => void;
+    stubDisplayMedia(() => new Promise<MediaStream>((r) => { resolve = r; }));
+    const { room, publishTrack } = fakeRoom();
+    Object.assign(room.localParticipant, { sid: 'first-room' });
+    const { result } = renderHook(() => useScreenShare(room, vi.fn()));
+    const pending = result.current.startSharing();
+    Object.assign(room.localParticipant, { sid: 'second-room' });
+    const oldSource = fakeTrack('video');
+    resolve(fakeStream(oldSource));
+    await pending;
+
+    expect(oldSource.stop).toHaveBeenCalledOnce();
+    expect(publishTrack).not.toHaveBeenCalled();
+  });
 });
 
 describe('useScreenShare — changing source', () => {
@@ -221,8 +238,11 @@ describe('useScreenShare — changing source', () => {
   async function sharing(firstStream: MediaStream) {
     const getDisplayMedia = stubDisplayMedia(firstStream);
     const dispatch = vi.fn();
-    const publications = new Map<Track.Source, { track: LocalTrack }>();
-    const publishTrack = vi.fn(async (track: LocalTrack) => { publications.set(track.source, { track }); return {}; });
+    const publications = new Map<Track.Source, { track: LocalTrack; trackName: string }>();
+    const publishTrack = vi.fn(async (track: LocalTrack, options: { name: string }) => {
+      publications.set(track.source, { track, trackName: options.name });
+      return {};
+    });
     const { room, unpublishTrack } = fakeRoom({ publishTrack, getTrackPublication: vi.fn((source: Track.Source) => publications.get(source)) });
     const { result } = renderHook(() => useScreenShare(room, dispatch));
     await result.current.startSharing();
@@ -273,12 +293,14 @@ describe('useScreenShare — changing source', () => {
   });
 
   it('adds the new source\'s sound when the old one had none, and removes it the other way round', async () => {
-    const { result, publishTrack, unpublishTrack, getDisplayMedia } = await sharing(fakeStream(fakeTrack('video')));
+    const { result, publishTrack, unpublishTrack, getDisplayMedia, publications } = await sharing(fakeStream(fakeTrack('video')));
+    const name = publications.get(Track.Source.ScreenShare)!.trackName;
     getDisplayMedia.mockResolvedValueOnce(fakeStream(fakeTrack('video', { displaySurface: 'browser' }), fakeTrack('audio')));
 
     await result.current.changeSource();
     const [added] = publishedTracks(publishTrack);
     expect(added.source).toBe(Track.Source.ScreenShareAudio);
+    expect(publications.get(Track.Source.ScreenShareAudio)?.trackName).toBe(name.replace(':video:', ':audio:'));
 
     vi.spyOn(added, 'replaceTrack').mockResolvedValue(added);
     getDisplayMedia.mockResolvedValueOnce(fakeStream(fakeTrack('video')));
@@ -287,7 +309,8 @@ describe('useScreenShare — changing source', () => {
   });
 
   it('publishes again when the quality changed since the share started, once the new source is picked', async () => {
-    const { result, room, publishTrack, getDisplayMedia, replaceVideo } = await sharing(fakeStream(fakeTrack('video')));
+    const { result, room, publishTrack, getDisplayMedia, replaceVideo, publications } = await sharing(fakeStream(fakeTrack('video')));
+    const name = publications.get(Track.Source.ScreenShare)!.trackName;
     saveShareQuality('screen1440');
     getDisplayMedia.mockResolvedValueOnce(fakeStream(fakeTrack('video')));
 
@@ -296,6 +319,7 @@ describe('useScreenShare — changing source', () => {
     expect(replaceVideo).not.toHaveBeenCalled();
     expect(room.localParticipant.setScreenShareEnabled).toHaveBeenCalledWith(false);
     expect(publishedTracks(publishTrack)[0]?.source).toBe(Track.Source.ScreenShare);
+    expect(publications.get(Track.Source.ScreenShare)?.trackName).toBe(name);
   });
 });
 

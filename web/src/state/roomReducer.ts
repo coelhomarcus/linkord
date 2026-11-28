@@ -35,7 +35,6 @@ export interface RoomState {
   hiddenVideoKeys: Set<string>;
   /** Screen shares unsubscribed locally for this session; never changes the presenter's
    * publication. Cleared when that participant leaves. */
-  unwatchedScreenKeys: Set<string>;
   reconnecting: boolean;
   joined: boolean;
   roomError: string | null;
@@ -65,7 +64,6 @@ export const initialRoomState: RoomState = {
   focusOrigin: null,
   pendingScreenFocus: null,
   hiddenVideoKeys: new Set(),
-  unwatchedScreenKeys: new Set(),
   reconnecting: false,
   joined: false,
   roomError: null,
@@ -105,7 +103,6 @@ export type RoomAction =
   // only that very request: a newer one set meanwhile stays
   | { type: 'DROP_PENDING_SCREEN_FOCUS'; target: NonNullable<RoomState['pendingScreenFocus']> }
   | { type: 'TOGGLE_HIDDEN_VIDEO'; key: string }
-  | { type: 'TOGGLE_SCREEN_WATCH'; key: string }
   | { type: 'SET_SHARE_ERROR'; message: string | null }
   | { type: 'SET_MIC_PROBLEM'; problem: MicProblem }
   | { type: 'SET_CALL_JOIN_ERROR'; error: RoomState['callJoinError'] };
@@ -176,20 +173,12 @@ export function roomReducer(state: RoomState, action: RoomAction): RoomState {
           hiddenVideoKeys.delete(key);
         }
       }
-      let unwatchedScreenKeys = state.unwatchedScreenKeys;
-      for (const key of unwatchedScreenKeys) {
-        if (key.startsWith(`${action.id}:`)) {
-          if (unwatchedScreenKeys === state.unwatchedScreenKeys) unwatchedScreenKeys = new Set(state.unwatchedScreenKeys);
-          unwatchedScreenKeys.delete(key);
-        }
-      }
       return {
         ...state,
         participants,
         focusedId: stillThere ? state.focusedId : null,
         focusOrigin: stillThere ? state.focusOrigin : null,
         hiddenVideoKeys,
-        unwatchedScreenKeys,
       };
     }
     case 'SET_RECONNECTING':
@@ -251,11 +240,6 @@ export function roomReducer(state: RoomState, action: RoomAction): RoomState {
       const hiddenVideoKeys = new Set(state.hiddenVideoKeys);
       if (hiddenVideoKeys.has(action.key)) hiddenVideoKeys.delete(action.key); else hiddenVideoKeys.add(action.key);
       return { ...state, hiddenVideoKeys };
-    }
-    case 'TOGGLE_SCREEN_WATCH': {
-      const unwatchedScreenKeys = new Set(state.unwatchedScreenKeys);
-      if (unwatchedScreenKeys.has(action.key)) unwatchedScreenKeys.delete(action.key); else unwatchedScreenKeys.add(action.key);
-      return { ...state, unwatchedScreenKeys };
     }
     case 'SET_SHARE_ERROR':
       return { ...state, shareError: action.message };

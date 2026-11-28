@@ -238,9 +238,9 @@ Playwright runs on Bun and uses the installed Google Chrome. Its CLI scripts use
 | `features/servers` | Creating, invites, permissions, an animated icon, mute levels, and context menus for category and channel management, member moderation, and reordering servers by touch. Channel reordering and category moves across accounts preserve access rules. |
 | `features/pins` | Pinning and unpinning, the `PIN_MESSAGES` permission, saved messages. |
 | `features/search` | The header search's filters, keyboard submission with suggestions open, sort, jump to message and history. |
-| `features/voice` | Hearing each other, mute, camera, adaptive screen share and shared audio, moving and disconnecting a member. |
+| `features/voice` | Automatic microphone and camera, selective screen video and audio, multiple watched screens, Adaptive Stream, Dynacast, and member moves and disconnects. |
 | `features/call-membership` | A LiveKit client using a kept token is removed from the room after leaving or being banned. |
-| `features/dm-call` | Decline, cancel, an answered call with audio both ways, a video call. |
+| `features/dm-call` | Decline, cancel, an answered call with audio both ways, automatic camera, and explicit screen watching. |
 | `features/call-tabs` | One call per account across two tabs, for voice channels and DM calls. |
 | `features/webhooks` | Text and cards through the ingress, invalid payloads, rotating and deleting the URL, the webhook picture. |
 | `features/soundboard` | Uploading and playing sounds, the `CREATE_EXPRESSIONS` permission, sounds from another server. |
@@ -253,7 +253,7 @@ Playwright runs on Bun and uses the installed Google Chrome. Its CLI scripts use
 | `features/settings` | Language and theme following the account to another browser; text size staying on the device. |
 | `features/security` | No framing, a foreign script refused and reported, YouTube as a sandboxed iframe. |
 | `features/presence` | Status and custom status reaching other devices and friends, invisible, status kept across a reload. |
-| `restart/voice` | A voice call survives a redeploy, and someone joining afterwards hears the others. |
+| `restart/voice` | A voice call survives a redeploy, newcomers hear the others, and chosen screens recover after app and LiveKit restarts. |
 | `restart/dm-call` | An answered DM call and a ringing one survive a redeploy. |
 | `restart/chat` | Messages sent during a redeploy are stored and shown exactly once. Separate steps report failures in PostgreSQL persistence and in each participant's view. |
 | `restart/voice-message` | A voice message sent while the server is down arrives once. |

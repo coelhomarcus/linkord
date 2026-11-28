@@ -27,7 +27,7 @@ export function FloatingPip({ allIds, onExpand, hideOnMobile = false }: Floating
   const { t } = useTranslation('calls');
   const state = useRoomState('focusedId', 'reconnecting', 'me');
   const { isMobile } = useSidebar();
-  const descriptors = useCallTiles(allIds).filter((d) => d.kind !== 'avatar');
+  const descriptors = useCallTiles(allIds).filter((d) => d.kind === 'camera' || d.watching);
   // The user's own explicit prev/next pick — takes priority over following
   // focus, same "manual never gets overridden automatically" rule as the
   // Stage's own focus (useAutoFocusScreenShare). Cleared once its source is

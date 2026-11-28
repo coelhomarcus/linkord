@@ -3,6 +3,7 @@ import { EMPTY_SAVED } from '@/features/saved/useSavedMessages';
 import { render } from '@testing-library/react';
 import type { RenderResult } from '@testing-library/react';
 import { Room } from 'livekit-client';
+import { createCallSubscriptions } from '@/features/calls/callSubscriptions';
 import { RoomStoreProvider } from '@/state/RoomStoreProvider';
 import type { RoomContextValue } from '@/state/RoomContext';
 import { initialRoomState } from '@/state/roomReducer';
@@ -12,6 +13,7 @@ import { DEFAULT_POLICY, EMPTY_NOTIFICATION_SETTINGS } from '@/features/notifica
 export function createFakeRoomContextValue(overrides: Partial<RoomContextValue> = {}): RoomContextValue {
   const noop = () => {};
   const asyncNoop = async () => {};
+  const livekitRoom = overrides.livekitRoom ?? new Room();
   const base: RoomContextValue = {
     state: initialRoomState,
     dispatch: noop,
@@ -30,7 +32,8 @@ export function createFakeRoomContextValue(overrides: Partial<RoomContextValue> 
     micStarting: false,
     setPreferMuted: noop,
     reconnecting: false,
-    livekitRoom: new Room(),
+    livekitRoom,
+    callSubscriptions: createCallSubscriptions(livekitRoom),
     notifyActiveView: noop,
     registerRequestChatView: noop,
     registerOpenCall: noop,

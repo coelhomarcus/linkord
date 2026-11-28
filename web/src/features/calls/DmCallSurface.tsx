@@ -35,7 +35,7 @@ export function DmCallSurface({ participantIds, peers }: { participantIds: strin
   const state = useRoomState('focusOrigin', 'focusedId', 'me');
   const descriptors = useCallTiles(participantIds);
   const focusScreenShare = useCallback((key: string) => dispatch({ type: 'SET_FOCUSED', id: key, origin: 'automatic' }), [dispatch]);
-  useAutoFocusScreenShare(descriptors, state.focusOrigin, focusScreenShare);
+  useAutoFocusScreenShare(descriptors.filter((d) => d.participantId === state.me.id), state.focusOrigin, focusScreenShare);
 
   const { videos, pendingCameraIds } = splitDmCallMedia(descriptors);
   const onCamera = new Set(videos.filter((d) => d.kind === 'camera').map((d) => d.participantId));

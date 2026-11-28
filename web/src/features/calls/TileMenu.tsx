@@ -6,7 +6,7 @@ import type { Track as LKTrack } from 'livekit-client';
 import { useRoom, useRoomState } from '../../state/RoomContext';
 import { useCallRoster } from './callRoster';
 import type { AnchorRect } from '../../state/RoomContext';
-import { useParticipantMedia } from './useLiveKitTrack';
+import { useParticipantMedia, useScreenWatchState } from './useLiveKitTrack';
 import { useMuteForMe } from './useMuteForMe';
 import { enterFullscreen, exitFullscreen } from '@/shared/lib/fullscreen';
 import {
@@ -76,9 +76,9 @@ export function TileMenu({ onOpenProfile }: TileMenuProps) {
   const {
     dispatch, menuTarget, closeTileMenu, tileDomRegistry, showStats, kickFromCall,
     activeCallConversationId, conversations, mirrorCameraPreview, setMirrorCameraPreview, stopCamera,
-    stopSharing, changeSource, pauseSharePreview, resumeSharePreview, shareQuality, setShareQuality, fullscreenElement,
-  } = useRoom('dispatch', 'menuTarget', 'closeTileMenu', 'tileDomRegistry', 'showStats', 'kickFromCall', 'activeCallConversationId', 'conversations', 'mirrorCameraPreview', 'setMirrorCameraPreview', 'stopCamera', 'stopSharing', 'changeSource', 'pauseSharePreview', 'resumeSharePreview', 'shareQuality', 'setShareQuality', 'fullscreenElement');
-  const state = useRoomState('me', 'focusedId', 'hiddenVideoKeys', 'unwatchedScreenKeys');
+    stopSharing, changeSource, pauseSharePreview, resumeSharePreview, shareQuality, setShareQuality, fullscreenElement, callSubscriptions,
+  } = useRoom('dispatch', 'menuTarget', 'closeTileMenu', 'tileDomRegistry', 'showStats', 'kickFromCall', 'activeCallConversationId', 'conversations', 'mirrorCameraPreview', 'setMirrorCameraPreview', 'stopCamera', 'stopSharing', 'changeSource', 'pauseSharePreview', 'resumeSharePreview', 'shareQuality', 'setShareQuality', 'fullscreenElement', 'callSubscriptions');
+  const state = useRoomState('me', 'focusedId', 'hiddenVideoKeys');
   const roster = useCallRoster();
   const [bitrateKbps, setBitrateKbps] = useState(0);
   const [elapsedSec, setElapsedSec] = useState(0);
@@ -91,6 +91,7 @@ export function TileMenu({ onOpenProfile }: TileMenuProps) {
   const targetUserId = isMe ? state.me.userId : (participantId ? roster.get(participantId)?.userId : undefined);
 
   const media = useParticipantMedia(participantId ?? '');
+  const watching = useScreenWatchState(kind === 'screen' && !isMe ? participantId : null, media.screenShareId) === 'watching';
   const mainTrack = kind === 'screen' ? media.screenTrack : kind === 'camera' ? media.cameraTrack : media.micTrack;
   const { hasAudio, volume, muted, setVolume, toggleMute } = useMuteForMe(participantId, kind ?? 'camera', isMe);
 
@@ -108,10 +109,10 @@ export function TileMenu({ onOpenProfile }: TileMenuProps) {
       return;
     }
     const participantGone = !isMe && !roster.has(participantId);
-    const sourceEnded = (kind === 'camera' && !media.cameraTrack) || (kind === 'screen' && !media.screenPublished);
+    const sourceEnded = (kind === 'camera' && !media.cameraTrack) || (kind === 'screen' && !media.screenShareId);
     const conversationChanged = activeCallConversationId !== openedConversationIdRef.current;
     if (participantGone || sourceEnded || conversationChanged) closeTileMenu();
-  }, [menuTarget, participantId, isMe, kind, roster, media.cameraTrack, media.screenPublished, activeCallConversationId, closeTileMenu]);
+  }, [menuTarget, participantId, isMe, kind, roster, media.cameraTrack, media.screenShareId, activeCallConversationId, closeTileMenu]);
 
   useEffect(() => {
     if (!key || !showStats || !mainTrack) { setBitrateKbps(0); setResolution(null); return; }
@@ -148,7 +149,6 @@ export function TileMenu({ onOpenProfile }: TileMenuProps) {
   const handle = tileDomRegistry.current.get(key);
   const isFocused = state.focusedId === key;
   const isHiddenForMe = state.hiddenVideoKeys.has(key);
-  const isNotWatching = state.unwatchedScreenKeys.has(key);
   const isSharePaused = media.screenPaused;
   // "Remove from call" is a group-moderation power — not offered for 1:1
   // direct calls, where "leave call" already covers it (mirrors the
@@ -193,7 +193,7 @@ export function TileMenu({ onOpenProfile }: TileMenuProps) {
     dispatch({ type: 'TOGGLE_HIDDEN_VIDEO', key: key! });
   }
   function handleToggleWatch() {
-    dispatch({ type: 'TOGGLE_SCREEN_WATCH', key: key! });
+    if (participantId) callSubscriptions.setWatching(participantId, media.screenShareId, !watching);
   }
   function handleStopSharing() {
     stopSharing();
@@ -220,10 +220,12 @@ export function TileMenu({ onOpenProfile }: TileMenuProps) {
             <span>{t('menu.profile')}</span>
           </DropdownMenuItem>
         )}
-        <DropdownMenuItem onClick={toggleTileFullscreen}>
-          {isTileFullscreen ? <ArrowsInIcon size={16} /> : <ArrowsOutIcon size={16} />}
-          <span>{isTileFullscreen ? t('controls.fullscreenExit') : t('controls.fullscreenEnter')}</span>
-        </DropdownMenuItem>
+        {(kind !== 'screen' || isMe || watching || isTileFullscreen) && (
+          <DropdownMenuItem onClick={toggleTileFullscreen}>
+            {isTileFullscreen ? <ArrowsInIcon size={16} /> : <ArrowsOutIcon size={16} />}
+            <span>{isTileFullscreen ? t('controls.fullscreenExit') : t('controls.fullscreenEnter')}</span>
+          </DropdownMenuItem>
+        )}
         {pipSupported && (
           <DropdownMenuItem onClick={togglePip}>
             <PictureInPictureIcon size={16} />
@@ -286,9 +288,9 @@ export function TileMenu({ onOpenProfile }: TileMenuProps) {
         {kind === 'screen' && !isMe && (
           <>
             <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={handleToggleWatch}>
-              {isNotWatching ? <EyeIcon size={16} /> : <EyeSlashIcon size={16} />}
-              <span>{isNotWatching ? t('menu.watch') : t('menu.stopWatching')}</span>
+            <DropdownMenuItem onClick={handleToggleWatch} disabled={!media.screenShareId}>
+              {watching ? <EyeSlashIcon size={16} /> : <EyeIcon size={16} />}
+              <span>{watching ? t('menu.stopWatching') : t('menu.watch')}</span>
             </DropdownMenuItem>
           </>
         )}

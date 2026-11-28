@@ -29,7 +29,7 @@ Overcord is a self-hosted place to chat and call with friends. Talk in direct me
 
 **Voice and video**
 - Voice channels and one-to-one DM calls, with camera and screen sharing.
-- Screen shares adapt to the viewer's display size and connection, including in fullscreen and picture-in-picture. The video pauses when it leaves view while shared audio keeps playing.
+- Choose **Watch** on each screen share to start its video and shared audio. Microphones and cameras are received automatically. Screen video adapts to the viewer's layout and connection, including fullscreen and picture-in-picture. It pauses when it leaves view while shared audio keeps playing.
 - One call per account: every tab and device shows the call you are in, and can take it over after asking.
 - A soundboard per server, usable in any call.
 

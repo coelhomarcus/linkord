@@ -2,6 +2,7 @@ import { test, expect } from '../../fixtures/test';
 import { acceptInvite, befriend, createInvite, createServer } from '../../fixtures/api';
 import { HEAD_IMAGE, baseVersion, headProtocol, type BaseVersion } from '../../stack/images';
 import { deploy, down, up } from '../../stack/stack';
+import { expectStreamImage, installScreenCapture, screenTile, watchButton } from '../../fixtures/screenShare';
 
 // The next deploy, rehearsed: people are using the version in production
 // (E2E_BASE_REF, origin/main by default) when the server is upgraded to the
@@ -99,4 +100,22 @@ test('tabs opened on the production version keep working with tabs on the new on
     await a.expectTilesFor([alice.username, carol.username]);
     await c.expectTilesFor([alice.username, carol.username]);
   }
+
+  await installScreenCapture(a.page);
+  await a.page.getByRole('button', { name: 'Compartilhar tela' }).first().click();
+  const legacyShare = screenTile(c.page, alice.username);
+  await expect(watchButton(legacyShare, alice.username)).toBeVisible();
+  await expect(legacyShare.locator('video')).toHaveCount(0);
+  await c.expectRemoteAudio(1);
+  await watchButton(legacyShare, alice.username).click();
+  await expectStreamImage(legacyShare);
+  await c.expectRemoteAudio(2);
+
+  await installScreenCapture(c.page);
+  await c.page.getByRole('button', { name: 'Compartilhar tela' }).first().click();
+  const newShare = screenTile(a.page, carol.username);
+  await expect(newShare).toBeVisible();
+  const legacyWatchButton = watchButton(newShare, carol.username);
+  if (await legacyWatchButton.count()) await legacyWatchButton.click();
+  await expectStreamImage(newShare);
 });

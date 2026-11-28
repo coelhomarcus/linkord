@@ -5,7 +5,8 @@ import type { Participant, Room, Track as LKTrack } from 'livekit-client';
 
 import { useRoom } from '../../state/RoomContext';
 import { observeScreenShareVideo } from './screenShareVisibility';
-import { tileKey } from './tileTypes';
+import { screenAudioMatches, screenShareId } from './screenSharePublication';
+import type { ScreenWatchState } from './callSubscriptions';
 
 export interface ParticipantMedia {
   screenTrack: LKTrack | null;
@@ -14,14 +15,14 @@ export interface ParticipantMedia {
   micTrack: LKTrack | null;
   micActivated: boolean;
   micMuted: boolean;
-  screenPublished: boolean;
+  screenShareId: string | null;
   /** The presenter paused their preview, independently of viewer subscriptions. */
   screenPaused: boolean;
 }
 
 const EMPTY_MEDIA: ParticipantMedia = {
   screenTrack: null, screenAudioTrack: null, cameraTrack: null, micTrack: null,
-  micActivated: false, micMuted: true, screenPublished: false, screenPaused: false,
+  micActivated: false, micMuted: true, screenShareId: null, screenPaused: false,
 };
 
 export function getParticipant(room: Room, identity: string): Participant | undefined {
@@ -52,19 +53,23 @@ function readMedia(room: Room, identity: string): ParticipantMedia {
   const participant = getParticipant(room, identity);
   if (!participant) return EMPTY_MEDIA;
   const micPub = participant.getTrackPublication(Track.Source.Microphone);
+  const screenPub = participant.getTrackPublication(Track.Source.ScreenShare);
+  const screenAudioPub = participant.getTrackPublication(Track.Source.ScreenShareAudio);
   return {
     screenTrack: activeTrack(participant, Track.Source.ScreenShare),
-    screenAudioTrack: activeTrack(participant, Track.Source.ScreenShareAudio),
+    screenAudioTrack: screenAudioMatches(screenPub, screenAudioPub) && !screenAudioPub?.isMuted ? screenAudioPub?.track ?? null : null,
     cameraTrack: activeTrack(participant, Track.Source.Camera),
     micTrack: micPub?.track ?? null,
     micActivated: !!micPub,
     micMuted: micPub ? micPub.isMuted : true,
-    screenPublished: !!participant.getTrackPublication(Track.Source.ScreenShare),
+    screenShareId: screenShareId(screenPub),
     screenPaused: isScreenPaused(participant),
   };
 }
 
 const MEDIA_EVENTS = [
+  RoomEvent.Connected,
+  RoomEvent.Reconnected,
   RoomEvent.TrackPublished,
   RoomEvent.TrackUnpublished,
   RoomEvent.TrackSubscribed,
@@ -158,6 +163,17 @@ export function useParticipantMedia(identity: string): ParticipantMedia {
   return useSyncExternalStore(subscribe, getSnapshot);
 }
 
+const ignoreScreenWatch = () => () => {};
+
+export function useScreenWatchState(participantId: string | null, shareId: string | null): ScreenWatchState {
+  const { callSubscriptions } = useRoom('callSubscriptions');
+  const getSnapshot = useCallback(
+    () => participantId && shareId ? callSubscriptions.screenState(participantId, shareId) : 'available',
+    [callSubscriptions, participantId, shareId],
+  );
+  return useSyncExternalStore(participantId && shareId ? callSubscriptions.subscribe : ignoreScreenWatch, getSnapshot);
+}
+
 const SPEAKING_THRESHOLD = 0.02;
 const SPEAKING_RELEASE_MS = 250;
 
@@ -246,29 +262,4 @@ export function useAttachTrack(track: LKTrack | null, elRef: RefObject<HTMLMedia
     track.attach(el);
     return () => { track.detach(el); };
   }, [track, elRef]);
-}
-
-/** Explicit watch intent is independent of which tiles are mounted. Setting
- * an enabled override here would prevent LiveKit from pausing hidden video. */
-export function useScreenShareSubscriptions(room: Room, unwatchedScreenKeys: ReadonlySet<string>): void {
-  useEffect(() => {
-    function apply() {
-      for (const participant of room.remoteParticipants.values()) {
-        const watching = !unwatchedScreenKeys.has(tileKey(participant.identity, 'screen'));
-        for (const source of [Track.Source.ScreenShare, Track.Source.ScreenShareAudio]) {
-          const pub = participant.getTrackPublication(source);
-          if (pub && pub.isDesired !== watching) pub.setSubscribed(watching);
-        }
-      }
-    }
-    apply();
-    room.on(RoomEvent.TrackPublished, apply);
-    room.on(RoomEvent.Connected, apply);
-    room.on(RoomEvent.Reconnected, apply);
-    return () => {
-      room.off(RoomEvent.TrackPublished, apply);
-      room.off(RoomEvent.Connected, apply);
-      room.off(RoomEvent.Reconnected, apply);
-    };
-  }, [room, unwatchedScreenKeys]);
 }

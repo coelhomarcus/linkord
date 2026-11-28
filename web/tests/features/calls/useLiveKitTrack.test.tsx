@@ -1,10 +1,10 @@
 import { describe, expect, it, vi } from 'vitest';
 import { act, renderHook } from '@testing-library/react';
 import type { ReactNode } from 'react';
-import { ConnectionQuality, RoomEvent, Track } from 'livekit-client';
+import { ConnectionQuality, Track } from 'livekit-client';
 import type { Participant, Room } from 'livekit-client';
 import {
-  activeTrack, getParticipant, isScreenPaused, useConnectionQuality, useParticipantMedia, useScreenShareSubscriptions,
+  activeTrack, getParticipant, isScreenPaused, useConnectionQuality, useParticipantMedia,
 } from '@/features/calls/useLiveKitTrack';
 import { RoomStoreProvider } from '@/state/RoomStoreProvider';
 import { createFakeRoomContextValue } from '@tests/fixtures/roomContextFixture';
@@ -108,41 +108,6 @@ describe('isScreenPaused', () => {
 
   it('a muted publication with a track present, true — intentionally paused (pauseSharePreview)', () => {
     expect(isScreenPaused(fakeParticipant({ isMuted: true, track: {} }))).toBe(true);
-  });
-});
-
-describe('useScreenShareSubscriptions', () => {
-  function fakePublication() {
-    const pub = { isDesired: true, setSubscribed: vi.fn((desired: boolean) => { pub.isDesired = desired; }) };
-    return pub;
-  }
-
-  it('preserves automatic visibility and reapplies explicit watch intent as sources change', () => {
-    const { room } = fakeEventRoom();
-    const video = fakePublication();
-    const audio = fakePublication();
-    const mic = fakePublication();
-    const publications = new Map([[Track.Source.ScreenShare, video], [Track.Source.ScreenShareAudio, audio], [Track.Source.Microphone, mic]]);
-    Object.assign(room, { remoteParticipants: new Map([['bia', { identity: 'bia', getTrackPublication: (source: Track.Source) => publications.get(source) }]]) });
-
-    const { rerender } = renderHook(({ keys }) => useScreenShareSubscriptions(room, keys), { initialProps: { keys: new Set<string>() } });
-    expect(video.setSubscribed).not.toHaveBeenCalled();
-    expect(audio.setSubscribed).not.toHaveBeenCalled();
-
-    rerender({ keys: new Set(['bia:screen']) });
-    expect(video.setSubscribed).toHaveBeenCalledExactlyOnceWith(false);
-    expect(audio.setSubscribed).toHaveBeenCalledExactlyOnceWith(false);
-
-    const replacement = fakePublication();
-    publications.set(Track.Source.ScreenShare, replacement);
-    room.emit(RoomEvent.TrackPublished);
-    expect(replacement.setSubscribed).toHaveBeenCalledExactlyOnceWith(false);
-    expect(audio.setSubscribed).toHaveBeenCalledTimes(1);
-
-    rerender({ keys: new Set<string>() });
-    expect(replacement.setSubscribed).toHaveBeenLastCalledWith(true);
-    expect(audio.setSubscribed).toHaveBeenLastCalledWith(true);
-    expect(mic.setSubscribed).not.toHaveBeenCalled();
   });
 });
 

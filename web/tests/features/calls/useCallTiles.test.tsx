@@ -125,7 +125,7 @@ describe('useCallTiles', () => {
     expect(result.current[0]).toMatchObject({ kind: 'avatar', loading: false });
   });
 
-  it('a shared screen appears as "loading" before the track arrives', () => {
+  it('a remote screen publication appears as available before the viewer subscribes', () => {
     const livekitRoom = fakeRoom();
     const remote = livekitRoom.addRemote('bia');
     const wrapper = ({ children }: { children: ReactNode }) => (
@@ -137,7 +137,7 @@ describe('useCallTiles', () => {
     act(() => { livekitRoom.emit(RoomEvent.TrackPublished); });
 
     const screenTile = result.current.find((d) => d.kind === 'screen');
-    expect(screenTile).toMatchObject({ loading: true });
+    expect(screenTile).toMatchObject({ loading: false, watching: false });
   });
 
   it('a paused screen (publication muted but with a track) keeps appearing, marked as "paused" — it does not disappear', () => {
