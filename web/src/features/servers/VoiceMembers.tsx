@@ -1,10 +1,11 @@
-import { ArrowsLeftRightIcon, ChatCircleIcon, DotsThreeIcon, MicrophoneSlashIcon, MonitorPlayIcon, PhoneSlashIcon, SpeakerHighIcon, SpeakerSimpleSlashIcon, SpeakerSlashIcon, UserIcon, VideoCameraIcon, iconWeight } from '@/shared/ui/icons';
+import { ArrowsLeftRightIcon, ChatCircleIcon, DotsThreeIcon, EyeIcon, MicrophoneSlashIcon, PhoneSlashIcon, SpeakerHighIcon, SpeakerSimpleSlashIcon, SpeakerSlashIcon, UserIcon, VideoCameraIcon, iconWeight } from '@/shared/ui/icons';
 import { useEffect, useState } from 'react';
 import type { DragEvent, MouseEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { TOUCH_FIRST_QUERY } from '@/shared/hooks/useLongPress';
 import { useMediaQuery } from '@/shared/hooks/useMediaQuery';
 import { Avatar, colorFor } from '@/shared/Avatar';
+import { Button } from '@/shared/ui/primitives/button';
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator,
 } from '@/shared/ui/primitives/dropdown-menu';
@@ -75,13 +76,12 @@ function StreamPreview({ participantId, name, onWatch }: { participantId: string
       {preview?.image
         ? <img src={preview.image} alt={t('voiceMembers.previewOf', { name })} className="absolute inset-0 h-full w-full object-contain" />
         : !answered && <span role="status" aria-label={t('voiceMembers.previewLoading')} className="absolute inset-0 animate-pulse bg-white/5" />}
-      <div className="relative flex flex-col items-center gap-2">
-        {!preview?.image && answered && <span>{t('voiceMembers.previewUnavailable')}</span>}
-        <button type="button" onClick={onWatch} aria-label={t('voiceMembers.watch.buttonLabel', { name })}
-          className="rounded-md bg-black/55 px-4 py-1.5 text-label font-semibold text-white focus-ring backdrop-blur-sm transition-colors duration-100 hover:bg-black/75">
-          {t('voiceMembers.watch.button')}
-        </button>
-      </div>
+      {!preview?.image && answered && <span className="absolute inset-x-2 bottom-[calc(50%+1.75rem)] text-center">{t('voiceMembers.previewUnavailable')}</span>}
+      <Button type="button" size="lg" onClick={onWatch} aria-label={t('voiceMembers.watch.buttonLabel', { name })}
+        className="h-11 gap-2 rounded-full px-5 font-semibold shadow-sm">
+        <EyeIcon aria-hidden className="size-5" />
+        {t('voiceMembers.watch.button')}
+      </Button>
     </div>
   );
 }
@@ -182,7 +182,7 @@ function VoiceMemberMenu({ target, server, channel, onClose, onOpenProfile }: {
       <DropdownMenuContent anchor={rectAt(target.x, target.y)} side="bottom" align="start" sideOffset={4} className="w-60">
         {target.onWatch && !person.isMe && (
           <DropdownMenuItem onClick={target.onWatch}>
-            <MonitorPlayIcon size={16} /><span>{t('voiceMembers.menu.watch')}</span>
+            <EyeIcon size={16} aria-hidden /><span>{t('voiceMembers.menu.watch')}</span>
           </DropdownMenuItem>
         )}
         <DropdownMenuItem onClick={() => onOpenProfile(person.userId)}>

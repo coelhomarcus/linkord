@@ -38,15 +38,30 @@ test.describe('voice channels', () => {
   });
 
   test('sharing the screen shows the share to the other member until it stops', async ({ users }) => {
-    const { bob, a, b } = await twoInVoice(users);
+    const { alice, bob, a, b } = await twoInVoice(users);
+    await a.page.setViewportSize({ width: 1600, height: 1000 });
     // Sharing is refused until the tab reaches LiveKit; hearing the other side proves it has.
     await b.expectRemoteAudio(1);
     // The fake media UI accepts the picker with a fake screen, like a person choosing one.
     await b.page.getByRole('button', { name: 'Compartilhar tela' }).first().click();
     const share = screenTile(a.page, bob.username);
-    await expect(watchButton(share, bob.username)).toBeVisible();
+    const watch = watchButton(share, bob.username);
+    const expectCenteredWatch = async (minHeight: number) => {
+      await expect(watch.locator('svg')).toBeVisible();
+      await expect(async () => {
+        const tile = (await share.boundingBox())!;
+        const button = (await watch.boundingBox())!;
+        expect(button.height).toBeGreaterThanOrEqual(minHeight);
+        expect(Math.abs(button.x + button.width / 2 - tile.x - tile.width / 2)).toBeLessThan(1);
+        expect(Math.abs(button.y + button.height / 2 - tile.y - tile.height / 2)).toBeLessThan(1);
+      }).toPass();
+    };
+    await expectCenteredWatch(44);
+    await a.page.getByRole('button', { name: `Destacar ${alice.username}`, exact: true }).click();
+    await expect(a.page.locator('[data-thumb-strip]').getByRole('button', { name: `Assistir à transmissão de ${bob.username}`, exact: true })).toBeVisible();
+    await expectCenteredWatch(36);
     await expect(share.locator('video')).toHaveCount(0);
-    await watchButton(share, bob.username).click();
+    await watch.click();
     await expectStreamImage(share);
     await b.page.getByRole('button', { name: 'Parar compartilhamento' }).first().click();
     await expect(a.page.locator('[data-tile-kind="screen"]')).toHaveCount(0);
