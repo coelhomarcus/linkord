@@ -134,7 +134,7 @@ describe('VoiceMembers — your own row', () => {
 
   it('shows your own mute and deafen', () => {
     mockedTrack.useParticipantMedia.mockReturnValue({
-      screenTrack: null, screenAudioTrack: null, cameraTrack: null, micTrack: null, micActivated: true, micMuted: true, screenPaused: false,
+      screenTrack: null, screenAudioTrack: null, cameraTrack: null, micTrack: null, micActivated: true, micMuted: true, screenPublished: false, screenPaused: false,
     });
     renderList({ room: { activeCallConversationId: 'v1', deafened: true } });
     expect(within(row('Eu')).getByRole('img', { name: 'Microfone desativado' })).toBeInTheDocument();

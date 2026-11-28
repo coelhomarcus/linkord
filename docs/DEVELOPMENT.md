@@ -238,7 +238,7 @@ Playwright runs on Bun and uses the installed Google Chrome. Its CLI scripts use
 | `features/servers` | Creating, invites, permissions, an animated icon, mute levels, and context menus for category and channel management, member moderation, and reordering servers by touch. Channel reordering and category moves across accounts preserve access rules. |
 | `features/pins` | Pinning and unpinning, the `PIN_MESSAGES` permission, saved messages. |
 | `features/search` | The header search's filters, keyboard submission with suggestions open, sort, jump to message and history. |
-| `features/voice` | Hearing each other, mute, camera, screen share, moving and disconnecting a member. |
+| `features/voice` | Hearing each other, mute, camera, adaptive screen share and shared audio, moving and disconnecting a member. |
 | `features/call-membership` | A LiveKit client using a kept token is removed from the room after leaving or being banned. |
 | `features/dm-call` | Decline, cancel, an answered call with audio both ways, a video call. |
 | `features/call-tabs` | One call per account across two tabs, for voice channels and DM calls. |
@@ -262,6 +262,8 @@ Playwright runs on Bun and uses the installed Google Chrome. Its CLI scripts use
 | `upgrade/upgrade` | Old and new tabs exchanging messages and friend requests, and a call going on across the upgrade. |
 
 When you add a user-facing flow, add it to the matching spec (or a new `features/<area>.spec.ts`) and to this table.
+
+For adaptive screen sharing, compare the received video dimensions in a thumbnail and fullscreen. On Windows, also keep the stream visible on a second monitor in Chrome and the desktop app while using another app on the first. Verify that it keeps playing, that minimizing the viewer pauses only video, and that a visible native picture-in-picture window keeps playing and adapts when resized.
 
 ## Backup scripts locally
 

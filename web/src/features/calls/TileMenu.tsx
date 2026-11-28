@@ -26,11 +26,13 @@ async function getTrackBytes(track: LKTrack | null): Promise<number> {
   try {
     const report = await (track as unknown as StatsCapableTrack).getRTCStatsReport?.();
     if (!report) return 0;
+    let bytes = 0;
     for (const stat of report.values()) {
       const s = stat as RTCStats & { bytesSent?: number; bytesReceived?: number };
-      if (s.type === 'outbound-rtp' && typeof s.bytesSent === 'number') return s.bytesSent;
-      if (s.type === 'inbound-rtp' && typeof s.bytesReceived === 'number') return s.bytesReceived;
+      if (s.type === 'outbound-rtp') bytes += s.bytesSent ?? 0;
+      if (s.type === 'inbound-rtp') bytes += s.bytesReceived ?? 0;
     }
+    return bytes;
   } catch {  }
   return 0;
 }
@@ -106,12 +108,10 @@ export function TileMenu({ onOpenProfile }: TileMenuProps) {
       return;
     }
     const participantGone = !isMe && !roster.has(participantId);
-    // A muted screen share has no track but is not ended; keep the menu open
-    // while its pause action is active.
-    const sourceEnded = (kind === 'camera' && !media.cameraTrack) || (kind === 'screen' && !media.screenTrack && !media.screenPaused);
+    const sourceEnded = (kind === 'camera' && !media.cameraTrack) || (kind === 'screen' && !media.screenPublished);
     const conversationChanged = activeCallConversationId !== openedConversationIdRef.current;
     if (participantGone || sourceEnded || conversationChanged) closeTileMenu();
-  }, [menuTarget, participantId, isMe, kind, roster, media.cameraTrack, media.screenTrack, media.screenPaused, activeCallConversationId, closeTileMenu]);
+  }, [menuTarget, participantId, isMe, kind, roster, media.cameraTrack, media.screenPublished, activeCallConversationId, closeTileMenu]);
 
   useEffect(() => {
     if (!key || !showStats || !mainTrack) { setBitrateKbps(0); setResolution(null); return; }

@@ -1,9 +1,11 @@
 import { useCallback, useEffect, useState, useSyncExternalStore } from 'react';
 import type { RefObject } from 'react';
-import { ConnectionQuality, RoomEvent, Track } from 'livekit-client';
+import { ConnectionQuality, RemoteVideoTrack, RoomEvent, Track } from 'livekit-client';
 import type { Participant, Room, Track as LKTrack } from 'livekit-client';
 
 import { useRoom } from '../../state/RoomContext';
+import { observeScreenShareVideo } from './screenShareVisibility';
+import { tileKey } from './tileTypes';
 
 export interface ParticipantMedia {
   screenTrack: LKTrack | null;
@@ -12,15 +14,14 @@ export interface ParticipantMedia {
   micTrack: LKTrack | null;
   micActivated: boolean;
   micMuted: boolean;
-  /** The screen-share publication exists and still has a track, but it's
-   * muted — the owner paused their own preview (see useScreenShare's
-   * pauseSharePreview), not "no share"/"still loading". */
+  screenPublished: boolean;
+  /** The presenter paused their preview, independently of viewer subscriptions. */
   screenPaused: boolean;
 }
 
 const EMPTY_MEDIA: ParticipantMedia = {
   screenTrack: null, screenAudioTrack: null, cameraTrack: null, micTrack: null,
-  micActivated: false, micMuted: true, screenPaused: false,
+  micActivated: false, micMuted: true, screenPublished: false, screenPaused: false,
 };
 
 export function getParticipant(room: Room, identity: string): Participant | undefined {
@@ -42,12 +43,9 @@ export function isTrackPending(participant: Participant, source: Track.Source): 
   return !!pub && !pub.isMuted && !pub.track;
 }
 
-/** True when a screen-share publication exists, still has a track, but is
- * muted — i.e. deliberately paused (see useScreenShare's pauseSharePreview),
- * distinct from "no share" (no publication) and "loading" (no track yet). */
+/** A viewer can be unsubscribed while the presenter has their preview paused. */
 export function isScreenPaused(participant: Participant): boolean {
-  const pub = participant.getTrackPublication(Track.Source.ScreenShare);
-  return !!pub && pub.isMuted && !!pub.track;
+  return participant.getTrackPublication(Track.Source.ScreenShare)?.isMuted ?? false;
 }
 
 function readMedia(room: Room, identity: string): ParticipantMedia {
@@ -61,6 +59,7 @@ function readMedia(room: Room, identity: string): ParticipantMedia {
     micTrack: micPub?.track ?? null,
     micActivated: !!micPub,
     micMuted: micPub ? micPub.isMuted : true,
+    screenPublished: !!participant.getTrackPublication(Track.Source.ScreenShare),
     screenPaused: isScreenPaused(participant),
   };
 }
@@ -241,29 +240,35 @@ export function useAttachTrack(track: LKTrack | null, elRef: RefObject<HTMLMedia
   useEffect(() => {
     const el = elRef.current;
     if (!el || !track) return;
+    if (track instanceof RemoteVideoTrack && track.source === Track.Source.ScreenShare && el instanceof HTMLVideoElement) {
+      observeScreenShareVideo(track, el);
+    }
     track.attach(el);
     return () => { track.detach(el); };
   }, [track, elRef]);
 }
 
-/** Disable only this viewer's remote share subscription; the presenter and other viewers are unaffected.
- * Reapply when the publication returns so a locally paused share stays disabled. */
-export function useWatchScreenShare(room: Room, participantId: string, notWatching: boolean): void {
+/** Explicit watch intent is independent of which tiles are mounted. Setting
+ * an enabled override here would prevent LiveKit from pausing hidden video. */
+export function useScreenShareSubscriptions(room: Room, unwatchedScreenKeys: ReadonlySet<string>): void {
   useEffect(() => {
     function apply() {
-      const participant = getParticipant(room, participantId);
-      if (!participant) return;
-      for (const source of [Track.Source.ScreenShare, Track.Source.ScreenShareAudio]) {
-        const pub = participant.getTrackPublication(source);
-        if (pub && !pub.isLocal) (pub as unknown as { setEnabled: (enabled: boolean) => void }).setEnabled(!notWatching);
+      for (const participant of room.remoteParticipants.values()) {
+        const watching = !unwatchedScreenKeys.has(tileKey(participant.identity, 'screen'));
+        for (const source of [Track.Source.ScreenShare, Track.Source.ScreenShareAudio]) {
+          const pub = participant.getTrackPublication(source);
+          if (pub && pub.isDesired !== watching) pub.setSubscribed(watching);
+        }
       }
     }
     apply();
     room.on(RoomEvent.TrackPublished, apply);
-    room.on(RoomEvent.TrackSubscribed, apply);
+    room.on(RoomEvent.Connected, apply);
+    room.on(RoomEvent.Reconnected, apply);
     return () => {
       room.off(RoomEvent.TrackPublished, apply);
-      room.off(RoomEvent.TrackSubscribed, apply);
+      room.off(RoomEvent.Connected, apply);
+      room.off(RoomEvent.Reconnected, apply);
     };
-  }, [room, participantId, notWatching]);
+  }, [room, unwatchedScreenKeys]);
 }

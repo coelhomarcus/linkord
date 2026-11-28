@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { useRoom, useRoomSelector, useRoomState } from '../../state/RoomContext';
-import { useParticipantMedia, useAttachTrack } from './useLiveKitTrack';
+import { useParticipantMedia, useAttachTrack, useScreenShareSubscriptions } from './useLiveKitTrack';
 import { loadCallVolume } from '../settings/useCallVolumePreference';
 import { loadDevicePreference } from '../settings/useDevicePreference';
 import { useAudioPreferences } from './audioPreferences';
@@ -78,7 +78,9 @@ function ParticipantAudio({ participantId }: { participantId: string }) {
 }
 
 export function ParticipantAudioLayer({ participantIds }: { participantIds: string[] }) {
-  const state = useRoomState('me');
+  const { livekitRoom } = useRoom('livekitRoom');
+  const state = useRoomState('me', 'unwatchedScreenKeys');
+  useScreenShareSubscriptions(livekitRoom, state.unwatchedScreenKeys);
   return (
     <>
       {participantIds

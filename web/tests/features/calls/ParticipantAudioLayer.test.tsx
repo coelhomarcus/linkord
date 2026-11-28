@@ -18,13 +18,16 @@ function fakeParticipant(overrides: Partial<Participant> = {}): Participant {
 
 function fakeRoomWithScreenAudio(screenAudioPub?: { isMuted: boolean; track: object }) {
   const listeners = new Map<string, Set<() => void>>();
+  const remote = {
+    identity: 'p-2',
+    getTrackPublication: (source: Track.Source) => (source === Track.Source.ScreenShareAudio && screenAudioPub ? { ...screenAudioPub, isDesired: true } : undefined),
+  };
   const room = {
     on: vi.fn((event: string, fn: () => void) => { if (!listeners.has(event)) listeners.set(event, new Set()); listeners.get(event)!.add(fn); }),
     off: vi.fn((event: string, fn: () => void) => { listeners.get(event)?.delete(fn); }),
     localParticipant: { identity: 'p-1', getTrackPublication: () => undefined },
-    getParticipantByIdentity: vi.fn(() => ({
-      getTrackPublication: (source: Track.Source) => (source === Track.Source.ScreenShareAudio ? screenAudioPub : undefined),
-    })),
+    remoteParticipants: new Map([[remote.identity, remote]]),
+    getParticipantByIdentity: vi.fn(() => remote),
   };
   return room as unknown as LKRoom;
 }

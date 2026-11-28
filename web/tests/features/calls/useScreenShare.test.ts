@@ -109,7 +109,7 @@ describe('useScreenShare — quality applied to the capture', () => {
     expect(publishTrack).toHaveBeenCalledWith(expect.anything(), {
       screenShareEncoding: preset.encoding,
       degradationPreference: preset.degradationPreference,
-      simulcast: false,
+      simulcast: true,
     });
     expect(publishedTracks(publishTrack).map((t) => t.source)).toEqual([Track.Source.ScreenShare]);
   });
@@ -259,6 +259,17 @@ describe('useScreenShare — changing source', () => {
     expect(first.stop).not.toHaveBeenCalled();
     expect(room.localParticipant.setScreenShareEnabled).not.toHaveBeenCalled();
     expect(dispatch).not.toHaveBeenCalled();
+  });
+
+  it('renegotiates the encodings when a new source crosses the LiveKit simulcast size threshold', async () => {
+    const { result, room, publishTrack, getDisplayMedia, replaceVideo } = await sharing(fakeStream(fakeTrack('video', { width: 640, height: 360 })));
+    getDisplayMedia.mockResolvedValueOnce(fakeStream(fakeTrack('video', { width: 400, height: 300 })));
+
+    await result.current.changeSource();
+
+    expect(replaceVideo).not.toHaveBeenCalled();
+    expect(room.localParticipant.setScreenShareEnabled).toHaveBeenCalledWith(false);
+    expect(publishTrack).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ simulcast: true }));
   });
 
   it('adds the new source\'s sound when the old one had none, and removes it the other way round', async () => {

@@ -5,7 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { ConnectionQuality } from 'livekit-client';
 
 import { useRoom, useRoomSelector, useRoomState } from '@/state/RoomContext';
-import { getParticipant, useParticipantMedia, useAttachTrack, useIsSpeaking, useConnectionQuality, useWatchScreenShare } from './useLiveKitTrack';
+import { getParticipant, useParticipantMedia, useAttachTrack, useIsSpeaking, useConnectionQuality } from './useLiveKitTrack';
 import { participantMicMuted, useOwnMic } from './micState';
 import { useMuteForMe } from './useMuteForMe';
 import { useTileSizing } from './useTileSizing';
@@ -62,11 +62,7 @@ export function Tile({ participantId, kind, isMine, loading = false, paused = fa
 
   // Hiding a tile is presentation-only; it never changes the media subscription.
   const hiddenForMe = kind === 'camera' && !isMine && state.hiddenVideoKeys.has(key);
-  // "Parar de assistir" a remote screen share — unlike hiddenForMe, this
-  // really unsubscribes (see useWatchScreenShare), a deliberate bandwidth
-  // saving rather than a purely local presentation choice.
   const notWatching = kind === 'screen' && !isMine && state.unwatchedScreenKeys.has(key);
-  useWatchScreenShare(livekitRoom, participantId, notWatching);
   const showsVideo = kind !== 'avatar' && !hiddenForMe && !notWatching && !paused;
   const videoTrack = kind === 'screen' ? media.screenTrack : kind === 'camera' ? media.cameraTrack : null;
   const { containerRef, frameStyle } = useTileSizing(sizing, `${participantId}:${kind}`, showsVideo, videoTrack, videoRef, rootRef);

@@ -41,13 +41,13 @@ describe('video publish options', () => {
     expect(() => applyCameraContentHint(undefined)).not.toThrow();
   });
 
-  it('leaves screen share as one layer at every preset', () => {
+  it('keeps the top screen share encoding and enables simulcast for every preset', () => {
     for (const id of Object.keys(SHARE_QUALITY_PRESETS) as ShareQualityId[]) {
       const quality = SHARE_QUALITY_PRESETS[id];
       expect(screenSharePublishOptions(id)).toEqual({
         screenShareEncoding: quality.encoding,
         degradationPreference: quality.degradationPreference,
-        simulcast: false,
+        simulcast: true,
       });
     }
   });

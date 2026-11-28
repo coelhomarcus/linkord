@@ -78,7 +78,7 @@ async function publishCapture(room: Room, capture: Capture, qualityId: ShareQual
 
   const publishOptions = screenSharePublishOptions(qualityId);
   try {
-    await Promise.all(tracks.map((track) => room.localParticipant.publishTrack(track, publishOptions)));
+    await Promise.all(tracks.map((track) => room.localParticipant.publishTrack(track, track === screenVideo ? publishOptions : undefined)));
   } catch (err) {
     await Promise.allSettled(tracks.map((track) => room.localParticipant.unpublishTrack(track, true)));
     tracks.forEach((track) => track.stop());
@@ -96,13 +96,20 @@ async function publishCapture(room: Room, capture: Capture, qualityId: ShareQual
  * publications, so the tile, the viewers and the call's state never see the
  * share end. The sound follows the new source: replaced, added or removed.
  */
-async function replaceCapture(room: Room, capture: Capture, qualityId: ShareQualityId, dispatch: Dispatch<RoomAction>): Promise<boolean> {
+async function replaceCapture(room: Room, capture: Capture, dispatch: Dispatch<RoomAction>): Promise<boolean> {
   const participant = room.localParticipant;
   const video = participant.getTrackPublication(Track.Source.ScreenShare)?.track;
   if (!(video instanceof LocalVideoTrack)) return false;
+  const previousVideo = video.mediaStreamTrack;
+  const currentSize = previousVideo.getSettings();
+  const nextSize = capture.video.getSettings();
+  // LiveKit negotiates the second layer only above this size. replaceTrack
+  // can update encoding parameters but cannot change the negotiated count.
+  const currentSide = Math.max(currentSize.width ?? 0, currentSize.height ?? 0);
+  const nextSide = Math.max(nextSize.width ?? 0, nextSize.height ?? 0);
+  if (currentSide && nextSide && (currentSide >= 480) !== (nextSide >= 480)) return false;
   const audio = participant.getTrackPublication(Track.Source.ScreenShareAudio)?.track;
   try {
-    const previousVideo = video.mediaStreamTrack;
     await video.replaceTrack(capture.video, false);
     previousVideo.stop();
     if (capture.audio && audio instanceof LocalAudioTrack) {
@@ -110,7 +117,7 @@ async function replaceCapture(room: Room, capture: Capture, qualityId: ShareQual
       await audio.replaceTrack(capture.audio, false);
       previousAudio.stop();
     } else if (capture.audio) {
-      await participant.publishTrack(screenAudioTrack(capture.audio), screenSharePublishOptions(qualityId));
+      await participant.publishTrack(screenAudioTrack(capture.audio));
     } else if (audio) {
       await participant.unpublishTrack(audio, true);
     }
@@ -179,7 +186,7 @@ export function useScreenShare(room: Room, dispatch: Dispatch<RoomAction>): Scre
       // A quality picked since the share started needs the new encodings, which
       // only publishing again applies; the share still only ends once the new
       // source is in hand
-      if (qualityId === publishedQuality.current && await replaceCapture(room, capture, qualityId, dispatch)) return;
+      if (qualityId === publishedQuality.current && await replaceCapture(room, capture, dispatch)) return;
       await room.localParticipant.setScreenShareEnabled(false).catch(() => {});
       if (await publishCapture(room, capture, qualityId, dispatch)) publishedQuality.current = qualityId;
       else dispatch({ type: 'SET_LOCAL_SHARING', sharing: false });
