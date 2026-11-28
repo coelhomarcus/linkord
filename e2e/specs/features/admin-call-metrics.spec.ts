@@ -50,7 +50,11 @@ test('the admin sees aggregate calls and screen peaks through a pause and resume
   const live = page.getByRole('region', { name: 'Atividade ao vivo', exact: true });
   const screenCount = live.getByRole('definition').nth(1);
   await expect(screenCount).toHaveText('1', { timeout: 40_000 });
-  await expect(page.getByRole('region', { name: 'Picos de telas transmitindo', exact: true }).getByRole('listitem')).toHaveCount(7);
+  for (const title of ['Picos de chamadas', 'Picos de telas transmitindo']) {
+    const chart = page.getByRole('region', { name: title, exact: true });
+    await expect(chart.getByRole('img', { name: title })).toBeVisible();
+    await expect(chart.getByRole('listitem')).toHaveCount(7);
+  }
 
   const settings = b.page.getByRole('button', { name: 'Configurações de compartilhamento de tela', exact: true }).first();
   await settings.click();

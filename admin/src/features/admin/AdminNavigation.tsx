@@ -20,7 +20,7 @@ export function AdminNavigation({ onNavigate }: { onNavigate?: () => void }) {
                 <li key={section.id}>
                   <NavLink to={adminSectionPath(section)} end={section.id === 'overview'} onClick={onNavigate} className="admin-nav-link focus-ring">
                     <Icon size={17} aria-hidden className="shrink-0" />
-                    <span className="truncate">{t(section.labelKey)}</span>
+                    <span className="min-w-0 leading-snug wrap-anywhere">{t(section.labelKey)}</span>
                   </NavLink>
                 </li>
               );

@@ -64,7 +64,7 @@ Overcord is a self-hosted place to chat and call with friends. Talk in direct me
 **Administration**
 - An optional [administration site](docs/DEPLOY.md#administration-site) with a dedicated hostname and mandatory two-step sign-in by email for managing users and their badges, servers, webhooks, reports, audit history and uploads.
 - The administration dashboard groups account activity in one card and shows capacity bars for connections and storage. It also shows recent audit activity and open reports. The dashboard uses a dark monochrome theme. The sidebar shows the signed-in account's profile picture and becomes a navigation menu on smaller screens.
-- **Calls and screen shares** shows live totals for active calls, accounts in calls and screens transmitting video. Paused video drops out of the total. The seven-day history stores only the highest service-wide totals observed each day since collection began, using the Belém time zone. The System tab shows connection and storage capacity, pending and failed notifications, and server uptime.
+- **Calls and screen shares** shows live totals for active calls, accounts in calls and screens transmitting video. Paused video drops out of the total. Two line charts show the highest service-wide counts observed each day over the past seven days, using the Belém time zone. Gaps indicate days without observations. The System tab shows connection and storage capacity, pending and failed notifications, and server uptime.
 - [Full backups](docs/DEPLOY.md#backups) downloaded from the administration site as one ZIP of the database and every stored file, never kept on the server.
 
 ## ⚡ Quick start

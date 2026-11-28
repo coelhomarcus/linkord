@@ -249,7 +249,7 @@ Playwright runs on Bun and uses the installed Google Chrome. Its CLI scripts use
 | `features/profile` | Profile edits reaching a friend, animated photo and banner, the games widgets and Wall editing, the phone layout. |
 | `features/activity` | Ranked activity and the summary published on the Wall from the desktop history. |
 | `features/admin-site` | The admin site on its own host and session: mandatory email verification, fresh codes for granting and removing administrator access, account suspension, the retired public routes returning `404`, the dashboard and its phone navigation. |
-| `features/admin-call-metrics` | Administrator access to aggregate call metrics and the seven-day history. With two accounts in a call, the live screen total follows start, pause, resume and stop, and the daily peak stays visible. |
+| `features/admin-call-metrics` | Administrator access to aggregate call metrics and both seven-day peak charts. With two accounts in a call, the live screen total follows start, pause, resume and stop, and the daily peak stays visible. |
 | `features/reports-admin` | A reported message reaching the admin, who deletes it for everyone. |
 | `features/settings` | Language and theme following the account to another browser; text size staying on the device. |
 | `features/security` | No framing, a foreign script refused and reported, YouTube as a sandboxed iframe. |

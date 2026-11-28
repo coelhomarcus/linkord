@@ -20,7 +20,7 @@
     align-items: center;
     gap: 0.625rem;
     border-radius: var(--radius-md);
-    padding-inline: 0.75rem;
+    padding: 0.5rem 0.75rem;
     color: var(--color-text-secondary);
     font-size: var(--text-label);
     font-weight: 500;

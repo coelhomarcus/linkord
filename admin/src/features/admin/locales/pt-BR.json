@@ -21,7 +21,7 @@
     "uptime": "Tempo no ar",
     "viewHistory": "Ver histórico",
     "history": "Picos dos últimos 7 dias",
-    "historyDescription": "Maior total observado por dia, no fuso {{timeZone}}.",
+    "historyDescription": "Maior total observado por dia, no fuso {{timeZone}}. Dias sem dados aparecem como lacunas no gráfico.",
     "callPeaks": "Picos de chamadas",
     "screenPeaks": "Picos de telas transmitindo",
     "unavailable": "Indisponível",
