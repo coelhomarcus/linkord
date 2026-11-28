@@ -2,7 +2,7 @@ import type { ReactElement, Ref, SVGProps } from 'react';
 
 /** Fluent's two styles: `fill` for an active or emphasised icon, and for a line
  * icon (check, chevron, dismiss) that needs a heavier stroke. */
-export type IconWeight = 'regular' | 'fill';
+type IconWeight = 'regular' | 'fill';
 
 interface IconProps extends Omit<SVGProps<SVGSVGElement>, 'ref'> {
   size?: string | number;
