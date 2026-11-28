@@ -13,15 +13,16 @@ export async function expectStreamImage(tile: Locator): Promise<void> {
 }
 
 /** A known-size source and isolated audio that travel through the real SFU. */
-export async function installScreenCapture(page: Page, audioFromCapture = 1): Promise<void> {
-  await page.evaluate((audioFromCapture) => {
+export async function installScreenCapture(page: Page, audioFromCapture = 1, sizes: ReadonlyArray<readonly [width: number, height: number]> = []): Promise<void> {
+  await page.evaluate(({ audioFromCapture, sizes }) => {
     let captures = 0;
     Object.defineProperty(navigator.mediaDevices, 'getDisplayMedia', {
       configurable: true,
       value: async () => {
         const canvas = document.createElement('canvas');
-        canvas.width = 1280;
-        canvas.height = 720;
+        const [width, height] = sizes[captures] ?? [1280, 720];
+        canvas.width = width;
+        canvas.height = height;
         const frame = canvas.getContext('2d')!;
         let x = 0;
         function draw() {
@@ -55,7 +56,7 @@ export async function installScreenCapture(page: Page, audioFromCapture = 1): Pr
         return stream;
       },
     });
-  }, audioFromCapture);
+  }, { audioFromCapture, sizes });
 }
 
 export async function observeCallRtp(context: BrowserContext): Promise<void> {

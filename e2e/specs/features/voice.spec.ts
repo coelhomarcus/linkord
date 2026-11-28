@@ -52,6 +52,44 @@ test.describe('voice channels', () => {
     await expect(a.page.locator('[data-tile-kind="screen"]')).toHaveCount(0);
   });
 
+  test('a viewer keeps watching through a source change and a screen republish', async ({ users }) => {
+    const { bob, a, b } = await twoInVoice(users);
+    await b.expectRemoteAudio(1);
+    await installScreenCapture(b.page, 1, [[1280, 720], [960, 720], [720, 720]]);
+    await b.page.getByRole('button', { name: 'Compartilhar tela' }).first().click();
+
+    const share = screenTile(a.page, bob.username);
+    const video = share.locator('video');
+    const readAspectRatio = () => video.evaluate((el: HTMLVideoElement) => el.videoWidth / el.videoHeight);
+    const settingsName = 'Configurações de compartilhamento de tela';
+    const openSettings = b.page.getByRole('button', { name: settingsName }).first();
+    const settings = b.page.getByRole('menu', { name: settingsName });
+    const changeSource = settings.getByRole('menuitem', { name: 'Trocar fonte' });
+
+    await watchButton(share, bob.username).click();
+    await share.press('Enter');
+    await expect(share).toHaveAttribute('aria-pressed', 'true');
+    await expect.poll(readAspectRatio).toBeCloseTo(16 / 9);
+    await a.expectRemoteAudio(2);
+    await openSettings.click();
+    await changeSource.click();
+    await expect.poll(readAspectRatio).toBeCloseTo(4 / 3);
+    await expect(share).toHaveAttribute('aria-pressed', 'true');
+    await expect(watchButton(share, bob.username)).toHaveCount(0);
+    await a.expectRemoteAudio(2);
+
+    // Applying a new publisher quality with the next source requires republishing.
+    await openSettings.click();
+    const quality = settings.getByRole('menuitemradio', { name: 'Tela (1080p, 30 fps)' });
+    await quality.click();
+    await expect(quality).toHaveAttribute('aria-checked', 'true');
+    await changeSource.click();
+    await expect.poll(readAspectRatio).toBeCloseTo(1);
+    await expect(share).toHaveAttribute('aria-pressed', 'true');
+    await expect(watchButton(share, bob.username)).toHaveCount(0);
+    await a.expectRemoteAudio(2);
+  });
+
   test('screen share adapts to thumbnail and fullscreen while hidden video leaves audio playing', async ({ users }) => {
     const { alice, bob, a, b } = await twoInVoice(users);
     await b.expectRemoteAudio(1);
