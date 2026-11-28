@@ -6,6 +6,8 @@ export interface AdminIdentity {
   id: string;
   username: string;
   locale: Language;
+  avatar?: string;
+  avatarColor?: string;
 }
 
 type SignedIn = { user: AdminIdentity };

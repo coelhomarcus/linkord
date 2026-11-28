@@ -77,7 +77,7 @@ export function AdminApp() {
   return (
     <Routes>
       <Route path="/admin/*" element={
-        <AdminRoutes viewerId={user.id} username={user.username} signingOut={signingOut} signOutFailed={signOutFailed} onSignOut={() => void signOut()} />
+        <AdminRoutes viewer={user} signingOut={signingOut} signOutFailed={signOutFailed} onSignOut={() => void signOut()} />
       } />
       <Route path="*" element={<Navigate to={ADMIN_PATH} replace />} />
     </Routes>
